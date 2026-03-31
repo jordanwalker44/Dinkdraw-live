@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
-import { TopNav } from '@/components/TopNav';
+import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
+import { TopNav } from '../../../components/TopNav';
 
 export default function JoinTournamentPage() {
   const supabase = getSupabaseBrowserClient();

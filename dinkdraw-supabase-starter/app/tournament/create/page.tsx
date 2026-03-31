@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
-import { TopNav } from '@/components/TopNav';
+import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
+import { TopNav } from '../../../components/TopNav';
 
 function makeJoinCode() { return Math.random().toString(36).slice(2, 8).toUpperCase(); }
 

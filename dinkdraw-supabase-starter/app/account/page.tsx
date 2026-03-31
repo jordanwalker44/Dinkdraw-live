@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
-import { TopNav } from '@/components/TopNav';
+import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
+import { TopNav } from '../../components/TopNav';;
 
 export default function AccountPage() {
   const supabase = getSupabaseBrowserClient();

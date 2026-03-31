@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
-import { TopNav } from '@/components/TopNav';
+import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
+import { TopNav } from '../../../components/TopNav';;
 
 type Tournament = { id: string; title: string; join_code: string; organizer_user_id: string; organizer_name: string | null; player_count: number; courts: number; rounds: number; games_to: number; status: string; };
 type PlayerSlot = { id: string; slot_number: number; display_name: string | null; claimed_by_user_id: string | null; };

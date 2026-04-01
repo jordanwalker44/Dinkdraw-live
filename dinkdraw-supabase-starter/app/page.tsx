@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { TopNav } from '@/components/TopNav';
+import { TopNav } from '../components/TopNav';
 
 export default function HomePage() {
   return (

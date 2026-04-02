@@ -82,6 +82,9 @@ export default function CreateTournamentPage() {
 
   const [title, setTitle] = useState('Saturday Round Robin');
   const [organizerName, setOrganizerName] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [location, setLocation] = useState('');
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
   const [rounds, setRounds] = useState(4);
@@ -155,6 +158,9 @@ export default function CreateTournamentPage() {
           organizer_user_id: user.id,
           organizer_name: safeOrganizerName,
           join_code: joinCode,
+          event_date: eventDate || null,
+          event_time: eventTime || null,
+          location: location.trim() || null,
           player_count: playerCount,
           courts,
           rounds,
@@ -212,60 +218,35 @@ export default function CreateTournamentPage() {
         <div className="grid">
           <div>
             <label className="label">Event name</label>
-            <input
-              className="input"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
+            <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
 
           <div>
             <label className="label">Organizer name</label>
-            <input
-              className="input"
-              value={organizerName}
-              onChange={(e) => setOrganizerName(e.target.value)}
-            />
+            <input className="input" value={organizerName} onChange={(e) => setOrganizerName(e.target.value)} />
           </div>
 
-          <Stepper
-            label="Number of players"
-            value={playerCount}
-            min={4}
-            max={40}
-            onChange={setPlayerCount}
-          />
+          <div>
+            <label className="label">Date</label>
+            <input className="input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          </div>
 
-          <Stepper
-            label="Courts"
-            value={courts}
-            min={1}
-            max={20}
-            onChange={setCourts}
-          />
+          <div>
+            <label className="label">Time</label>
+            <input className="input" type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
+          </div>
 
-          <Stepper
-            label="Rounds"
-            value={rounds}
-            min={1}
-            max={30}
-            onChange={setRounds}
-          />
+          <div>
+            <label className="label">Place</label>
+            <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Pickleball courts, gym, park..." />
+          </div>
 
-          <Stepper
-            label="Games to"
-            value={gamesTo}
-            min={1}
-            max={21}
-            onChange={setGamesTo}
-          />
+          <Stepper label="Number of players" value={playerCount} min={4} max={40} onChange={setPlayerCount} />
+          <Stepper label="Courts" value={courts} min={1} max={20} onChange={setCourts} />
+          <Stepper label="Rounds" value={rounds} min={1} max={30} onChange={setRounds} />
+          <Stepper label="Games to" value={gamesTo} min={1} max={21} onChange={setGamesTo} />
 
-          <button
-            type="button"
-            className="button primary"
-            onClick={handleCreate}
-            disabled={isCreating}
-          >
+          <button type="button" className="button primary" onClick={handleCreate} disabled={isCreating}>
             {isCreating ? 'Creating...' : 'Create tournament'}
           </button>
 

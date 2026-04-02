@@ -42,6 +42,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
   const [newNames, setNewNames] = useState<Record<string, string>>({});
+  const [isSavingNames, setIsSavingNames] = useState(false);
 
   const claimedSlot = useMemo(
     () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
@@ -104,7 +105,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
 
     if (claimedSlot) {
-      setMessage('You already claimed a slot in this tournament.');
+      setMessage('You already claimed a spot in this tournament.');
       return;
     }
 
@@ -125,20 +126,16 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   async function saveAllPlayerNames() {
     setMessage('');
+    setIsSavingNames(true);
 
-    const rows = playerSlots
-      .map((slot) => ({
-        id: slot.id,
-        display_name: (newNames[slot.id] ?? '').trim(),
-      }))
-      .filter((row) => row.display_name !== '');
-
-    if (!rows.length) {
-      setMessage('No player name changes to save.');
-      return;
-    }
+    const rows = playerSlots.map((slot) => ({
+      id: slot.id,
+      display_name: (newNames[slot.id] ?? '').trim(),
+    }));
 
     const { error } = await supabase.from('tournament_players').upsert(rows);
+
+    setIsSavingNames(false);
 
     if (error) {
       setMessage(error.message);
@@ -186,43 +183,62 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         <div className="card-subtitle">Claim your spot, or edit all player names and save once at the bottom.</div>
 
         <div className="grid">
-          {playerSlots.map((slot) => (
-            <div key={slot.id} className="list-item">
-              <div className="row-between">
-                <div>
-                  <div><strong>Player {slot.slot_number}</strong></div>
-                  <div className="muted">{slot.display_name || 'No name yet'}</div>
+          {playerSlots.map((slot) => {
+            const isMine = slot.claimed_by_user_id === userId;
+            const isClaimedBySomeone = !!slot.claimed_by_user_id;
+            const canClaim = !isClaimedBySomeone && !claimedSlot;
+
+            return (
+              <div
+                key={slot.id}
+                className="list-item"
+                style={{
+                  borderColor: isMine ? 'rgba(163,230,53,.45)' : undefined,
+                  boxShadow: isMine ? '0 0 0 1px rgba(163,230,53,.18) inset' : undefined,
+                }}
+              >
+                <div className="row-between">
+                  <div>
+                    <div><strong>Player {slot.slot_number}</strong></div>
+                    <div className="muted">{slot.display_name || 'No name yet'}</div>
+                  </div>
+
+                  <div>
+                    {isMine ? (
+                      <span className="tag green">Yours</span>
+                    ) : isClaimedBySomeone ? (
+                      <span className="tag green">Claimed</span>
+                    ) : canClaim ? (
+                      <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                        Claim
+                      </button>
+                    ) : (
+                      <button className="button secondary" disabled>
+                        Unavailable
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  {slot.claimed_by_user_id ? (
-                    <span className="tag green">Claimed</span>
-                  ) : (
-                    <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                      Claim
-                    </button>
-                  )}
+                <div className="row" style={{ marginTop: 12 }}>
+                  <input
+                    className="input"
+                    value={newNames[slot.id] ?? ''}
+                    onChange={(e) =>
+                      setNewNames((prev) => ({
+                        ...prev,
+                        [slot.id]: e.target.value,
+                      }))
+                    }
+                    placeholder={`Name for Player ${slot.slot_number}`}
+                  />
                 </div>
               </div>
+            );
+          })}
 
-              <div className="row" style={{ marginTop: 12 }}>
-                <input
-                  className="input"
-                  value={newNames[slot.id] ?? ''}
-                  onChange={(e) =>
-                    setNewNames((prev) => ({
-                      ...prev,
-                      [slot.id]: e.target.value,
-                    }))
-                  }
-                  placeholder={`Name for Player ${slot.slot_number}`}
-                />
-              </div>
-            </div>
-          ))}
-
-          <button className="button primary" onClick={saveAllPlayerNames}>
-            Save all player names
+          <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
+            {isSavingNames ? 'Saving...' : 'Save all player names'}
           </button>
         </div>
       </div>

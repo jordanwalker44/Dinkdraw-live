@@ -874,19 +874,23 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                       </div>
 
                       <div>
-                        {isMine ? (
-                          <span className="tag green">Yours</span>
-                        ) : isClaimedBySomeone ? (
-                          <span className="tag green">Claimed</span>
-                        ) : canClaim ? (
-                          <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                            Claim
-                          </button>
-                        ) : (
-                          <button className="button secondary" disabled>
-                            Locked
-                          </button>
-                        )}
+                       {isMine ? (
+  <span className="tag green">Yours</span>
+) : isClaimedBySomeone ? (
+  <span className="tag green">Claimed</span>
+) : tournament?.status === 'started' ? (
+  <button className="button secondary" disabled>
+    Locked
+  </button>
+) : canClaim ? (
+  <button className="button primary" onClick={() => claimSlot(slot.id)}>
+    Claim
+  </button>
+) : isOrganizer ? (
+  <span className="muted">Open</span>
+) : (
+  <span className="muted">Open</span>
+)}
                       </div>
                     </div>
 

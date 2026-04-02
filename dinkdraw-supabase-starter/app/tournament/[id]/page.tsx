@@ -55,6 +55,8 @@ type ScoreDraft = {
   team_b_score: string;
 };
 
+const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
+
 function pairKey(a: string, b: string) {
   return [a, b].sort().join('|');
 }
@@ -402,6 +404,18 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setTournament(tournamentData || null);
     setPlayerSlots(playersData || []);
     setMatches(matchesData || []);
+
+    if (tournamentData) {
+      try {
+        window.localStorage.setItem(
+          LAST_TOURNAMENT_KEY,
+          JSON.stringify({
+            id: tournamentData.id,
+            title: tournamentData.title,
+          })
+        );
+      } catch {}
+    }
 
     if ((playersData || []).length > 0) {
       setNewNames((prev) => {

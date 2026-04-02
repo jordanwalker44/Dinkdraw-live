@@ -322,6 +322,45 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return Array.from(roundSet).sort((a, b) => a - b);
   }, [matches, tournament]);
 
+  const currentRound = useMemo(() => {
+    if (!matches.length) return roundsAvailable[0] || 1;
+
+    for (const round of roundsAvailable) {
+      const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
+      if (!roundMatches.length) continue;
+
+      const allComplete = roundMatches.every((m) => m.is_complete);
+      if (!allComplete) return round;
+    }
+
+    return roundsAvailable[roundsAvailable.length - 1] || 1;
+  }, [matches, roundsAvailable]);
+
+  const roundStatusByRound = useMemo(() => {
+    const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
+
+    for (const round of roundsAvailable) {
+      const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
+      if (!roundMatches.length) {
+        statusMap.set(round, round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming');
+        continue;
+      }
+
+      const allComplete = roundMatches.every((m) => m.is_complete);
+      if (allComplete) {
+        statusMap.set(round, 'complete');
+      } else if (round === currentRound) {
+        statusMap.set(round, 'current');
+      } else if (round < currentRound) {
+        statusMap.set(round, 'complete');
+      } else {
+        statusMap.set(round, 'upcoming');
+      }
+    }
+
+    return statusMap;
+  }, [matches, roundsAvailable, currentRound]);
+
   const matchesForSelectedRound = useMemo(
     () => matches.filter((m) => m.round_number === selectedRound && !m.is_bye),
     [matches, selectedRound]
@@ -488,13 +527,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
 
     if (currentUserId) setUserId(currentUserId);
-
-    if ((matchesData || []).length > 0) {
-      const firstRound = [...new Set((matchesData || []).map((m) => m.round_number))].sort((a, b) => a - b)[0];
-      if (firstRound) setSelectedRound(firstRound);
-    } else if (tournamentData?.rounds) {
-      setSelectedRound(1);
-    }
   }
 
   useEffect(() => {
@@ -508,6 +540,22 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
     load();
   }, [params.id, supabase]);
+
+  useEffect(() => {
+    if (!roundsAvailable.length) return;
+    setSelectedRound((prev) => {
+      if (!roundsAvailable.includes(prev)) {
+        return currentRound;
+      }
+      return prev;
+    });
+  }, [roundsAvailable, currentRound]);
+
+  useEffect(() => {
+    if (tournament?.status === 'started' && matches.length > 0) {
+      setSelectedRound(currentRound);
+    }
+  }, [tournament?.status, matches.length, currentRound]);
 
   async function copyJoinCode() {
     try {
@@ -698,6 +746,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       await loadTournamentData(userId);
       setActiveTab('rounds');
+      setSelectedRound(1);
       setMessage('Tournament started.');
     } catch (err) {
       setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.');
@@ -744,6 +793,18 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     );
   }
 
+  function getNextIncompleteRound(updatedMatches: Match[]) {
+    for (const round of roundsAvailable) {
+      const roundMatches = updatedMatches.filter((m) => m.round_number === round && !m.is_bye);
+      if (!roundMatches.length) continue;
+
+      const allComplete = roundMatches.every((m) => m.is_complete);
+      if (!allComplete) return round;
+    }
+
+    return null;
+  }
+
   async function submitMatchScore(matchId: string) {
     const draft = scoreDrafts[matchId];
     if (!draft) {
@@ -781,15 +842,35 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       return;
     }
 
-    setMatches((prev) =>
-      prev.map((m) =>
-        m.id === matchId
-          ? { ...m, team_a_score: aNum, team_b_score: bNum, is_complete: true }
-          : m
-      )
+    const updatedMatches = matches.map((m) =>
+      m.id === matchId
+        ? { ...m, team_a_score: aNum, team_b_score: bNum, is_complete: true }
+        : m
     );
 
-    setMessage('Score submitted.');
+    setMatches(updatedMatches);
+
+    const submittedMatch = updatedMatches.find((m) => m.id === matchId);
+    const submittedRound = submittedMatch?.round_number ?? selectedRound;
+    const submittedRoundMatches = updatedMatches.filter(
+      (m) => m.round_number === submittedRound && !m.is_bye
+    );
+    const submittedRoundComplete =
+      submittedRoundMatches.length > 0 &&
+      submittedRoundMatches.every((m) => m.is_complete);
+
+    if (submittedRoundComplete) {
+      const nextRound = getNextIncompleteRound(updatedMatches);
+
+      if (nextRound && nextRound !== submittedRound) {
+        setSelectedRound(nextRound);
+        setMessage(`Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`);
+      } else {
+        setMessage('Score submitted. Final round complete.');
+      }
+    } else {
+      setMessage('Score submitted.');
+    }
   }
 
   function renderPlayerName(id: string | null) {
@@ -864,6 +945,12 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <span className="muted">Status</span>
             <strong>{tournament?.status === 'started' ? 'Started' : 'Setup'}</strong>
           </div>
+          {tournament?.status === 'started' ? (
+            <div className="row-between">
+              <span className="muted">Live Round</span>
+              <strong>Round {currentRound}</strong>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -996,32 +1083,41 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       {activeTab === 'rounds' && (
         <>
           <div className="row" style={{ gap: 10, overflowX: 'auto', marginBottom: 16 }}>
-            {roundsAvailable.map((round) => (
-              <button
-                key={round}
-                type="button"
-                className={`button ${selectedRound === round ? 'primary' : 'secondary'}`}
-                onClick={() => setSelectedRound(round)}
-                style={{
-                  minWidth: 72,
-                  minHeight: 56,
-                  flexShrink: 0,
-                  fontWeight: 800,
-                  fontSize: 20,
-                  transform: selectedRound === round ? 'scale(1.04)' : 'scale(1)',
-                  boxShadow:
-                    selectedRound === round ? '0 0 0 2px rgba(163,230,53,.25)' : undefined,
-                }}
-              >
-                R{round}
-              </button>
-            ))}
+            {roundsAvailable.map((round) => {
+              const status = roundStatusByRound.get(round);
+              const isSelected = selectedRound === round;
+
+              return (
+                <button
+                  key={round}
+                  type="button"
+                  className={`button ${isSelected ? 'primary' : 'secondary'}`}
+                  onClick={() => setSelectedRound(round)}
+                  style={{
+                    minWidth: 84,
+                    minHeight: 56,
+                    flexShrink: 0,
+                    fontWeight: 800,
+                    fontSize: 20,
+                    transform: isSelected ? 'scale(1.04)' : 'scale(1)',
+                    boxShadow: isSelected ? '0 0 0 2px rgba(163,230,53,.25)' : undefined,
+                    opacity: status === 'upcoming' ? 0.9 : 1,
+                  }}
+                >
+                  {status === 'complete' ? `✓ R${round}` : status === 'current' ? `● R${round}` : `R${round}`}
+                </button>
+              );
+            })}
           </div>
 
           <div className="card">
             <div className="card-title">Round {selectedRound}</div>
             <div className="card-subtitle">
-              Keep one round on screen at a time so players always know where they are.
+              {selectedRound === currentRound && tournament?.status === 'started'
+                ? 'This is the current live round.'
+                : roundStatusByRound.get(selectedRound) === 'complete'
+                ? 'This round is complete.'
+                : 'Keep one round on screen at a time so players always know where they are.'}
             </div>
 
             {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (

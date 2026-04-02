@@ -38,6 +38,17 @@ type Match = {
   is_bye: boolean;
 };
 
+type StandingRow = {
+  playerId: string;
+  name: string;
+  played: number;
+  wins: number;
+  losses: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+};
+
 function pairKey(a: string, b: string) {
   return [a, b].sort().join('|');
 }
@@ -230,6 +241,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
+  const [selectedRound, setSelectedRound] = useState(1);
 
   const claimedSlot = useMemo(
     () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
@@ -240,6 +253,113 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
     [playerSlots]
   );
+
+  const roundsAvailable = useMemo(() => {
+    const roundSet = new Set<number>();
+    matches.forEach((m) => roundSet.add(m.round_number));
+    if (!roundSet.size && tournament?.rounds) {
+      for (let i = 1; i <= tournament.rounds; i += 1) roundSet.add(i);
+    }
+    return Array.from(roundSet).sort((a, b) => a - b);
+  }, [matches, tournament]);
+
+  const matchesForSelectedRound = useMemo(
+    () => matches.filter((m) => m.round_number === selectedRound && !m.is_bye),
+    [matches, selectedRound]
+  );
+
+  const byesForSelectedRound = useMemo(
+    () => matches.filter((m) => m.round_number === selectedRound && m.is_bye),
+    [matches, selectedRound]
+  );
+
+  const standings = useMemo<StandingRow[]>(() => {
+    const rows = new Map<string, StandingRow>();
+
+    for (const slot of playerSlots) {
+      rows.set(slot.id, {
+        playerId: slot.id,
+        name: slot.display_name || `Player ${slot.slot_number}`,
+        played: 0,
+        wins: 0,
+        losses: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        pointDiff: 0,
+      });
+    }
+
+    for (const match of matches) {
+      if (
+        match.is_bye ||
+        match.team_a_score === null ||
+        match.team_b_score === null ||
+        match.team_a_player_1_id === null ||
+        match.team_a_player_2_id === null ||
+        match.team_b_player_1_id === null ||
+        match.team_b_player_2_id === null
+      ) {
+        continue;
+      }
+
+      const aIds = [match.team_a_player_1_id, match.team_a_player_2_id];
+      const bIds = [match.team_b_player_1_id, match.team_b_player_2_id];
+
+      for (const id of [...aIds, ...bIds]) {
+        const row = rows.get(id);
+        if (!row) continue;
+        row.played += 1;
+      }
+
+      for (const id of aIds) {
+        const row = rows.get(id);
+        if (!row) continue;
+        row.pointsFor += match.team_a_score;
+        row.pointsAgainst += match.team_b_score;
+      }
+
+      for (const id of bIds) {
+        const row = rows.get(id);
+        if (!row) continue;
+        row.pointsFor += match.team_b_score;
+        row.pointsAgainst += match.team_a_score;
+      }
+
+      if (match.team_a_score > match.team_b_score) {
+        for (const id of aIds) {
+          const row = rows.get(id);
+          if (row) row.wins += 1;
+        }
+        for (const id of bIds) {
+          const row = rows.get(id);
+          if (row) row.losses += 1;
+        }
+      } else if (match.team_b_score > match.team_a_score) {
+        for (const id of bIds) {
+          const row = rows.get(id);
+          if (row) row.wins += 1;
+        }
+        for (const id of aIds) {
+          const row = rows.get(id);
+          if (row) row.losses += 1;
+        }
+      }
+    }
+
+    const result = Array.from(rows.values()).map((row) => ({
+      ...row,
+      pointDiff: row.pointsFor - row.pointsAgainst,
+    }));
+
+    result.sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
+      return a.name.localeCompare(b.name);
+    });
+
+    return result;
+  }, [playerSlots, matches]);
 
   async function loadTournamentData(currentUserId?: string) {
     const { data: tournamentData, error: tournamentError } = await supabase
@@ -266,7 +386,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       .from('matches')
       .select('*')
       .eq('tournament_id', params.id)
-      .order('round_number', { ascending: true });
+      .order('round_number', { ascending: true })
+      .order('court_number', { ascending: true });
 
     if (matchesError) {
       setMessage(matchesError.message);
@@ -280,9 +401,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       setNewNames((prev) => {
         const next = { ...prev };
         for (const slot of playersData || []) {
-          if (!(slot.id in next)) {
-            next[slot.id] = slot.display_name || '';
-          }
+          if (!(slot.id in next)) next[slot.id] = slot.display_name || '';
         }
         return next;
       });
@@ -290,6 +409,13 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
     if (currentUserId) {
       setUserId(currentUserId);
+    }
+
+    if ((matchesData || []).length > 0) {
+      const firstRound = [...new Set((matchesData || []).map((m) => m.round_number))].sort((a, b) => a - b)[0];
+      if (firstRound) setSelectedRound(firstRound);
+    } else if (tournamentData?.rounds) {
+      setSelectedRound(1);
     }
   }
 
@@ -350,34 +476,34 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setMessage('Spot claimed.');
   }
 
- async function saveAllPlayerNames() {
-  setMessage('');
-  setIsSavingNames(true);
+  async function saveAllPlayerNames() {
+    setMessage('');
+    setIsSavingNames(true);
 
-  try {
-    for (const slot of playerSlots) {
-      const nextName = (newNames[slot.id] ?? '').trim();
+    try {
+      for (const slot of playerSlots) {
+        const nextName = (newNames[slot.id] ?? '').trim();
 
-      const { error } = await supabase
-        .from('tournament_players')
-        .update({ display_name: nextName })
-        .eq('id', slot.id);
+        const { error } = await supabase
+          .from('tournament_players')
+          .update({ display_name: nextName })
+          .eq('id', slot.id);
 
-      if (error) {
-        setMessage(`Save failed: ${error.message}`);
-        setIsSavingNames(false);
-        return;
+        if (error) {
+          setMessage(`Save failed: ${error.message}`);
+          setIsSavingNames(false);
+          return;
+        }
       }
+
+      await loadTournamentData(userId);
+      setMessage('Player names saved.');
+    } catch (err) {
+      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
     }
 
-    await loadTournamentData(userId);
-    setMessage('Player names saved.');
-  } catch (err) {
-    setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
+    setIsSavingNames(false);
   }
-
-  setIsSavingNames(false);
-}
 
   async function generateSchedule() {
     setMessage('');
@@ -441,6 +567,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       }
 
       await loadTournamentData(userId);
+      setActiveTab('rounds');
       setMessage('Schedule generated.');
     } catch (err) {
       setMessage(err instanceof Error ? `Generate failed: ${err.message}` : 'Generate failed.');
@@ -474,6 +601,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return playersById[id]?.display_name || 'Player';
   }
 
+  function renderTeam(a: string | null, b: string | null) {
+    return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
+  }
+
   return (
     <main className="page-shell">
       <div className="hero">
@@ -490,151 +621,245 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       {message ? <div className="notice" style={{ marginBottom: 16 }}>{message}</div> : null}
 
-      <div className="card">
-        <div className="card-title">Player spots</div>
-        <div className="card-subtitle">
-          Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.
-        </div>
-
-        {isLoading ? (
-          <div className="muted">Loading player spots...</div>
-        ) : (
-          <div className="grid">
-            {playerSlots.map((slot) => {
-              const isMine = slot.claimed_by_user_id === userId;
-              const isClaimedBySomeone = !!slot.claimed_by_user_id;
-              const isOrganizer = tournament?.organizer_user_id === userId;
-              const canClaim = !isClaimedBySomeone && !claimedSlot;
-              const canEditName = isOrganizer || isMine || !isClaimedBySomeone;
-
-              return (
-                <div
-                  key={slot.id}
-                  className="list-item"
-                  style={{
-                    borderColor: isMine ? 'rgba(163,230,53,.45)' : undefined,
-                    boxShadow: isMine ? '0 0 0 1px rgba(163,230,53,.18) inset' : undefined,
-                  }}
-                >
-                  <div className="row-between">
-                    <div>
-                      <div><strong>Player {slot.slot_number}</strong></div>
-                      <div className="muted">{slot.display_name || 'Open spot'}</div>
-                    </div>
-
-                    <div>
-                      {isMine ? (
-                        <span className="tag green">Yours</span>
-                      ) : isClaimedBySomeone ? (
-                        <span className="tag green">Claimed</span>
-                      ) : canClaim ? (
-                        <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                          Claim
-                        </button>
-                      ) : isOrganizer ? (
-                        <span className="muted">Open</span>
-                      ) : (
-                        <button className="button secondary" disabled>
-                          Unavailable
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="row" style={{ marginTop: 12 }}>
-                    <input
-                      className="input"
-                      value={newNames[slot.id] ?? ''}
-                      onChange={(e) =>
-                        setNewNames((prev) => ({
-                          ...prev,
-                          [slot.id]: e.target.value,
-                        }))
-                      }
-                      placeholder={`Name for Player ${slot.slot_number}`}
-                      disabled={!canEditName}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-            <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
-              {isSavingNames ? 'Saving...' : 'Save all player names'}
-            </button>
-
-            <button className="button secondary" onClick={generateSchedule} disabled={isGenerating}>
-              {isGenerating ? 'Generating...' : 'Generate round robin schedule'}
-            </button>
-          </div>
-        )}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: 12,
+          marginBottom: 18,
+        }}
+      >
+        <button
+          className={`button ${activeTab === 'players' ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab('players')}
+          type="button"
+        >
+          Players
+        </button>
+        <button
+          className={`button ${activeTab === 'rounds' ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab('rounds')}
+          type="button"
+        >
+          Rounds
+        </button>
+        <button
+          className={`button ${activeTab === 'standings' ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab('standings')}
+          type="button"
+        >
+          Standings
+        </button>
       </div>
 
-      <div className="card">
-        <div className="card-title">Matches</div>
-        <div className="card-subtitle">Generated matches will appear here.</div>
-
-        {!matches.length ? (
-          <div className="muted">
-            No matches yet. Save player names, then tap “Generate round robin schedule”.
+      {activeTab === 'players' && (
+        <div className="card">
+          <div className="card-title">Player spots</div>
+          <div className="card-subtitle">
+            Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.
           </div>
-        ) : (
-          <div className="grid">
-            {matches.map((match) => (
-              <div key={match.id} className="list-item">
-                <div className="row-between" style={{ marginBottom: 12 }}>
-                  <div><strong>Round {match.round_number}</strong></div>
-                  <div className="muted">
-                    {match.is_bye ? 'Bye' : `Court ${match.court_number ?? '-'}`}
-                  </div>
-                </div>
 
-                {match.is_bye ? (
-                  <div className="muted">
-                    Bye: {renderPlayerName(match.team_a_player_1_id)}
-                  </div>
-                ) : (
-                  <>
-                    <div style={{ marginBottom: 10 }}>
-                      <strong>
-                        {renderPlayerName(match.team_a_player_1_id)} & {renderPlayerName(match.team_a_player_2_id)}
-                      </strong>
+          {isLoading ? (
+            <div className="muted">Loading player spots...</div>
+          ) : (
+            <div className="grid">
+              {playerSlots.map((slot) => {
+                const isMine = slot.claimed_by_user_id === userId;
+                const isClaimedBySomeone = !!slot.claimed_by_user_id;
+                const isOrganizer = tournament?.organizer_user_id === userId;
+                const canClaim = !isClaimedBySomeone && !claimedSlot;
+                const canEditName = isOrganizer || isMine || !isClaimedBySomeone;
+
+                return (
+                  <div
+                    key={slot.id}
+                    className="list-item"
+                    style={{
+                      borderColor: isMine ? 'rgba(163,230,53,.45)' : undefined,
+                      boxShadow: isMine ? '0 0 0 1px rgba(163,230,53,.18) inset' : undefined,
+                    }}
+                  >
+                    <div className="row-between">
+                      <div>
+                        <div><strong>Player {slot.slot_number}</strong></div>
+                        <div className="muted">{slot.display_name || 'Open spot'}</div>
+                      </div>
+
+                      <div>
+                        {isMine ? (
+                          <span className="tag green">Yours</span>
+                        ) : isClaimedBySomeone ? (
+                          <span className="tag green">Claimed</span>
+                        ) : canClaim ? (
+                          <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                            Claim
+                          </button>
+                        ) : isOrganizer ? (
+                          <span className="muted">Open</span>
+                        ) : (
+                          <button className="button secondary" disabled>
+                            Unavailable
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="muted" style={{ marginBottom: 10 }}>vs</div>
-
-                    <div style={{ marginBottom: 14 }}>
-                      <strong>
-                        {renderPlayerName(match.team_b_player_1_id)} & {renderPlayerName(match.team_b_player_2_id)}
-                      </strong>
-                    </div>
-
-                    <div className="row">
+                    <div className="row" style={{ marginTop: 12 }}>
                       <input
                         className="input"
-                        style={{ width: 100, textAlign: 'center', fontSize: 24, fontWeight: 700 }}
-                        type="number"
-                        value={match.team_a_score ?? ''}
-                        onChange={(e) => updateMatchScore(match.id, 'team_a_score', e.target.value)}
-                        placeholder="0"
-                      />
-                      <span className="muted">vs</span>
-                      <input
-                        className="input"
-                        style={{ width: 100, textAlign: 'center', fontSize: 24, fontWeight: 700 }}
-                        type="number"
-                        value={match.team_b_score ?? ''}
-                        onChange={(e) => updateMatchScore(match.id, 'team_b_score', e.target.value)}
-                        placeholder="0"
+                        value={newNames[slot.id] ?? ''}
+                        onChange={(e) =>
+                          setNewNames((prev) => ({
+                            ...prev,
+                            [slot.id]: e.target.value,
+                          }))
+                        }
+                        placeholder={`Name for Player ${slot.slot_number}`}
+                        disabled={!canEditName}
                       />
                     </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                );
+              })}
+
+              <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
+                {isSavingNames ? 'Saving...' : 'Save all player names'}
+              </button>
+
+              <button className="button secondary" onClick={generateSchedule} disabled={isGenerating}>
+                {isGenerating ? 'Generating...' : 'Generate round robin schedule'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'rounds' && (
+        <>
+          <div className="row" style={{ gap: 10, overflowX: 'auto', marginBottom: 16 }}>
+            {roundsAvailable.map((round) => (
+              <button
+                key={round}
+                type="button"
+                className={`button ${selectedRound === round ? 'primary' : 'secondary'}`}
+                onClick={() => setSelectedRound(round)}
+                style={{
+                  minWidth: 64,
+                  flexShrink: 0,
+                }}
+              >
+                R{round}
+              </button>
             ))}
           </div>
-        )}
-      </div>
+
+          <div className="card">
+            <div className="card-title">Round {selectedRound}</div>
+            <div className="card-subtitle">
+              Keep one round on screen at a time so players always know where they are.
+            </div>
+
+            {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
+              <div className="muted">
+                No matches in this round yet. Generate the schedule first.
+              </div>
+            ) : (
+              <>
+                <div className="two-col">
+                  {matchesForSelectedRound.map((match) => (
+                    <div key={match.id} className="list-item" style={{ marginBottom: 16 }}>
+                      <div
+                        className="tag green"
+                        style={{ marginBottom: 14, display: 'inline-block' }}
+                      >
+                        Court {match.court_number ?? '-'}
+                      </div>
+
+                      <div style={{ fontWeight: 700, marginBottom: 10 }}>
+                        {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                      </div>
+
+                      <div style={{ fontWeight: 700, marginBottom: 18 }}>
+                        {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+                      </div>
+
+                      <div className="row" style={{ marginBottom: 14 }}>
+                        <input
+                          className="input"
+                          style={{ width: 92, textAlign: 'center', fontSize: 22, fontWeight: 700 }}
+                          type="number"
+                          value={match.team_a_score ?? ''}
+                          onChange={(e) => updateMatchScore(match.id, 'team_a_score', e.target.value)}
+                          placeholder="0"
+                        />
+                        <input
+                          className="input"
+                          style={{ width: 92, textAlign: 'center', fontSize: 22, fontWeight: 700 }}
+                          type="number"
+                          value={match.team_b_score ?? ''}
+                          onChange={(e) => updateMatchScore(match.id, 'team_b_score', e.target.value)}
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {byesForSelectedRound.length ? (
+                  <div className="card" style={{ marginTop: 12 }}>
+                    <div className="card-title" style={{ fontSize: 18 }}>Byes this round</div>
+                    <div className="grid">
+                      {byesForSelectedRound.map((bye) => (
+                        <div key={bye.id} className="list-item">
+                          {renderPlayerName(bye.team_a_player_1_id)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'standings' && (
+        <div className="card">
+          <div className="card-title">Standings</div>
+          <div className="card-subtitle">
+            Wins first, then point differential.
+          </div>
+
+          {!standings.length ? (
+            <div className="muted">No players yet.</div>
+          ) : (
+            <div className="grid">
+              {standings.map((row, index) => (
+                <div key={row.playerId} className="list-item">
+                  <div className="row-between">
+                    <div>
+                      <div style={{ fontWeight: 700 }}>
+                        {index + 1}. {row.name}
+                      </div>
+                      <div className="muted">
+                        {row.wins}-{row.losses} • Played {row.played}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontWeight: 700 }}>
+                        {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
+                      </div>
+                      <div className="muted">
+                        {row.pointsFor}-{row.pointsAgainst}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </main>
   );
 }

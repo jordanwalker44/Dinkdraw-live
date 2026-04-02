@@ -1,99 +1,118 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 
-type Tournament = {
-  id: string;
-  title: string;
-  join_code: string;
-  organizer_user_id: string;
-  organizer_name: string | null;
-  player_count: number;
-  courts: number;
-  rounds: number;
-  games_to: number;
-  status: string;
-};
+function makeJoinCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
 
-type PlayerSlot = {
-  id: string;
-  slot_number: number;
-  display_name: string | null;
-  claimed_by_user_id: string | null;
-};
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
 
-type Match = {
-  id: string;
-  round_number: number;
-  court_number: number | null;
-  team_a_score: number | null;
-  team_b_score: number | null;
-  is_bye: boolean;
-};
+function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '56px 1fr 56px',
+          gap: 12,
+          alignItems: 'center',
+        }}
+      >
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value - 1, min, max))}
+          disabled={value <= min}
+          aria-label={`Decrease ${label}`}
+          style={{ height: 56, fontSize: 24 }}
+        >
+          −
+        </button>
 
-export default function TournamentDetailPage({ params }: { params: { id: string } }) {
-  const supabase = getSupabaseBrowserClient();
+        <div
+          className="input"
+          style={{
+            textAlign: 'center',
+            fontSize: 28,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 56,
+          }}
+        >
+          {value}
+        </div>
 
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [message, setMessage] = useState('');
-  const [userId, setUserId] = useState('');
-  const [newNames, setNewNames] = useState<Record<string, string>>({});
-  const [isSavingNames, setIsSavingNames] = useState(false);
-
-  const claimedSlot = useMemo(
-    () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
-    [playerSlots, userId]
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value + 1, min, max))}
+          disabled={value >= max}
+          aria-label={`Increase ${label}`}
+          style={{ height: 56, fontSize: 24 }}
+        >
+          +
+        </button>
+      </div>
+    </div>
   );
+}
 
-  async function loadTournamentData(currentUserId?: string) {
-    const { data: tournamentData } = await supabase
-      .from('tournaments')
-      .select('*')
-      .eq('id', params.id)
-      .single();
+export default function CreateTournamentPage() {
+  const supabase = getSupabaseBrowserClient();
+  const router = useRouter();
 
-    const { data: playersData } = await supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('slot_number', { ascending: true });
-
-    const { data: matchesData } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('round_number', { ascending: true });
-
-    setTournament(tournamentData || null);
-    setPlayerSlots(playersData || []);
-    setMatches(matchesData || []);
-
-    const initialNames: Record<string, string> = {};
-    (playersData || []).forEach((slot) => {
-      initialNames[slot.id] = slot.display_name || '';
-    });
-    setNewNames(initialNames);
-
-    if (currentUserId) {
-      setUserId(currentUserId);
-    }
-  }
+  const [title, setTitle] = useState('Saturday Round Robin');
+  const [organizerName, setOrganizerName] = useState('');
+  const [playerCount, setPlayerCount] = useState(8);
+  const [courts, setCourts] = useState(2);
+  const [rounds, setRounds] = useState(4);
+  const [gamesTo, setGamesTo] = useState(11);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    async function load() {
+    async function loadUser() {
       const { data: authData } = await supabase.auth.getUser();
-      const currentUserId = authData.user?.id ?? '';
-      await loadTournamentData(currentUserId);
+      const user = authData.user;
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name, email')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.display_name) {
+        setOrganizerName(profile.display_name);
+      } else {
+        setOrganizerName(user.email?.split('@')[0] || '');
+      }
     }
 
-    load();
-  }, [params.id, supabase]);
+    loadUser();
+  }, [supabase]);
 
-  async function claimSlot(slotId: string) {
+  async function handleCreate() {
     setMessage('');
 
     const { data: authData } = await supabase.auth.getUser();
@@ -104,185 +123,137 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       return;
     }
 
-    if (claimedSlot) {
-      setMessage('You already claimed a spot in this tournament.');
+    const safeOrganizerName =
+      organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
+
+    const { error: profileError } = await supabase.from('profiles').upsert({
+      id: user.id,
+      display_name: safeOrganizerName,
+      email: user.email,
+    });
+
+    if (profileError) {
+      setMessage(profileError.message);
       return;
     }
 
-    const { error } = await supabase
-      .from('tournament_players')
-      .update({ claimed_by_user_id: user.id })
-      .eq('id', slotId)
-      .is('claimed_by_user_id', null);
+    const joinCode = makeJoinCode();
 
-    if (error) {
-      setMessage(error.message);
+    const { data: tournament, error } = await supabase
+      .from('tournaments')
+      .insert({
+        title,
+        organizer_user_id: user.id,
+        organizer_name: safeOrganizerName,
+        join_code: joinCode,
+        player_count: playerCount,
+        courts,
+        rounds,
+        games_to: gamesTo,
+        status: 'draft',
+      })
+      .select()
+      .single();
+
+    if (error || !tournament) {
+      setMessage(error?.message || 'Could not create tournament.');
       return;
     }
 
-    await loadTournamentData(user.id);
-    setMessage('Spot claimed.');
-  }
-
-  async function saveAllPlayerNames() {
-    setMessage('');
-    setIsSavingNames(true);
-
-    const rows = playerSlots.map((slot) => ({
-      id: slot.id,
-      display_name: (newNames[slot.id] ?? '').trim(),
+    const playerRows = Array.from({ length: playerCount }, (_, idx) => ({
+      tournament_id: tournament.id,
+      slot_number: idx + 1,
+      display_name: '',
     }));
 
-    const { error } = await supabase.from('tournament_players').upsert(rows);
+    const { error: playersError } = await supabase
+      .from('tournament_players')
+      .insert(playerRows);
 
-    setIsSavingNames(false);
-
-    if (error) {
-      setMessage(error.message);
+    if (playersError) {
+      setMessage(playersError.message);
       return;
     }
 
-    await loadTournamentData(userId);
-    setMessage('Player names saved.');
-  }
-
-  async function updateMatchScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
-    const numeric = value === '' ? null : Math.max(0, Number(value));
-
-    const { error } = await supabase
-      .from('matches')
-      .update({ [field]: numeric })
-      .eq('id', matchId);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    await loadTournamentData(userId);
+    router.push(`/tournament/${tournament.id}`);
   }
 
   return (
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <h1 className="hero-title">{tournament?.title || 'Tournament'}</h1>
+          <img
+            src="/dinkdraw-logo.png"
+            alt="DinkDraw logo"
+            className="hero-logo"
+          />
+          <h1 className="hero-title">Create Tournament</h1>
           <p className="hero-subtitle">
-            Join code: <span className="code-pill">{tournament?.join_code || '...'}</span>
+            This writes a real tournament to Supabase.
           </p>
         </div>
       </div>
 
       <TopNav />
 
-      {message ? <div className="notice" style={{ marginBottom: 16 }}>{message}</div> : null}
-
       <div className="card">
-        <div className="card-title">Player spots</div>
-        <div className="card-subtitle">Claim your spot, or edit all player names and save once at the bottom.</div>
-
         <div className="grid">
-          {playerSlots.map((slot) => {
-            const isMine = slot.claimed_by_user_id === userId;
-            const isClaimedBySomeone = !!slot.claimed_by_user_id;
-            const canClaim = !isClaimedBySomeone && !claimedSlot;
+          <div>
+            <label className="label">Event name</label>
+            <input
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
 
-            return (
-              <div
-                key={slot.id}
-                className="list-item"
-                style={{
-                  borderColor: isMine ? 'rgba(163,230,53,.45)' : undefined,
-                  boxShadow: isMine ? '0 0 0 1px rgba(163,230,53,.18) inset' : undefined,
-                }}
-              >
-                <div className="row-between">
-                  <div>
-                    <div><strong>Player {slot.slot_number}</strong></div>
-                    <div className="muted">{slot.display_name || 'No name yet'}</div>
-                  </div>
+          <div>
+            <label className="label">Organizer name</label>
+            <input
+              className="input"
+              value={organizerName}
+              onChange={(e) => setOrganizerName(e.target.value)}
+            />
+          </div>
 
-                  <div>
-                    {isMine ? (
-                      <span className="tag green">Yours</span>
-                    ) : isClaimedBySomeone ? (
-                      <span className="tag green">Claimed</span>
-                    ) : canClaim ? (
-                      <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                        Claim
-                      </button>
-                    ) : (
-                      <button className="button secondary" disabled>
-                        Unavailable
-                      </button>
-                    )}
-                  </div>
-                </div>
+          <Stepper
+            label="Number of players"
+            value={playerCount}
+            min={4}
+            max={40}
+            onChange={setPlayerCount}
+          />
 
-                <div className="row" style={{ marginTop: 12 }}>
-                  <input
-                    className="input"
-                    value={newNames[slot.id] ?? ''}
-                    onChange={(e) =>
-                      setNewNames((prev) => ({
-                        ...prev,
-                        [slot.id]: e.target.value,
-                      }))
-                    }
-                    placeholder={`Name for Player ${slot.slot_number}`}
-                  />
-                </div>
-              </div>
-            );
-          })}
+          <Stepper
+            label="Courts"
+            value={courts}
+            min={1}
+            max={20}
+            onChange={setCourts}
+          />
 
-          <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
-            {isSavingNames ? 'Saving...' : 'Save all player names'}
+          <Stepper
+            label="Rounds"
+            value={rounds}
+            min={1}
+            max={30}
+            onChange={setRounds}
+          />
+
+          <Stepper
+            label="Games to"
+            value={gamesTo}
+            min={1}
+            max={21}
+            onChange={setGamesTo}
+          />
+
+          <button className="button primary" onClick={handleCreate}>
+            Create tournament
           </button>
+
+          {message ? <div className="notice">{message}</div> : null}
         </div>
-      </div>
-
-      <div className="card">
-        <div className="card-title">Matches</div>
-        <div className="card-subtitle">This starter reads and updates saved matches.</div>
-
-        {!matches.length ? (
-          <div className="muted">
-            No matches yet. Next build step: generate the schedule and insert rows into the matches table.
-          </div>
-        ) : (
-          <div className="grid">
-            {matches.map((match) => (
-              <div key={match.id} className="list-item">
-                <div className="row-between" style={{ marginBottom: 12 }}>
-                  <div><strong>Round {match.round_number}</strong></div>
-                  <div className="muted">Court {match.court_number ?? '-'}</div>
-                </div>
-
-                <div className="row">
-                  <input
-                    className="input"
-                    style={{ width: 100, textAlign: 'center', fontSize: 24, fontWeight: 700 }}
-                    type="number"
-                    value={match.team_a_score ?? ''}
-                    onChange={(e) => updateMatchScore(match.id, 'team_a_score', e.target.value)}
-                    placeholder="0"
-                  />
-                  <span className="muted">vs</span>
-                  <input
-                    className="input"
-                    style={{ width: 100, textAlign: 'center', fontSize: 24, fontWeight: 700 }}
-                    type="number"
-                    value={match.team_b_score ?? ''}
-                    onChange={(e) => updateMatchScore(match.id, 'team_b_score', e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </main>
   );

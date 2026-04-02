@@ -11,25 +11,63 @@ export default function AccountPage() {
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [name, setName] = useState('');
+  const [profileName, setProfileName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const [message, setMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
       const { data } = await supabase.auth.getUser();
-      setUserEmail(data.user?.email ?? '');
+      const user = data.user;
+
+      setUserEmail(user?.email ?? '');
+      setEmail(user?.email ?? '');
+
+      if (!user) {
+        setProfileName('');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
+      setProfileName(resolvedName);
+      setName(resolvedName);
     }
 
     loadUser();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? '');
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const user = session?.user;
+      setUserEmail(user?.email ?? '');
+      setEmail(user?.email ?? '');
+
+      if (!user) {
+        setProfileName('');
+        setName('');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
+      setProfileName(resolvedName);
+      setName(resolvedName);
     });
 
     return () => {
@@ -72,6 +110,9 @@ export default function AccountPage() {
           await supabase.from('lifetime_stats').upsert({
             user_id: data.user.id,
           });
+
+          setProfileName(displayName);
+          setName(displayName);
         }
 
         setUserEmail(email.trim());
@@ -93,7 +134,19 @@ export default function AccountPage() {
         return;
       }
 
-      setUserEmail(data.user.email ?? email.trim());
+      const signedInEmail = data.user.email ?? email.trim();
+      setUserEmail(signedInEmail);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      const resolvedName = profile?.display_name || signedInEmail.split('@')[0] || '';
+      setProfileName(resolvedName);
+      setName(resolvedName);
+
       setMessage('You are now signed in.');
       setPassword('');
     } catch (err) {
@@ -103,6 +156,39 @@ export default function AccountPage() {
     setIsLoading(false);
   }
 
+  async function handleSaveDisplayName() {
+    setMessage('');
+
+    const { data } = await supabase.auth.getUser();
+    const user = data.user;
+
+    if (!user) {
+      setMessage('Sign in first.');
+      return;
+    }
+
+    const nextName = profileName.trim() || user.email?.split('@')[0] || 'Player';
+
+    setIsSavingProfile(true);
+
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      display_name: nextName,
+      email: user.email,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setIsSavingProfile(false);
+      return;
+    }
+
+    setProfileName(nextName);
+    setName(nextName);
+    setMessage('Display name saved. New tournaments and claimed spots will use this name.');
+    setIsSavingProfile(false);
+  }
+
   async function handleSignOut() {
     setMessage('');
     setIsLoading(true);
@@ -110,6 +196,8 @@ export default function AccountPage() {
     await supabase.auth.signOut();
 
     setUserEmail('');
+    setProfileName('');
+    setName('');
     setPassword('');
     setMessage('You have been signed out.');
     setIsLoading(false);
@@ -144,6 +232,9 @@ export default function AccountPage() {
               <div>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>Signed In</div>
                 <div className="muted">{userEmail}</div>
+                <div className="muted" style={{ marginTop: 4 }}>
+                  Default display name: {profileName || 'Not set'}
+                </div>
               </div>
               <span className="tag green">Active</span>
             </div>
@@ -171,6 +262,39 @@ export default function AccountPage() {
           }}
         >
           {message}
+        </div>
+      ) : null}
+
+      {userEmail ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-title">Profile</div>
+          <div className="card-subtitle">
+            This is the default name DinkDraw will use when you create tournaments or claim spots.
+          </div>
+
+          <div className="grid">
+            <div>
+              <label className="label">Display name</label>
+              <input
+                className="input"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder="Your display name"
+              />
+            </div>
+
+            <button
+              className="button primary"
+              onClick={handleSaveDisplayName}
+              disabled={isSavingProfile}
+            >
+              {isSavingProfile ? 'Saving...' : 'Save Display Name'}
+            </button>
+
+            <button className="button secondary" onClick={handleSignOut} disabled={isLoading}>
+              {isLoading ? 'Working...' : 'Sign Out'}
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -251,12 +375,6 @@ export default function AccountPage() {
               ? 'Create Account'
               : 'Sign In'}
           </button>
-
-          {userEmail ? (
-            <button className="button secondary" onClick={handleSignOut} disabled={isLoading}>
-              {isLoading ? 'Working...' : 'Sign Out'}
-            </button>
-          ) : null}
         </div>
       </div>
     </main>

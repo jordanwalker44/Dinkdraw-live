@@ -12,12 +12,40 @@ type Tournament = {
   organizer_user_id: string;
   organizer_name: string | null;
   created_at?: string;
+  status?: string | null;
+  event_date?: string | null;
+  event_time?: string | null;
+  location?: string | null;
 };
 
 type PlayerSlot = {
   tournament_id: string;
   claimed_by_user_id: string | null;
 };
+
+function formatCreatedAt(value?: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function statusLabel(status?: string | null) {
+  return status === 'started' ? 'In Progress' : 'Setup';
+}
+
+function statusTagClass(status?: string | null) {
+  return status === 'started' ? 'tag green' : 'tag';
+}
+
+function eventSummary(tournament: Tournament) {
+  const parts = [tournament.event_date, tournament.event_time, tournament.location].filter(Boolean);
+  return parts.length ? parts.join(' • ') : 'No event details yet';
+}
 
 export default function MyTournamentsPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -29,6 +57,7 @@ export default function MyTournamentsPage() {
   useEffect(() => {
     async function load() {
       setIsLoading(true);
+      setMessage('');
 
       const { data: authData, error: authError } = await supabase.auth.getUser();
       if (authError) {
@@ -67,9 +96,12 @@ export default function MyTournamentsPage() {
         return;
       }
 
-      const joinedIds = Array.from(new Set((joinedSlots || []).map((row: PlayerSlot) => row.tournament_id)));
+      const joinedIds = Array.from(
+        new Set((joinedSlots || []).map((row: PlayerSlot) => row.tournament_id))
+      );
 
       let joinedTournaments: Tournament[] = [];
+
       if (joinedIds.length > 0) {
         const { data: joinedData, error: joinedTournamentError } = await supabase
           .from('tournaments')
@@ -94,7 +126,7 @@ export default function MyTournamentsPage() {
     }
 
     load();
-  }, []);
+  }, [supabase]);
 
   return (
     <main className="page-shell">
@@ -129,12 +161,30 @@ export default function MyTournamentsPage() {
                 {organized.map((tournament) => (
                   <Link key={tournament.id} href={`/tournament/${tournament.id}`}>
                     <div className="list-item" style={{ cursor: 'pointer' }}>
-                      <div className="row-between">
+                      <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
                         <div>
-                          <div><strong>{tournament.title}</strong></div>
-                          <div className="muted">Join code: {tournament.join_code}</div>
+                          <div style={{ marginBottom: 4 }}>
+                            <strong>{tournament.title}</strong>
+                          </div>
+                          <div className="muted" style={{ marginBottom: 4 }}>
+                            Join code: {tournament.join_code}
+                          </div>
+                          <div className="muted" style={{ marginBottom: 4 }}>
+                            {eventSummary(tournament)}
+                          </div>
+                          <div className="muted">
+                            {formatCreatedAt(tournament.created_at)
+                              ? `Created ${formatCreatedAt(tournament.created_at)}`
+                              : ''}
+                          </div>
                         </div>
-                        <span className="tag green">Organizer</span>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                          <span className="tag green">Organizer</span>
+                          <span className={statusTagClass(tournament.status)}>
+                            {statusLabel(tournament.status)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -154,12 +204,30 @@ export default function MyTournamentsPage() {
                 {joined.map((tournament) => (
                   <Link key={tournament.id} href={`/tournament/${tournament.id}`}>
                     <div className="list-item" style={{ cursor: 'pointer' }}>
-                      <div className="row-between">
+                      <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
                         <div>
-                          <div><strong>{tournament.title}</strong></div>
-                          <div className="muted">Join code: {tournament.join_code}</div>
+                          <div style={{ marginBottom: 4 }}>
+                            <strong>{tournament.title}</strong>
+                          </div>
+                          <div className="muted" style={{ marginBottom: 4 }}>
+                            Join code: {tournament.join_code}
+                          </div>
+                          <div className="muted" style={{ marginBottom: 4 }}>
+                            {eventSummary(tournament)}
+                          </div>
+                          <div className="muted">
+                            {formatCreatedAt(tournament.created_at)
+                              ? `Created ${formatCreatedAt(tournament.created_at)}`
+                              : ''}
+                          </div>
                         </div>
-                        <span className="tag green">Joined</span>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                          <span className="tag green">Joined</span>
+                          <span className={statusTagClass(tournament.status)}>
+                            {statusLabel(tournament.status)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </Link>

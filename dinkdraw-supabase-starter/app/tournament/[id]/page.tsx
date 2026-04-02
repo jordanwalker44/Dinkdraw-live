@@ -468,55 +468,59 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
   }
 
-  async function claimSlot(slotId: string) {
-    setMessage('');
+ async function claimSlot(slotId: string) {
+  setMessage('');
 
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData.user;
 
-    if (!user) {
-      setMessage('Sign in first.');
-      return;
-    }
-
-    if (claimedSlot) {
-      setMessage('You already claimed a spot in this tournament.');
-      return;
-    }
-
-    if (tournament?.status === 'started') {
-      setMessage('Tournament already started. Player spots are locked.');
-      return;
-    }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const updatePayload: { claimed_by_user_id: string; display_name?: string } = {
-      claimed_by_user_id: user.id,
-    };
-
-    if (profile?.display_name) {
-      updatePayload.display_name = profile.display_name;
-    }
-
-    const { error } = await supabase
-      .from('tournament_players')
-      .update(updatePayload)
-      .eq('id', slotId)
-      .is('claimed_by_user_id', null);
-
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
-
-    await loadTournamentData(user.id);
-    setMessage('Spot claimed.');
+  if (!user) {
+    setMessage('Sign in first.');
+    return;
   }
+
+  if (claimedSlot) {
+    setMessage('You already claimed a spot in this tournament.');
+    return;
+  }
+
+  if (tournament?.status === 'started') {
+    setMessage('Tournament already started. Player spots are locked.');
+    return;
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('display_name')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const claimedName =
+    profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
+
+  const { error } = await supabase
+    .from('tournament_players')
+    .update({
+      claimed_by_user_id: user.id,
+      display_name: claimedName,
+    })
+    .eq('id', slotId)
+    .is('claimed_by_user_id', null);
+
+  if (error) {
+    setMessage(error.message);
+    return;
+  }
+
+  // Update local input state immediately so the name box shows the claimed name.
+  setNewNames((prev) => ({
+    ...prev,
+    [slotId]: claimedName,
+  }));
+
+  await loadTournamentData(user.id);
+  setMessage('Spot claimed.');
+}
 
   async function saveAllPlayerNames() {
     setMessage('');

@@ -368,9 +368,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       .eq('id', params.id)
       .maybeSingle();
 
-    if (tournamentError) {
-      setMessage(tournamentError.message);
-    }
+    if (tournamentError) setMessage(tournamentError.message);
 
     const { data: playersData, error: playersError } = await supabase
       .from('tournament_players')
@@ -378,9 +376,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       .eq('tournament_id', params.id)
       .order('slot_number', { ascending: true });
 
-    if (playersError) {
-      setMessage(playersError.message);
-    }
+    if (playersError) setMessage(playersError.message);
 
     const { data: matchesData, error: matchesError } = await supabase
       .from('matches')
@@ -389,9 +385,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       .order('round_number', { ascending: true })
       .order('court_number', { ascending: true });
 
-    if (matchesError) {
-      setMessage(matchesError.message);
-    }
+    if (matchesError) setMessage(matchesError.message);
 
     setTournament(tournamentData || null);
     setPlayerSlots(playersData || []);
@@ -407,9 +401,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       });
     }
 
-    if (currentUserId) {
-      setUserId(currentUserId);
-    }
+    if (currentUserId) setUserId(currentUserId);
 
     if ((matchesData || []).length > 0) {
       const firstRound = [...new Set((matchesData || []).map((m) => m.round_number))].sort((a, b) => a - b)[0];
@@ -430,6 +422,16 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
     load();
   }, [params.id]);
+
+  async function copyJoinCode() {
+    try {
+      if (!tournament?.join_code) return;
+      await navigator.clipboard.writeText(tournament.join_code);
+      setMessage('Join code copied.');
+    } catch {
+      setMessage('Could not copy join code.');
+    }
+  }
 
   async function claimSlot(slotId: string) {
     setMessage('');
@@ -605,15 +607,43 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
+  function getWinnerStyle(team: 'a' | 'b', match: Match) {
+    if (match.team_a_score === null || match.team_b_score === null) return {};
+    const aWins = match.team_a_score > match.team_b_score;
+    const bWins = match.team_b_score > match.team_a_score;
+    const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
+
+    return isWinner
+      ? {
+          color: '#a3e635',
+        }
+      : {};
+  }
+
   return (
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">{tournament?.title || 'Tournament'}</h1>
-          <p className="hero-subtitle">
-            Join code: <span className="code-pill">{tournament?.join_code || '...'}</span>
-          </p>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              marginTop: 12,
+            }}
+          >
+            <p className="hero-subtitle" style={{ margin: 0 }}>
+              Join code: <span className="code-pill">{tournament?.join_code || '...'}</span>
+            </p>
+            <button type="button" className="button secondary" onClick={copyJoinCode}>
+              Copy
+            </button>
+          </div>
         </div>
       </div>
 
@@ -744,8 +774,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 className={`button ${selectedRound === round ? 'primary' : 'secondary'}`}
                 onClick={() => setSelectedRound(round)}
                 style={{
-                  minWidth: 64,
+                  minWidth: 72,
+                  minHeight: 56,
                   flexShrink: 0,
+                  fontWeight: 800,
+                  fontSize: 20,
                 }}
               >
                 R{round}
@@ -768,38 +801,57 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 <div className="two-col">
                   {matchesForSelectedRound.map((match) => (
                     <div key={match.id} className="list-item" style={{ marginBottom: 16 }}>
-                      <div
-                        className="tag green"
-                        style={{ marginBottom: 14, display: 'inline-block' }}
-                      >
+                      <div className="tag green" style={{ marginBottom: 16, display: 'inline-block' }}>
                         Court {match.court_number ?? '-'}
                       </div>
 
-                      <div style={{ fontWeight: 700, marginBottom: 10 }}>
-                        {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 92px',
+                          gap: 12,
+                          alignItems: 'center',
+                          marginBottom: 14,
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: 18, ...getWinnerStyle('a', match) }}>
+                          {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                        </div>
+                        <div>
+                          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Score</div>
+                          <input
+                            className="input"
+                            style={{ textAlign: 'center', fontSize: 22, fontWeight: 700 }}
+                            type="number"
+                            value={match.team_a_score ?? ''}
+                            onChange={(e) => updateMatchScore(match.id, 'team_a_score', e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
 
-                      <div style={{ fontWeight: 700, marginBottom: 18 }}>
-                        {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
-                      </div>
-
-                      <div className="row" style={{ marginBottom: 14 }}>
-                        <input
-                          className="input"
-                          style={{ width: 92, textAlign: 'center', fontSize: 22, fontWeight: 700 }}
-                          type="number"
-                          value={match.team_a_score ?? ''}
-                          onChange={(e) => updateMatchScore(match.id, 'team_a_score', e.target.value)}
-                          placeholder="0"
-                        />
-                        <input
-                          className="input"
-                          style={{ width: 92, textAlign: 'center', fontSize: 22, fontWeight: 700 }}
-                          type="number"
-                          value={match.team_b_score ?? ''}
-                          onChange={(e) => updateMatchScore(match.id, 'team_b_score', e.target.value)}
-                          placeholder="0"
-                        />
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 92px',
+                          gap: 12,
+                          alignItems: 'center',
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, fontSize: 18, ...getWinnerStyle('b', match) }}>
+                          {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+                        </div>
+                        <div>
+                          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Score</div>
+                          <input
+                            className="input"
+                            style={{ textAlign: 'center', fontSize: 22, fontWeight: 700 }}
+                            type="number"
+                            value={match.team_b_score ?? ''}
+                            onChange={(e) => updateMatchScore(match.id, 'team_b_score', e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
                       </div>
                     </div>
                   ))}

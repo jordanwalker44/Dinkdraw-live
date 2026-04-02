@@ -350,43 +350,34 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setMessage('Spot claimed.');
   }
 
-  async function saveAllPlayerNames() {
-    setMessage('');
-    setIsSavingNames(true);
+ async function saveAllPlayerNames() {
+  setMessage('');
+  setIsSavingNames(true);
 
-    try {
-      const rows = playerSlots.map((slot) => ({
-        id: slot.id,
-        tournament_id: slot.tournament_id,
-        display_name: (newNames[slot.id] ?? '').trim(),
-      }));
-
-      const rowsWithNames = rows.filter((row) => row.display_name !== '');
-
-      if (!rowsWithNames.length) {
-        setMessage('Enter at least one player name before saving.');
-        setIsSavingNames(false);
-        return;
-      }
+  try {
+    for (const slot of playerSlots) {
+      const nextName = (newNames[slot.id] ?? '').trim();
 
       const { error } = await supabase
         .from('tournament_players')
-        .upsert(rowsWithNames, { onConflict: 'id' });
+        .update({ display_name: nextName })
+        .eq('id', slot.id);
 
       if (error) {
         setMessage(`Save failed: ${error.message}`);
         setIsSavingNames(false);
         return;
       }
-
-      await loadTournamentData(userId);
-      setMessage('Player names saved.');
-    } catch (err) {
-      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
     }
 
-    setIsSavingNames(false);
+    await loadTournamentData(userId);
+    setMessage('Player names saved.');
+  } catch (err) {
+    setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
   }
+
+  setIsSavingNames(false);
+}
 
   async function generateSchedule() {
     setMessage('');

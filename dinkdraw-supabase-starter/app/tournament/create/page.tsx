@@ -29,14 +29,7 @@ function Stepper({
   return (
     <div>
       <label className="label">{label}</label>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '56px 1fr 56px',
-          gap: 12,
-          alignItems: 'center',
-        }}
-      >
+      <div style={{ display: 'grid', gridTemplateColumns: '56px 1fr 56px', gap: 12 }}>
         <button
           type="button"
           className="button secondary"
@@ -47,18 +40,7 @@ function Stepper({
           −
         </button>
 
-        <div
-          className="input"
-          style={{
-            textAlign: 'center',
-            fontSize: 28,
-            fontWeight: 700,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 56,
-          }}
-        >
+        <div className="input" style={{ textAlign: 'center', fontSize: 28, fontWeight: 700 }}>
           {value}
         </div>
 
@@ -85,12 +67,18 @@ export default function CreateTournamentPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
+
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
   const [rounds, setRounds] = useState(4);
   const [gamesTo, setGamesTo] = useState(11);
+
   const [message, setMessage] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+
+  // ✅ Derived constraints
+  const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / 4));
+  const isValidSetup = playerCount >= 4;
 
   useEffect(() => {
     async function loadUser() {
@@ -104,30 +92,40 @@ export default function CreateTournamentPage() {
         .eq('id', user.id)
         .maybeSingle();
 
-      if (profile?.display_name) {
-        setOrganizerName(profile.display_name);
-      } else {
-        setOrganizerName(user.email?.split('@')[0] || '');
-      }
+      setOrganizerName(
+        profile?.display_name || user.email?.split('@')[0] || ''
+      );
     }
 
     loadUser();
-  }, []);
+  }, [supabase]);
+
+  // ✅ Keep courts valid automatically
+  useEffect(() => {
+    if (courts > maxCourtsAllowed) {
+      setCourts(maxCourtsAllowed);
+    }
+  }, [playerCount, courts, maxCourtsAllowed]);
 
   async function handleCreate() {
     setMessage('');
+
+    if (!isValidSetup) {
+      setMessage('You need at least 4 players.');
+      return;
+    }
+
+    if (!title.trim()) {
+      setMessage('Please enter a tournament name.');
+      return;
+    }
+
     setIsCreating(true);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-
-      if (authError) {
-        setMessage(authError.message);
-        setIsCreating(false);
-        return;
-      }
-
+      const { data: authData } = await supabase.auth.getUser();
       const user = authData.user;
+
       if (!user) {
         setMessage('Sign in first.');
         setIsCreating(false);
@@ -137,24 +135,18 @@ export default function CreateTournamentPage() {
       const safeOrganizerName =
         organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
 
-      const { error: profileError } = await supabase.from('profiles').upsert({
+      await supabase.from('profiles').upsert({
         id: user.id,
         display_name: safeOrganizerName,
         email: user.email,
       });
 
-      if (profileError) {
-        setMessage(profileError.message);
-        setIsCreating(false);
-        return;
-      }
-
       const joinCode = makeJoinCode();
 
-      const { data: tournament, error: tournamentError } = await supabase
+      const { data: tournament, error } = await supabase
         .from('tournaments')
         .insert({
-          title,
+          title: title.trim(),
           organizer_user_id: user.id,
           organizer_name: safeOrganizerName,
           join_code: joinCode,
@@ -170,27 +162,19 @@ export default function CreateTournamentPage() {
         .select()
         .single();
 
-      if (tournamentError || !tournament) {
-        setMessage(tournamentError?.message || 'Could not create tournament.');
+      if (error || !tournament) {
+        setMessage(error?.message || 'Failed to create tournament.');
         setIsCreating(false);
         return;
       }
 
-      const playerRows = Array.from({ length: playerCount }, (_, idx) => ({
+      const playerRows = Array.from({ length: playerCount }, (_, i) => ({
         tournament_id: tournament.id,
-        slot_number: idx + 1,
+        slot_number: i + 1,
         display_name: '',
       }));
 
-      const { error: playersError } = await supabase
-        .from('tournament_players')
-        .insert(playerRows);
-
-      if (playersError) {
-        setMessage(playersError.message);
-        setIsCreating(false);
-        return;
-      }
+      await supabase.from('tournament_players').insert(playerRows);
 
       router.push(`/tournament/${tournament.id}`);
     } catch (err) {
@@ -207,7 +191,7 @@ export default function CreateTournamentPage() {
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">Create Tournament</h1>
           <p className="hero-subtitle">
-            Create the event first, then share the join code so players can claim spots and enter their own names.
+            Set up your event in seconds, then share the join code at the courts.
           </p>
         </div>
       </div>
@@ -218,36 +202,80 @@ export default function CreateTournamentPage() {
         <div className="grid">
           <div>
             <label className="label">Event name</label>
-            <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
 
           <div>
             <label className="label">Organizer name</label>
-            <input className="input" value={organizerName} onChange={(e) => setOrganizerName(e.target.value)} />
+            <input
+              className="input"
+              value={organizerName}
+              onChange={(e) => setOrganizerName(e.target.value)}
+            />
           </div>
 
           <div>
             <label className="label">Date</label>
-            <input className="input" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+            <input
+              className="input"
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
           </div>
 
           <div>
             <label className="label">Time</label>
-            <input className="input" type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} />
+            <input
+              className="input"
+              type="time"
+              value={eventTime}
+              onChange={(e) => setEventTime(e.target.value)}
+            />
           </div>
 
           <div>
-            <label className="label">Place</label>
-            <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Pickleball courts, gym, park..." />
+            <label className="label">Location</label>
+            <input
+              className="input"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Courts, gym, park..."
+            />
           </div>
 
-          <Stepper label="Number of players" value={playerCount} min={4} max={40} onChange={setPlayerCount} />
-          <Stepper label="Courts" value={courts} min={1} max={20} onChange={setCourts} />
+          <Stepper label="Players" value={playerCount} min={4} max={40} onChange={setPlayerCount} />
+
+          <Stepper
+            label={`Courts (max ${maxCourtsAllowed})`}
+            value={courts}
+            min={1}
+            max={maxCourtsAllowed}
+            onChange={setCourts}
+          />
+
           <Stepper label="Rounds" value={rounds} min={1} max={30} onChange={setRounds} />
+
           <Stepper label="Games to" value={gamesTo} min={1} max={21} onChange={setGamesTo} />
 
-          <button type="button" className="button primary" onClick={handleCreate} disabled={isCreating}>
-            {isCreating ? 'Creating...' : 'Create tournament'}
+          <div className="list-item">
+            <div style={{ fontWeight: 700 }}>Quick summary</div>
+            <div className="muted">
+              {playerCount} players • {courts} courts • {rounds} rounds
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="button primary"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
+            {isCreating ? 'Creating...' : 'Create Tournament'}
           </button>
 
           {message ? <div className="notice">{message}</div> : null}

@@ -17,12 +17,17 @@ export default function HomePage() {
   const [lastTournament, setLastTournament] = useState<LastTournament | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [showAutoRedirect, setShowAutoRedirect] = useState(false);
 
   useEffect(() => {
     try {
       const saved = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
       if (saved) {
-        setLastTournament(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        setLastTournament(parsed);
+
+        // 🔥 trigger redirect UX
+        setShowAutoRedirect(true);
       }
     } catch {}
 
@@ -35,6 +40,17 @@ export default function HomePage() {
 
     loadUser();
   }, [supabase]);
+
+  // 🔥 optional auto redirect after 2 seconds
+  useEffect(() => {
+    if (!lastTournament) return;
+
+    const timer = setTimeout(() => {
+      window.location.href = `/tournament/${lastTournament.id}`;
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [lastTournament]);
 
   return (
     <main className="page-shell">
@@ -49,6 +65,21 @@ export default function HomePage() {
       </div>
 
       <TopNav />
+
+      {/* 🔥 AUTO RESUME BANNER */}
+      {lastTournament && showAutoRedirect ? (
+        <div
+          className="notice"
+          style={{
+            marginBottom: 16,
+            fontSize: 16,
+            fontWeight: 700,
+            textAlign: 'center',
+          }}
+        >
+          Jumping back into <strong>{lastTournament.title}</strong>...
+        </div>
+      ) : null}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">Start Here</div>
@@ -121,47 +152,21 @@ export default function HomePage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="card-title">Account</div>
           <div className="card-subtitle">
-            Sign in to save tournaments, resume them later, and manage your profile.
+            Sign in to save tournaments and resume them later.
           </div>
 
           <div className="grid">
             <Link href="/account">
               <button className="action-button blue">
-                <div className="action-title">Create Account or Sign In</div>
+                <div className="action-title">Sign In</div>
                 <div className="action-subtitle">
-                  Use your account to keep your tournaments connected to you.
+                  Quickly access your tournaments.
                 </div>
               </button>
             </Link>
           </div>
         </div>
       )}
-
-      <div className="card">
-        <div className="card-title">What DinkDraw Does</div>
-        <div className="grid">
-          <div className="list-item">
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Fast setup</div>
-            <div className="muted">
-              Create a tournament in seconds and hand out one simple join code.
-            </div>
-          </div>
-
-          <div className="list-item">
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Live rounds</div>
-            <div className="muted">
-              Run round-based matchups, enter scores, and keep players moving.
-            </div>
-          </div>
-
-          <div className="list-item">
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Final results</div>
-            <div className="muted">
-              Lock standings when the tournament finishes, even if it ends early.
-            </div>
-          </div>
-        </div>
-      </div>
     </main>
   );
 }

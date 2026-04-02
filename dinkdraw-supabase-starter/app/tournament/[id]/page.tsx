@@ -19,6 +19,7 @@ type Tournament = {
 
 type PlayerSlot = {
   id: string;
+  tournament_id: string;
   slot_number: number;
   display_name: string | null;
   claimed_by_user_id: string | null;
@@ -228,15 +229,17 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const claimedSlot = useMemo(
     () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
     [playerSlots, userId]
   );
 
-  const playersById = useMemo(() => {
-    return Object.fromEntries(playerSlots.map((slot) => [slot.id, slot]));
-  }, [playerSlots]);
+  const playersById = useMemo(
+    () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
+    [playerSlots]
+  );
 
   async function loadTournamentData(currentUserId?: string) {
     const { data: tournamentData, error: tournamentError } = await supabase
@@ -273,11 +276,17 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setPlayerSlots(playersData || []);
     setMatches(matchesData || []);
 
-    const initialNames: Record<string, string> = {};
-    (playersData || []).forEach((slot) => {
-      initialNames[slot.id] = slot.display_name || '';
-    });
-    setNewNames(initialNames);
+    if ((playersData || []).length > 0) {
+      setNewNames((prev) => {
+        const next = { ...prev };
+        for (const slot of playersData || []) {
+          if (!(slot.id in next)) {
+            next[slot.id] = slot.display_name || '';
+          }
+        }
+        return next;
+      });
+    }
 
     if (currentUserId) {
       setUserId(currentUserId);
@@ -286,9 +295,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   useEffect(() => {
     async function load() {
+      setIsLoading(true);
       const { data: authData } = await supabase.auth.getUser();
       const currentUserId = authData.user?.id ?? '';
       await loadTournamentData(currentUserId);
+      setIsLoading(false);
     }
 
     load();
@@ -316,10 +327,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       .eq('id', user.id)
       .maybeSingle();
 
-    const updatePayload: {
-      claimed_by_user_id: string;
-      display_name?: string;
-    } = {
+    const updatePayload: { claimed_by_user_id: string; display_name?: string } = {
       claimed_by_user_id: user.id,
     };
 
@@ -346,76 +354,108 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setMessage('');
     setIsSavingNames(true);
 
-    const rows = playerSlots.map((slot) => ({
-      id: slot.id,
-      display_name: (newNames[slot.id] ?? '').trim(),
-    }));
+    try {
+      const rows = playerSlots.map((slot) => ({
+        id: slot.id,
+        tournament_id: slot.tournament_id,
+        display_name: (newNames[slot.id] ?? '').trim(),
+      }));
 
-    const { error } = await supabase.from('tournament_players').upsert(rows);
+      const rowsWithNames = rows.filter((row) => row.display_name !== '');
 
-    setIsSavingNames(false);
+      if (!rowsWithNames.length) {
+        setMessage('Enter at least one player name before saving.');
+        setIsSavingNames(false);
+        return;
+      }
 
-    if (error) {
-      setMessage(error.message);
-      return;
+      const { error } = await supabase
+        .from('tournament_players')
+        .upsert(rowsWithNames, { onConflict: 'id' });
+
+      if (error) {
+        setMessage(`Save failed: ${error.message}`);
+        setIsSavingNames(false);
+        return;
+      }
+
+      await loadTournamentData(userId);
+      setMessage('Player names saved.');
+    } catch (err) {
+      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
     }
 
-    await loadTournamentData(userId);
-    setMessage('Player names saved.');
+    setIsSavingNames(false);
   }
 
   async function generateSchedule() {
     setMessage('');
     setIsGenerating(true);
 
-    const namedPlayers = playerSlots.filter((slot) => (slot.display_name || '').trim());
-    if (namedPlayers.length < 4) {
-      setIsGenerating(false);
-      setMessage('Please save at least 4 player names before generating the schedule.');
-      return;
+    try {
+      const namedPlayers = playerSlots.filter((slot) => {
+        const currentName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
+        return currentName !== '';
+      });
+
+      if (namedPlayers.length < 4) {
+        setMessage('Please save at least 4 player names before generating the schedule.');
+        setIsGenerating(false);
+        return;
+      }
+
+      if (!tournament) {
+        setMessage('Tournament not loaded yet.');
+        setIsGenerating(false);
+        return;
+      }
+
+      const scheduleSource = playerSlots.map((slot) => ({
+        ...slot,
+        display_name: (newNames[slot.id] ?? slot.display_name ?? '').trim(),
+      }));
+
+      const scheduleRows = buildSchedule(scheduleSource, tournament.rounds, tournament.courts);
+
+      if (!scheduleRows.length) {
+        setMessage('Could not generate a schedule.');
+        setIsGenerating(false);
+        return;
+      }
+
+      const { error: deleteError } = await supabase
+        .from('matches')
+        .delete()
+        .eq('tournament_id', tournament.id);
+
+      if (deleteError) {
+        setMessage(`Delete old matches failed: ${deleteError.message}`);
+        setIsGenerating(false);
+        return;
+      }
+
+      const rowsToInsert = scheduleRows.map((row) => ({
+        tournament_id: tournament.id,
+        ...row,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('matches')
+        .insert(rowsToInsert);
+
+      if (insertError) {
+        setMessage(`Generate failed: ${insertError.message}`);
+        setIsGenerating(false);
+        return;
+      }
+
+      await loadTournamentData(userId);
+      setMessage('Schedule generated.');
+    } catch (err) {
+      setMessage(err instanceof Error ? `Generate failed: ${err.message}` : 'Generate failed.');
     }
-
-    if (!tournament) {
-      setIsGenerating(false);
-      setMessage('Tournament not loaded yet.');
-      return;
-    }
-
-    const scheduleRows = buildSchedule(playerSlots, tournament.rounds, tournament.courts);
-
-    if (!scheduleRows.length) {
-      setIsGenerating(false);
-      setMessage('Could not generate a schedule.');
-      return;
-    }
-
-    const { error: deleteError } = await supabase
-      .from('matches')
-      .delete()
-      .eq('tournament_id', tournament.id);
-
-    if (deleteError) {
-      setIsGenerating(false);
-      setMessage(deleteError.message);
-      return;
-    }
-
-    const rowsToInsert = scheduleRows.map((row) => ({
-      tournament_id: tournament.id,
-      ...row,
-    }));
-
-    const { error: insertError } = await supabase.from('matches').insert(rowsToInsert);
 
     setIsGenerating(false);
-
-    if (insertError) {
-      setMessage(insertError.message);
-      return;
-    }
-
-    await loadTournamentData(userId);
-    setMessage('Schedule generated.');
   }
 
   async function updateMatchScore(
@@ -465,74 +505,78 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.
         </div>
 
-        <div className="grid">
-          {playerSlots.map((slot) => {
-            const isMine = slot.claimed_by_user_id === userId;
-            const isClaimedBySomeone = !!slot.claimed_by_user_id;
-            const isOrganizer = tournament?.organizer_user_id === userId;
-            const canClaim = !isClaimedBySomeone && !claimedSlot;
-            const canEditName = isOrganizer || isMine || !isClaimedBySomeone;
+        {isLoading ? (
+          <div className="muted">Loading player spots...</div>
+        ) : (
+          <div className="grid">
+            {playerSlots.map((slot) => {
+              const isMine = slot.claimed_by_user_id === userId;
+              const isClaimedBySomeone = !!slot.claimed_by_user_id;
+              const isOrganizer = tournament?.organizer_user_id === userId;
+              const canClaim = !isClaimedBySomeone && !claimedSlot;
+              const canEditName = isOrganizer || isMine || !isClaimedBySomeone;
 
-            return (
-              <div
-                key={slot.id}
-                className="list-item"
-                style={{
-                  borderColor: isMine ? 'rgba(163,230,53,.45)' : undefined,
-                  boxShadow: isMine ? '0 0 0 1px rgba(163,230,53,.18) inset' : undefined,
-                }}
-              >
-                <div className="row-between">
-                  <div>
-                    <div><strong>Player {slot.slot_number}</strong></div>
-                    <div className="muted">{slot.display_name || 'Open spot'}</div>
+              return (
+                <div
+                  key={slot.id}
+                  className="list-item"
+                  style={{
+                    borderColor: isMine ? 'rgba(163,230,53,.45)' : undefined,
+                    boxShadow: isMine ? '0 0 0 1px rgba(163,230,53,.18) inset' : undefined,
+                  }}
+                >
+                  <div className="row-between">
+                    <div>
+                      <div><strong>Player {slot.slot_number}</strong></div>
+                      <div className="muted">{slot.display_name || 'Open spot'}</div>
+                    </div>
+
+                    <div>
+                      {isMine ? (
+                        <span className="tag green">Yours</span>
+                      ) : isClaimedBySomeone ? (
+                        <span className="tag green">Claimed</span>
+                      ) : canClaim ? (
+                        <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                          Claim
+                        </button>
+                      ) : isOrganizer ? (
+                        <span className="muted">Open</span>
+                      ) : (
+                        <button className="button secondary" disabled>
+                          Unavailable
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div>
-                    {isMine ? (
-                      <span className="tag green">Yours</span>
-                    ) : isClaimedBySomeone ? (
-                      <span className="tag green">Claimed</span>
-                    ) : canClaim ? (
-                      <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                        Claim
-                      </button>
-                    ) : isOrganizer ? (
-                      <span className="muted">Open</span>
-                    ) : (
-                      <button className="button secondary" disabled>
-                        Unavailable
-                      </button>
-                    )}
+                  <div className="row" style={{ marginTop: 12 }}>
+                    <input
+                      className="input"
+                      value={newNames[slot.id] ?? ''}
+                      onChange={(e) =>
+                        setNewNames((prev) => ({
+                          ...prev,
+                          [slot.id]: e.target.value,
+                        }))
+                      }
+                      placeholder={`Name for Player ${slot.slot_number}`}
+                      disabled={!canEditName}
+                    />
                   </div>
                 </div>
+              );
+            })}
 
-                <div className="row" style={{ marginTop: 12 }}>
-                  <input
-                    className="input"
-                    value={newNames[slot.id] ?? ''}
-                    onChange={(e) =>
-                      setNewNames((prev) => ({
-                        ...prev,
-                        [slot.id]: e.target.value,
-                      }))
-                    }
-                    placeholder={`Name for Player ${slot.slot_number}`}
-                    disabled={!canEditName}
-                  />
-                </div>
-              </div>
-            );
-          })}
+            <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
+              {isSavingNames ? 'Saving...' : 'Save all player names'}
+            </button>
 
-          <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
-            {isSavingNames ? 'Saving...' : 'Save all player names'}
-          </button>
-
-          <button className="button secondary" onClick={generateSchedule} disabled={isGenerating}>
-            {isGenerating ? 'Generating...' : 'Generate round robin schedule'}
-          </button>
-        </div>
+            <button className="button secondary" onClick={generateSchedule} disabled={isGenerating}>
+              {isGenerating ? 'Generating...' : 'Generate round robin schedule'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card">

@@ -218,7 +218,7 @@ function buildSchedule(players: PlayerSlot[], rounds: number, courts: number) {
 }
 
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
@@ -292,7 +292,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
 
     load();
-  }, [params.id, supabase]);
+  }, [params.id]);
 
   async function claimSlot(slotId: string) {
     setMessage('');

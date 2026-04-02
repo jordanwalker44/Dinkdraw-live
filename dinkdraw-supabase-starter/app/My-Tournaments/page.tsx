@@ -35,11 +35,15 @@ function formatCreatedAt(value?: string) {
 }
 
 function statusLabel(status?: string | null) {
-  return status === 'started' ? 'In Progress' : 'Setup';
+  if (status === 'completed') return 'Completed';
+  if (status === 'started') return 'In Progress';
+  return 'Setup';
 }
 
 function statusTagClass(status?: string | null) {
-  return status === 'started' ? 'tag green' : 'tag';
+  if (status === 'completed') return 'tag';
+  if (status === 'started') return 'tag green';
+  return 'tag';
 }
 
 function eventSummary(tournament: Tournament) {

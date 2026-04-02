@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
@@ -77,7 +77,7 @@ function Stepper({
 }
 
 export default function CreateTournamentPage() {
-  const supabase = getSupabaseBrowserClient();
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
 
   const [title, setTitle] = useState('Saturday Round Robin');
@@ -109,7 +109,7 @@ export default function CreateTournamentPage() {
     }
 
     loadUser();
-  }, [supabase]);
+  }, []);
 
   async function handleCreate() {
     setMessage('');

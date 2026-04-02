@@ -9,6 +9,75 @@ function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '56px 1fr 56px',
+          gap: 12,
+          alignItems: 'center',
+        }}
+      >
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value - 1, min, max))}
+          disabled={value <= min}
+          aria-label={`Decrease ${label}`}
+          style={{ height: 56, fontSize: 24 }}
+        >
+          −
+        </button>
+
+        <div
+          className="input"
+          style={{
+            textAlign: 'center',
+            fontSize: 28,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 56,
+          }}
+        >
+          {value}
+        </div>
+
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value + 1, min, max))}
+          disabled={value >= max}
+          aria-label={`Increase ${label}`}
+          style={{ height: 56, fontSize: 24 }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function CreateTournamentPage() {
   const supabase = getSupabaseBrowserClient();
   const router = useRouter();
@@ -54,13 +123,13 @@ export default function CreateTournamentPage() {
       return;
     }
 
-    const safeOrganizerName = organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
+    const safeOrganizerName =
+      organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
 
-    // make sure the profile row exists
     const { error: profileError } = await supabase.from('profiles').upsert({
       id: user.id,
       display_name: safeOrganizerName,
-      email: user.email
+      email: user.email,
     });
 
     if (profileError) {
@@ -81,7 +150,7 @@ export default function CreateTournamentPage() {
         courts,
         rounds,
         games_to: gamesTo,
-        status: 'draft'
+        status: 'draft',
       })
       .select()
       .single();
@@ -94,7 +163,7 @@ export default function CreateTournamentPage() {
     const playerRows = Array.from({ length: playerCount }, (_, idx) => ({
       tournament_id: tournament.id,
       slot_number: idx + 1,
-      display_name: ''
+      display_name: '',
     }));
 
     const { error: playersError } = await supabase
@@ -113,9 +182,15 @@ export default function CreateTournamentPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
+          <img
+            src="/dinkdraw-logo.png"
+            alt="DinkDraw logo"
+            className="hero-logo"
+          />
           <h1 className="hero-title">Create Tournament</h1>
-          <p className="hero-subtitle">This writes a real tournament to Supabase.</p>
+          <p className="hero-subtitle">
+            This writes a real tournament to Supabase.
+          </p>
         </div>
       </div>
 
@@ -125,37 +200,58 @@ export default function CreateTournamentPage() {
         <div className="grid">
           <div>
             <label className="label">Event name</label>
-            <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <input
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
           </div>
 
           <div>
             <label className="label">Organizer name</label>
-            <input className="input" value={organizerName} onChange={(e) => setOrganizerName(e.target.value)} />
+            <input
+              className="input"
+              value={organizerName}
+              onChange={(e) => setOrganizerName(e.target.value)}
+            />
           </div>
 
-          <div className="two-col">
-            <div>
-              <label className="label">Number of players</label>
-              <input className="input" type="number" min={4} max={40} value={playerCount} onChange={(e) => setPlayerCount(Number(e.target.value) || 8)} />
-            </div>
-            <div>
-              <label className="label">Courts</label>
-              <input className="input" type="number" min={1} max={20} value={courts} onChange={(e) => setCourts(Number(e.target.value) || 2)} />
-            </div>
-          </div>
+          <Stepper
+            label="Number of players"
+            value={playerCount}
+            min={4}
+            max={40}
+            onChange={setPlayerCount}
+          />
 
-          <div className="two-col">
-            <div>
-              <label className="label">Rounds</label>
-              <input className="input" type="number" min={1} max={30} value={rounds} onChange={(e) => setRounds(Number(e.target.value) || 4)} />
-            </div>
-            <div>
-              <label className="label">Games to</label>
-              <input className="input" type="number" min={1} max={21} value={gamesTo} onChange={(e) => setGamesTo(Number(e.target.value) || 11)} />
-            </div>
-          </div>
+          <Stepper
+            label="Courts"
+            value={courts}
+            min={1}
+            max={20}
+            onChange={setCourts}
+          />
 
-          <button className="button primary" onClick={handleCreate}>Create tournament</button>
+          <Stepper
+            label="Rounds"
+            value={rounds}
+            min={1}
+            max={30}
+            onChange={setRounds}
+          />
+
+          <Stepper
+            label="Games to"
+            value={gamesTo}
+            min={1}
+            max={21}
+            onChange={setGamesTo}
+          />
+
+          <button className="button primary" onClick={handleCreate}>
+            Create tournament
+          </button>
+
           {message ? <div className="notice">{message}</div> : null}
         </div>
       </div>

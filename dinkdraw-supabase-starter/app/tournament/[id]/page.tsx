@@ -184,9 +184,7 @@ function buildSchedule(players: PlayerSlot[], rounds: number, courts: number): S
           (playedCounts.get(b1) || 0) +
           (playedCounts.get(b2) || 0);
 
-        const randomness = Math.random();
-
-        const penalty = partnerPenalty + matchupPenalty + usagePenalty + randomness;
+        const penalty = partnerPenalty + matchupPenalty + usagePenalty + Math.random();
 
         if (!best || penalty < best.penalty) {
           best = {
@@ -298,10 +296,15 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [isEndingEarly, setIsEndingEarly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
   const [selectedRound, setSelectedRound] = useState(1);
   const [copied, setCopied] = useState(false);
+
+  const isStarted = tournament?.status === 'started';
+  const isCompleted = tournament?.status === 'completed';
+  const isLocked = isStarted || isCompleted;
 
   const claimedSlot = useMemo(
     () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
@@ -336,13 +339,31 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return roundsAvailable[roundsAvailable.length - 1] || 1;
   }, [matches, roundsAvailable]);
 
+  const finalRound = useMemo(() => {
+    return roundsAvailable[roundsAvailable.length - 1] || 1;
+  }, [roundsAvailable]);
+
+  const completedMatchCount = useMemo(
+    () => matches.filter((m) => !m.is_bye && m.is_complete).length,
+    [matches]
+  );
+
+  const totalPlayableMatchCount = useMemo(
+    () => matches.filter((m) => !m.is_bye).length,
+    [matches]
+  );
+
   const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
 
     for (const round of roundsAvailable) {
       const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
+
       if (!roundMatches.length) {
-        statusMap.set(round, round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming');
+        statusMap.set(
+          round,
+          round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming'
+        );
         continue;
       }
 
@@ -464,6 +485,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const canStartTournament =
     !!tournament &&
     tournament.status !== 'started' &&
+    tournament.status !== 'completed' &&
     playerSlots.filter((slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== '').length >= 4;
 
   async function loadTournamentData(currentUserId?: string) {
@@ -504,9 +526,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         const next = { ...prev };
 
         for (const slot of playersData || []) {
-          const existing = (next[slot.id] ?? '').trim();
+          const existing = next[slot.id];
           const saved = slot.display_name || '';
-          next[slot.id] = existing !== '' ? next[slot.id] : saved;
+          next[slot.id] = typeof existing === 'string' ? existing : saved;
         }
 
         return next;
@@ -545,17 +567,23 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     if (!roundsAvailable.length) return;
     setSelectedRound((prev) => {
       if (!roundsAvailable.includes(prev)) {
-        return currentRound;
+        return isCompleted ? finalRound : currentRound;
       }
       return prev;
     });
-  }, [roundsAvailable, currentRound]);
+  }, [roundsAvailable, currentRound, finalRound, isCompleted]);
 
   useEffect(() => {
-    if (tournament?.status === 'started' && matches.length > 0) {
+    if (isCompleted) {
+      setSelectedRound(finalRound);
+      setActiveTab('standings');
+      return;
+    }
+
+    if (isStarted && matches.length > 0) {
       setSelectedRound(currentRound);
     }
-  }, [tournament?.status, matches.length, currentRound]);
+  }, [isStarted, isCompleted, matches.length, currentRound, finalRound]);
 
   async function copyJoinCode() {
     try {
@@ -585,7 +613,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       return;
     }
 
-    if (tournament?.status === 'started') {
+    if (isLocked) {
       setMessage('Tournament already started. Player spots are locked.');
       return;
     }
@@ -623,6 +651,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function saveAllPlayerNames() {
+    if (isLocked) {
+      setMessage('Player names are locked.');
+      return;
+    }
+
     setMessage('');
     setIsSavingNames(true);
 
@@ -756,6 +789,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   function setDraftScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
+    if (isCompleted) return;
+
     const sanitized = value.replace(/[^\d]/g, '');
 
     setScoreDrafts((prev) => ({
@@ -769,6 +804,14 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
+    if (isCompleted) {
+      setMessage('Final results are locked.');
+      return;
+    }
+
+    const match = matches.find((m) => m.id === matchId);
+    if (match?.is_complete) return;
+
     const draft = scoreDrafts[matchId];
     if (!draft) return;
 
@@ -794,7 +837,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   function getNextIncompleteRound(updatedMatches: Match[]) {
-    for (const round of roundsAvailable) {
+    const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort((a, b) => a - b);
+
+    for (const round of roundNumbers) {
       const roundMatches = updatedMatches.filter((m) => m.round_number === round && !m.is_bye);
       if (!roundMatches.length) continue;
 
@@ -805,7 +850,52 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return null;
   }
 
+  async function markTournamentCompleted() {
+    if (!tournament || isCompleted) return true;
+
+    const { error } = await supabase
+      .from('tournaments')
+      .update({ status: 'completed' })
+      .eq('id', tournament.id);
+
+    if (error) {
+      setMessage(`Tournament completion failed: ${error.message}`);
+      return false;
+    }
+
+    setTournament((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+    return true;
+  }
+
+  async function endTournamentEarly() {
+    if (!tournament || !isOrganizer || !isStarted || isCompleted) return;
+
+    const confirmed = window.confirm(
+      'End this tournament now? Any unfinished rounds will be locked and the current standings will become final.'
+    );
+
+    if (!confirmed) return;
+
+    setIsEndingEarly(true);
+    setMessage('');
+
+    const completed = await markTournamentCompleted();
+
+    if (completed) {
+      setActiveTab('standings');
+      setSelectedRound(currentRound);
+      setMessage('Tournament ended early. Final results are now locked.');
+    }
+
+    setIsEndingEarly(false);
+  }
+
   async function submitMatchScore(matchId: string) {
+    if (isCompleted) {
+      setMessage('Final results are locked.');
+      return;
+    }
+
     const draft = scoreDrafts[matchId];
     if (!draft) {
       setMessage('Enter both scores first.');
@@ -859,18 +949,25 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       submittedRoundMatches.length > 0 &&
       submittedRoundMatches.every((m) => m.is_complete);
 
-    if (submittedRoundComplete) {
-      const nextRound = getNextIncompleteRound(updatedMatches);
+    const nextRound = getNextIncompleteRound(updatedMatches);
 
-      if (nextRound && nextRound !== submittedRound) {
-        setSelectedRound(nextRound);
-        setMessage(`Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`);
-      } else {
-        setMessage('Score submitted. Final round complete.');
-      }
-    } else {
-      setMessage('Score submitted.');
+    if (!nextRound) {
+      const completed = await markTournamentCompleted();
+      if (!completed) return;
+
+      setSelectedRound(finalRound);
+      setActiveTab('standings');
+      setMessage('Score submitted. Tournament complete. Final results are now locked.');
+      return;
     }
+
+    if (submittedRoundComplete && nextRound !== submittedRound) {
+      setSelectedRound(nextRound);
+      setMessage(`Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`);
+      return;
+    }
+
+    setMessage('Score submitted.');
   }
 
   function renderPlayerName(id: string | null) {
@@ -943,15 +1040,43 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           </div>
           <div className="row-between">
             <span className="muted">Status</span>
-            <strong>{tournament?.status === 'started' ? 'Started' : 'Setup'}</strong>
+            <strong>
+              {isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}
+            </strong>
           </div>
-          {tournament?.status === 'started' ? (
+          <div className="row-between">
+            <span className="muted">Completed Matches</span>
+            <strong>
+              {completedMatchCount}/{totalPlayableMatchCount}
+            </strong>
+          </div>
+          {isStarted && !isCompleted ? (
             <div className="row-between">
               <span className="muted">Live Round</span>
               <strong>Round {currentRound}</strong>
             </div>
           ) : null}
+          {isCompleted ? (
+            <div className="row-between">
+              <span className="muted">Final Round View</span>
+              <strong>Round {selectedRound}</strong>
+            </div>
+          ) : null}
         </div>
+
+        {isOrganizer && isStarted && !isCompleted ? (
+          <div style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              className="button secondary"
+              onClick={endTournamentEarly}
+              disabled={isEndingEarly}
+              style={{ width: '100%' }}
+            >
+              {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Now'}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div
@@ -989,7 +1114,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         <div className="card">
           <div className="card-title">Player spots</div>
           <div className="card-subtitle">
-            {tournament?.status === 'started'
+            {isCompleted
+              ? 'Tournament is complete. Player list is locked.'
+              : isStarted
               ? 'Tournament has started. Player list is locked.'
               : 'Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.'}
           </div>
@@ -1001,9 +1128,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               {playerSlots.map((slot) => {
                 const isMine = slot.claimed_by_user_id === userId;
                 const isClaimedBySomeone = !!slot.claimed_by_user_id;
-                const canClaim = !isClaimedBySomeone && !claimedSlot && tournament?.status !== 'started';
+                const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
                 const canEditName =
-                  tournament?.status !== 'started' &&
+                  !isLocked &&
                   (isOrganizer || isMine || !isClaimedBySomeone);
 
                 return (
@@ -1026,7 +1153,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                           <span className="tag green">Yours</span>
                         ) : isClaimedBySomeone ? (
                           <span className="tag green">Claimed</span>
-                        ) : tournament?.status === 'started' ? (
+                        ) : isLocked ? (
                           <button className="button secondary" disabled>
                             Locked
                           </button>
@@ -1058,7 +1185,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 );
               })}
 
-              {tournament?.status !== 'started' ? (
+              {!isLocked ? (
                 <>
                   <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
                     {isSavingNames ? 'Saving...' : 'Save all player names'}
@@ -1113,7 +1240,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div className="card">
             <div className="card-title">Round {selectedRound}</div>
             <div className="card-subtitle">
-              {selectedRound === currentRound && tournament?.status === 'started'
+              {isCompleted
+                ? 'Tournament is complete. Scores are locked.'
+                : selectedRound === currentRound && isStarted
                 ? 'This is the current live round.'
                 : roundStatusByRound.get(selectedRound) === 'complete'
                 ? 'This round is complete.'
@@ -1156,7 +1285,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                               style={{ textAlign: 'center', fontSize: 22, fontWeight: 700 }}
                               type="number"
                               value={draft.team_a_score}
-                              disabled={match.is_complete}
+                              disabled={match.is_complete || isCompleted}
                               onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                               onBlur={() => saveScoreField(match.id, 'team_a_score')}
                               placeholder="0"
@@ -1183,7 +1312,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                               style={{ textAlign: 'center', fontSize: 22, fontWeight: 700 }}
                               type="number"
                               value={draft.team_b_score}
-                              disabled={match.is_complete}
+                              disabled={match.is_complete || isCompleted}
                               onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                               onBlur={() => saveScoreField(match.id, 'team_b_score')}
                               placeholder="0"
@@ -1191,9 +1320,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                           </div>
                         </div>
 
-                        {match.is_complete ? (
+                        {match.is_complete || isCompleted ? (
                           <button className="button secondary" disabled style={{ width: '100%' }}>
-                            Score Submitted
+                            {isCompleted ? 'Final Locked' : 'Score Submitted'}
                           </button>
                         ) : (
                           <button
@@ -1229,9 +1358,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       {activeTab === 'standings' && (
         <div className="card">
-          <div className="card-title">Standings</div>
+          <div className="card-title">{isCompleted ? 'Final Results' : 'Standings'}</div>
           <div className="card-subtitle">
-            Wins first, then point differential.
+            {isCompleted
+              ? 'Tournament complete. Final results are locked.'
+              : 'Wins first, then point differential.'}
           </div>
 
           {!standings.length ? (

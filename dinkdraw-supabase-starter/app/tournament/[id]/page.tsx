@@ -10,11 +10,15 @@ type Tournament = {
   join_code: string;
   organizer_user_id: string;
   organizer_name: string | null;
+  event_date: string | null;
+  event_time: string | null;
+  location: string | null;
   player_count: number;
   courts: number;
   rounds: number;
   games_to: number;
   status: string;
+  started_at: string | null;
 };
 
 type PlayerSlot = {
@@ -252,6 +256,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
   const [selectedRound, setSelectedRound] = useState(1);
@@ -375,31 +380,31 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return result;
   }, [playerSlots, matches]);
 
+  const isOrganizer = tournament?.organizer_user_id === userId;
+  const canStartTournament =
+    !!tournament &&
+    tournament.status !== 'started' &&
+    playerSlots.filter((slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== '').length >= 4;
+
   async function loadTournamentData(currentUserId?: string) {
-    const { data: tournamentData, error: tournamentError } = await supabase
+    const { data: tournamentData } = await supabase
       .from('tournaments')
       .select('*')
       .eq('id', params.id)
       .maybeSingle();
 
-    if (tournamentError) setMessage(tournamentError.message);
-
-    const { data: playersData, error: playersError } = await supabase
+    const { data: playersData } = await supabase
       .from('tournament_players')
       .select('*')
       .eq('tournament_id', params.id)
       .order('slot_number', { ascending: true });
 
-    if (playersError) setMessage(playersError.message);
-
-    const { data: matchesData, error: matchesError } = await supabase
+    const { data: matchesData } = await supabase
       .from('matches')
       .select('*')
       .eq('tournament_id', params.id)
       .order('round_number', { ascending: true })
       .order('court_number', { ascending: true });
-
-    if (matchesError) setMessage(matchesError.message);
 
     setTournament(tournamentData || null);
     setPlayerSlots(playersData || []);
@@ -409,10 +414,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       try {
         window.localStorage.setItem(
           LAST_TOURNAMENT_KEY,
-          JSON.stringify({
-            id: tournamentData.id,
-            title: tournamentData.title,
-          })
+          JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
         );
       } catch {}
     }
@@ -490,6 +492,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       return;
     }
 
+    if (tournament?.status === 'started') {
+      setMessage('Tournament already started. Player spots are locked.');
+      return;
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('display_name')
@@ -548,38 +555,47 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setIsSavingNames(false);
   }
 
-  async function generateSchedule() {
+  async function generateScheduleAndStart() {
+    if (!tournament) return;
+
     setMessage('');
-    setIsGenerating(true);
+    setIsStarting(true);
 
     try {
-      const namedPlayers = playerSlots.filter((slot) => {
-        const currentName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
-        return currentName !== '';
-      });
+      for (const slot of playerSlots) {
+        const nextName = (newNames[slot.id] ?? '').trim();
+
+        const { error } = await supabase
+          .from('tournament_players')
+          .update({ display_name: nextName })
+          .eq('id', slot.id);
+
+        if (error) {
+          setMessage(`Save failed: ${error.message}`);
+          setIsStarting(false);
+          return;
+        }
+      }
+
+      const { data: freshPlayers } = await supabase
+        .from('tournament_players')
+        .select('*')
+        .eq('tournament_id', tournament.id)
+        .order('slot_number', { ascending: true });
+
+      const namedPlayers = (freshPlayers || []).filter((slot) => (slot.display_name || '').trim() !== '');
 
       if (namedPlayers.length < 4) {
-        setMessage('Please save at least 4 player names before generating the schedule.');
-        setIsGenerating(false);
+        setMessage('Please save at least 4 player names before starting.');
+        setIsStarting(false);
         return;
       }
 
-      if (!tournament) {
-        setMessage('Tournament not loaded yet.');
-        setIsGenerating(false);
-        return;
-      }
-
-      const scheduleSource = playerSlots.map((slot) => ({
-        ...slot,
-        display_name: (newNames[slot.id] ?? slot.display_name ?? '').trim(),
-      }));
-
-      const scheduleRows = buildSchedule(scheduleSource, tournament.rounds, tournament.courts);
+      const scheduleRows = buildSchedule(freshPlayers || [], tournament.rounds, tournament.courts);
 
       if (!scheduleRows.length) {
         setMessage('Could not generate a schedule.');
-        setIsGenerating(false);
+        setIsStarting(false);
         return;
       }
 
@@ -590,7 +606,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       if (deleteError) {
         setMessage(`Delete old matches failed: ${deleteError.message}`);
-        setIsGenerating(false);
+        setIsStarting(false);
         return;
       }
 
@@ -605,18 +621,32 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       if (insertError) {
         setMessage(`Generate failed: ${insertError.message}`);
-        setIsGenerating(false);
+        setIsStarting(false);
+        return;
+      }
+
+      const { error: startError } = await supabase
+        .from('tournaments')
+        .update({
+          status: 'started',
+          started_at: new Date().toISOString(),
+        })
+        .eq('id', tournament.id);
+
+      if (startError) {
+        setMessage(`Start failed: ${startError.message}`);
+        setIsStarting(false);
         return;
       }
 
       await loadTournamentData(userId);
       setActiveTab('rounds');
-      setMessage('Schedule generated.');
+      setMessage('Tournament started.');
     } catch (err) {
-      setMessage(err instanceof Error ? `Generate failed: ${err.message}` : 'Generate failed.');
+      setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.');
     }
 
-    setIsGenerating(false);
+    setIsStarting(false);
   }
 
   function setDraftScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
@@ -744,6 +774,32 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       {message ? <div className="notice" style={{ marginBottom: 16 }}>{message}</div> : null}
 
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-title">Tournament Details</div>
+        <div className="grid">
+          <div className="row-between">
+            <span className="muted">Organizer</span>
+            <strong>{tournament?.organizer_name || '-'}</strong>
+          </div>
+          <div className="row-between">
+            <span className="muted">Date</span>
+            <strong>{tournament?.event_date || '-'}</strong>
+          </div>
+          <div className="row-between">
+            <span className="muted">Time</span>
+            <strong>{tournament?.event_time || '-'}</strong>
+          </div>
+          <div className="row-between">
+            <span className="muted">Place</span>
+            <strong>{tournament?.location || '-'}</strong>
+          </div>
+          <div className="row-between">
+            <span className="muted">Status</span>
+            <strong>{tournament?.status === 'started' ? 'Started' : 'Setup'}</strong>
+          </div>
+        </div>
+      </div>
+
       <div
         style={{
           display: 'grid',
@@ -779,7 +835,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         <div className="card">
           <div className="card-title">Player spots</div>
           <div className="card-subtitle">
-            Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.
+            {tournament?.status === 'started'
+              ? 'Tournament has started. Player list is locked.'
+              : 'Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.'}
           </div>
 
           {isLoading ? (
@@ -789,9 +847,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               {playerSlots.map((slot) => {
                 const isMine = slot.claimed_by_user_id === userId;
                 const isClaimedBySomeone = !!slot.claimed_by_user_id;
-                const isOrganizer = tournament?.organizer_user_id === userId;
-                const canClaim = !isClaimedBySomeone && !claimedSlot;
-                const canEditName = isOrganizer || isMine || !isClaimedBySomeone;
+                const canClaim = !isClaimedBySomeone && !claimedSlot && tournament?.status !== 'started';
+                const canEditName = tournament?.status !== 'started' && (isOrganizer || isMine || !isClaimedBySomeone);
 
                 return (
                   <div
@@ -817,11 +874,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                           <button className="button primary" onClick={() => claimSlot(slot.id)}>
                             Claim
                           </button>
-                        ) : isOrganizer ? (
-                          <span className="muted">Open</span>
                         ) : (
                           <button className="button secondary" disabled>
-                            Unavailable
+                            Locked
                           </button>
                         )}
                       </div>
@@ -845,13 +900,19 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 );
               })}
 
-              <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
-                {isSavingNames ? 'Saving...' : 'Save all player names'}
-              </button>
+              {tournament?.status !== 'started' ? (
+                <>
+                  <button className="button primary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
+                    {isSavingNames ? 'Saving...' : 'Save all player names'}
+                  </button>
 
-              <button className="button secondary" onClick={generateSchedule} disabled={isGenerating}>
-                {isGenerating ? 'Generating...' : 'Generate round robin schedule'}
-              </button>
+                  {isOrganizer ? (
+                    <button className="button secondary" onClick={generateScheduleAndStart} disabled={isStarting || !canStartTournament}>
+                      {isStarting ? 'Starting...' : 'Start Tournament'}
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
             </div>
           )}
         </div>
@@ -889,9 +950,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             </div>
 
             {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
-              <div className="muted">
-                No matches in this round yet. Generate the schedule first.
-              </div>
+              <div className="muted">No matches in this round yet.</div>
             ) : (
               <>
                 <div className="two-col">

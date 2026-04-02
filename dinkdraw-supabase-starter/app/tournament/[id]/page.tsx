@@ -111,9 +111,18 @@ function buildSchedule(players: PlayerSlot[], rounds: number, courts: number) {
         }
 
         const layouts = [
-          { teamA: [group[0], group[1]] as [string, string], teamB: [group[2], group[3]] as [string, string] },
-          { teamA: [group[0], group[2]] as [string, string], teamB: [group[1], group[3]] as [string, string] },
-          { teamA: [group[0], group[3]] as [string, string], teamB: [group[1], group[2]] as [string, string] },
+          {
+            teamA: [group[0], group[1]] as [string, string],
+            teamB: [group[2], group[3]] as [string, string],
+          },
+          {
+            teamA: [group[0], group[2]] as [string, string],
+            teamB: [group[1], group[3]] as [string, string],
+          },
+          {
+            teamA: [group[0], group[3]] as [string, string],
+            teamB: [group[1], group[2]] as [string, string],
+          },
         ];
 
         let bestLayout:
@@ -301,10 +310,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       return;
     }
 
-    const myProfileName =
-      tournament && tournament.organizer_user_id === user.id
-        ? tournament.organizer_name || ''
-        : '';
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
 
     const updatePayload: {
       claimed_by_user_id: string;
@@ -313,8 +323,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       claimed_by_user_id: user.id,
     };
 
-    if (myProfileName) {
-      updatePayload.display_name = myProfileName;
+    if (profile?.display_name) {
+      updatePayload.display_name = profile.display_name;
     }
 
     const { error } = await supabase
@@ -395,9 +405,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       ...row,
     }));
 
-    const { error: insertError } = await supabase
-      .from('matches')
-      .insert(rowsToInsert);
+    const { error: insertError } = await supabase.from('matches').insert(rowsToInsert);
 
     setIsGenerating(false);
 
@@ -410,7 +418,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setMessage('Schedule generated.');
   }
 
-  async function updateMatchScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
+  async function updateMatchScore(
+    matchId: string,
+    field: 'team_a_score' | 'team_b_score',
+    value: string
+  ) {
     const numeric = value === '' ? null : Math.max(0, Number(value));
 
     const { error } = await supabase
@@ -428,7 +440,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   function renderPlayerName(id: string | null) {
     if (!id) return '-';
-    return playersById[id]?.display_name || `Player`;
+    return playersById[id]?.display_name || 'Player';
   }
 
   return (
@@ -450,14 +462,16 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       <div className="card">
         <div className="card-title">Player spots</div>
         <div className="card-subtitle">
-          Share this join code now. Players can claim a spot and enter their own name.
+          Share this join code now. Players can claim a spot and enter their own name, or the organizer can fill in names manually.
         </div>
 
         <div className="grid">
           {playerSlots.map((slot) => {
             const isMine = slot.claimed_by_user_id === userId;
             const isClaimedBySomeone = !!slot.claimed_by_user_id;
+            const isOrganizer = tournament?.organizer_user_id === userId;
             const canClaim = !isClaimedBySomeone && !claimedSlot;
+            const canEditName = isOrganizer || isMine || !isClaimedBySomeone;
 
             return (
               <div
@@ -471,9 +485,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 <div className="row-between">
                   <div>
                     <div><strong>Player {slot.slot_number}</strong></div>
-                    <div className="muted">
-                      {slot.display_name || 'Open spot'}
-                    </div>
+                    <div className="muted">{slot.display_name || 'Open spot'}</div>
                   </div>
 
                   <div>
@@ -485,6 +497,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                       <button className="button primary" onClick={() => claimSlot(slot.id)}>
                         Claim
                       </button>
+                    ) : isOrganizer ? (
+                      <span className="muted">Open</span>
                     ) : (
                       <button className="button secondary" disabled>
                         Unavailable
@@ -504,6 +518,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                       }))
                     }
                     placeholder={`Name for Player ${slot.slot_number}`}
+                    disabled={!canEditName}
                   />
                 </div>
               </div>

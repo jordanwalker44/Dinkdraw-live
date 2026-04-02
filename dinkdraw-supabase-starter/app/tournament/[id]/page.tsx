@@ -419,15 +419,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       } catch {}
     }
 
-    if ((playersData || []).length > 0) {
-      setNewNames((prev) => {
-        const next = { ...prev };
-        for (const slot of playersData || []) {
-          if (!(slot.id in next)) next[slot.id] = slot.display_name || '';
-        }
-        return next;
-      });
-    }
+   if ((playersData || []).length > 0) {
 
     if ((matchesData || []).length > 0) {
       setScoreDrafts((prev) => {

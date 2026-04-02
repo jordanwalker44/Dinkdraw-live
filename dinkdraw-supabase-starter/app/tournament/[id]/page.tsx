@@ -301,6 +301,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
   const [selectedRound, setSelectedRound] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [isLive, setIsLive] = useState(false);
 
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
@@ -535,18 +536,29 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       });
     }
 
-    if ((matchesData || []).length > 0) {
-      setScoreDrafts((prev) => {
-        const next = { ...prev };
-        for (const match of matchesData || []) {
-          next[match.id] = {
-            team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-            team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-          };
-        }
-        return next;
-      });
-    }
+    setScoreDrafts((prev) => {
+      const next = { ...prev };
+      for (const match of matchesData || []) {
+        const existingA = prev[match.id]?.team_a_score;
+        const existingB = prev[match.id]?.team_b_score;
+
+        next[match.id] = {
+          team_a_score:
+            typeof existingA === 'string' && existingA !== '' && !match.is_complete
+              ? existingA
+              : match.team_a_score === null
+              ? ''
+              : String(match.team_a_score),
+          team_b_score:
+            typeof existingB === 'string' && existingB !== '' && !match.is_complete
+              ? existingB
+              : match.team_b_score === null
+              ? ''
+              : String(match.team_b_score),
+        };
+      }
+      return next;
+    });
 
     if (currentUserId) setUserId(currentUserId);
   }
@@ -562,6 +574,57 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
     load();
   }, [params.id, supabase]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`tournament-live-${params.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tournaments',
+          filter: `id=eq.${params.id}`,
+        },
+        async () => {
+          setIsLive(true);
+          await loadTournamentData(userId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tournament_players',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        async () => {
+          setIsLive(true);
+          await loadTournamentData(userId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matches',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        async () => {
+          setIsLive(true);
+          await loadTournamentData(userId);
+        }
+      )
+      .subscribe((status) => {
+        setIsLive(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [params.id, supabase, userId]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;
@@ -1011,6 +1074,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <button type="button" className="button secondary" onClick={copyJoinCode}>
               {copied ? 'Copied!' : 'Copy'}
             </button>
+            <span className={isLive ? 'tag green' : 'tag'}>
+              {isLive ? 'Live Sync On' : 'Connecting...'}
+            </span>
           </div>
         </div>
       </div>

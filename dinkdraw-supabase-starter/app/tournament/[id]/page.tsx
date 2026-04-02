@@ -255,7 +255,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
@@ -419,7 +418,19 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       } catch {}
     }
 
-   if ((playersData || []).length > 0) {
+    if ((playersData || []).length > 0) {
+      setNewNames((prev) => {
+        const next = { ...prev };
+
+        for (const slot of playersData || []) {
+          const existing = (next[slot.id] ?? '').trim();
+          const saved = slot.display_name || '';
+          next[slot.id] = existing !== '' ? next[slot.id] : saved;
+        }
+
+        return next;
+      });
+    }
 
     if ((matchesData || []).length > 0) {
       setScoreDrafts((prev) => {
@@ -468,59 +479,58 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
   }
 
- async function claimSlot(slotId: string) {
-  setMessage('');
+  async function claimSlot(slotId: string) {
+    setMessage('');
 
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData.user;
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
 
-  if (!user) {
-    setMessage('Sign in first.');
-    return;
+    if (!user) {
+      setMessage('Sign in first.');
+      return;
+    }
+
+    if (claimedSlot) {
+      setMessage('You already claimed a spot in this tournament.');
+      return;
+    }
+
+    if (tournament?.status === 'started') {
+      setMessage('Tournament already started. Player spots are locked.');
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const claimedName =
+      profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
+
+    const { error } = await supabase
+      .from('tournament_players')
+      .update({
+        claimed_by_user_id: user.id,
+        display_name: claimedName,
+      })
+      .eq('id', slotId)
+      .is('claimed_by_user_id', null);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setNewNames((prev) => ({
+      ...prev,
+      [slotId]: claimedName,
+    }));
+
+    await loadTournamentData(user.id);
+    setMessage('Spot claimed.');
   }
-
-  if (claimedSlot) {
-    setMessage('You already claimed a spot in this tournament.');
-    return;
-  }
-
-  if (tournament?.status === 'started') {
-    setMessage('Tournament already started. Player spots are locked.');
-    return;
-  }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name')
-    .eq('id', user.id)
-    .maybeSingle();
-
-  const claimedName =
-    profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
-
-  const { error } = await supabase
-    .from('tournament_players')
-    .update({
-      claimed_by_user_id: user.id,
-      display_name: claimedName,
-    })
-    .eq('id', slotId)
-    .is('claimed_by_user_id', null);
-
-  if (error) {
-    setMessage(error.message);
-    return;
-  }
-
-  // Update local input state immediately so the name box shows the claimed name.
-  setNewNames((prev) => ({
-    ...prev,
-    [slotId]: claimedName,
-  }));
-
-  await loadTournamentData(user.id);
-  setMessage('Spot claimed.');
-}
 
   async function saveAllPlayerNames() {
     setMessage('');
@@ -844,7 +854,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 const isMine = slot.claimed_by_user_id === userId;
                 const isClaimedBySomeone = !!slot.claimed_by_user_id;
                 const canClaim = !isClaimedBySomeone && !claimedSlot && tournament?.status !== 'started';
-                const canEditName = tournament?.status !== 'started' && (isOrganizer || isMine || !isClaimedBySomeone);
+                const canEditName =
+                  tournament?.status !== 'started' &&
+                  (isOrganizer || isMine || !isClaimedBySomeone);
 
                 return (
                   <div
@@ -903,7 +915,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                   </button>
 
                   {isOrganizer ? (
-                    <button className="button secondary" onClick={generateScheduleAndStart} disabled={isStarting || !canStartTournament}>
+                    <button
+                      className="button secondary"
+                      onClick={generateScheduleAndStart}
+                      disabled={isStarting || !canStartTournament}
+                    >
                       {isStarting ? 'Starting...' : 'Start Tournament'}
                     </button>
                   ) : null}

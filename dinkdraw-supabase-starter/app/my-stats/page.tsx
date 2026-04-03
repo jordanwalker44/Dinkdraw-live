@@ -722,7 +722,6 @@ export default function MyStatsPage() {
       return {
         currentElo: 1000,
         peakElo: 1000,
-        startEloForWindow: 1000,
         deltaInWindow: 0,
       };
     }
@@ -744,7 +743,6 @@ export default function MyStatsPage() {
       return {
         currentElo,
         peakElo,
-        startEloForWindow: 1000,
         deltaInWindow: currentElo - 1000,
       };
     }
@@ -767,7 +765,6 @@ export default function MyStatsPage() {
     return {
       currentElo: endEloForWindow,
       peakElo,
-      startEloForWindow,
       deltaInWindow: endEloForWindow - startEloForWindow,
     };
   }, [allStatsForElo, userId, timeFilter]);
@@ -792,126 +789,139 @@ export default function MyStatsPage() {
 
   return (
     <main className="page-shell">
-      <TopNav />
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="row" style={{ alignItems: 'center', gap: 16 }}>
+      <div className="hero">
+        <div className="hero-inner">
           <div
             style={{
-              width: 64,
-              height: 64,
+              width: 70,
+              height: 70,
               borderRadius: '50%',
-              background: '#134e4a',
+              background: 'rgba(163,230,53,.12)',
+              border: '1px solid rgba(163,230,53,.22)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800,
-              fontSize: 22,
+              fontSize: 24,
+              margin: '0 auto 12px',
             }}
           >
             {initials}
           </div>
+          <h1 className="hero-title">{displayName || 'My Stats'}</h1>
+          <p className="hero-subtitle">{filterLabel(timeFilter)}</p>
+        </div>
+      </div>
 
-          <div>
-            <div style={{ fontSize: 26, fontWeight: 800 }}>{displayName}</div>
-            <div className="muted">{filterLabel(timeFilter)}</div>
+      <TopNav />
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Time Filter</div>
+        <div className="grid">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+              gap: 8,
+            }}
+          >
+            <FilterButton active={timeFilter === 'lifetime'} label="All" onClick={() => setTimeFilter('lifetime')} />
+            <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
+            <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
+            <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
+            <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
           </div>
         </div>
       </div>
 
-      <div
-        className="card"
-        style={{
-          marginBottom: 16,
-          padding: 12,
-        }}
-      >
-        <div className="card-title" style={{ marginBottom: 12 }}>
-          Time Filter
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 8,
-          }}
-        >
-          <FilterButton active={timeFilter === 'lifetime'} label="Lifetime" onClick={() => setTimeFilter('lifetime')} />
-          <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
-          <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
-          <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
-          <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Ranking</div>
+        <div className="two-col">
+          <SimpleStatCard
+            label="Current Elo"
+            value={eloStats.currentElo}
+            sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)}
+          />
+          <SimpleStatCard label="Peak Elo" value={eloStats.peakElo} sub="Lifetime high" />
+          <SimpleStatCard
+            label="Elo Change"
+            value={eloStats.deltaInWindow >= 0 ? `+${eloStats.deltaInWindow}` : eloStats.deltaInWindow}
+            sub={filterLabel(timeFilter)}
+          />
+          <SimpleStatCard
+            label="Leaderboard Rank"
+            value={leaderboardRank.rank}
+            sub={`${leaderboardRank.totalRanked} ranked`}
+          />
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <StatCard label="W/L" value={`${aggregates.winPct}%`} sub={`${aggregates.matches} matches`} />
-        <StatCard label="Points" value={aggregates.pointsFor} sub={`Avg ${aggregates.avgPoints}/match`} />
-        <StatCard label="Wins" value={aggregates.wins} sub={`${aggregates.losses} losses`} />
-        <StatCard label="Point Diff" value={aggregates.pointDiff} sub="Total" />
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Performance</div>
+        <div className="two-col">
+          <SimpleStatCard label="Win Rate" value={`${aggregates.winPct}%`} sub={`${aggregates.matches} matches`} />
+          <SimpleStatCard label="Wins" value={aggregates.wins} sub={`${aggregates.losses} losses`} />
+          <SimpleStatCard label="Points For" value={aggregates.pointsFor} sub={`Avg ${aggregates.avgPoints}/match`} />
+          <SimpleStatCard label="Point Diff" value={aggregates.pointDiff} sub="Total" />
+        </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <StatCard label="Current Elo" value={eloStats.currentElo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
-        <StatCard label="Peak Elo" value={eloStats.peakElo} sub="Lifetime high" />
-        <StatCard
-          label="Elo Change"
-          value={eloStats.deltaInWindow >= 0 ? `+${eloStats.deltaInWindow}` : eloStats.deltaInWindow}
-          sub={filterLabel(timeFilter)}
-        />
-        <StatCard
-          label="Leaderboard Rank"
-          value={leaderboardRank.rank}
-          sub={`${leaderboardRank.totalRanked} ranked`}
-        />
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Achievements</div>
+        <div className="two-col">
+          <SimpleStatCard label="Best Finish" value={tournamentSummary.bestFinish} sub="Tournament place" />
+          <SimpleStatCard label="Podiums" value={tournamentSummary.podiums} sub="Top 3 finishes" />
+          <SimpleStatCard label="Tournament Wins" value={tournamentSummary.tournamentWins} sub="1st place finishes" />
+          <SimpleStatCard label="Best Win Streak" value={streaks.bestWinStreak} sub="Lifetime" />
+        </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, 1fr)',
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <StatCard label="Best Finish" value={tournamentSummary.bestFinish} sub="Tournament place" />
-        <StatCard label="Podiums" value={tournamentSummary.podiums} sub="Top 3 finishes" />
-        <StatCard label="Tournament Wins" value={tournamentSummary.tournamentWins} sub="1st place finishes" />
-        <StatCard label="Current Streak" value={streaks.currentStreakLabel} sub="W / L / T" />
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Form</div>
+        <div className="grid">
+          <div className="list-item">
+            <div className="row-between">
+              <span className="muted">Current Streak</span>
+              <strong>{streaks.currentStreakLabel}</strong>
+            </div>
+          </div>
+
+          <div className="list-item">
+            <div className="row-between">
+              <span className="muted">Recent Form</span>
+              <strong>{streaks.recentForm}</strong>
+            </div>
+          </div>
+
+          <div className="list-item">
+            <div className="row-between">
+              <span className="muted">Tournaments Played</span>
+              <strong>{aggregates.tournamentsPlayed}</strong>
+            </div>
+          </div>
+
+          <div className="list-item">
+            <div className="row-between">
+              <span className="muted">Ties</span>
+              <strong>{aggregates.ties}</strong>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Summary</div>
 
         {loading ? (
           <div className="muted">Loading stats...</div>
         ) : (
           <div className="grid">
-            <Row label="Tournaments Played" value={aggregates.tournamentsPlayed} />
-            <Row label="Matches Played" value={aggregates.matches} />
-            <Row label="Wins" value={aggregates.wins} />
-            <Row label="Losses" value={aggregates.losses} />
-            <Row label="Ties" value={aggregates.ties} />
-            <Row label="Points For" value={aggregates.pointsFor} />
-            <Row label="Points Against" value={aggregates.pointsAgainst} />
-            <Row label="Point Differential" value={aggregates.pointDiff} />
-            <Row label="Best Win Streak" value={streaks.bestWinStreak} />
-            <Row label="Recent Form" value={streaks.recentForm} />
+            <SummaryRow label="Matches Played" value={aggregates.matches} />
+            <SummaryRow label="Wins" value={aggregates.wins} />
+            <SummaryRow label="Losses" value={aggregates.losses} />
+            <SummaryRow label="Points For" value={aggregates.pointsFor} />
+            <SummaryRow label="Points Against" value={aggregates.pointsAgainst} />
+            <SummaryRow label="Point Differential" value={aggregates.pointDiff} />
           </div>
         )}
       </div>
@@ -929,7 +939,7 @@ export default function MyStatsPage() {
               <div key={match.id} className="list-item">
                 <div className="row-between">
                   <div>
-                    <div style={{ fontWeight: 700 }}>
+                    <div style={{ fontWeight: 800 }}>
                       {match.wins === 1 ? 'Win' : match.losses === 1 ? 'Loss' : 'Tie'}
                     </div>
                     <div className="muted">
@@ -938,7 +948,7 @@ export default function MyStatsPage() {
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 700 }}>
+                    <div style={{ fontWeight: 800 }}>
                       {match.points_for}-{match.points_against}
                     </div>
                     <div className="muted">
@@ -971,17 +981,14 @@ function FilterButton({
       type="button"
       className={`button ${active ? 'primary' : 'secondary'}`}
       onClick={onClick}
-      style={{
-        minHeight: 44,
-        fontWeight: 700,
-      }}
+      style={{ minHeight: 44, fontWeight: 800 }}
     >
       {label}
     </button>
   );
 }
 
-function StatCard({
+function SimpleStatCard({
   label,
   value,
   sub,
@@ -991,19 +998,27 @@ function StatCard({
   sub: string;
 }) {
   return (
-    <div className="card" style={{ padding: 16 }}>
-      <div className="muted">{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 800 }}>{value}</div>
-      <div className="muted">{sub}</div>
+    <div className="list-item">
+      <div className="muted" style={{ marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.05 }}>{value}</div>
+      <div className="muted" style={{ marginTop: 6 }}>{sub}</div>
     </div>
   );
 }
 
-function Row({ label, value }: { label: string; value: string | number }) {
+function SummaryRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
-    <div className="row-between">
-      <span className="muted">{label}</span>
-      <strong>{value}</strong>
+    <div className="list-item" style={{ padding: 12 }}>
+      <div className="row-between">
+        <span className="muted">{label}</span>
+        <strong>{value}</strong>
+      </div>
     </div>
   );
 }

@@ -1025,85 +1025,87 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
-    if (!tournament) return true;
+  if (!tournament) return true;
 
-    const a1 = match.team_a_player_1_id ? playersById[match.team_a_player_1_id] : null;
-    const a2 = match.team_a_player_2_id ? playersById[match.team_a_player_2_id] : null;
-    const b1 = match.team_b_player_1_id ? playersById[match.team_b_player_1_id] : null;
-    const b2 = match.team_b_player_2_id ? playersById[match.team_b_player_2_id] : null;
+  const currentTournamentId = tournament.id;
 
-    const teamAUsers = [a1, a2]
-      .filter((slot): slot is PlayerSlot => !!slot && !!slot.claimed_by_user_id)
-      .map((slot) => slot.claimed_by_user_id as string);
+  const a1 = match.team_a_player_1_id ? playersById[match.team_a_player_1_id] : null;
+  const a2 = match.team_a_player_2_id ? playersById[match.team_a_player_2_id] : null;
+  const b1 = match.team_b_player_1_id ? playersById[match.team_b_player_1_id] : null;
+  const b2 = match.team_b_player_2_id ? playersById[match.team_b_player_2_id] : null;
 
-    const teamBUsers = [b1, b2]
-      .filter((slot): slot is PlayerSlot => !!slot && !!slot.claimed_by_user_id)
-      .map((slot) => slot.claimed_by_user_id as string);
+  const teamAUsers = [a1, a2]
+    .filter((slot): slot is PlayerSlot => !!slot && !!slot.claimed_by_user_id)
+    .map((slot) => slot.claimed_by_user_id as string);
 
-    const playedAt = new Date().toISOString();
+  const teamBUsers = [b1, b2]
+    .filter((slot): slot is PlayerSlot => !!slot && !!slot.claimed_by_user_id)
+    .map((slot) => slot.claimed_by_user_id as string);
 
-    function buildRow(
-      currentUserId: string,
-      partnerUserId: string | null,
-      opponentUserIds: string[],
-      side: 'A' | 'B'
-    ) {
-      const isTie = aScore === bScore;
-      const isWin = side === 'A' ? aScore > bScore : bScore > aScore;
-      const pointsFor = side === 'A' ? aScore : bScore;
-      const pointsAgainst = side === 'A' ? bScore : aScore;
+  const playedAt = new Date().toISOString();
 
-      return {
-        user_id: currentUserId,
-        tournament_id: tournament.id,
-        match_id: match.id,
-        round_number: match.round_number,
-        played_at: playedAt,
-        partner_user_id: partnerUserId,
-        opponent_1_user_id: opponentUserIds[0] || null,
-        opponent_2_user_id: opponentUserIds[1] || null,
-        result: isTie ? 'tie' : isWin ? 'win' : 'loss',
-        wins: isTie ? 0 : isWin ? 1 : 0,
-        losses: isTie ? 0 : isWin ? 0 : 1,
-        ties: isTie ? 1 : 0,
-        points_for: pointsFor,
-        points_against: pointsAgainst,
-        point_diff: pointsFor - pointsAgainst,
-      };
-    }
+  function buildRow(
+    currentUserId: string,
+    partnerUserId: string | null,
+    opponentUserIds: string[],
+    side: 'A' | 'B'
+  ) {
+    const isTie = aScore === bScore;
+    const isWin = side === 'A' ? aScore > bScore : bScore > aScore;
+    const pointsFor = side === 'A' ? aScore : bScore;
+    const pointsAgainst = side === 'A' ? bScore : aScore;
 
-    const rows = [
-      ...teamAUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          teamAUsers.find((id) => id !== currentUserId) || null,
-          teamBUsers,
-          'A'
-        )
-      ),
-      ...teamBUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          teamBUsers.find((id) => id !== currentUserId) || null,
-          teamAUsers,
-          'B'
-        )
-      ),
-    ];
-
-    if (!rows.length) return true;
-
-    const { error } = await supabase
-      .from('player_match_stats')
-      .upsert(rows, { onConflict: 'match_id,user_id' });
-
-    if (error) {
-      setMessage(`Score submitted, but stats update failed: ${error.message}`);
-      return false;
-    }
-
-    return true;
+    return {
+      user_id: currentUserId,
+      tournament_id: currentTournamentId,
+      match_id: match.id,
+      round_number: match.round_number,
+      played_at: playedAt,
+      partner_user_id: partnerUserId,
+      opponent_1_user_id: opponentUserIds[0] || null,
+      opponent_2_user_id: opponentUserIds[1] || null,
+      result: isTie ? 'tie' : isWin ? 'win' : 'loss',
+      wins: isTie ? 0 : isWin ? 1 : 0,
+      losses: isTie ? 0 : isWin ? 0 : 1,
+      ties: isTie ? 1 : 0,
+      points_for: pointsFor,
+      points_against: pointsAgainst,
+      point_diff: pointsFor - pointsAgainst,
+    };
   }
+
+  const rows = [
+    ...teamAUsers.map((currentUserId) =>
+      buildRow(
+        currentUserId,
+        teamAUsers.find((id) => id !== currentUserId) || null,
+        teamBUsers,
+        'A'
+      )
+    ),
+    ...teamBUsers.map((currentUserId) =>
+      buildRow(
+        currentUserId,
+        teamBUsers.find((id) => id !== currentUserId) || null,
+        teamAUsers,
+        'B'
+      )
+    ),
+  ];
+
+  if (!rows.length) return true;
+
+  const { error } = await supabase
+    .from('player_match_stats')
+    .upsert(rows, { onConflict: 'match_id,user_id' });
+
+  if (error) {
+    setMessage(`Score submitted, but stats update failed: ${error.message}`);
+    return false;
+  }
+
+  return true;
+}
 
   function getNextIncompleteRound(updatedMatches: Match[]) {
     const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort((a, b) => a - b);

@@ -1423,44 +1423,77 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       )}
 
       {activeTab === 'standings' && (
-        <div className="card">
-          <div className="card-title">{isCompleted ? 'Final Results' : 'Standings'}</div>
-          <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Final results are locked.'
-              : 'Wins first, then point differential.'}
-          </div>
+  <div className="card">
+    <div className="card-title">
+      {isCompleted ? '🏆 Final Results' : 'Standings'}
+    </div>
+    <div className="card-subtitle">
+      {isCompleted
+        ? 'Tournament complete. Final results are locked.'
+        : 'Ranked by wins, then point differential, then points scored.'}
+    </div>
 
-          {!standings.length ? (
-            <div className="muted">No players yet.</div>
-          ) : (
-            <div className="grid">
-              {standings.map((row, index) => (
-                <div key={row.playerId} className="list-item">
-                  <div className="row-between">
-                    <div>
-                      <div style={{ fontWeight: 700 }}>
-                        {index + 1}. {row.name}
-                      </div>
-                      <div className="muted">
-                        {row.wins}-{row.losses} • Played {row.played}
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 700 }}>
-                        {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
-                      </div>
-                      <div className="muted">
-                        {row.pointsFor}-{row.pointsAgainst}
-                      </div>
-                    </div>
+    {!standings.length ? (
+      <div className="muted">No players yet.</div>
+    ) : (
+      <div className="grid">
+        {standings.map((row, index) => {
+          const place = index + 1;
+
+          const medal =
+            place === 1
+              ? '🥇'
+              : place === 2
+              ? '🥈'
+              : place === 3
+              ? '🥉'
+              : null;
+
+          const highlightStyle =
+            place === 1
+              ? {
+                  borderColor: 'rgba(250,204,21,.6)',
+                  boxShadow: '0 0 0 1px rgba(250,204,21,.35) inset',
+                }
+              : place <= 3
+              ? {
+                  borderColor: 'rgba(163,230,53,.35)',
+                }
+              : {};
+
+          return (
+            <div
+              key={row.playerId}
+              className="list-item"
+              style={highlightStyle}
+            >
+              <div className="row-between">
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 18 }}>
+                    {medal ? `${medal} ` : ''}
+                    {place}. {row.name}
+                  </div>
+
+                  <div className="muted" style={{ marginTop: 4 }}>
+                    {row.wins}-{row.losses} • {row.played} played
+                  </div>
+
+                  <div className="muted" style={{ marginTop: 2 }}>
+                    PF: {row.pointsFor} | PA: {row.pointsAgainst}
                   </div>
                 </div>
-              ))}
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 800, fontSize: 18 }}>
+                    {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
+                  </div>
+                  <div className="muted">Diff</div>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-    </main>
-  );
-}
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 
@@ -12,18 +12,21 @@ function normalizeJoinCode(value: string) {
 export default function JoinTournamentPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const codeFromUrl = searchParams.get('code') || '';
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = params.get('code') || '';
+
     if (codeFromUrl) {
       setCode(normalizeJoinCode(codeFromUrl));
     }
-  }, [searchParams]);
+  }, []);
 
   const normalizedCode = normalizeJoinCode(code);
   const canJoin = normalizedCode.length > 0 && !isLoading;

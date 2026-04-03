@@ -1,384 +1,165 @@
-:root {
-  --bg: #081018;
-  --panel: #0f1722;
-  --panel-2: #121c28;
-  --text: #f8fafc;
-  --muted: #94a3b8;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --accent: #a3e635;
-  --accent-dark: #84cc16;
-  --accent-text: #081018;
-  --blue: #38bdf8;
-  --danger: #f87171;
-  --shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
-  --radius: 18px;
-  --radius-sm: 12px;
-  --max: 720px;
-}
+'use client';
 
-* {
-  box-sizing: border-box;
-}
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { TopNav } from '../components/TopNav';
+import { getSupabaseBrowserClient } from '../lib/supabase-browser';
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+type LastTournament = {
+  id: string;
+  title: string;
+};
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  background: linear-gradient(180deg, #071019 0%, #0b1320 100%);
-  color: var(--text);
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-}
+const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
 
-body {
-  min-height: 100vh;
-}
+export default function HomePage() {
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const [lastTournament, setLastTournament] = useState<LastTournament | null>(null);
+  const [userEmail, setUserEmail] = useState('');
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
+      if (saved) {
+        setLastTournament(JSON.parse(saved));
+      }
+    } catch {}
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
+    async function loadUser() {
+      setIsLoadingUser(true);
+      const { data } = await supabase.auth.getUser();
+      setUserEmail(data.user?.email ?? '');
+      setIsLoadingUser(false);
+    }
 
-img {
-  max-width: 100%;
-  display: block;
-}
+    loadUser();
+  }, [supabase]);
 
-.page-shell {
-  width: 100%;
-  max-width: var(--max);
-  margin: 0 auto;
-  padding: 16px 14px 40px;
-}
+  return (
+    <main className="page-shell">
+      <div className="hero">
+        <div className="hero-inner">
+          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
+          <h1 className="hero-title">DinkDraw</h1>
+          <p className="hero-subtitle">
+            Run round robin pickleball without the clipboard chaos.
+          </p>
+        </div>
+      </div>
 
-.hero {
-  margin-bottom: 14px;
-}
+      <TopNav />
 
-.hero-inner {
-  background: linear-gradient(180deg, rgba(163, 230, 53, 0.08), rgba(163, 230, 53, 0.02));
-  border: 1px solid rgba(163, 230, 53, 0.14);
-  border-radius: 24px;
-  padding: 22px 18px;
-  text-align: center;
-  box-shadow: var(--shadow);
-}
+      {lastTournament ? (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-title">Resume</div>
+          <div className="card-subtitle">
+            Pick up where you left off.
+          </div>
 
-.hero-logo {
-  width: 72px;
-  height: 72px;
-  object-fit: contain;
-  margin: 0 auto 10px;
-}
+          <Link href={`/tournament/${lastTournament.id}`}>
+            <button className="action-button green">
+              <div className="action-title">Resume Last Tournament</div>
+              <div className="action-subtitle">
+                {lastTournament.title || 'Open your most recent tournament'}
+              </div>
+            </button>
+          </Link>
+        </div>
+      ) : null}
 
-.hero-title {
-  margin: 0;
-  font-size: 30px;
-  line-height: 1.05;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Start a Tournament</div>
+        <div className="card-subtitle">
+          Create a new event or join one with a code.
+        </div>
 
-.hero-subtitle {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: 15px;
-  line-height: 1.45;
-}
+        <div className="grid">
+          <Link href="/tournament/create">
+            <button className="action-button green">
+              <div className="action-title">Create Tournament</div>
+              <div className="action-subtitle">
+                Set up players, courts, rounds, and share the join code.
+              </div>
+            </button>
+          </Link>
 
-.top-nav-shell {
-  margin-bottom: 16px;
-}
+          <Link href="/tournament/join">
+            <button className="action-button black">
+              <div className="action-title">Join Tournament</div>
+              <div className="action-subtitle">
+                Enter a code and claim your spot from any phone.
+              </div>
+            </button>
+          </Link>
+        </div>
+      </div>
 
-.top-nav-mobile-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Your DinkDraw</div>
 
-.top-nav-brand {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
+        {isLoadingUser ? (
+          <div className="muted">Loading account...</div>
+        ) : userEmail ? (
+          <>
+            <div className="card-subtitle">Signed in as {userEmail}</div>
 
-.nav-menu-button {
-  appearance: none;
-  border: 1px solid var(--line-strong);
-  background: var(--panel);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 10px 14px;
-  font-weight: 700;
-  min-height: 42px;
-}
+            <div className="grid">
+              <Link href="/my-tournaments">
+                <button className="button secondary">My Tournaments</button>
+              </Link>
 
-.top-nav {
-  display: none;
-  flex-direction: column;
-  gap: 10px;
-}
+              <Link href="/my-stats">
+                <button className="button secondary">My Stats</button>
+              </Link>
 
-.top-nav.open {
-  display: flex;
-}
+              <Link href="/leaderboard">
+                <button className="button secondary">Leaderboard</button>
+              </Link>
 
-.top-nav-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+              <Link href="/account">
+                <button className="button secondary">Account</button>
+              </Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="card-subtitle">
+              Sign in to track stats, save tournaments, and climb the leaderboard.
+            </div>
 
-.nav-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  color: var(--text);
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: var(--shadow);
-}
+            <Link href="/account">
+              <button className="button primary">Sign In or Create Account</button>
+            </Link>
+          </>
+        )}
+      </div>
 
-.nav-pill.active {
-  border-color: rgba(163, 230, 53, 0.45);
-  box-shadow: 0 0 0 1px rgba(163, 230, 53, 0.18) inset;
-}
+      <div className="card">
+        <div className="card-title">Why People Use It</div>
+        <div className="grid">
+          <div className="list-item">
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>Fast setup</div>
+            <div className="muted">
+              Create a tournament and start filling spots in seconds.
+            </div>
+          </div>
 
-.nav-pill.accent {
-  background: var(--accent);
-  color: var(--accent-text);
-  border-color: transparent;
-}
+          <div className="list-item">
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>Live rounds</div>
+            <div className="muted">
+              Keep courts moving with score entry and automatic round flow.
+            </div>
+          </div>
 
-.card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.015));
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: var(--shadow);
-}
-
-.card + .card {
-  margin-top: 14px;
-}
-
-.card-title {
-  font-size: 20px;
-  line-height: 1.15;
-  font-weight: 800;
-  margin-bottom: 6px;
-  letter-spacing: -0.02em;
-}
-
-.card-subtitle {
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.45;
-  margin-bottom: 14px;
-}
-
-.grid {
-  display: grid;
-  gap: 12px;
-}
-
-.two-col {
-  display: grid;
-  gap: 12px;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.row-between {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.list-item {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 14px;
-}
-
-.label {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.input,
-select.input,
-textarea.input {
-  width: 100%;
-  min-height: 48px;
-  border-radius: 14px;
-  border: 1px solid var(--line-strong);
-  background: #0a1420;
-  color: var(--text);
-  padding: 12px 14px;
-  outline: none;
-}
-
-.input:focus,
-select.input:focus,
-textarea.input:focus {
-  border-color: rgba(163, 230, 53, 0.45);
-  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.12);
-}
-
-.button,
-.action-button {
-  appearance: none;
-  border: none;
-  width: 100%;
-  min-height: 48px;
-  border-radius: 14px;
-  padding: 12px 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.08s ease, opacity 0.15s ease, box-shadow 0.15s ease;
-}
-
-.button:disabled,
-.action-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.button:active,
-.action-button:active {
-  transform: scale(0.99);
-}
-
-.button.primary,
-.action-button.green {
-  background: var(--accent);
-  color: var(--accent-text);
-  box-shadow: 0 10px 24px rgba(163, 230, 53, 0.18);
-}
-
-.button.secondary,
-.action-button.black {
-  background: var(--panel);
-  color: var(--text);
-  border: 1px solid var(--line-strong);
-}
-
-.action-button.blue {
-  background: var(--blue);
-  color: #071019;
-  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.18);
-}
-
-.action-button {
-  text-align: left;
-}
-
-.action-title {
-  font-size: 17px;
-  line-height: 1.2;
-  font-weight: 800;
-  margin-bottom: 4px;
-}
-
-.action-subtitle {
-  font-size: 13px;
-  line-height: 1.4;
-  opacity: 0.86;
-}
-
-.notice {
-  background: rgba(163, 230, 53, 0.1);
-  border: 1px solid rgba(163, 230, 53, 0.2);
-  color: var(--text);
-  border-radius: 14px;
-  padding: 12px 14px;
-}
-
-.muted {
-  color: var(--muted);
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.tag.green {
-  background: rgba(163, 230, 53, 0.12);
-  border-color: rgba(163, 230, 53, 0.28);
-  color: #d9f99d;
-}
-
-.code-pill {
-  display: inline-block;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-@media (min-width: 720px) {
-  .page-shell {
-    padding: 22px 18px 48px;
-  }
-
-  .top-nav-mobile-bar {
-    display: none;
-  }
-
-  .top-nav {
-    display: flex !important;
-  }
-
-  .two-col {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+          <div className="list-item">
+            <div style={{ fontWeight: 800, marginBottom: 4 }}>Player stats</div>
+            <div className="muted">
+              Logged-in players can track Elo, results, streaks, and rankings.
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }

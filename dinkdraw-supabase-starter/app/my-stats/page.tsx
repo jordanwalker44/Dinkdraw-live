@@ -39,12 +39,33 @@ type MatchRow = {
   is_complete: boolean;
 };
 
+type Profile = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+};
+
 type TimeFilter = 'lifetime' | '12m' | '6m' | '30d' | '7d';
 
 type EloMatchGroup = {
   matchId: string;
   playedAt: string;
   rows: StatRow[];
+};
+
+type LeaderboardRow = {
+  userId: string;
+  name: string;
+  matches: number;
+  wins: number;
+  losses: number;
+  ties: number;
+  winPct: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+  tournamentsPlayed: number;
+  rating: number;
 };
 
 function getCutoffDate(filter: TimeFilter) {
@@ -197,6 +218,169 @@ function buildEloTimeline(allStats: StatRow[]) {
   return timelineByUser;
 }
 
+function buildLeaderboardRows(
+  filteredStats: StatRow[],
+  profiles: Profile[],
+  minMatches: number
+): LeaderboardRow[] {
+  const profilesById = new Map(profiles.map((p) => [p.id, p]));
+
+  const groupedMatches = new Map<string, EloMatchGroup>();
+  for (const row of filteredStats) {
+    if (!groupedMatches.has(row.match_id)) {
+      groupedMatches.set(row.match_id, {
+        matchId: row.match_id,
+        playedAt: row.played_at,
+        rows: [],
+      });
+    }
+    groupedMatches.get(row.match_id)!.rows.push(row);
+  }
+
+  const chronologicalMatches = Array.from(groupedMatches.values()).sort(
+    (a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime()
+  );
+
+  const ratings = new Map<string, number>();
+  const matchCounts = new Map<string, number>();
+
+  const totals = new Map<
+    string,
+    {
+      userId: string;
+      matches: number;
+      wins: number;
+      losses: number;
+      ties: number;
+      pointsFor: number;
+      pointsAgainst: number;
+      tournaments: Set<string>;
+    }
+  >();
+
+  function getRating(userId: string) {
+    return ratings.get(userId) ?? 1000;
+  }
+
+  function getMatchesPlayed(userId: string) {
+    return matchCounts.get(userId) ?? 0;
+  }
+
+  function bumpMatchCount(userId: string) {
+    matchCounts.set(userId, getMatchesPlayed(userId) + 1);
+  }
+
+  function ensureTotals(userId: string) {
+    if (!totals.has(userId)) {
+      totals.set(userId, {
+        userId,
+        matches: 0,
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        tournaments: new Set<string>(),
+      });
+    }
+    return totals.get(userId)!;
+  }
+
+  for (const row of filteredStats) {
+    const current = ensureTotals(row.user_id);
+    current.wins += row.wins;
+    current.losses += row.losses;
+    current.ties += row.ties;
+    current.matches += row.wins + row.losses + row.ties;
+    current.pointsFor += row.points_for;
+    current.pointsAgainst += row.points_against;
+    if (row.tournament_id) current.tournaments.add(row.tournament_id);
+  }
+
+  for (const match of chronologicalMatches) {
+    const rows = match.rows;
+    if (!rows.length) continue;
+
+    const first = rows[0];
+    const teamAIds = [first.user_id, first.partner_user_id].filter(Boolean) as string[];
+    const teamBIds = [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
+
+    if (!teamAIds.length || !teamBIds.length) continue;
+
+    const teamARating =
+      teamAIds.reduce((sum, id) => sum + getRating(id), 0) / teamAIds.length;
+    const teamBRating =
+      teamBIds.reduce((sum, id) => sum + getRating(id), 0) / teamBIds.length;
+
+    const teamARepresentative = rows.find((r) => teamAIds.includes(r.user_id));
+    if (!teamARepresentative) continue;
+
+    const teamAResult: 'win' | 'loss' | 'tie' =
+      teamARepresentative.wins > 0
+        ? 'win'
+        : teamARepresentative.losses > 0
+        ? 'loss'
+        : 'tie';
+
+    const teamBResult: 'win' | 'loss' | 'tie' =
+      teamAResult === 'win' ? 'loss' : teamAResult === 'loss' ? 'win' : 'tie';
+
+    const expectedA = expectedScore(teamARating, teamBRating);
+    const expectedB = expectedScore(teamBRating, teamARating);
+
+    const averageKTeamA =
+      teamAIds.reduce((sum, id) => sum + getKFactor(getMatchesPlayed(id)), 0) / teamAIds.length;
+    const averageKTeamB =
+      teamBIds.reduce((sum, id) => sum + getKFactor(getMatchesPlayed(id)), 0) / teamBIds.length;
+
+    const deltaA = averageKTeamA * (resultScore(teamAResult) - expectedA);
+    const deltaB = averageKTeamB * (resultScore(teamBResult) - expectedB);
+
+    for (const userId of teamAIds) {
+      ratings.set(userId, Math.round(getRating(userId) + deltaA));
+      bumpMatchCount(userId);
+    }
+
+    for (const userId of teamBIds) {
+      ratings.set(userId, Math.round(getRating(userId) + deltaB));
+      bumpMatchCount(userId);
+    }
+  }
+
+  return Array.from(totals.values())
+    .map((row) => {
+      const profile = profilesById.get(row.userId);
+      const winPct = row.matches ? Math.round((row.wins / row.matches) * 100) : 0;
+      const pointDiff = row.pointsFor - row.pointsAgainst;
+
+      return {
+        userId: row.userId,
+        name:
+          profile?.display_name?.trim() ||
+          profile?.email?.split('@')[0] ||
+          'Player',
+        matches: row.matches,
+        wins: row.wins,
+        losses: row.losses,
+        ties: row.ties,
+        winPct,
+        pointsFor: row.pointsFor,
+        pointsAgainst: row.pointsAgainst,
+        pointDiff,
+        tournamentsPlayed: row.tournaments.size,
+        rating: getRating(row.userId),
+      };
+    })
+    .filter((row) => row.matches >= minMatches)
+    .sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      if (b.winPct !== a.winPct) return b.winPct - a.winPct;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      return a.name.localeCompare(b.name);
+    });
+}
+
 export default function MyStatsPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -204,6 +388,7 @@ export default function MyStatsPage() {
   const [displayName, setDisplayName] = useState('');
   const [stats, setStats] = useState<StatRow[]>([]);
   const [allStatsForElo, setAllStatsForElo] = useState<StatRow[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [allTournamentPlayers, setAllTournamentPlayers] = useState<TournamentPlayer[]>([]);
   const [allCompletedMatches, setAllCompletedMatches] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -242,6 +427,18 @@ export default function MyStatsPage() {
         .select('*')
         .order('played_at', { ascending: true });
 
+      const allUserIds = Array.from(
+        new Set(((allStatRows || []) as StatRow[]).map((row) => row.user_id).filter(Boolean))
+      );
+
+      const { data: profileRows } =
+        allUserIds.length > 0
+          ? await supabase
+              .from('profiles')
+              .select('id, display_name, email')
+              .in('id', allUserIds)
+          : { data: [] as Profile[] };
+
       const userTournamentIds = Array.from(
         new Set((userStatRows || []).map((row) => row.tournament_id).filter(Boolean))
       );
@@ -270,6 +467,7 @@ export default function MyStatsPage() {
 
       setStats((userStatRows || []) as StatRow[]);
       setAllStatsForElo((allStatRows || []) as StatRow[]);
+      setProfiles((profileRows || []) as Profile[]);
       setAllTournamentPlayers(tournamentPlayers);
       setAllCompletedMatches(completedMatches);
       setLoading(false);
@@ -287,6 +485,30 @@ export default function MyStatsPage() {
       return playedAt >= cutoff;
     });
   }, [stats, timeFilter]);
+
+  const filteredLeaderboardStats = useMemo(() => {
+    const cutoff = getCutoffDate(timeFilter);
+    if (!cutoff) return allStatsForElo;
+
+    return allStatsForElo.filter((row) => {
+      const playedAt = new Date(row.played_at);
+      return playedAt >= cutoff;
+    });
+  }, [allStatsForElo, timeFilter]);
+
+  const leaderboardRows = useMemo(() => {
+    return buildLeaderboardRows(filteredLeaderboardStats, profiles, 1);
+  }, [filteredLeaderboardStats, profiles]);
+
+  const leaderboardRank = useMemo(() => {
+    if (!userId) return { rank: '-', totalRanked: 0 };
+
+    const index = leaderboardRows.findIndex((row) => row.userId === userId);
+    return {
+      rank: index >= 0 ? index + 1 : '-',
+      totalRanked: leaderboardRows.length,
+    };
+  }, [leaderboardRows, userId]);
 
   const filteredTournamentIds = useMemo(() => {
     return Array.from(new Set(filteredStats.map((row) => row.tournament_id).filter(Boolean)));
@@ -652,7 +874,11 @@ export default function MyStatsPage() {
           value={eloStats.deltaInWindow >= 0 ? `+${eloStats.deltaInWindow}` : eloStats.deltaInWindow}
           sub={filterLabel(timeFilter)}
         />
-        <StatCard label="Current Streak" value={streaks.currentStreakLabel} sub="W / L / T" />
+        <StatCard
+          label="Leaderboard Rank"
+          value={leaderboardRank.rank}
+          sub={`${leaderboardRank.totalRanked} ranked`}
+        />
       </div>
 
       <div
@@ -666,7 +892,7 @@ export default function MyStatsPage() {
         <StatCard label="Best Finish" value={tournamentSummary.bestFinish} sub="Tournament place" />
         <StatCard label="Podiums" value={tournamentSummary.podiums} sub="Top 3 finishes" />
         <StatCard label="Tournament Wins" value={tournamentSummary.tournamentWins} sub="1st place finishes" />
-        <StatCard label="Best Win Streak" value={streaks.bestWinStreak} sub="Lifetime" />
+        <StatCard label="Current Streak" value={streaks.currentStreakLabel} sub="W / L / T" />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -684,6 +910,7 @@ export default function MyStatsPage() {
             <Row label="Points For" value={aggregates.pointsFor} />
             <Row label="Points Against" value={aggregates.pointsAgainst} />
             <Row label="Point Differential" value={aggregates.pointDiff} />
+            <Row label="Best Win Streak" value={streaks.bestWinStreak} />
             <Row label="Recent Form" value={streaks.recentForm} />
           </div>
         )}

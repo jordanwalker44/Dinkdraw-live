@@ -6,6 +6,8 @@ import { TopNav } from '../../components/TopNav';
 
 type StatRow = {
   id: string;
+  user_id: string;
+  match_id: string;
   wins: number;
   losses: number;
   ties: number;
@@ -13,9 +15,37 @@ type StatRow = {
   points_against: number;
   played_at: string;
   tournament_id: string;
+  partner_user_id: string | null;
+  opponent_1_user_id: string | null;
+  opponent_2_user_id: string | null;
+};
+
+type TournamentPlayer = {
+  id: string;
+  tournament_id: string;
+  claimed_by_user_id: string | null;
+  display_name: string | null;
+};
+
+type MatchRow = {
+  tournament_id: string;
+  team_a_player_1_id: string | null;
+  team_a_player_2_id: string | null;
+  team_b_player_1_id: string | null;
+  team_b_player_2_id: string | null;
+  team_a_score: number | null;
+  team_b_score: number | null;
+  is_bye: boolean;
+  is_complete: boolean;
 };
 
 type TimeFilter = 'lifetime' | '12m' | '6m' | '30d' | '7d';
+
+type EloMatchGroup = {
+  matchId: string;
+  playedAt: string;
+  rows: StatRow[];
+};
 
 function getCutoffDate(filter: TimeFilter) {
   if (filter === 'lifetime') return null;
@@ -53,12 +83,129 @@ function filterLabel(filter: TimeFilter) {
   return 'Last 7 Days';
 }
 
+function expectedScore(ratingA: number, ratingB: number) {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+}
+
+function resultScore(result: 'win' | 'loss' | 'tie') {
+  if (result === 'win') return 1;
+  if (result === 'loss') return 0;
+  return 0.5;
+}
+
+function getKFactor(matchCount: number) {
+  if (matchCount < 10) return 32;
+  if (matchCount < 30) return 24;
+  return 16;
+}
+
+function buildEloTimeline(allStats: StatRow[]) {
+  const groupedMatches = new Map<string, EloMatchGroup>();
+
+  for (const row of allStats) {
+    if (!groupedMatches.has(row.match_id)) {
+      groupedMatches.set(row.match_id, {
+        matchId: row.match_id,
+        playedAt: row.played_at,
+        rows: [],
+      });
+    }
+    groupedMatches.get(row.match_id)!.rows.push(row);
+  }
+
+  const chronologicalMatches = Array.from(groupedMatches.values()).sort(
+    (a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime()
+  );
+
+  const ratings = new Map<string, number>();
+  const matchCounts = new Map<string, number>();
+  const timelineByUser = new Map<string, Array<{ playedAt: string; rating: number }>>();
+
+  function getRating(userId: string) {
+    return ratings.get(userId) ?? 1000;
+  }
+
+  function getMatchesPlayed(userId: string) {
+    return matchCounts.get(userId) ?? 0;
+  }
+
+  function bumpMatchCount(userId: string) {
+    matchCounts.set(userId, getMatchesPlayed(userId) + 1);
+  }
+
+  function pushTimeline(userId: string, playedAt: string, rating: number) {
+    if (!timelineByUser.has(userId)) {
+      timelineByUser.set(userId, []);
+    }
+    timelineByUser.get(userId)!.push({ playedAt, rating });
+  }
+
+  for (const match of chronologicalMatches) {
+    const rows = match.rows;
+    if (!rows.length) continue;
+
+    const first = rows[0];
+    const teamAIds = [first.user_id, first.partner_user_id].filter(Boolean) as string[];
+    const teamBIds = [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
+
+    if (!teamAIds.length || !teamBIds.length) continue;
+
+    const teamARating =
+      teamAIds.reduce((sum, id) => sum + getRating(id), 0) / teamAIds.length;
+    const teamBRating =
+      teamBIds.reduce((sum, id) => sum + getRating(id), 0) / teamBIds.length;
+
+    const teamARepresentative = rows.find((r) => teamAIds.includes(r.user_id));
+    if (!teamARepresentative) continue;
+
+    const teamAResult: 'win' | 'loss' | 'tie' =
+      teamARepresentative.wins > 0
+        ? 'win'
+        : teamARepresentative.losses > 0
+        ? 'loss'
+        : 'tie';
+
+    const teamBResult: 'win' | 'loss' | 'tie' =
+      teamAResult === 'win' ? 'loss' : teamAResult === 'loss' ? 'win' : 'tie';
+
+    const expectedA = expectedScore(teamARating, teamBRating);
+    const expectedB = expectedScore(teamBRating, teamARating);
+
+    const averageKTeamA =
+      teamAIds.reduce((sum, id) => sum + getKFactor(getMatchesPlayed(id)), 0) / teamAIds.length;
+    const averageKTeamB =
+      teamBIds.reduce((sum, id) => sum + getKFactor(getMatchesPlayed(id)), 0) / teamBIds.length;
+
+    const deltaA = averageKTeamA * (resultScore(teamAResult) - expectedA);
+    const deltaB = averageKTeamB * (resultScore(teamBResult) - expectedB);
+
+    for (const userId of teamAIds) {
+      const newRating = Math.round(getRating(userId) + deltaA);
+      ratings.set(userId, newRating);
+      bumpMatchCount(userId);
+      pushTimeline(userId, match.playedAt, newRating);
+    }
+
+    for (const userId of teamBIds) {
+      const newRating = Math.round(getRating(userId) + deltaB);
+      ratings.set(userId, newRating);
+      bumpMatchCount(userId);
+      pushTimeline(userId, match.playedAt, newRating);
+    }
+  }
+
+  return timelineByUser;
+}
+
 export default function MyStatsPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [userId, setUserId] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [stats, setStats] = useState<StatRow[]>([]);
+  const [allStatsForElo, setAllStatsForElo] = useState<StatRow[]>([]);
+  const [allTournamentPlayers, setAllTournamentPlayers] = useState<TournamentPlayer[]>([]);
+  const [allCompletedMatches, setAllCompletedMatches] = useState<MatchRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
 
@@ -84,13 +231,47 @@ export default function MyStatsPage() {
 
       setDisplayName(profile?.display_name || user.email || 'Player');
 
-      const { data: statRows } = await supabase
+      const { data: userStatRows } = await supabase
         .from('player_match_stats')
         .select('*')
         .eq('user_id', user.id)
         .order('played_at', { ascending: false });
 
-      setStats(statRows || []);
+      const { data: allStatRows } = await supabase
+        .from('player_match_stats')
+        .select('*')
+        .order('played_at', { ascending: true });
+
+      const userTournamentIds = Array.from(
+        new Set((userStatRows || []).map((row) => row.tournament_id).filter(Boolean))
+      );
+
+      let tournamentPlayers: TournamentPlayer[] = [];
+      let completedMatches: MatchRow[] = [];
+
+      if (userTournamentIds.length > 0) {
+        const { data: playersData } = await supabase
+          .from('tournament_players')
+          .select('id, tournament_id, claimed_by_user_id, display_name')
+          .in('tournament_id', userTournamentIds);
+
+        tournamentPlayers = playersData || [];
+
+        const { data: matchesData } = await supabase
+          .from('matches')
+          .select(
+            'tournament_id, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete'
+          )
+          .in('tournament_id', userTournamentIds)
+          .eq('is_complete', true);
+
+        completedMatches = matchesData || [];
+      }
+
+      setStats((userStatRows || []) as StatRow[]);
+      setAllStatsForElo((allStatRows || []) as StatRow[]);
+      setAllTournamentPlayers(tournamentPlayers);
+      setAllCompletedMatches(completedMatches);
       setLoading(false);
     }
 
@@ -106,6 +287,18 @@ export default function MyStatsPage() {
       return playedAt >= cutoff;
     });
   }, [stats, timeFilter]);
+
+  const filteredTournamentIds = useMemo(() => {
+    return Array.from(new Set(filteredStats.map((row) => row.tournament_id).filter(Boolean)));
+  }, [filteredStats]);
+
+  const filteredTournamentPlayers = useMemo(() => {
+    return allTournamentPlayers.filter((row) => filteredTournamentIds.includes(row.tournament_id));
+  }, [allTournamentPlayers, filteredTournamentIds]);
+
+  const filteredCompletedMatches = useMemo(() => {
+    return allCompletedMatches.filter((row) => filteredTournamentIds.includes(row.tournament_id));
+  }, [allCompletedMatches, filteredTournamentIds]);
 
   const aggregates = useMemo(() => {
     let wins = 0;
@@ -143,6 +336,219 @@ export default function MyStatsPage() {
       tournamentsPlayed: tournamentIds.size,
     };
   }, [filteredStats]);
+
+  const tournamentSummary = useMemo(() => {
+    if (!userId) {
+      return {
+        bestFinish: '-',
+        podiums: 0,
+        tournamentWins: 0,
+      };
+    }
+
+    const playersByTournament = new Map<string, TournamentPlayer[]>();
+    for (const row of filteredTournamentPlayers) {
+      if (!playersByTournament.has(row.tournament_id)) {
+        playersByTournament.set(row.tournament_id, []);
+      }
+      playersByTournament.get(row.tournament_id)!.push(row);
+    }
+
+    const matchesByTournament = new Map<string, MatchRow[]>();
+    for (const row of filteredCompletedMatches) {
+      if (!matchesByTournament.has(row.tournament_id)) {
+        matchesByTournament.set(row.tournament_id, []);
+      }
+      matchesByTournament.get(row.tournament_id)!.push(row);
+    }
+
+    const finishes: number[] = [];
+
+    for (const tournamentId of filteredTournamentIds) {
+      const players = playersByTournament.get(tournamentId) || [];
+      const matches = matchesByTournament.get(tournamentId) || [];
+      if (!players.length) continue;
+
+      const statsMap = new Map<
+        string,
+        {
+          playerId: string;
+          wins: number;
+          losses: number;
+          pointsFor: number;
+          pointsAgainst: number;
+        }
+      >();
+
+      for (const player of players) {
+        if (!player.claimed_by_user_id) continue;
+        statsMap.set(player.claimed_by_user_id, {
+          playerId: player.claimed_by_user_id,
+          wins: 0,
+          losses: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        });
+      }
+
+      for (const match of matches) {
+        if (
+          match.is_bye ||
+          match.team_a_score === null ||
+          match.team_b_score === null
+        ) {
+          continue;
+        }
+
+        const aPlayers = players.filter((p) =>
+          [match.team_a_player_1_id, match.team_a_player_2_id].includes(p.id)
+        );
+
+        const bPlayers = players.filter((p) =>
+          [match.team_b_player_1_id, match.team_b_player_2_id].includes(p.id)
+        );
+
+        const aUserIds = aPlayers.map((p) => p.claimed_by_user_id).filter(Boolean) as string[];
+        const bUserIds = bPlayers.map((p) => p.claimed_by_user_id).filter(Boolean) as string[];
+
+        for (const id of aUserIds) {
+          const row = statsMap.get(id);
+          if (!row) continue;
+          row.pointsFor += match.team_a_score;
+          row.pointsAgainst += match.team_b_score;
+          if (match.team_a_score > match.team_b_score) row.wins += 1;
+          if (match.team_a_score < match.team_b_score) row.losses += 1;
+        }
+
+        for (const id of bUserIds) {
+          const row = statsMap.get(id);
+          if (!row) continue;
+          row.pointsFor += match.team_b_score;
+          row.pointsAgainst += match.team_a_score;
+          if (match.team_b_score > match.team_a_score) row.wins += 1;
+          if (match.team_b_score < match.team_a_score) row.losses += 1;
+        }
+      }
+
+      const ranked = Array.from(statsMap.values()).sort((a, b) => {
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        const diffA = a.pointsFor - a.pointsAgainst;
+        const diffB = b.pointsFor - b.pointsAgainst;
+        if (diffB !== diffA) return diffB - diffA;
+        if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
+        return a.playerId.localeCompare(b.playerId);
+      });
+
+      const finish = ranked.findIndex((row) => row.playerId === userId);
+      if (finish >= 0) finishes.push(finish + 1);
+    }
+
+    const bestFinish = finishes.length ? Math.min(...finishes) : null;
+    const podiums = finishes.filter((f) => f <= 3).length;
+    const tournamentWins = finishes.filter((f) => f === 1).length;
+
+    return {
+      bestFinish: bestFinish ?? '-',
+      podiums,
+      tournamentWins,
+    };
+  }, [filteredTournamentIds, filteredTournamentPlayers, filteredCompletedMatches, userId]);
+
+  const streaks = useMemo(() => {
+    const ordered = [...filteredStats].sort(
+      (a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+    );
+
+    let currentType: 'W' | 'L' | 'T' | null = null;
+    let currentCount = 0;
+    let bestWinStreak = 0;
+
+    for (const row of ordered) {
+      const result: 'W' | 'L' | 'T' =
+        row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
+
+      if (result === currentType) {
+        currentCount += 1;
+      } else {
+        currentType = result;
+        currentCount = 1;
+      }
+
+      if (result === 'W') {
+        bestWinStreak = Math.max(bestWinStreak, currentCount);
+      }
+    }
+
+    const currentStreakLabel =
+      currentType && currentCount > 0 ? `${currentType}${currentCount}` : '-';
+
+    const recentForm = [...filteredStats]
+      .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+      .slice(0, 5)
+      .map((row) => (row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T'))
+      .join(' ');
+
+    return {
+      currentStreakLabel,
+      bestWinStreak,
+      recentForm: recentForm || '-',
+    };
+  }, [filteredStats]);
+
+  const eloStats = useMemo(() => {
+    if (!userId || !allStatsForElo.length) {
+      return {
+        currentElo: 1000,
+        peakElo: 1000,
+        startEloForWindow: 1000,
+        deltaInWindow: 0,
+      };
+    }
+
+    const timelineByUser = buildEloTimeline(allStatsForElo);
+    const userTimeline = timelineByUser.get(userId) || [];
+
+    const currentElo = userTimeline.length
+      ? userTimeline[userTimeline.length - 1].rating
+      : 1000;
+
+    const peakElo = userTimeline.length
+      ? Math.max(...userTimeline.map((entry) => entry.rating))
+      : 1000;
+
+    const cutoff = getCutoffDate(timeFilter);
+
+    if (!cutoff) {
+      return {
+        currentElo,
+        peakElo,
+        startEloForWindow: 1000,
+        deltaInWindow: currentElo - 1000,
+      };
+    }
+
+    const beforeWindow = userTimeline.filter(
+      (entry) => new Date(entry.playedAt).getTime() < cutoff.getTime()
+    );
+    const insideWindow = userTimeline.filter(
+      (entry) => new Date(entry.playedAt).getTime() >= cutoff.getTime()
+    );
+
+    const startEloForWindow = beforeWindow.length
+      ? beforeWindow[beforeWindow.length - 1].rating
+      : 1000;
+
+    const endEloForWindow = insideWindow.length
+      ? insideWindow[insideWindow.length - 1].rating
+      : startEloForWindow;
+
+    return {
+      currentElo: endEloForWindow,
+      peakElo,
+      startEloForWindow,
+      deltaInWindow: endEloForWindow - startEloForWindow,
+    };
+  }, [allStatsForElo, userId, timeFilter]);
 
   const initials = useMemo(() => {
     if (!displayName) return 'DD';
@@ -209,31 +615,11 @@ export default function MyStatsPage() {
             gap: 8,
           }}
         >
-          <FilterButton
-            active={timeFilter === 'lifetime'}
-            label="Lifetime"
-            onClick={() => setTimeFilter('lifetime')}
-          />
-          <FilterButton
-            active={timeFilter === '12m'}
-            label="12M"
-            onClick={() => setTimeFilter('12m')}
-          />
-          <FilterButton
-            active={timeFilter === '6m'}
-            label="6M"
-            onClick={() => setTimeFilter('6m')}
-          />
-          <FilterButton
-            active={timeFilter === '30d'}
-            label="30D"
-            onClick={() => setTimeFilter('30d')}
-          />
-          <FilterButton
-            active={timeFilter === '7d'}
-            label="7D"
-            onClick={() => setTimeFilter('7d')}
-          />
+          <FilterButton active={timeFilter === 'lifetime'} label="Lifetime" onClick={() => setTimeFilter('lifetime')} />
+          <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
+          <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
+          <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
+          <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
         </div>
       </div>
 
@@ -251,6 +637,38 @@ export default function MyStatsPage() {
         <StatCard label="Point Diff" value={aggregates.pointDiff} sub="Total" />
       </div>
 
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        <StatCard label="Current Elo" value={eloStats.currentElo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
+        <StatCard label="Peak Elo" value={eloStats.peakElo} sub="Lifetime high" />
+        <StatCard
+          label="Elo Change"
+          value={eloStats.deltaInWindow >= 0 ? `+${eloStats.deltaInWindow}` : eloStats.deltaInWindow}
+          sub={filterLabel(timeFilter)}
+        />
+        <StatCard label="Current Streak" value={streaks.currentStreakLabel} sub="W / L / T" />
+      </div>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 12,
+          marginBottom: 16,
+        }}
+      >
+        <StatCard label="Best Finish" value={tournamentSummary.bestFinish} sub="Tournament place" />
+        <StatCard label="Podiums" value={tournamentSummary.podiums} sub="Top 3 finishes" />
+        <StatCard label="Tournament Wins" value={tournamentSummary.tournamentWins} sub="1st place finishes" />
+        <StatCard label="Best Win Streak" value={streaks.bestWinStreak} sub="Lifetime" />
+      </div>
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">Summary</div>
 
@@ -266,6 +684,7 @@ export default function MyStatsPage() {
             <Row label="Points For" value={aggregates.pointsFor} />
             <Row label="Points Against" value={aggregates.pointsAgainst} />
             <Row label="Point Differential" value={aggregates.pointDiff} />
+            <Row label="Recent Form" value={streaks.recentForm} />
           </div>
         )}
       </div>

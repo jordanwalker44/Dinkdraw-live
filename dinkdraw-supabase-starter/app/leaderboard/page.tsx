@@ -5,7 +5,9 @@ import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
 import { TopNav } from '../../components/TopNav';
 
 type PlayerMatchStat = {
+  id: string;
   user_id: string;
+  match_id: string;
   wins: number;
   losses: number;
   ties: number;
@@ -13,6 +15,9 @@ type PlayerMatchStat = {
   points_against: number;
   played_at: string;
   tournament_id: string;
+  partner_user_id: string | null;
+  opponent_1_user_id: string | null;
+  opponent_2_user_id: string | null;
 };
 
 type Profile = {
@@ -36,6 +41,12 @@ type LeaderboardRow = {
   pointDiff: number;
   tournamentsPlayed: number;
   rating: number;
+};
+
+type EloMatchGroup = {
+  matchId: string;
+  playedAt: string;
+  rows: PlayerMatchStat[];
 };
 
 function getCutoffDate(filter: TimeFilter) {
@@ -74,12 +85,20 @@ function filterLabel(filter: TimeFilter) {
   return 'Last 7 Days';
 }
 
-function calculateRating(matches: number, winPct: number, pointDiff: number) {
-  const base = 1000;
-  const volumeBoost = Math.min(matches * 8, 240);
-  const winBoost = Math.round((winPct - 50) * 8);
-  const diffBoost = Math.max(-120, Math.min(120, pointDiff * 2));
-  return base + volumeBoost + winBoost + diffBoost;
+function expectedScore(ratingA: number, ratingB: number) {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+}
+
+function resultScore(result: 'win' | 'loss' | 'tie') {
+  if (result === 'win') return 1;
+  if (result === 'loss') return 0;
+  return 0.5;
+}
+
+function getKFactor(matchCount: number) {
+  if (matchCount < 10) return 32;
+  if (matchCount < 30) return 24;
+  return 16;
 }
 
 export default function LeaderboardPage() {
@@ -98,7 +117,7 @@ export default function LeaderboardPage() {
       const { data: statsData, error: statsError } = await supabase
         .from('player_match_stats')
         .select('*')
-        .order('played_at', { ascending: false });
+        .order('played_at', { ascending: true });
 
       if (statsError) {
         setStats([]);
@@ -142,7 +161,27 @@ export default function LeaderboardPage() {
 
   const leaderboard = useMemo<LeaderboardRow[]>(() => {
     const profilesById = new Map(profiles.map((p) => [p.id, p]));
-    const map = new Map<
+
+    const groupedMatches = new Map<string, EloMatchGroup>();
+    for (const row of filteredStats) {
+      if (!groupedMatches.has(row.match_id)) {
+        groupedMatches.set(row.match_id, {
+          matchId: row.match_id,
+          playedAt: row.played_at,
+          rows: [],
+        });
+      }
+      groupedMatches.get(row.match_id)!.rows.push(row);
+    }
+
+    const chronologicalMatches = Array.from(groupedMatches.values()).sort(
+      (a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime()
+    );
+
+    const ratings = new Map<string, number>();
+    const matchCounts = new Map<string, number>();
+
+    const totals = new Map<
       string,
       {
         userId: string;
@@ -156,10 +195,22 @@ export default function LeaderboardPage() {
       }
     >();
 
-    for (const row of filteredStats) {
-      if (!map.has(row.user_id)) {
-        map.set(row.user_id, {
-          userId: row.user_id,
+    function getRating(userId: string) {
+      return ratings.get(userId) ?? 1000;
+    }
+
+    function getMatchesPlayed(userId: string) {
+      return matchCounts.get(userId) ?? 0;
+    }
+
+    function bumpMatchCount(userId: string) {
+      matchCounts.set(userId, getMatchesPlayed(userId) + 1);
+    }
+
+    function ensureTotals(userId: string) {
+      if (!totals.has(userId)) {
+        totals.set(userId, {
+          userId,
           matches: 0,
           wins: 0,
           losses: 0,
@@ -169,8 +220,11 @@ export default function LeaderboardPage() {
           tournaments: new Set<string>(),
         });
       }
+      return totals.get(userId)!;
+    }
 
-      const current = map.get(row.user_id)!;
+    for (const row of filteredStats) {
+      const current = ensureTotals(row.user_id);
       current.wins += row.wins;
       current.losses += row.losses;
       current.ties += row.ties;
@@ -180,12 +234,73 @@ export default function LeaderboardPage() {
       if (row.tournament_id) current.tournaments.add(row.tournament_id);
     }
 
-    return Array.from(map.values())
+    for (const match of chronologicalMatches) {
+      const rows = match.rows;
+
+      const teamA = rows.filter((r) => r.wins === 1 || r.losses === 1 || r.ties === 1).filter((r) => {
+        const result = r.wins > 0 ? 'win' : r.losses > 0 ? 'loss' : 'tie';
+        const opponents = [r.opponent_1_user_id, r.opponent_2_user_id].filter(Boolean);
+        if (!opponents.length) return false;
+        return rows.some((other) => opponents.includes(other.user_id));
+      });
+
+      if (!teamA.length) continue;
+
+      const processed = new Set<string>();
+      const first = rows[0];
+      const teamAIds = [first.user_id, first.partner_user_id].filter(Boolean) as string[];
+      const teamBIds = [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
+
+      if (!teamAIds.length || !teamBIds.length) continue;
+
+      teamAIds.forEach((id) => processed.add(id));
+      teamBIds.forEach((id) => processed.add(id));
+
+      const teamARating =
+        teamAIds.reduce((sum, id) => sum + getRating(id), 0) / teamAIds.length;
+      const teamBRating =
+        teamBIds.reduce((sum, id) => sum + getRating(id), 0) / teamBIds.length;
+
+      const teamARepresentative = rows.find((r) => teamAIds.includes(r.user_id));
+      if (!teamARepresentative) continue;
+
+      const teamAResult: 'win' | 'loss' | 'tie' =
+        teamARepresentative.wins > 0
+          ? 'win'
+          : teamARepresentative.losses > 0
+          ? 'loss'
+          : 'tie';
+
+      const teamBResult: 'win' | 'loss' | 'tie' =
+        teamAResult === 'win' ? 'loss' : teamAResult === 'loss' ? 'win' : 'tie';
+
+      const expectedA = expectedScore(teamARating, teamBRating);
+      const expectedB = expectedScore(teamBRating, teamARating);
+
+      const averageKTeamA =
+        teamAIds.reduce((sum, id) => sum + getKFactor(getMatchesPlayed(id)), 0) / teamAIds.length;
+      const averageKTeamB =
+        teamBIds.reduce((sum, id) => sum + getKFactor(getMatchesPlayed(id)), 0) / teamBIds.length;
+
+      const deltaA = averageKTeamA * (resultScore(teamAResult) - expectedA);
+      const deltaB = averageKTeamB * (resultScore(teamBResult) - expectedB);
+
+      for (const userId of teamAIds) {
+        ratings.set(userId, Math.round(getRating(userId) + deltaA));
+        bumpMatchCount(userId);
+      }
+
+      for (const userId of teamBIds) {
+        ratings.set(userId, Math.round(getRating(userId) + deltaB));
+        bumpMatchCount(userId);
+      }
+    }
+
+    return Array.from(totals.values())
       .map((row) => {
         const profile = profilesById.get(row.userId);
         const winPct = row.matches ? Math.round((row.wins / row.matches) * 100) : 0;
         const pointDiff = row.pointsFor - row.pointsAgainst;
-        const rating = calculateRating(row.matches, winPct, pointDiff);
 
         return {
           userId: row.userId,
@@ -202,7 +317,7 @@ export default function LeaderboardPage() {
           pointsAgainst: row.pointsAgainst,
           pointDiff,
           tournamentsPlayed: row.tournaments.size,
-          rating,
+          rating: getRating(row.userId),
         };
       })
       .filter((row) => row.matches >= minMatches)
@@ -222,7 +337,7 @@ export default function LeaderboardPage() {
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">Global Leaderboard</div>
         <div className="card-subtitle">
-          Ranked by rating, then win rate, wins, and point differential.
+          Ranked by real Elo, updated match by match.
         </div>
       </div>
 
@@ -328,7 +443,7 @@ export default function LeaderboardPage() {
 
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 800, fontSize: 20 }}>{player.rating}</div>
-                    <div className="muted">Rating</div>
+                    <div className="muted">Elo</div>
                     <div style={{ fontWeight: 700, marginTop: 6 }}>{player.winPct}%</div>
                     <div className="muted">Win Rate</div>
                   </div>

@@ -236,25 +236,13 @@ export default function LeaderboardPage() {
 
     for (const match of chronologicalMatches) {
       const rows = match.rows;
+      if (!rows.length) continue;
 
-      const teamA = rows.filter((r) => r.wins === 1 || r.losses === 1 || r.ties === 1).filter((r) => {
-        const result = r.wins > 0 ? 'win' : r.losses > 0 ? 'loss' : 'tie';
-        const opponents = [r.opponent_1_user_id, r.opponent_2_user_id].filter(Boolean);
-        if (!opponents.length) return false;
-        return rows.some((other) => opponents.includes(other.user_id));
-      });
-
-      if (!teamA.length) continue;
-
-      const processed = new Set<string>();
       const first = rows[0];
       const teamAIds = [first.user_id, first.partner_user_id].filter(Boolean) as string[];
       const teamBIds = [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
 
       if (!teamAIds.length || !teamBIds.length) continue;
-
-      teamAIds.forEach((id) => processed.add(id));
-      teamBIds.forEach((id) => processed.add(id));
 
       const teamARating =
         teamAIds.reduce((sum, id) => sum + getRating(id), 0) / teamAIds.length;
@@ -330,38 +318,45 @@ export default function LeaderboardPage() {
       });
   }, [filteredStats, profiles, minMatches]);
 
+  const summary = useMemo(() => {
+    return {
+      players: leaderboard.length,
+      topRating: leaderboard[0]?.rating ?? 1000,
+      topWinRate: leaderboard[0]?.winPct ?? 0,
+    };
+  }, [leaderboard]);
+
   return (
     <main className="page-shell">
-      <TopNav />
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Global Leaderboard</div>
-        <div className="card-subtitle">
-          Ranked by real Elo, updated match by match.
+      <div className="hero">
+        <div className="hero-inner">
+          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
+          <h1 className="hero-title">Leaderboard</h1>
+          <p className="hero-subtitle">
+            Live player rankings powered by match-by-match Elo.
+          </p>
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title" style={{ marginBottom: 12 }}>
-          Filters
-        </div>
+      <TopNav />
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          <FilterButton active={timeFilter === 'lifetime'} label="Lifetime" onClick={() => setTimeFilter('lifetime')} />
-          <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
-          <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
-          <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
-          <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
-        </div>
-
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Filters</div>
         <div className="grid">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+              gap: 8,
+            }}
+          >
+            <FilterButton active={timeFilter === 'lifetime'} label="All" onClick={() => setTimeFilter('lifetime')} />
+            <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
+            <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
+            <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
+            <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
+          </div>
+
           <div>
             <label className="label">Minimum Matches</label>
             <select
@@ -376,15 +371,16 @@ export default function LeaderboardPage() {
               <option value={20}>20+</option>
             </select>
           </div>
+        </div>
+      </div>
 
-          <div className="list-item">
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>
-              {filterLabel(timeFilter)}
-            </div>
-            <div className="muted">
-              {leaderboard.length} ranked player{leaderboard.length === 1 ? '' : 's'}
-            </div>
-          </div>
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Overview</div>
+        <div className="two-col">
+          <SimpleStatCard label="Time Window" value={filterLabel(timeFilter)} sub="Current leaderboard" />
+          <SimpleStatCard label="Ranked Players" value={summary.players} sub={`${minMatches}+ matches`} />
+          <SimpleStatCard label="Top Elo" value={summary.topRating} sub="Current leader" />
+          <SimpleStatCard label="Top Win Rate" value={`${summary.topWinRate}%`} sub="Current leader" />
         </div>
       </div>
 
@@ -395,8 +391,8 @@ export default function LeaderboardPage() {
       ) : !leaderboard.length ? (
         <div className="card">
           <div className="card-title">No Ranked Players Yet</div>
-          <div className="muted">
-            Try lowering the minimum matches filter or play more completed matches.
+          <div className="card-subtitle">
+            Try lowering the minimum matches filter or complete more matches.
           </div>
         </div>
       ) : (
@@ -419,47 +415,46 @@ export default function LeaderboardPage() {
                 : {};
 
             return (
-              <div
-                key={player.userId}
-                className="list-item"
-                style={highlightStyle}
-              >
-                <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+              <div key={player.userId} className="card" style={highlightStyle}>
+                <div className="row-between" style={{ marginBottom: 12, alignItems: 'flex-start' }}>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: 18 }}>
+                    <div style={{ fontWeight: 800, fontSize: 20, lineHeight: 1.15 }}>
                       {medal ? `${medal} ` : ''}
                       {place}. {player.name}
                     </div>
-
-                    <div className="muted" style={{ marginTop: 4 }}>
-                      {player.wins}-{player.losses}
-                      {player.ties > 0 ? `-${player.ties}` : ''} • {player.matches} matches
-                    </div>
-
-                    <div className="muted" style={{ marginTop: 2 }}>
-                      {player.tournamentsPlayed} tournaments • PF {player.pointsFor} / PA {player.pointsAgainst}
+                    <div className="muted" style={{ marginTop: 6 }}>
+                      {player.matches} matches • {player.tournamentsPlayed} tournaments
                     </div>
                   </div>
 
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, fontSize: 20 }}>{player.rating}</div>
-                    <div className="muted">Elo</div>
-                    <div style={{ fontWeight: 700, marginTop: 6 }}>{player.winPct}%</div>
-                    <div className="muted">Win Rate</div>
+                    <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1 }}>
+                      {player.rating}
+                    </div>
+                    <div className="muted" style={{ marginTop: 4 }}>Elo</div>
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    gap: 8,
-                    marginTop: 12,
-                  }}
-                >
-                  <MiniStat label="Wins" value={player.wins} />
-                  <MiniStat label="Diff" value={player.pointDiff >= 0 ? `+${player.pointDiff}` : player.pointDiff} />
-                  <MiniStat label="Events" value={player.tournamentsPlayed} />
+                <div className="two-col" style={{ marginBottom: 12 }}>
+                  <MiniStat label="Record" value={`${player.wins}-${player.losses}${player.ties > 0 ? `-${player.ties}` : ''}`} />
+                  <MiniStat label="Win Rate" value={`${player.winPct}%`} />
+                  <MiniStat label="Point Diff" value={player.pointDiff >= 0 ? `+${player.pointDiff}` : player.pointDiff} />
+                  <MiniStat label="Points" value={`${player.pointsFor}-${player.pointsAgainst}`} />
+                </div>
+
+                <div className="list-item" style={{ padding: 12 }}>
+                  <div className="row-between">
+                    <span className="muted">Standing</span>
+                    <strong>
+                      {place === 1
+                        ? 'Leader'
+                        : place <= 3
+                        ? 'Podium'
+                        : place <= 10
+                        ? 'Top 10'
+                        : `#${place}`}
+                    </strong>
+                  </div>
                 </div>
               </div>
             );
@@ -484,10 +479,28 @@ function FilterButton({
       type="button"
       className={`button ${active ? 'primary' : 'secondary'}`}
       onClick={onClick}
-      style={{ minHeight: 44, fontWeight: 700 }}
+      style={{ minHeight: 44, fontWeight: 800 }}
     >
       {label}
     </button>
+  );
+}
+
+function SimpleStatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string | number;
+  sub: string;
+}) {
+  return (
+    <div className="list-item">
+      <div className="muted" style={{ marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.05 }}>{value}</div>
+      <div className="muted" style={{ marginTop: 6 }}>{sub}</div>
+    </div>
   );
 }
 
@@ -499,9 +512,9 @@ function MiniStat({
   value: string | number;
 }) {
   return (
-    <div className="card" style={{ padding: 10 }}>
-      <div className="muted" style={{ fontSize: 12 }}>{label}</div>
-      <div style={{ fontWeight: 800, fontSize: 18 }}>{value}</div>
+    <div className="list-item" style={{ padding: 12 }}>
+      <div className="muted" style={{ marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>{value}</div>
     </div>
   );
 }

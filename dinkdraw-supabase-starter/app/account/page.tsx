@@ -50,6 +50,7 @@ export default function AccountPage() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const user = session?.user;
+
       setUserEmail(user?.email ?? '');
       setEmail(user?.email ?? '');
 
@@ -185,7 +186,7 @@ export default function AccountPage() {
 
     setProfileName(nextName);
     setName(nextName);
-    setMessage('Display name saved. New tournaments and claimed spots will use this name.');
+    setMessage('Display name saved.');
     setIsSavingProfile(false);
   }
 
@@ -203,22 +204,47 @@ export default function AccountPage() {
     setIsLoading(false);
   }
 
+  const initials = (profileName || userEmail || 'DD')
+    .split(' ')
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('')
+    .slice(0, 2);
+
   return (
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
+          <div
+            style={{
+              width: 70,
+              height: 70,
+              borderRadius: '50%',
+              background: 'rgba(163,230,53,.12)',
+              border: '1px solid rgba(163,230,53,.22)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800,
+              fontSize: 24,
+              margin: '0 auto 12px',
+            }}
+          >
+            {initials || 'DD'}
+          </div>
           <h1 className="hero-title">Account</h1>
           <p className="hero-subtitle">
-            Sign in fast, manage your profile, and keep your tournaments connected to you.
+            Sign in, manage your profile, and keep your tournaments connected to you.
           </p>
         </div>
       </div>
 
       <TopNav />
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="card-title">Account Status</div>
+      {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Status</div>
 
         {userEmail ? (
           <div
@@ -228,12 +254,12 @@ export default function AccountPage() {
               boxShadow: '0 0 0 1px rgba(163,230,53,.18) inset',
             }}
           >
-            <div className="row-between" style={{ alignItems: 'center', gap: 12 }}>
+            <div className="row-between">
               <div>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>Signed In</div>
                 <div className="muted">{userEmail}</div>
                 <div className="muted" style={{ marginTop: 4 }}>
-                  Default display name: {profileName || 'Not set'}
+                  Display name: {profileName || 'Not set'}
                 </div>
               </div>
               <span className="tag green">Active</span>
@@ -241,10 +267,12 @@ export default function AccountPage() {
           </div>
         ) : (
           <div className="list-item">
-            <div className="row-between" style={{ alignItems: 'center', gap: 12 }}>
+            <div className="row-between">
               <div>
                 <div style={{ fontWeight: 800, marginBottom: 4 }}>Not Signed In</div>
-                <div className="muted">Sign in to save tournaments and resume them later.</div>
+                <div className="muted">
+                  Sign in to save tournaments, track stats, and show up on the leaderboard.
+                </div>
               </div>
               <span className="tag">Guest</span>
             </div>
@@ -252,29 +280,16 @@ export default function AccountPage() {
         )}
       </div>
 
-      {message ? (
-        <div
-          className="notice"
-          style={{
-            marginBottom: 16,
-            fontSize: 16,
-            fontWeight: 700,
-          }}
-        >
-          {message}
-        </div>
-      ) : null}
-
       {userEmail ? (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card" style={{ marginBottom: 14 }}>
           <div className="card-title">Profile</div>
           <div className="card-subtitle">
-            This is the default name DinkDraw will use when you create tournaments or claim spots.
+            This is the default name DinkDraw uses when you create tournaments or claim spots.
           </div>
 
           <div className="grid">
             <div>
-              <label className="label">Display name</label>
+              <label className="label">Display Name</label>
               <input
                 className="input"
                 value={profileName}
@@ -291,7 +306,11 @@ export default function AccountPage() {
               {isSavingProfile ? 'Saving...' : 'Save Display Name'}
             </button>
 
-            <button className="button secondary" onClick={handleSignOut} disabled={isLoading}>
+            <button
+              className="button secondary"
+              onClick={handleSignOut}
+              disabled={isLoading}
+            >
               {isLoading ? 'Working...' : 'Sign Out'}
             </button>
           </div>
@@ -299,28 +318,36 @@ export default function AccountPage() {
       ) : null}
 
       <div className="card">
-        <div className="row" style={{ marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+        <div className="card-title">{mode === 'signin' ? 'Sign In' : 'Create Account'}</div>
+        <div className="card-subtitle">
+          {mode === 'signin'
+            ? 'Use your account to access saved tournaments, rankings, and stats.'
+            : 'Create an account so your results and profile stay connected to you.'}
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 8,
+            marginBottom: 14,
+          }}
+        >
           <button
+            type="button"
             className={`button ${mode === 'signin' ? 'primary' : 'secondary'}`}
             onClick={() => setMode('signin')}
-            type="button"
           >
             Sign In
           </button>
 
           <button
+            type="button"
             className={`button ${mode === 'signup' ? 'primary' : 'secondary'}`}
             onClick={() => setMode('signup')}
-            type="button"
           >
-            Create Account
+            Create
           </button>
-        </div>
-
-        <div className="card-subtitle" style={{ marginBottom: 16 }}>
-          {mode === 'signin'
-            ? 'Sign in is the fastest way to get back into your tournaments.'
-            : 'Create an account so your tournaments and name stay connected to you.'}
         </div>
 
         <div className="grid">

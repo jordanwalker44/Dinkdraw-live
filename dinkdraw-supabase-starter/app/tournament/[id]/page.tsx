@@ -101,6 +101,10 @@ function chunkIntoGroups<T>(items: T[], size: number) {
   return groups;
 }
 
+function makeJoinCode() {
+  return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
 function buildSchedule(players: PlayerSlot[], rounds: number, courts: number): ScheduleRow[] {
   const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
   if (activePlayers.length < 4) return [];
@@ -297,6 +301,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
+  const [isRematching, setIsRematching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
   const [selectedRound, setSelectedRound] = useState(1);
@@ -660,6 +665,31 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
   }
 
+  async function shareJoinLink() {
+    try {
+      if (!tournament?.join_code) return;
+
+      const url = `${window.location.origin}/tournament/join?code=${encodeURIComponent(
+        tournament.join_code
+      )}`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: tournament.title || 'Join DinkDraw Tournament',
+          text: `Join ${tournament.title || 'this tournament'} on DinkDraw`,
+          url,
+        });
+        setMessage('Share link opened.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      setMessage('Join link copied.');
+    } catch {
+      setMessage('Could not share join link.');
+    }
+  }
+
   async function claimSlot(slotId: string) {
     setMessage('');
 
@@ -849,6 +879,101 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
 
     setIsStarting(false);
+  }
+
+  async function rematchTournament() {
+    if (!tournament) return;
+
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError) {
+      setMessage(authError.message);
+      return;
+    }
+
+    const user = authData.user;
+    if (!user) {
+      setMessage('Sign in first.');
+      return;
+    }
+
+    setIsRematching(true);
+    setMessage('');
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const organizerName =
+        profile?.display_name?.trim() ||
+        user.email?.split('@')[0] ||
+        tournament.organizer_name ||
+        'Organizer';
+
+      const rematchTitle = tournament.title.toLowerCase().includes('rematch')
+        ? tournament.title
+        : `${tournament.title} Rematch`;
+
+      const { data: newTournament, error: tournamentError } = await supabase
+        .from('tournaments')
+        .insert({
+          title: rematchTitle,
+          organizer_user_id: user.id,
+          organizer_name: organizerName,
+          join_code: makeJoinCode(),
+          event_date: tournament.event_date,
+          event_time: tournament.event_time,
+          location: tournament.location,
+          player_count: tournament.player_count,
+          courts: tournament.courts,
+          rounds: tournament.rounds,
+          games_to: tournament.games_to,
+          status: 'draft',
+          started_at: null,
+        })
+        .select()
+        .single();
+
+      if (tournamentError || !newTournament) {
+        setMessage(tournamentError?.message || 'Could not create rematch tournament.');
+        setIsRematching(false);
+        return;
+      }
+
+      const playerRows = Array.from({ length: tournament.player_count }, (_, index) => {
+        const oldSlot = playerSlots[index];
+        return {
+          tournament_id: newTournament.id,
+          slot_number: index + 1,
+          display_name: oldSlot?.display_name?.trim() || '',
+          claimed_by_user_id: null,
+        };
+      });
+
+      const { error: playersError } = await supabase
+        .from('tournament_players')
+        .insert(playerRows);
+
+      if (playersError) {
+        setMessage(playersError.message);
+        setIsRematching(false);
+        return;
+      }
+
+      try {
+        window.localStorage.setItem(
+          LAST_TOURNAMENT_KEY,
+          JSON.stringify({ id: newTournament.id, title: newTournament.title })
+        );
+      } catch {}
+
+      window.location.href = `/tournament/${newTournament.id}`;
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.');
+      setIsRematching(false);
+    }
   }
 
   function setDraftScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
@@ -1074,6 +1199,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <button type="button" className="button secondary" onClick={copyJoinCode}>
               {copied ? 'Copied!' : 'Copy'}
             </button>
+            <button type="button" className="button primary" onClick={shareJoinLink}>
+              Share Link
+            </button>
             <span className={isLive ? 'tag green' : 'tag'}>
               {isLive ? 'Live Sync On' : 'Connecting...'}
             </span>
@@ -1140,6 +1268,20 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               style={{ width: '100%' }}
             >
               {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Now'}
+            </button>
+          </div>
+        ) : null}
+
+        {isCompleted ? (
+          <div style={{ marginTop: 16 }}>
+            <button
+              type="button"
+              className="button primary"
+              onClick={rematchTournament}
+              disabled={isRematching}
+              style={{ width: '100%' }}
+            >
+              {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
             </button>
           </div>
         ) : null}
@@ -1423,77 +1565,71 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       )}
 
       {activeTab === 'standings' && (
-  <div className="card">
-    <div className="card-title">
-      {isCompleted ? '🏆 Final Results' : 'Standings'}
-    </div>
-    <div className="card-subtitle">
-      {isCompleted
-        ? 'Tournament complete. Final results are locked.'
-        : 'Ranked by wins, then point differential, then points scored.'}
-    </div>
+        <div className="card">
+          <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
+          <div className="card-subtitle">
+            {isCompleted
+              ? 'Tournament complete. Final results are locked.'
+              : 'Ranked by wins, then point differential, then points scored.'}
+          </div>
 
-    {!standings.length ? (
-      <div className="muted">No players yet.</div>
-    ) : (
-      <div className="grid">
-        {standings.map((row, index) => {
-          const place = index + 1;
+          {!standings.length ? (
+            <div className="muted">No players yet.</div>
+          ) : (
+            <div className="grid">
+              {standings.map((row, index) => {
+                const place = index + 1;
+                const medal =
+                  place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
 
-          const medal =
-            place === 1
-              ? '🥇'
-              : place === 2
-              ? '🥈'
-              : place === 3
-              ? '🥉'
-              : null;
+                const highlightStyle =
+                  place === 1
+                    ? {
+                        borderColor: 'rgba(250,204,21,.6)',
+                        boxShadow: '0 0 0 1px rgba(250,204,21,.35) inset',
+                      }
+                    : place <= 3
+                    ? {
+                        borderColor: 'rgba(163,230,53,.35)',
+                      }
+                    : {};
 
-          const highlightStyle =
-            place === 1
-              ? {
-                  borderColor: 'rgba(250,204,21,.6)',
-                  boxShadow: '0 0 0 1px rgba(250,204,21,.35) inset',
-                }
-              : place <= 3
-              ? {
-                  borderColor: 'rgba(163,230,53,.35)',
-                }
-              : {};
+                return (
+                  <div
+                    key={row.playerId}
+                    className="list-item"
+                    style={highlightStyle}
+                  >
+                    <div className="row-between">
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 18 }}>
+                          {medal ? `${medal} ` : ''}
+                          {place}. {row.name}
+                        </div>
 
-          return (
-            <div
-              key={row.playerId}
-              className="list-item"
-              style={highlightStyle}
-            >
-              <div className="row-between">
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 18 }}>
-                    {medal ? `${medal} ` : ''}
-                    {place}. {row.name}
+                        <div className="muted" style={{ marginTop: 4 }}>
+                          {row.wins}-{row.losses} • {row.played} played
+                        </div>
+
+                        <div className="muted" style={{ marginTop: 2 }}>
+                          PF: {row.pointsFor} | PA: {row.pointsAgainst}
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 800, fontSize: 18 }}>
+                          {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
+                        </div>
+                        <div className="muted">Diff</div>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="muted" style={{ marginTop: 4 }}>
-                    {row.wins}-{row.losses} • {row.played} played
-                  </div>
-
-                  <div className="muted" style={{ marginTop: 2 }}>
-                    PF: {row.pointsFor} | PA: {row.pointsAgainst}
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 800, fontSize: 18 }}>
-                    {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
-                  </div>
-                  <div className="muted">Diff</div>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
-    )}
-  </div>
-)}
+          )}
+        </div>
+      )}
+    </main>
+  );
+}

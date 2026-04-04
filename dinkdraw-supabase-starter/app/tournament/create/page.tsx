@@ -62,6 +62,7 @@ export default function CreateTournamentPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
 
+  const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const [title, setTitle] = useState('Saturday Round Robin');
   const [organizerName, setOrganizerName] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -76,9 +77,10 @@ export default function CreateTournamentPage() {
   const [message, setMessage] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
-  // ✅ Derived constraints
-  const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / 4));
-  const isValidSetup = playerCount >= 4;
+  const minPlayers = format === 'singles' ? 3 : 4;
+  const playersPerCourt = format === 'singles' ? 2 : 4;
+  const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / playersPerCourt));
+  const isValidSetup = playerCount >= minPlayers;
 
   useEffect(() => {
     async function loadUser() {
@@ -100,18 +102,27 @@ export default function CreateTournamentPage() {
     loadUser();
   }, [supabase]);
 
-  // ✅ Keep courts valid automatically
+  // Keep courts valid when format or player count changes
   useEffect(() => {
     if (courts > maxCourtsAllowed) {
       setCourts(maxCourtsAllowed);
     }
-  }, [playerCount, courts, maxCourtsAllowed]);
+  }, [playerCount, format, courts, maxCourtsAllowed]);
+
+  // Reset player count when switching formats to ensure minimum is met
+  useEffect(() => {
+    if (format === 'singles' && playerCount < 3) {
+      setPlayerCount(3);
+    } else if (format === 'doubles' && playerCount < 4) {
+      setPlayerCount(4);
+    }
+  }, [format]);
 
   async function handleCreate() {
     setMessage('');
 
     if (!isValidSetup) {
-      setMessage('You need at least 4 players.');
+      setMessage(`You need at least ${minPlayers} players for ${format}.`);
       return;
     }
 
@@ -158,6 +169,7 @@ export default function CreateTournamentPage() {
           rounds,
           games_to: gamesTo,
           status: 'draft',
+          format,
         })
         .select()
         .single();
@@ -200,6 +212,27 @@ export default function CreateTournamentPage() {
 
       <div className="card">
         <div className="grid">
+
+          <div>
+            <label className="label">Format</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+              <button
+                type="button"
+                className={`button ${format === 'doubles' ? 'primary' : 'secondary'}`}
+                onClick={() => setFormat('doubles')}
+              >
+                Doubles
+              </button>
+              <button
+                type="button"
+                className={`button ${format === 'singles' ? 'primary' : 'secondary'}`}
+                onClick={() => setFormat('singles')}
+              >
+                Singles
+              </button>
+            </div>
+          </div>
+
           <div>
             <label className="label">Event name</label>
             <input
@@ -248,7 +281,13 @@ export default function CreateTournamentPage() {
             />
           </div>
 
-          <Stepper label="Players" value={playerCount} min={4} max={40} onChange={setPlayerCount} />
+          <Stepper
+            label={`Players (min ${minPlayers})`}
+            value={playerCount}
+            min={minPlayers}
+            max={40}
+            onChange={setPlayerCount}
+          />
 
           <Stepper
             label={`Courts (max ${maxCourtsAllowed})`}
@@ -258,14 +297,26 @@ export default function CreateTournamentPage() {
             onChange={setCourts}
           />
 
-          <Stepper label="Rounds" value={rounds} min={1} max={30} onChange={setRounds} />
+          <Stepper
+            label="Rounds"
+            value={rounds}
+            min={1}
+            max={30}
+            onChange={setRounds}
+          />
 
-          <Stepper label="Games to" value={gamesTo} min={1} max={21} onChange={setGamesTo} />
+          <Stepper
+            label="Games to"
+            value={gamesTo}
+            min={1}
+            max={21}
+            onChange={setGamesTo}
+          />
 
           <div className="list-item">
             <div style={{ fontWeight: 700 }}>Quick summary</div>
             <div className="muted">
-              {playerCount} players • {courts} courts • {rounds} rounds
+              {format === 'singles' ? 'Singles' : 'Doubles'} • {playerCount} players • {courts} courts • {rounds} rounds
             </div>
           </div>
 

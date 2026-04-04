@@ -12,6 +12,7 @@ import {
 } from '../../lib/elo';
 
 type TimeFilter = 'lifetime' | '12m' | '6m' | '30d' | '7d';
+type FormatFilter = 'all' | 'singles' | 'doubles';
 
 export default function LeaderboardPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -20,6 +21,7 @@ export default function LeaderboardPage() {
   const [profiles, setProfiles] = useState<EloProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
+  const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [minMatches, setMinMatches] = useState(5);
 
   useEffect(() => {
@@ -62,10 +64,21 @@ export default function LeaderboardPage() {
   }, [supabase]);
 
   const filteredStats = useMemo(() => {
+    let result = stats;
+
+    // Filter by time
     const cutoff = getCutoffDate(timeFilter);
-    if (!cutoff) return stats;
-    return stats.filter((row) => new Date(row.played_at) >= cutoff);
-  }, [stats, timeFilter]);
+    if (cutoff) {
+      result = result.filter((row) => new Date(row.played_at) >= cutoff);
+    }
+
+    // Filter by format
+    if (formatFilter !== 'all') {
+      result = result.filter((row) => row.format === formatFilter);
+    }
+
+    return result;
+  }, [stats, timeFilter, formatFilter]);
 
   const leaderboard = useMemo(
     () => buildLeaderboardRows(filteredStats, profiles, minMatches),
@@ -77,6 +90,12 @@ export default function LeaderboardPage() {
     topRating: leaderboard[0]?.rating ?? 1000,
     topWinRate: leaderboard[0]?.winPct ?? 0,
   }), [leaderboard]);
+
+  function formatFilterLabel(f: FormatFilter) {
+    if (f === 'singles') return 'Singles';
+    if (f === 'doubles') return 'Doubles';
+    return 'All Formats';
+  }
 
   return (
     <main className="page-shell">
@@ -95,12 +114,25 @@ export default function LeaderboardPage() {
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Filters</div>
         <div className="grid">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
-            <FilterButton active={timeFilter === 'lifetime'} label="All" onClick={() => setTimeFilter('lifetime')} />
-            <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
-            <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
-            <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
-            <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
+
+          <div>
+            <label className="label">Format</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
+              <FilterButton active={formatFilter === 'all'} label="All" onClick={() => setFormatFilter('all')} />
+              <FilterButton active={formatFilter === 'doubles'} label="Doubles" onClick={() => setFormatFilter('doubles')} />
+              <FilterButton active={formatFilter === 'singles'} label="Singles" onClick={() => setFormatFilter('singles')} />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Time Period</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
+              <FilterButton active={timeFilter === 'lifetime'} label="All" onClick={() => setTimeFilter('lifetime')} />
+              <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
+              <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
+              <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
+              <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
+            </div>
           </div>
 
           <div>
@@ -123,10 +155,10 @@ export default function LeaderboardPage() {
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Overview</div>
         <div className="two-col">
+          <SimpleStatCard label="Format" value={formatFilterLabel(formatFilter)} sub="Current filter" />
           <SimpleStatCard label="Time Window" value={filterLabel(timeFilter)} sub="Current leaderboard" />
           <SimpleStatCard label="Ranked Players" value={summary.players} sub={`${minMatches}+ matches`} />
           <SimpleStatCard label="Top Elo" value={summary.topRating} sub="Current leader" />
-          <SimpleStatCard label="Top Win Rate" value={`${summary.topWinRate}%`} sub="Current leader" />
         </div>
       </div>
 
@@ -138,7 +170,7 @@ export default function LeaderboardPage() {
         <div className="card">
           <div className="card-title">No Ranked Players Yet</div>
           <div className="card-subtitle">
-            Try lowering the minimum matches filter or complete more matches.
+            Try lowering the minimum matches filter, changing the format, or complete more matches.
           </div>
         </div>
       ) : (
@@ -148,9 +180,9 @@ export default function LeaderboardPage() {
             const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
             const highlightStyle =
               place === 1
-                ? { borderColor: 'rgba(250,204,21,.6)', boxShadow: '0 0 0 1px rgba(250,204,21,.35) inset' }
+                ? { borderColor: 'rgba(255,203,5,.6)', boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset' }
                 : place <= 3
-                ? { borderColor: 'rgba(163,230,53,.35)' }
+                ? { borderColor: 'rgba(255,203,5,.35)' }
                 : {};
 
             return (

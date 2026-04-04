@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 
@@ -384,6 +385,7 @@ function buildSchedule(
 
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const router = useRouter();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
@@ -1220,10 +1222,25 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           ) : null}
 
           {isCompleted ? (
-            <button type="button" className="button primary" onClick={rematchTournament} disabled={isRematching}>
-              {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
-            </button>
-          ) : null}
+  <button
+    type="button"
+    className="button primary"
+    onClick={rematchTournament}
+    disabled={isRematching}
+  >
+    {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
+  </button>
+) : null}
+
+{isCompleted ? (
+  <button
+    type="button"
+    className="button primary"
+    onClick={() => router.push(`/tournament/${params.id}/results`)}
+  >
+    View & Share Results
+  </button>
+) : null}
         </div>
       </div>
 

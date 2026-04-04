@@ -1,7 +1,7 @@
 :root {
-  --bg: #081018;
-  --panel: #0f1722;
-  --panel-2: #121c28;
+  --bg: #00274C;
+  --panel: #001e3c;
+  --panel-2: #001830;
   --text: #f8fafc;
   --muted: #94a3b8;
   --line: rgba(255, 255, 255, 0.08);
@@ -9,7 +9,7 @@
   --accent: #FFCB05;
   --accent-dark: #e6b800;
   --accent-text: #00274C;
-  --blue: #00274C;
+  --blue: #FFCB05;
   --danger: #f87171;
   --shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
   --radius: 18px;
@@ -29,7 +29,7 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: linear-gradient(180deg, #071019 0%, #0b1320 100%);
+  background: linear-gradient(180deg, #00274C 0%, #001a36 100%);
   color: var(--text);
   font-family:
     Inter,
@@ -74,8 +74,8 @@ img {
 }
 
 .hero-inner {
-  background: linear-gradient(180deg, rgba(163, 230, 53, 0.08), rgba(163, 230, 53, 0.02));
-  border: 1px solid rgba(163, 230, 53, 0.14);
+  background: linear-gradient(180deg, rgba(255,203,5,0.10), rgba(255,203,5,0.03));
+  border: 1px solid rgba(255,203,5,0.18);
   border-radius: 24px;
   padding: 22px 18px;
   text-align: center;
@@ -166,8 +166,8 @@ img {
 }
 
 .nav-pill.active {
-  border-color: rgba(163, 230, 53, 0.45);
-  box-shadow: 0 0 0 1px rgba(163, 230, 53, 0.18) inset;
+  border-color: rgba(255,203,5,0.55);
+  box-shadow: 0 0 0 1px rgba(255,203,5,0.22) inset;
 }
 
 .nav-pill.accent {
@@ -177,7 +177,7 @@ img {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.015));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 16px;
@@ -249,7 +249,7 @@ textarea.input {
   min-height: 48px;
   border-radius: 14px;
   border: 1px solid var(--line-strong);
-  background: #0a1420;
+  background: #001428;
   color: var(--text);
   padding: 12px 14px;
   outline: none;
@@ -258,8 +258,8 @@ textarea.input {
 .input:focus,
 select.input:focus,
 textarea.input:focus {
-  border-color: rgba(163, 230, 53, 0.45);
-  box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.12);
+  border-color: rgba(255,203,5,0.5);
+  box-shadow: 0 0 0 3px rgba(255,203,5,0.12);
 }
 
 .button,
@@ -290,7 +290,7 @@ textarea.input:focus {
 .action-button.green {
   background: var(--accent);
   color: var(--accent-text);
-  box-shadow: 0 10px 24px rgba(163, 230, 53, 0.18);
+  box-shadow: 0 10px 24px rgba(255,203,5,0.22);
 }
 
 .button.secondary,
@@ -301,9 +301,9 @@ textarea.input:focus {
 }
 
 .action-button.blue {
-  background: var(--blue);
-  color: #071019;
-  box-shadow: 0 10px 24px rgba(56, 189, 248, 0.18);
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 10px 24px rgba(255,203,5,0.18);
 }
 
 .action-button {
@@ -324,8 +324,8 @@ textarea.input:focus {
 }
 
 .notice {
-  background: rgba(163, 230, 53, 0.1);
-  border: 1px solid rgba(163, 230, 53, 0.2);
+  background: rgba(255,203,5,0.10);
+  border: 1px solid rgba(255,203,5,0.22);
   color: var(--text);
   border-radius: 14px;
   padding: 12px 14px;
@@ -350,9 +350,9 @@ textarea.input:focus {
 }
 
 .tag.green {
-  background: rgba(163, 230, 53, 0.12);
-  border-color: rgba(163, 230, 53, 0.28);
-  color: #d9f99d;
+  background: rgba(255,203,5,0.15);
+  border-color: rgba(255,203,5,0.35);
+  color: #FFCB05;
 }
 
 .code-pill {

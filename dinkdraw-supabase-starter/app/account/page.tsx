@@ -157,6 +157,30 @@ export default function AccountPage() {
     setIsLoading(false);
   }
 
+  async function handleForgotPassword() {
+    setMessage('');
+
+    if (!email.trim()) {
+      setMessage('Enter your email address first, then click Forgot Password.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'https://dinkdraw.app/reset-password',
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setIsLoading(false);
+      return;
+    }
+
+    setMessage('Password reset email sent! Check your inbox.');
+    setIsLoading(false);
+  }
+
   async function handleSaveDisplayName() {
     setMessage('');
 
@@ -220,8 +244,8 @@ export default function AccountPage() {
               width: 70,
               height: 70,
               borderRadius: '50%',
-              background: 'rgba(163,230,53,.12)',
-              border: '1px solid rgba(163,230,53,.22)',
+              background: 'rgba(255,203,5,.12)',
+              border: '1px solid rgba(255,203,5,.22)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -250,8 +274,8 @@ export default function AccountPage() {
           <div
             className="list-item"
             style={{
-              borderColor: 'rgba(163,230,53,.45)',
-              boxShadow: '0 0 0 1px rgba(163,230,53,.18) inset',
+              borderColor: 'rgba(255,203,5,.45)',
+              boxShadow: '0 0 0 1px rgba(255,203,5,.18) inset',
             }}
           >
             <div className="row-between">
@@ -402,6 +426,17 @@ export default function AccountPage() {
               ? 'Create Account'
               : 'Sign In'}
           </button>
+
+          {mode === 'signin' ? (
+            <button
+              type="button"
+              className="button secondary"
+              onClick={handleForgotPassword}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Sending...' : 'Forgot Password'}
+            </button>
+          ) : null}
         </div>
       </div>
     </main>

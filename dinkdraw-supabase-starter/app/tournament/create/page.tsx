@@ -1,1137 +1,193 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
-
-type Tournament = {
-  id: string;
-  title: string;
-  join_code: string;
-  organizer_user_id: string;
-  organizer_name: string | null;
-  event_date: string | null;
-  event_time: string | null;
-  location: string | null;
-  player_count: number;
-  courts: number;
-  rounds: number;
-  games_to: number;
-  status: string;
-  started_at: string | null;
-  format: string;
-};
-
-type PlayerSlot = {
-  id: string;
-  tournament_id: string;
-  slot_number: number;
-  display_name: string | null;
-  claimed_by_user_id: string | null;
-};
-
-type Match = {
-  id: string;
-  round_number: number;
-  court_number: number | null;
-  team_a_player_1_id: string | null;
-  team_a_player_2_id: string | null;
-  team_b_player_1_id: string | null;
-  team_b_player_2_id: string | null;
-  team_a_score: number | null;
-  team_b_score: number | null;
-  is_bye: boolean;
-  is_complete: boolean;
-};
-
-type StandingRow = {
-  playerId: string;
-  name: string;
-  played: number;
-  wins: number;
-  losses: number;
-  pointsFor: number;
-  pointsAgainst: number;
-  pointDiff: number;
-};
-
-type ScoreDraft = {
-  team_a_score: string;
-  team_b_score: string;
-};
-
-type ScheduleRow = {
-  round_number: number;
-  court_number: number | null;
-  team_a_player_1_id: string | null;
-  team_a_player_2_id: string | null;
-  team_b_player_1_id: string | null;
-  team_b_player_2_id: string | null;
-  team_a_score: number | null;
-  team_b_score: number | null;
-  is_bye: boolean;
-  is_complete: boolean;
-};
-
-const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
-
-function pairKey(a: string, b: string) {
-  return [a, b].sort().join('|');
-}
-
-function matchupKey(a1: string, a2: string, b1: string, b2: string) {
-  const teamA = [a1, a2].sort().join('|');
-  const teamB = [b1, b2].sort().join('|');
-  return [teamA, teamB].sort().join(' vs ');
-}
-
-function singlesMatchupKey(a: string, b: string) {
-  return [a, b].sort().join(' vs ');
-}
-
-function shuffle<T>(array: T[]) {
-  const arr = [...array];
-  for (let i = arr.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function chunkIntoGroups<T>(items: T[], size: number) {
-  const groups: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    groups.push(items.slice(i, i + size));
-  }
-  return groups;
-}
 
 function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
-// ─── Singles schedule builder ───────────────────────────────────────────────
-
-function buildSinglesSchedule(
-  players: PlayerSlot[],
-  rounds: number,
-  courts: number
-): ScheduleRow[] {
-  const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
-  if (activePlayers.length < 3) return [];
-
-  const ids = activePlayers.map((p) => p.id);
-  const maxParticipantsPerRound = Math.min(courts * 2, ids.length);
-
-  const matchupCounts = new Map<string, number>();
-  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-
-  const output: ScheduleRow[] = [];
-
-  function getMatchupCount(a: string, b: string) {
-    return matchupCounts.get(singlesMatchupKey(a, b)) || 0;
-  }
-
-  function chooseParticipantsForRound() {
-    const sorted = [...ids].sort((a, b) => {
-      const byeDiff = (byeCounts.get(b) || 0) - (byeCounts.get(a) || 0);
-      if (byeDiff !== 0) return byeDiff;
-      const playDiff = (playedCounts.get(a) || 0) - (playedCounts.get(b) || 0);
-      if (playDiff !== 0) return playDiff;
-      return Math.random() - 0.5;
-    });
-
-    // Need even number for singles matchups
-    const count = Math.min(maxParticipantsPerRound, sorted.length);
-    return count % 2 === 0 ? sorted.slice(0, count) : sorted.slice(0, count - 1);
-  }
-
-  function findBestSinglesMatches(participants: string[]) {
-    let bestResult: Array<{ playerA: string; playerB: string }> | null = null;
-    let bestPenalty = Infinity;
-
-    for (let attempt = 0; attempt < 500; attempt++) {
-      const shuffled = shuffle(participants);
-      const pairs = chunkIntoGroups(shuffled, 2).filter((g) => g.length === 2);
-      let penalty = 0;
-
-      for (const [a, b] of pairs) {
-        penalty += getMatchupCount(a, b) * 1000;
-        penalty += (playedCounts.get(a) || 0) + (playedCounts.get(b) || 0);
-        penalty += Math.random();
-      }
-
-      if (penalty < bestPenalty) {
-        bestPenalty = penalty;
-        bestResult = pairs.map(([a, b]) => ({ playerA: a, playerB: b }));
-      }
-    }
-
-    return bestResult || [];
-  }
-
-  for (let round = 1; round <= rounds; round++) {
-    const participants = chooseParticipantsForRound();
-    const benched = ids.filter((id) => !participants.includes(id));
-    const matches = findBestSinglesMatches(participants);
-
-    if (!matches.length) break;
-
-    benched.forEach((id) => {
-      byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({
-        round_number: round,
-        court_number: null,
-        team_a_player_1_id: id,
-        team_a_player_2_id: null,
-        team_b_player_1_id: null,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: true,
-        is_complete: false,
-      });
-    });
-
-    matches.forEach((match, index) => {
-      const { playerA, playerB } = match;
-
-      matchupCounts.set(
-        singlesMatchupKey(playerA, playerB),
-        getMatchupCount(playerA, playerB) + 1
-      );
-
-      playedCounts.set(playerA, (playedCounts.get(playerA) || 0) + 1);
-      playedCounts.set(playerB, (playedCounts.get(playerB) || 0) + 1);
-
-      output.push({
-        round_number: round,
-        court_number: index + 1,
-        team_a_player_1_id: playerA,
-        team_a_player_2_id: null,
-        team_b_player_1_id: playerB,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: false,
-        is_complete: false,
-      });
-    });
-  }
-
-  return output;
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
 }
 
-// ─── Doubles schedule builder ────────────────────────────────────────────────
-
-function buildDoublesSchedule(
-  players: PlayerSlot[],
-  rounds: number,
-  courts: number
-): ScheduleRow[] {
-  const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
-  if (activePlayers.length < 4) return [];
-
-  const ids = activePlayers.map((p) => p.id);
-  const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
-
-  const partnerCounts = new Map<string, number>();
-  const matchupCounts = new Map<string, number>();
-  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-
-  const output: ScheduleRow[] = [];
-
-  function getPartnerCount(a: string, b: string) {
-    return partnerCounts.get(pairKey(a, b)) || 0;
-  }
-
-  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
-    return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
-  }
-
-  function chooseParticipantsForRound() {
-    const sorted = [...ids].sort((a, b) => {
-      const byeDiff = (byeCounts.get(b) || 0) - (byeCounts.get(a) || 0);
-      if (byeDiff !== 0) return byeDiff;
-      const playDiff = (playedCounts.get(a) || 0) - (playedCounts.get(b) || 0);
-      if (playDiff !== 0) return playDiff;
-      return Math.random() - 0.5;
-    });
-    return sorted.slice(0, maxParticipantsPerRound);
-  }
-
-  function bestLayoutsForParticipants(participants: string[]) {
-    const groups = chunkIntoGroups(shuffle(participants), 4).filter((g) => g.length === 4);
-    if (!groups.length) return null;
-
-    let totalPenalty = 0;
-    const matches: Array<{ teamA: [string, string]; teamB: [string, string] }> = [];
-
-    for (const group of groups) {
-      const layouts = [
-        { teamA: [group[0], group[1]] as [string, string], teamB: [group[2], group[3]] as [string, string] },
-        { teamA: [group[0], group[2]] as [string, string], teamB: [group[1], group[3]] as [string, string] },
-        { teamA: [group[0], group[3]] as [string, string], teamB: [group[1], group[2]] as [string, string] },
-      ];
-
-      let best: { teamA: [string, string]; teamB: [string, string]; penalty: number } | null = null;
-
-      for (const layout of layouts) {
-        const [a1, a2] = layout.teamA;
-        const [b1, b2] = layout.teamB;
-        const penalty =
-          getPartnerCount(a1, a2) * 1000 +
-          getPartnerCount(b1, b2) * 1000 +
-          getMatchupCount(a1, a2, b1, b2) * 400 +
-          (playedCounts.get(a1) || 0) +
-          (playedCounts.get(a2) || 0) +
-          (playedCounts.get(b1) || 0) +
-          (playedCounts.get(b2) || 0) +
-          Math.random();
-
-        if (!best || penalty < best.penalty) {
-          best = { teamA: [a1, a2], teamB: [b1, b2], penalty };
-        }
-      }
-
-      if (!best) return null;
-      matches.push({ teamA: best.teamA, teamB: best.teamB });
-      totalPenalty += best.penalty;
-    }
-
-    return { matches, totalPenalty };
-  }
-
-  function findBestRoundMatches(participants: string[]) {
-    let bestResult: { matches: Array<{ teamA: [string, string]; teamB: [string, string] }>; totalPenalty: number } | null = null;
-
-    for (let attempt = 0; attempt < 700; attempt++) {
-      const candidate = bestLayoutsForParticipants(participants);
-      if (!candidate) continue;
-      if (!bestResult || candidate.totalPenalty < bestResult.totalPenalty) {
-        bestResult = candidate;
-      }
-    }
-
-    return bestResult?.matches || [];
-  }
-
-  for (let round = 1; round <= rounds; round++) {
-    const participants = chooseParticipantsForRound();
-    const benched = ids.filter((id) => !participants.includes(id));
-    const matches = findBestRoundMatches(participants);
-
-    if (!matches.length) break;
-
-    benched.forEach((id) => {
-      byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({
-        round_number: round,
-        court_number: null,
-        team_a_player_1_id: id,
-        team_a_player_2_id: null,
-        team_b_player_1_id: null,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: true,
-        is_complete: false,
-      });
-    });
-
-    matches.forEach((match, index) => {
-      const [a1, a2] = match.teamA;
-      const [b1, b2] = match.teamB;
-
-      partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
-      partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
-      matchupCounts.set(matchupKey(a1, a2, b1, b2), getMatchupCount(a1, a2, b1, b2) + 1);
-      [a1, a2, b1, b2].forEach((id) => {
-        playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
-      });
-
-      output.push({
-        round_number: round,
-        court_number: index + 1,
-        team_a_player_1_id: a1,
-        team_a_player_2_id: a2,
-        team_b_player_1_id: b1,
-        team_b_player_2_id: b2,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: false,
-        is_complete: false,
-      });
-    });
-  }
-
-  return output;
+function Stepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (next: number) => void;
+}) {
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div style={{ display: 'grid', gridTemplateColumns: '56px 1fr 56px', gap: 12 }}>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value - 1, min, max))}
+          disabled={value <= min}
+          style={{ height: 56, fontSize: 24 }}
+        >
+          −
+        </button>
+        <div className="input" style={{ textAlign: 'center', fontSize: 28, fontWeight: 700 }}>
+          {value}
+        </div>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value + 1, min, max))}
+          disabled={value >= max}
+          style={{ height: 56, fontSize: 24 }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
 }
 
-function buildSchedule(
-  players: PlayerSlot[],
-  rounds: number,
-  courts: number,
-  format: string
-): ScheduleRow[] {
-  if (format === 'singles') {
-    return buildSinglesSchedule(players, rounds, courts);
-  }
-  return buildDoublesSchedule(players, rounds, courts);
-}
-
-export default function TournamentDetailPage({ params }: { params: { id: string } }) {
+export default function CreateTournamentPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const router = useRouter();
 
-  const [tournament, setTournament] = useState<Tournament | null>(null);
-  const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
-  const [matches, setMatches] = useState<Match[]>([]);
+  const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
+  const [title, setTitle] = useState('Saturday Round Robin');
+  const [organizerName, setOrganizerName] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventTime, setEventTime] = useState('');
+  const [location, setLocation] = useState('');
+
+  const [playerCount, setPlayerCount] = useState(8);
+  const [courts, setCourts] = useState(2);
+  const [rounds, setRounds] = useState(4);
+  const [gamesTo, setGamesTo] = useState(11);
+
   const [message, setMessage] = useState('');
-  const [userId, setUserId] = useState('');
-  const [newNames, setNewNames] = useState<Record<string, string>>({});
-  const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
-  const [isSavingNames, setIsSavingNames] = useState(false);
-  const [isStarting, setIsStarting] = useState(false);
-  const [isEndingEarly, setIsEndingEarly] = useState(false);
-  const [isRematching, setIsRematching] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
-  const [selectedRound, setSelectedRound] = useState(1);
-  const [copied, setCopied] = useState(false);
-  const [isLive, setIsLive] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const isSingles = tournament?.format === 'singles';
-  const isStarted = tournament?.status === 'started';
-  const isCompleted = tournament?.status === 'completed';
-  const isLocked = isStarted || isCompleted;
-
-  const minPlayersRequired = isSingles ? 3 : 4;
-
-  const claimedSlot = useMemo(
-    () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
-    [playerSlots, userId]
-  );
-
-  const playersById = useMemo(
-    () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
-    [playerSlots]
-  );
-
-  const roundsAvailable = useMemo(() => {
-    const roundSet = new Set<number>();
-    matches.forEach((m) => roundSet.add(m.round_number));
-    if (!roundSet.size && tournament?.rounds) {
-      for (let i = 1; i <= tournament.rounds; i++) roundSet.add(i);
-    }
-    return Array.from(roundSet).sort((a, b) => a - b);
-  }, [matches, tournament]);
-
-  const currentRound = useMemo(() => {
-    if (!matches.length) return roundsAvailable[0] || 1;
-    for (const round of roundsAvailable) {
-      const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
-      if (!roundMatches.length) continue;
-      if (!roundMatches.every((m) => m.is_complete)) return round;
-    }
-    return roundsAvailable[roundsAvailable.length - 1] || 1;
-  }, [matches, roundsAvailable]);
-
-  const finalRound = useMemo(
-    () => roundsAvailable[roundsAvailable.length - 1] || 1,
-    [roundsAvailable]
-  );
-
-  const completedMatchCount = useMemo(
-    () => matches.filter((m) => !m.is_bye && m.is_complete).length,
-    [matches]
-  );
-
-  const totalPlayableMatchCount = useMemo(
-    () => matches.filter((m) => !m.is_bye).length,
-    [matches]
-  );
-
-  const roundStatusByRound = useMemo(() => {
-    const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
-    for (const round of roundsAvailable) {
-      const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
-      if (!roundMatches.length) {
-        statusMap.set(round, round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming');
-        continue;
-      }
-      if (roundMatches.every((m) => m.is_complete)) {
-        statusMap.set(round, 'complete');
-      } else if (round === currentRound) {
-        statusMap.set(round, 'current');
-      } else if (round < currentRound) {
-        statusMap.set(round, 'complete');
-      } else {
-        statusMap.set(round, 'upcoming');
-      }
-    }
-    return statusMap;
-  }, [matches, roundsAvailable, currentRound]);
-
-  const matchesForSelectedRound = useMemo(
-    () => matches.filter((m) => m.round_number === selectedRound && !m.is_bye),
-    [matches, selectedRound]
-  );
-
-  const byesForSelectedRound = useMemo(
-    () => matches.filter((m) => m.round_number === selectedRound && m.is_bye),
-    [matches, selectedRound]
-  );
-
-  const standings = useMemo<StandingRow[]>(() => {
-    const rows = new Map<string, StandingRow>();
-
-    for (const slot of playerSlots) {
-      rows.set(slot.id, {
-        playerId: slot.id,
-        name: slot.display_name || `Player ${slot.slot_number}`,
-        played: 0,
-        wins: 0,
-        losses: 0,
-        pointsFor: 0,
-        pointsAgainst: 0,
-        pointDiff: 0,
-      });
-    }
-
-    for (const match of matches) {
-      if (
-        match.is_bye ||
-        !match.is_complete ||
-        match.team_a_score === null ||
-        match.team_b_score === null ||
-        match.team_a_player_1_id === null ||
-        match.team_b_player_1_id === null
-      ) continue;
-
-      const aIds = isSingles
-        ? [match.team_a_player_1_id]
-        : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
-
-      const bIds = isSingles
-        ? [match.team_b_player_1_id]
-        : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
-
-      for (const id of [...aIds, ...bIds]) {
-        const row = rows.get(id);
-        if (row) row.played += 1;
-      }
-
-      for (const id of aIds) {
-        const row = rows.get(id);
-        if (!row) continue;
-        row.pointsFor += match.team_a_score;
-        row.pointsAgainst += match.team_b_score;
-      }
-
-      for (const id of bIds) {
-        const row = rows.get(id);
-        if (!row) continue;
-        row.pointsFor += match.team_b_score;
-        row.pointsAgainst += match.team_a_score;
-      }
-
-      if (match.team_a_score > match.team_b_score) {
-        aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-        bIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-      } else if (match.team_b_score > match.team_a_score) {
-        bIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-        aIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-      }
-    }
-
-    return Array.from(rows.values())
-      .map((row) => ({ ...row, pointDiff: row.pointsFor - row.pointsAgainst }))
-      .sort((a, b) => {
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-        if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-        return a.name.localeCompare(b.name);
-      });
-  }, [playerSlots, matches, isSingles]);
-
-  const isOrganizer = tournament?.organizer_user_id === userId;
-
-  const canStartTournament = useMemo(() => {
-    if (!tournament) return false;
-    if (tournament.status === 'started' || tournament.status === 'completed') return false;
-    const namedCount = playerSlots.filter(
-      (slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== ''
-    ).length;
-    return namedCount >= minPlayersRequired;
-  }, [tournament, playerSlots, newNames, minPlayersRequired]);
-
-  async function loadTournamentData(currentUserId?: string) {
-    const { data: tournamentData } = await supabase
-      .from('tournaments')
-      .select('*')
-      .eq('id', params.id)
-      .maybeSingle();
-
-    const { data: playersData } = await supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('slot_number', { ascending: true });
-
-    const { data: matchesData } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('round_number', { ascending: true })
-      .order('court_number', { ascending: true });
-
-    setTournament(tournamentData || null);
-    setPlayerSlots(playersData || []);
-    setMatches(matchesData || []);
-
-    if (tournamentData) {
-      try {
-        window.localStorage.setItem(
-          LAST_TOURNAMENT_KEY,
-          JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
-        );
-      } catch {}
-    }
-
-    if ((playersData || []).length > 0) {
-      setNewNames((prev) => {
-        const next = { ...prev };
-        for (const slot of playersData || []) {
-          if (typeof next[slot.id] !== 'string') {
-            next[slot.id] = slot.display_name || '';
-          }
-        }
-        return next;
-      });
-    }
-
-    setScoreDrafts((prev) => {
-      const next = { ...prev };
-      for (const match of matchesData || []) {
-        const existingA = prev[match.id]?.team_a_score;
-        const existingB = prev[match.id]?.team_b_score;
-        next[match.id] = {
-          team_a_score:
-            typeof existingA === 'string' && existingA !== '' && !match.is_complete
-              ? existingA
-              : match.team_a_score === null ? '' : String(match.team_a_score),
-          team_b_score:
-            typeof existingB === 'string' && existingB !== '' && !match.is_complete
-              ? existingB
-              : match.team_b_score === null ? '' : String(match.team_b_score),
-        };
-      }
-      return next;
-    });
-
-    if (currentUserId) setUserId(currentUserId);
-  }
+  const minPlayers = format === 'singles' ? 3 : 4;
+  const playersPerCourt = format === 'singles' ? 2 : 4;
+  const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / playersPerCourt));
+  const isValidSetup = playerCount >= minPlayers;
 
   useEffect(() => {
-    async function load() {
-      setIsLoading(true);
+    async function loadUser() {
       const { data: authData } = await supabase.auth.getUser();
-      const currentUserId = authData.user?.id ?? '';
-      await loadTournamentData(currentUserId);
-      setIsLoading(false);
-    }
-    load();
-  }, [params.id, supabase]);
+      const user = authData.user;
+      if (!user) return;
 
-  useEffect(() => {
-    const channel = supabase
-      .channel(`tournament-live-${params.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${params.id}` },
-        async () => { setIsLive(true); await loadTournamentData(userId); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_players', filter: `tournament_id=eq.${params.id}` },
-        async () => { setIsLive(true); await loadTournamentData(userId); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${params.id}` },
-        async () => { setIsLive(true); await loadTournamentData(userId); })
-      .subscribe((status) => { setIsLive(status === 'SUBSCRIBED'); });
-
-    return () => { void supabase.removeChannel(channel); };
-  }, [params.id, supabase, userId]);
-
-  useEffect(() => {
-    if (!roundsAvailable.length) return;
-    setSelectedRound((prev) => {
-      if (!roundsAvailable.includes(prev)) {
-        return isCompleted ? finalRound : currentRound;
-      }
-      return prev;
-    });
-  }, [roundsAvailable, currentRound, finalRound, isCompleted]);
-
-  useEffect(() => {
-    if (isCompleted) {
-      setSelectedRound(finalRound);
-      setActiveTab('standings');
-      return;
-    }
-    if (isStarted && matches.length > 0) {
-      setSelectedRound(currentRound);
-    }
-  }, [isStarted, isCompleted, matches.length, currentRound, finalRound]);
-
-  async function copyJoinCode() {
-    try {
-      if (!tournament?.join_code) return;
-      await navigator.clipboard.writeText(tournament.join_code);
-      setCopied(true);
-      setMessage('Join code copied.');
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setMessage('Could not copy join code.');
-    }
-  }
-
-  async function shareJoinLink() {
-    try {
-      if (!tournament?.join_code) return;
-      const url = `${window.location.origin}/tournament/join?code=${encodeURIComponent(tournament.join_code)}`;
-      if (navigator.share) {
-        await navigator.share({
-          title: tournament.title || 'Join DinkDraw Tournament',
-          text: `Join ${tournament.title || 'this tournament'} on DinkDraw`,
-          url,
-        });
-        setMessage('Share link opened.');
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      setMessage('Join link copied.');
-    } catch {
-      setMessage('Could not share join link.');
-    }
-  }
-
-  async function claimSlot(slotId: string) {
-    setMessage('');
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-
-    if (!user) { setMessage('Sign in first.'); return; }
-    if (claimedSlot) { setMessage('You already claimed a spot in this tournament.'); return; }
-    if (isLocked) { setMessage('Tournament already started. Player spots are locked.'); return; }
-
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const claimedName = profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
-
-    const { error } = await supabase
-      .from('tournament_players')
-      .update({ claimed_by_user_id: user.id, display_name: claimedName })
-      .eq('id', slotId)
-      .is('claimed_by_user_id', null);
-
-    if (error) { setMessage(error.message); return; }
-
-    setNewNames((prev) => ({ ...prev, [slotId]: claimedName }));
-    await loadTournamentData(user.id);
-    setMessage('Spot claimed.');
-  }
-
-  async function saveAllPlayerNames() {
-    if (isLocked) { setMessage('Player names are locked.'); return; }
-    setMessage('');
-    setIsSavingNames(true);
-
-    try {
-      for (const slot of playerSlots) {
-        const nextName = (newNames[slot.id] ?? '').trim();
-        const { error } = await supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
-        if (error) { setMessage(`Save failed: ${error.message}`); setIsSavingNames(false); return; }
-      }
-      await loadTournamentData(userId);
-      setMessage('Player names saved.');
-    } catch (err) {
-      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
-    }
-
-    setIsSavingNames(false);
-  }
-
-  async function generateScheduleAndStart() {
-    if (!tournament) return;
-    setMessage('');
-    setIsStarting(true);
-
-    try {
-      for (const slot of playerSlots) {
-        const nextName = (newNames[slot.id] ?? '').trim();
-        const { error } = await supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
-        if (error) { setMessage(`Save failed: ${error.message}`); setIsStarting(false); return; }
-      }
-
-      const { data: freshPlayers, error: freshPlayersError } = await supabase
-        .from('tournament_players')
-        .select('*')
-        .eq('tournament_id', tournament.id)
-        .order('slot_number', { ascending: true });
-
-      if (freshPlayersError) { setMessage(`Could not load players: ${freshPlayersError.message}`); setIsStarting(false); return; }
-
-      const namedPlayers = (freshPlayers || []).filter((slot) => (slot.display_name || '').trim() !== '');
-
-      if (namedPlayers.length < minPlayersRequired) {
-        setMessage(`Please save at least ${minPlayersRequired} player names before starting.`);
-        setIsStarting(false);
-        return;
-      }
-
-      const playersPerCourt = isSingles ? 2 : 4;
-      const availableCourts = Math.max(
-        1,
-        Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
-      );
-
-      const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format);
-
-      if (!scheduleRows.length) { setMessage('Could not generate a schedule.'); setIsStarting(false); return; }
-
-      const { error: deleteError } = await supabase.from('matches').delete().eq('tournament_id', tournament.id);
-      if (deleteError) { setMessage(`Delete old matches failed: ${deleteError.message}`); setIsStarting(false); return; }
-
-      const rowsToInsert = scheduleRows.map((row) => ({ tournament_id: tournament.id, ...row }));
-      const { error: insertError } = await supabase.from('matches').insert(rowsToInsert);
-      if (insertError) { setMessage(`Generate failed: ${insertError.message}`); setIsStarting(false); return; }
-
-      const { error: startError } = await supabase
-        .from('tournaments')
-        .update({ status: 'started', started_at: new Date().toISOString() })
-        .eq('id', tournament.id);
-
-      if (startError) { setMessage(`Start failed: ${startError.message}`); setIsStarting(false); return; }
-
-      await loadTournamentData(userId);
-      setActiveTab('rounds');
-      setSelectedRound(1);
-      setMessage('Tournament started.');
-    } catch (err) {
-      setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.');
-    }
-
-    setIsStarting(false);
-  }
-
-  async function rematchTournament() {
-    if (!tournament) return;
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
-    if (!user) { setMessage('Sign in first.'); return; }
-
-    setIsRematching(true);
-    setMessage('');
-
-    try {
       const { data: profile } = await supabase
         .from('profiles')
         .select('display_name')
         .eq('id', user.id)
         .maybeSingle();
 
-      const organizerName =
-        profile?.display_name?.trim() ||
-        user.email?.split('@')[0] ||
-        tournament.organizer_name ||
-        'Organizer';
+      setOrganizerName(profile?.display_name || user.email?.split('@')[0] || '');
+    }
 
-      const rematchTitle = tournament.title.toLowerCase().includes('rematch')
-        ? tournament.title
-        : `${tournament.title} Rematch`;
+    loadUser();
+  }, [supabase]);
 
-      const { data: newTournament, error: tournamentError } = await supabase
+  useEffect(() => {
+    if (courts > maxCourtsAllowed) {
+      setCourts(maxCourtsAllowed);
+    }
+  }, [playerCount, format, courts, maxCourtsAllowed]);
+
+  useEffect(() => {
+    if (format === 'singles' && playerCount < 3) {
+      setPlayerCount(3);
+    } else if (format === 'doubles' && playerCount < 4) {
+      setPlayerCount(4);
+    }
+  }, [format]);
+
+  async function handleCreate() {
+    setMessage('');
+
+    if (!isValidSetup) {
+      setMessage(`You need at least ${minPlayers} players for ${format}.`);
+      return;
+    }
+
+    if (!title.trim()) {
+      setMessage('Please enter a tournament name.');
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const user = authData.user;
+
+      if (!user) {
+        setMessage('Sign in first.');
+        setIsCreating(false);
+        return;
+      }
+
+      const safeOrganizerName =
+        organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
+
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        display_name: safeOrganizerName,
+        email: user.email,
+      });
+
+      const joinCode = makeJoinCode();
+
+      const { data: tournament, error } = await supabase
         .from('tournaments')
         .insert({
-          title: rematchTitle,
+          title: title.trim(),
           organizer_user_id: user.id,
-          organizer_name: organizerName,
-          join_code: makeJoinCode(),
-          event_date: tournament.event_date,
-          event_time: tournament.event_time,
-          location: tournament.location,
-          player_count: tournament.player_count,
-          courts: tournament.courts,
-          rounds: tournament.rounds,
-          games_to: tournament.games_to,
+          organizer_name: safeOrganizerName,
+          join_code: joinCode,
+          event_date: eventDate || null,
+          event_time: eventTime || null,
+          location: location.trim() || null,
+          player_count: playerCount,
+          courts,
+          rounds,
+          games_to: gamesTo,
           status: 'draft',
-          started_at: null,
-          format: tournament.format,
+          format,
         })
         .select()
         .single();
 
-      if (tournamentError || !newTournament) {
-        setMessage(tournamentError?.message || 'Could not create rematch tournament.');
-        setIsRematching(false);
+      if (error || !tournament) {
+        setMessage(error?.message || 'Failed to create tournament.');
+        setIsCreating(false);
         return;
       }
 
-      const playerRows = Array.from({ length: tournament.player_count }, (_, index) => {
-        const oldSlot = playerSlots[index];
-        return {
-          tournament_id: newTournament.id,
-          slot_number: index + 1,
-          display_name: oldSlot?.display_name?.trim() || '',
-          claimed_by_user_id: null,
-        };
-      });
+      const playerRows = Array.from({ length: playerCount }, (_, i) => ({
+        tournament_id: tournament.id,
+        slot_number: i + 1,
+        display_name: '',
+      }));
 
-      const { error: playersError } = await supabase.from('tournament_players').insert(playerRows);
-      if (playersError) { setMessage(playersError.message); setIsRematching(false); return; }
+      await supabase.from('tournament_players').insert(playerRows);
 
-      try {
-        window.localStorage.setItem(
-          LAST_TOURNAMENT_KEY,
-          JSON.stringify({ id: newTournament.id, title: newTournament.title })
-        );
-      } catch {}
-
-      window.location.href = `/tournament/${newTournament.id}`;
+      router.push(`/tournament/${tournament.id}`);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.');
-      setIsRematching(false);
-    }
-  }
-
-  function setDraftScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
-    if (isCompleted) return;
-    const sanitized = value.replace(/[^\d]/g, '');
-    setScoreDrafts((prev) => ({
-      ...prev,
-      [matchId]: {
-        team_a_score: prev[matchId]?.team_a_score ?? '',
-        team_b_score: prev[matchId]?.team_b_score ?? '',
-        [field]: sanitized,
-      },
-    }));
-  }
-
-  async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
-    if (isCompleted) { setMessage('Final results are locked.'); return; }
-    const match = matches.find((m) => m.id === matchId);
-    if (match?.is_complete) return;
-
-    const draft = scoreDrafts[matchId];
-    if (!draft) return;
-
-    const rawValue = draft[field];
-    const numeric = rawValue.trim() === '' || Number.isNaN(Number(rawValue))
-      ? null
-      : Math.max(0, Number(rawValue));
-
-    const { error } = await supabase.from('matches').update({ [field]: numeric }).eq('id', matchId);
-    if (error) { setMessage(`Score save failed: ${error.message}`); return; }
-
-    setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, [field]: numeric } : m)));
-  }
-
-  async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
-    if (!tournament) return true;
-
-    const a1 = match.team_a_player_1_id ? playersById[match.team_a_player_1_id] : null;
-    const a2 = match.team_a_player_2_id ? playersById[match.team_a_player_2_id] : null;
-    const b1 = match.team_b_player_1_id ? playersById[match.team_b_player_1_id] : null;
-    const b2 = match.team_b_player_2_id ? playersById[match.team_b_player_2_id] : null;
-
-    const teamAUsers = isSingles
-      ? [a1].filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id).map((s) => s.claimed_by_user_id as string)
-      : [a1, a2].filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id).map((s) => s.claimed_by_user_id as string);
-
-    const teamBUsers = isSingles
-      ? [b1].filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id).map((s) => s.claimed_by_user_id as string)
-      : [b1, b2].filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id).map((s) => s.claimed_by_user_id as string);
-
-    const playedAt = new Date().toISOString();
-    const matchFormat = tournament.format || 'doubles';
-
-    function buildRow(
-      currentUserId: string,
-      partnerUserId: string | null,
-      opponentUserIds: string[],
-      side: 'A' | 'B'
-    ) {
-      const isTie = aScore === bScore;
-      const isWin = side === 'A' ? aScore > bScore : bScore > aScore;
-      const pointsFor = side === 'A' ? aScore : bScore;
-      const pointsAgainst = side === 'A' ? bScore : aScore;
-
-      return {
-        user_id: currentUserId,
-        tournament_id: tournament!.id,
-        match_id: match.id,
-        round_number: match.round_number,
-        played_at: playedAt,
-        partner_user_id: partnerUserId,
-        opponent_1_user_id: opponentUserIds[0] || null,
-        opponent_2_user_id: opponentUserIds[1] || null,
-        result: isTie ? 'tie' : isWin ? 'win' : 'loss',
-        wins: isTie ? 0 : isWin ? 1 : 0,
-        losses: isTie ? 0 : isWin ? 0 : 1,
-        ties: isTie ? 1 : 0,
-        points_for: pointsFor,
-        points_against: pointsAgainst,
-        point_diff: pointsFor - pointsAgainst,
-        format: matchFormat,
-      };
+      setMessage(err instanceof Error ? err.message : 'Something went wrong.');
     }
 
-    const rows = [
-      ...teamAUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          isSingles ? null : teamAUsers.find((id) => id !== currentUserId) || null,
-          teamBUsers,
-          'A'
-        )
-      ),
-      ...teamBUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          isSingles ? null : teamBUsers.find((id) => id !== currentUserId) || null,
-          teamAUsers,
-          'B'
-        )
-      ),
-    ];
-
-    if (!rows.length) return true;
-
-    const { error } = await supabase
-      .from('player_match_stats')
-      .upsert(rows, { onConflict: 'match_id,user_id' });
-
-    if (error) { setMessage(`Score submitted, but stats update failed: ${error.message}`); return false; }
-    return true;
-  }
-
-  function getNextIncompleteRound(updatedMatches: Match[]) {
-    const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort((a, b) => a - b);
-    for (const round of roundNumbers) {
-      const roundMatches = updatedMatches.filter((m) => m.round_number === round && !m.is_bye);
-      if (!roundMatches.length) continue;
-      if (!roundMatches.every((m) => m.is_complete)) return round;
-    }
-    return null;
-  }
-
-  async function markTournamentCompleted() {
-    if (!tournament || isCompleted) return true;
-    const { error } = await supabase.from('tournaments').update({ status: 'completed' }).eq('id', tournament.id);
-    if (error) { setMessage(`Tournament completion failed: ${error.message}`); return false; }
-    setTournament((prev) => (prev ? { ...prev, status: 'completed' } : prev));
-    return true;
-  }
-
-  async function endTournamentEarly() {
-    if (!tournament || !isOrganizer || !isStarted || isCompleted) return;
-    const confirmed = window.confirm('End this tournament now? Any unfinished rounds will be locked and the current standings will become final.');
-    if (!confirmed) return;
-
-    setIsEndingEarly(true);
-    setMessage('');
-    const completed = await markTournamentCompleted();
-    if (completed) {
-      setActiveTab('standings');
-      setSelectedRound(currentRound);
-      setMessage('Tournament ended early. Final results are now locked.');
-    }
-    setIsEndingEarly(false);
-  }
-
-  async function submitMatchScore(matchId: string) {
-    if (isCompleted) { setMessage('Final results are locked.'); return; }
-
-    const draft = scoreDrafts[matchId];
-    if (!draft) { setMessage('Enter both scores first.'); return; }
-
-    const a = draft.team_a_score.trim();
-    const b = draft.team_b_score.trim();
-
-    if (a === '' || b === '') { setMessage('Enter both scores before submitting.'); return; }
-
-    const aNum = Math.max(0, Number(a));
-    const bNum = Math.max(0, Number(b));
-
-    if (Number.isNaN(aNum) || Number.isNaN(bNum)) { setMessage('Scores must be valid numbers.'); return; }
-
-    const { error } = await supabase
-      .from('matches')
-      .update({ team_a_score: aNum, team_b_score: bNum, is_complete: true })
-      .eq('id', matchId);
-
-    if (error) { setMessage(`Submit failed: ${error.message}`); return; }
-
-    const updatedMatches = matches.map((m) =>
-      m.id === matchId ? { ...m, team_a_score: aNum, team_b_score: bNum, is_complete: true } : m
-    );
-    setMatches(updatedMatches);
-
-    const completedMatch = updatedMatches.find((m) => m.id === matchId);
-    if (!completedMatch) { setMessage('Score submitted.'); return; }
-
-    const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
-
-    const submittedRound = completedMatch.round_number ?? selectedRound;
-    const submittedRoundMatches = updatedMatches.filter((m) => m.round_number === submittedRound && !m.is_bye);
-    const submittedRoundComplete = submittedRoundMatches.length > 0 && submittedRoundMatches.every((m) => m.is_complete);
-    const nextRound = getNextIncompleteRound(updatedMatches);
-
-    if (!nextRound) {
-      const completed = await markTournamentCompleted();
-      if (!completed) return;
-      setSelectedRound(finalRound);
-      setActiveTab('standings');
-      setMessage(statsSaved
-        ? 'Score submitted. Tournament complete. Final results are now locked.'
-        : 'Score submitted. Tournament complete, but stats update failed.');
-      return;
-    }
-
-    if (submittedRoundComplete && nextRound !== submittedRound) {
-      setSelectedRound(nextRound);
-      setMessage(statsSaved
-        ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
-        : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`);
-      return;
-    }
-
-    setMessage(statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.');
-  }
-
-  function renderPlayerName(id: string | null) {
-    if (!id) return '-';
-    return playersById[id]?.display_name || 'Player';
-  }
-
-  function renderTeam(a: string | null, b: string | null) {
-    if (isSingles) return renderPlayerName(a);
-    return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
-  }
-
-  function getWinnerStyle(team: 'a' | 'b', match: Match) {
-    if (match.team_a_score === null || match.team_b_score === null) return {};
-    const aWins = match.team_a_score > match.team_b_score;
-    const bWins = match.team_b_score > match.team_a_score;
-    const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
-    return isWinner ? { color: '#FFCB05' } : {};
+    setIsCreating(false);
   }
 
   return (
@@ -1139,345 +195,137 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       <div className="hero">
         <div className="hero-inner">
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <h1 className="hero-title">{tournament?.title || 'Tournament'}</h1>
+          <h1 className="hero-title">Create Tournament</h1>
           <p className="hero-subtitle">
-            {isCompleted
-              ? 'Finished tournament'
-              : isStarted
-              ? `Live now • Round ${currentRound}`
-              : 'Set up players, then start when ready'}
+            Set up your event in seconds, then share the join code at the courts.
           </p>
         </div>
       </div>
 
       <TopNav />
 
-      {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
-
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Tournament</div>
-
-        <div className="grid" style={{ marginBottom: 14 }}>
-          <div className="list-item">
-            <div className="label">Join Code</div>
-            <div className="row-between">
-              <strong style={{ letterSpacing: '0.08em' }}>{tournament?.join_code || '...'}</strong>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span className={isLive ? 'tag green' : 'tag'}>
-                  {isLive ? 'Live' : 'Connecting'}
-                </span>
-                <span className="tag">
-                  {isSingles ? 'Singles' : 'Doubles'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="list-item">
-            <div className="row-between">
-              <span className="muted">Organizer</span>
-              <strong>{tournament?.organizer_name || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Status</span>
-              <strong>{isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Progress</span>
-              <strong>{completedMatchCount}/{totalPlayableMatchCount} matches</strong>
-            </div>
-          </div>
-
-          <div className="list-item">
-            <div className="row-between">
-              <span className="muted">Date</span>
-              <strong>{tournament?.event_date || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Time</span>
-              <strong>{tournament?.event_time || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Location</span>
-              <strong style={{ textAlign: 'right' }}>{tournament?.location || '-'}</strong>
-            </div>
-          </div>
-        </div>
-
+      <div className="card">
         <div className="grid">
-          <button type="button" className="button secondary" onClick={copyJoinCode}>
-            {copied ? 'Join Code Copied' : 'Copy Join Code'}
+
+          <div>
+            <label className="label">Format</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+              <button
+                type="button"
+                className={`button ${format === 'doubles' ? 'primary' : 'secondary'}`}
+                onClick={() => setFormat('doubles')}
+              >
+                Doubles
+              </button>
+              <button
+                type="button"
+                className={`button ${format === 'singles' ? 'primary' : 'secondary'}`}
+                onClick={() => setFormat('singles')}
+              >
+                Singles
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Event name</label>
+            <input
+              className="input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="label">Organizer name</label>
+            <input
+              className="input"
+              value={organizerName}
+              onChange={(e) => setOrganizerName(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="label">Date</label>
+            <input
+              className="input"
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="label">Time</label>
+            <input
+              className="input"
+              type="time"
+              value={eventTime}
+              onChange={(e) => setEventTime(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label className="label">Location</label>
+            <input
+              className="input"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Courts, gym, park..."
+            />
+          </div>
+
+          <Stepper
+            label={`Players (min ${minPlayers})`}
+            value={playerCount}
+            min={minPlayers}
+            max={40}
+            onChange={setPlayerCount}
+          />
+
+          <Stepper
+            label={`Courts (max ${maxCourtsAllowed})`}
+            value={courts}
+            min={1}
+            max={maxCourtsAllowed}
+            onChange={setCourts}
+          />
+
+          <Stepper
+            label="Rounds"
+            value={rounds}
+            min={1}
+            max={30}
+            onChange={setRounds}
+          />
+
+          <Stepper
+            label="Games to"
+            value={gamesTo}
+            min={1}
+            max={21}
+            onChange={setGamesTo}
+          />
+
+          <div className="list-item">
+            <div style={{ fontWeight: 700 }}>Quick summary</div>
+            <div className="muted">
+              {format === 'singles' ? 'Singles' : 'Doubles'} • {playerCount} players • {courts} courts • {rounds} rounds
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="button primary"
+            onClick={handleCreate}
+            disabled={isCreating}
+          >
+            {isCreating ? 'Creating...' : 'Create Tournament'}
           </button>
 
-          <button type="button" className="button primary" onClick={shareJoinLink}>
-            Share Join Link
-          </button>
-
-          {isOrganizer && isStarted && !isCompleted ? (
-            <button type="button" className="button secondary" onClick={endTournamentEarly} disabled={isEndingEarly}>
-              {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
-            </button>
-          ) : null}
-
-          {isCompleted ? (
-            <button type="button" className="button primary" onClick={rematchTournament} disabled={isRematching}>
-              {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
-            </button>
-          ) : null}
+          {message ? <div className="notice">{message}</div> : null}
         </div>
       </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
-        <button type="button" className={`button ${activeTab === 'players' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('players')}>Players</button>
-        <button type="button" className={`button ${activeTab === 'rounds' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('rounds')}>Rounds</button>
-        <button type="button" className={`button ${activeTab === 'standings' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('standings')}>Standings</button>
-      </div>
-
-      {activeTab === 'players' && (
-        <div className="card">
-          <div className="card-title">Players</div>
-          <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament is complete. Player list is locked.'
-              : isStarted
-              ? 'Tournament has started. Player list is locked.'
-              : isSingles
-              ? 'Singles tournament — each player competes individually.'
-              : 'Players can claim a spot, or the organizer can type names manually.'}
-          </div>
-
-          {isLoading ? (
-            <div className="muted">Loading player spots...</div>
-          ) : (
-            <div className="grid">
-              {playerSlots.map((slot) => {
-                const isMine = slot.claimed_by_user_id === userId;
-                const isClaimedBySomeone = !!slot.claimed_by_user_id;
-                const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
-                const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
-
-                return (
-                  <div
-                    key={slot.id}
-                    className="list-item"
-                    style={{
-                      borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
-                      boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
-                    }}
-                  >
-                    <div className="row-between" style={{ marginBottom: 10 }}>
-                      <div>
-                        <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
-                        <div className="muted">{slot.display_name || 'Open spot'}</div>
-                      </div>
-                      {isMine ? (
-                        <span className="tag green">Yours</span>
-                      ) : isClaimedBySomeone ? (
-                        <span className="tag green">Claimed</span>
-                      ) : isLocked ? (
-                        <span className="tag">Locked</span>
-                      ) : (
-                        <span className="tag">Open</span>
-                      )}
-                    </div>
-
-                    <div className="grid">
-                      <input
-                        className="input"
-                        value={newNames[slot.id] ?? ''}
-                        onChange={(e) => setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))}
-                        placeholder={`Name for Player ${slot.slot_number}`}
-                        disabled={!canEditName}
-                      />
-                      {!isLocked && canClaim ? (
-                        <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                          Claim Spot
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {!isLocked ? (
-                <>
-                  <button className="button secondary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
-                    {isSavingNames ? 'Saving...' : 'Save Player Names'}
-                  </button>
-                  {isOrganizer ? (
-                    <button className="button primary" onClick={generateScheduleAndStart} disabled={isStarting || !canStartTournament}>
-                      {isStarting ? 'Starting...' : 'Start Tournament'}
-                    </button>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'rounds' && (
-        <div className="card">
-          <div className="card-title">Rounds</div>
-          <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Scores are locked.'
-              : isStarted
-              ? `Current live round: ${currentRound}`
-              : 'Round schedule appears here after the tournament starts.'}
-          </div>
-
-          <div className="grid" style={{ marginBottom: 14 }}>
-            {roundsAvailable.map((round) => {
-              const status = roundStatusByRound.get(round);
-              const isSelected = selectedRound === round;
-              return (
-                <button
-                  key={round}
-                  type="button"
-                  className={`button ${isSelected ? 'primary' : 'secondary'}`}
-                  onClick={() => setSelectedRound(round)}
-                >
-                  {status === 'complete' ? `✓ Round ${round}` : status === 'current' ? `• Round ${round}` : `Round ${round}`}
-                </button>
-              );
-            })}
-          </div>
-
-          {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
-            <div className="muted">No matches in this round yet.</div>
-          ) : (
-            <div className="grid">
-              {matchesForSelectedRound.map((match) => {
-                const draft = scoreDrafts[match.id] || {
-                  team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-                  team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-                };
-
-                return (
-                  <div key={match.id} className="list-item">
-                    <div className="row-between" style={{ marginBottom: 12 }}>
-                      <strong>Court {match.court_number ?? '-'}</strong>
-                      <span className={match.is_complete ? 'tag green' : 'tag'}>
-                        {match.is_complete ? 'Complete' : 'Live'}
-                      </span>
-                    </div>
-
-                    <div className="grid" style={{ marginBottom: 12 }}>
-                      <div className="list-item" style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>
-                          {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
-                        </div>
-                        <input
-                          className="input"
-                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                          type="number"
-                          value={draft.team_a_score}
-                          disabled={match.is_complete || isCompleted}
-                          onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
-                          onBlur={() => saveScoreField(match.id, 'team_a_score')}
-                          placeholder="0"
-                        />
-                      </div>
-
-                      <div className="list-item" style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>
-                          {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
-                        </div>
-                        <input
-                          className="input"
-                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                          type="number"
-                          value={draft.team_b_score}
-                          disabled={match.is_complete || isCompleted}
-                          onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
-                          onBlur={() => saveScoreField(match.id, 'team_b_score')}
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-
-                    {match.is_complete || isCompleted ? (
-                      <button className="button secondary" disabled>
-                        {isCompleted ? 'Final Locked' : 'Score Submitted'}
-                      </button>
-                    ) : (
-                      <button className="button primary" onClick={() => submitMatchScore(match.id)}>
-                        Submit Score
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-
-              {byesForSelectedRound.length ? (
-                <div className="list-item">
-                  <div style={{ fontWeight: 800, marginBottom: 8 }}>Byes This Round</div>
-                  <div className="grid">
-                    {byesForSelectedRound.map((bye) => (
-                      <div key={bye.id} className="list-item" style={{ padding: 10 }}>
-                        {renderPlayerName(bye.team_a_player_1_id)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'standings' && (
-        <div className="card">
-          <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
-          <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Final results are locked.'
-              : 'Ranked by wins, then point differential, then points scored.'}
-          </div>
-
-          {!standings.length ? (
-            <div className="muted">No players yet.</div>
-          ) : (
-            <div className="grid">
-              {standings.map((row, index) => {
-                const place = index + 1;
-                const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
-                const highlightStyle =
-                  place === 1
-                    ? { borderColor: 'rgba(255,203,5,.6)', boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset' }
-                    : place <= 3
-                    ? { borderColor: 'rgba(255,203,5,.35)' }
-                    : {};
-
-                return (
-                  <div key={row.playerId} className="list-item" style={highlightStyle}>
-                    <div className="row-between">
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>
-                          {medal ? `${medal} ` : ''}{place}. {row.name}
-                        </div>
-                        <div className="muted" style={{ marginTop: 4 }}>
-                          {row.wins}-{row.losses} • {row.played} played
-                        </div>
-                        <div className="muted" style={{ marginTop: 2 }}>
-                          PF: {row.pointsFor} | PA: {row.pointsAgainst}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>
-                          {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
-                        </div>
-                        <div className="muted">Diff</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </main>
   );
 }

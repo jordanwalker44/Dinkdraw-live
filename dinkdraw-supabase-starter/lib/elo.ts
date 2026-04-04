@@ -1,5 +1,5 @@
 export type EloStatRow = {
-  id: string; 
+  id: string;
   match_id: string;
   played_at: string;
   user_id: string;
@@ -12,6 +12,7 @@ export type EloStatRow = {
   points_for: number;
   points_against: number;
   tournament_id: string;
+  format: string;
 };
 
 export type EloProfile = {
@@ -64,7 +65,11 @@ function groupAndSortMatches(stats: EloStatRow[]): MatchGroup[] {
 
   for (const row of stats) {
     if (!grouped.has(row.match_id)) {
-      grouped.set(row.match_id, { matchId: row.match_id, playedAt: row.played_at, rows: [] });
+      grouped.set(row.match_id, {
+        matchId: row.match_id,
+        playedAt: row.played_at,
+        rows: [],
+      });
     }
     grouped.get(row.match_id)!.rows.push(row);
   }
@@ -72,6 +77,26 @@ function groupAndSortMatches(stats: EloStatRow[]): MatchGroup[] {
   return Array.from(grouped.values()).sort(
     (a, b) => new Date(a.playedAt).getTime() - new Date(b.playedAt).getTime()
   );
+}
+
+function getTeams(match: MatchGroup): { teamA: string[]; teamB: string[] } | null {
+  const first = match.rows[0];
+  if (!first) return null;
+
+  // Singles: partner is null, opponents only have 1 player
+  const isSingles = !first.partner_user_id && !first.opponent_2_user_id;
+
+  const teamA = isSingles
+    ? [first.user_id]
+    : [first.user_id, first.partner_user_id].filter(Boolean) as string[];
+
+  const teamB = isSingles
+    ? [first.opponent_1_user_id].filter(Boolean) as string[]
+    : [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
+
+  if (!teamA.length || !teamB.length) return null;
+
+  return { teamA, teamB };
 }
 
 export function buildEloTimeline(allStats: EloStatRow[]): EloTimeline {
@@ -84,17 +109,15 @@ export function buildEloTimeline(allStats: EloStatRow[]): EloTimeline {
   const getCount = (id: string) => matchCounts.get(id) ?? 0;
 
   for (const match of matches) {
-    const first = match.rows[0];
-    const teamA = [first.user_id, first.partner_user_id].filter(Boolean) as string[];
-    const teamB = [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
+    const teams = getTeams(match);
+    if (!teams) continue;
 
-    if (!teamA.length || !teamB.length) continue;
+    const { teamA, teamB } = teams;
+    const rep = match.rows.find((r) => teamA.includes(r.user_id));
+    if (!rep) continue;
 
     const ratingA = teamA.reduce((s, id) => s + getRating(id), 0) / teamA.length;
     const ratingB = teamB.reduce((s, id) => s + getRating(id), 0) / teamB.length;
-
-    const rep = match.rows.find((r) => teamA.includes(r.user_id));
-    if (!rep) continue;
 
     const resultA: 'win' | 'loss' | 'tie' =
       rep.wins > 0 ? 'win' : rep.losses > 0 ? 'loss' : 'tie';
@@ -137,8 +160,14 @@ export function buildLeaderboardRows(
   const ratings = new Map<string, number>();
   const matchCounts = new Map<string, number>();
   const totals = new Map<string, {
-    userId: string; matches: number; wins: number; losses: number;
-    ties: number; pointsFor: number; pointsAgainst: number; tournaments: Set<string>;
+    userId: string;
+    matches: number;
+    wins: number;
+    losses: number;
+    ties: number;
+    pointsFor: number;
+    pointsAgainst: number;
+    tournaments: Set<string>;
   }>();
 
   const getRating = (id: string) => ratings.get(id) ?? 1000;
@@ -147,8 +176,14 @@ export function buildLeaderboardRows(
   const ensureTotals = (userId: string) => {
     if (!totals.has(userId)) {
       totals.set(userId, {
-        userId, matches: 0, wins: 0, losses: 0,
-        ties: 0, pointsFor: 0, pointsAgainst: 0, tournaments: new Set(),
+        userId,
+        matches: 0,
+        wins: 0,
+        losses: 0,
+        ties: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        tournaments: new Set(),
       });
     }
     return totals.get(userId)!;
@@ -166,17 +201,15 @@ export function buildLeaderboardRows(
   }
 
   for (const match of matches) {
-    const first = match.rows[0];
-    const teamA = [first.user_id, first.partner_user_id].filter(Boolean) as string[];
-    const teamB = [first.opponent_1_user_id, first.opponent_2_user_id].filter(Boolean) as string[];
+    const teams = getTeams(match);
+    if (!teams) continue;
 
-    if (!teamA.length || !teamB.length) continue;
+    const { teamA, teamB } = teams;
+    const rep = match.rows.find((r) => teamA.includes(r.user_id));
+    if (!rep) continue;
 
     const ratingA = teamA.reduce((s, id) => s + getRating(id), 0) / teamA.length;
     const ratingB = teamB.reduce((s, id) => s + getRating(id), 0) / teamB.length;
-
-    const rep = match.rows.find((r) => teamA.includes(r.user_id));
-    if (!rep) continue;
 
     const resultA: 'win' | 'loss' | 'tie' =
       rep.wins > 0 ? 'win' : rep.losses > 0 ? 'loss' : 'tie';

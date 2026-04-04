@@ -40,11 +40,10 @@ export default function HomePage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <h1 className="hero-title">DinkDraw</h1>
-          <p className="hero-subtitle">
-            Run round robin pickleball without the clipboard chaos.
-          </p>
+         <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
+<p className="hero-subtitle">
+  Easy tournament creation. Stats. Pickle.
+</p>
         </div>
       </div>
 

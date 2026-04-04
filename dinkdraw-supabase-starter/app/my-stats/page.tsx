@@ -129,22 +129,54 @@ export default function MyStatsPage() {
     return stats.filter((row) => new Date(row.played_at) >= cutoff);
   }, [stats, timeFilter]);
 
+  // Split stats by format
+  const filteredSinglesStats = useMemo(
+    () => filteredStats.filter((row) => row.format === 'singles'),
+    [filteredStats]
+  );
+
+  const filteredDoublesStats = useMemo(
+    () => filteredStats.filter((row) => row.format === 'doubles'),
+    [filteredStats]
+  );
+
   const filteredLeaderboardStats = useMemo(() => {
     const cutoff = getCutoffDate(timeFilter);
     if (!cutoff) return allStatsForElo;
     return allStatsForElo.filter((row) => new Date(row.played_at) >= cutoff);
   }, [allStatsForElo, timeFilter]);
 
-  const leaderboardRows = useMemo(
-    () => buildLeaderboardRows(filteredLeaderboardStats, profiles, 1),
-    [filteredLeaderboardStats, profiles]
+  const singlesLeaderboardStats = useMemo(
+    () => filteredLeaderboardStats.filter((row) => row.format === 'singles'),
+    [filteredLeaderboardStats]
   );
 
-  const leaderboardRank = useMemo(() => {
+  const doublesLeaderboardStats = useMemo(
+    () => filteredLeaderboardStats.filter((row) => row.format === 'doubles'),
+    [filteredLeaderboardStats]
+  );
+
+  const singlesLeaderboardRows = useMemo(
+    () => buildLeaderboardRows(singlesLeaderboardStats, profiles, 1),
+    [singlesLeaderboardStats, profiles]
+  );
+
+  const doublesLeaderboardRows = useMemo(
+    () => buildLeaderboardRows(doublesLeaderboardStats, profiles, 1),
+    [doublesLeaderboardStats, profiles]
+  );
+
+  const singlesRank = useMemo(() => {
     if (!userId) return { rank: '-', totalRanked: 0 };
-    const index = leaderboardRows.findIndex((r) => r.userId === userId);
-    return { rank: index >= 0 ? index + 1 : '-', totalRanked: leaderboardRows.length };
-  }, [leaderboardRows, userId]);
+    const index = singlesLeaderboardRows.findIndex((r) => r.userId === userId);
+    return { rank: index >= 0 ? index + 1 : '-', totalRanked: singlesLeaderboardRows.length };
+  }, [singlesLeaderboardRows, userId]);
+
+  const doublesRank = useMemo(() => {
+    if (!userId) return { rank: '-', totalRanked: 0 };
+    const index = doublesLeaderboardRows.findIndex((r) => r.userId === userId);
+    return { rank: index >= 0 ? index + 1 : '-', totalRanked: doublesLeaderboardRows.length };
+  }, [doublesLeaderboardRows, userId]);
 
   const filteredTournamentIds = useMemo(
     () => Array.from(new Set(filteredStats.map((r) => r.tournament_id).filter(Boolean))),
@@ -161,11 +193,11 @@ export default function MyStatsPage() {
     [allCompletedMatches, filteredTournamentIds]
   );
 
-  const aggregates = useMemo(() => {
+  function calcAggregates(statRows: EloStatRow[]) {
     let wins = 0, losses = 0, ties = 0, pointsFor = 0, pointsAgainst = 0;
     const tournamentIds = new Set<string>();
 
-    for (const s of filteredStats) {
+    for (const s of statRows) {
       wins += s.wins;
       losses += s.losses;
       ties += s.ties;
@@ -183,7 +215,22 @@ export default function MyStatsPage() {
       avgPoints: matches ? Math.round(pointsFor / matches) : 0,
       tournamentsPlayed: tournamentIds.size,
     };
-  }, [filteredStats]);
+  }
+
+  const singlesAggregates = useMemo(
+    () => calcAggregates(filteredSinglesStats),
+    [filteredSinglesStats]
+  );
+
+  const doublesAggregates = useMemo(
+    () => calcAggregates(filteredDoublesStats),
+    [filteredDoublesStats]
+  );
+
+  const overallAggregates = useMemo(
+    () => calcAggregates(filteredStats),
+    [filteredStats]
+  );
 
   const tournamentSummary = useMemo(() => {
     if (!userId) return { bestFinish: '-', podiums: 0, tournamentWins: 0 };
@@ -292,23 +339,47 @@ export default function MyStatsPage() {
   }, [filteredStats]);
 
   const eloStats = useMemo(() => {
-    if (!userId || !allStatsForElo.length) return { currentElo: 1000, peakElo: 1000, deltaInWindow: 0 };
+    if (!userId || !allStatsForElo.length) {
+      return {
+        singlesElo: 1000, singlesPeakElo: 1000, singlesDelta: 0,
+        doublesElo: 1000, doublesPeakElo: 1000, doublesDelta: 0,
+      };
+    }
 
-    const timeline = buildEloTimeline(allStatsForElo);
-    const userTimeline = timeline.get(userId) || [];
+    const singlesOnly = allStatsForElo.filter((r) => r.format === 'singles');
+    const doublesOnly = allStatsForElo.filter((r) => r.format === 'doubles');
 
-    const currentElo = userTimeline.length ? userTimeline[userTimeline.length - 1].rating : 1000;
-    const peakElo = userTimeline.length ? Math.max(...userTimeline.map((e) => e.rating)) : 1000;
+    const singlesTimeline = buildEloTimeline(singlesOnly);
+    const doublesTimeline = buildEloTimeline(doublesOnly);
+
     const cutoff = getCutoffDate(timeFilter);
 
-    if (!cutoff) return { currentElo, peakElo, deltaInWindow: currentElo - 1000 };
+    function getEloStats(timeline: Map<string, Array<{ playedAt: string; rating: number }>>) {
+      const userTimeline = timeline.get(userId) || [];
+      const currentElo = userTimeline.length ? userTimeline[userTimeline.length - 1].rating : 1000;
+      const peakElo = userTimeline.length ? Math.max(...userTimeline.map((e) => e.rating)) : 1000;
 
-    const before = userTimeline.filter((e) => new Date(e.playedAt).getTime() < cutoff.getTime());
-    const inside = userTimeline.filter((e) => new Date(e.playedAt).getTime() >= cutoff.getTime());
-    const startElo = before.length ? before[before.length - 1].rating : 1000;
-    const endElo = inside.length ? inside[inside.length - 1].rating : startElo;
+      if (!cutoff) return { currentElo, peakElo, delta: currentElo - 1000 };
 
-    return { currentElo: endElo, peakElo, deltaInWindow: endElo - startElo };
+      const before = userTimeline.filter((e) => new Date(e.playedAt).getTime() < cutoff.getTime());
+      const inside = userTimeline.filter((e) => new Date(e.playedAt).getTime() >= cutoff.getTime());
+      const startElo = before.length ? before[before.length - 1].rating : 1000;
+      const endElo = inside.length ? inside[inside.length - 1].rating : startElo;
+
+      return { currentElo: endElo, peakElo, delta: endElo - startElo };
+    }
+
+    const singles = getEloStats(singlesTimeline);
+    const doubles = getEloStats(doublesTimeline);
+
+    return {
+      singlesElo: singles.currentElo,
+      singlesPeakElo: singles.peakElo,
+      singlesDelta: singles.delta,
+      doublesElo: doubles.currentElo,
+      doublesPeakElo: doubles.peakElo,
+      doublesDelta: doubles.delta,
+    };
   }, [allStatsForElo, userId, timeFilter]);
 
   const initials = useMemo(() => {
@@ -332,7 +403,7 @@ export default function MyStatsPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'rgba(163,230,53,.12)', border: '1px solid rgba(163,230,53,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 24, margin: '0 auto 12px' }}>
+          <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,203,5,.12)', border: '1px solid rgba(255,203,5,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 24, margin: '0 auto 12px' }}>
             {initials}
           </div>
           <h1 className="hero-title">{displayName || 'My Stats'}</h1>
@@ -353,23 +424,64 @@ export default function MyStatsPage() {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Ranking</div>
-        <div className="two-col">
-          <SimpleStatCard label="Current Elo" value={eloStats.currentElo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
-          <SimpleStatCard label="Peak Elo" value={eloStats.peakElo} sub="Lifetime high" />
-          <SimpleStatCard label="Elo Change" value={eloStats.deltaInWindow >= 0 ? `+${eloStats.deltaInWindow}` : eloStats.deltaInWindow} sub={filterLabel(timeFilter)} />
-          <SimpleStatCard label="Leaderboard Rank" value={leaderboardRank.rank} sub={`${leaderboardRank.totalRanked} ranked`} />
-        </div>
-      </div>
+      {/* ── Doubles Section ── */}
+      {doublesAggregates.matches > 0 ? (
+        <>
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Doubles — Ranking</div>
+            <div className="two-col">
+              <SimpleStatCard label="Elo" value={eloStats.doublesElo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
+              <SimpleStatCard label="Peak Elo" value={eloStats.doublesPeakElo} sub="Lifetime high" />
+              <SimpleStatCard label="Elo Change" value={eloStats.doublesDelta >= 0 ? `+${eloStats.doublesDelta}` : eloStats.doublesDelta} sub={filterLabel(timeFilter)} />
+              <SimpleStatCard label="Rank" value={doublesRank.rank} sub={`${doublesRank.totalRanked} ranked`} />
+            </div>
+          </div>
 
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Doubles — Performance</div>
+            <div className="two-col">
+              <SimpleStatCard label="Win Rate" value={`${doublesAggregates.winPct}%`} sub={`${doublesAggregates.matches} matches`} />
+              <SimpleStatCard label="Wins" value={doublesAggregates.wins} sub={`${doublesAggregates.losses} losses`} />
+              <SimpleStatCard label="Points For" value={doublesAggregates.pointsFor} sub={`Avg ${doublesAggregates.avgPoints}/match`} />
+              <SimpleStatCard label="Point Diff" value={doublesAggregates.pointDiff} sub="Total" />
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {/* ── Singles Section ── */}
+      {singlesAggregates.matches > 0 ? (
+        <>
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Singles — Ranking</div>
+            <div className="two-col">
+              <SimpleStatCard label="Elo" value={eloStats.singlesElo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
+              <SimpleStatCard label="Peak Elo" value={eloStats.singlesPeakElo} sub="Lifetime high" />
+              <SimpleStatCard label="Elo Change" value={eloStats.singlesDelta >= 0 ? `+${eloStats.singlesDelta}` : eloStats.singlesDelta} sub={filterLabel(timeFilter)} />
+              <SimpleStatCard label="Rank" value={singlesRank.rank} sub={`${singlesRank.totalRanked} ranked`} />
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Singles — Performance</div>
+            <div className="two-col">
+              <SimpleStatCard label="Win Rate" value={`${singlesAggregates.winPct}%`} sub={`${singlesAggregates.matches} matches`} />
+              <SimpleStatCard label="Wins" value={singlesAggregates.wins} sub={`${singlesAggregates.losses} losses`} />
+              <SimpleStatCard label="Points For" value={singlesAggregates.pointsFor} sub={`Avg ${singlesAggregates.avgPoints}/match`} />
+              <SimpleStatCard label="Point Diff" value={singlesAggregates.pointDiff} sub="Total" />
+            </div>
+          </div>
+        </>
+      ) : null}
+
+      {/* ── Overall Section ── */}
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Performance</div>
+        <div className="card-title">Overall</div>
         <div className="two-col">
-          <SimpleStatCard label="Win Rate" value={`${aggregates.winPct}%`} sub={`${aggregates.matches} matches`} />
-          <SimpleStatCard label="Wins" value={aggregates.wins} sub={`${aggregates.losses} losses`} />
-          <SimpleStatCard label="Points For" value={aggregates.pointsFor} sub={`Avg ${aggregates.avgPoints}/match`} />
-          <SimpleStatCard label="Point Diff" value={aggregates.pointDiff} sub="Total" />
+          <SimpleStatCard label="Total Matches" value={overallAggregates.matches} sub="Singles + Doubles" />
+          <SimpleStatCard label="Overall Win Rate" value={`${overallAggregates.winPct}%`} sub="All formats" />
+          <SimpleStatCard label="Tournaments" value={overallAggregates.tournamentsPlayed} sub="Played" />
+          <SimpleStatCard label="Point Diff" value={overallAggregates.pointDiff} sub="All formats" />
         </div>
       </div>
 
@@ -379,7 +491,7 @@ export default function MyStatsPage() {
           <SimpleStatCard label="Best Finish" value={tournamentSummary.bestFinish} sub="Tournament place" />
           <SimpleStatCard label="Podiums" value={tournamentSummary.podiums} sub="Top 3 finishes" />
           <SimpleStatCard label="Tournament Wins" value={tournamentSummary.tournamentWins} sub="1st place finishes" />
-          <SimpleStatCard label="Best Win Streak" value={streaks.bestWinStreak} sub="Lifetime" />
+          <SimpleStatCard label="Best Win Streak" value={streaks.bestWinStreak} sub="All formats" />
         </div>
       </div>
 
@@ -400,33 +512,17 @@ export default function MyStatsPage() {
           </div>
           <div className="list-item">
             <div className="row-between">
-              <span className="muted">Tournaments Played</span>
-              <strong>{aggregates.tournamentsPlayed}</strong>
+              <span className="muted">Doubles Tournaments</span>
+              <strong>{doublesAggregates.tournamentsPlayed}</strong>
             </div>
           </div>
           <div className="list-item">
             <div className="row-between">
-              <span className="muted">Ties</span>
-              <strong>{aggregates.ties}</strong>
+              <span className="muted">Singles Tournaments</span>
+              <strong>{singlesAggregates.tournamentsPlayed}</strong>
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Summary</div>
-        {loading ? (
-          <div className="muted">Loading stats...</div>
-        ) : (
-          <div className="grid">
-            <SummaryRow label="Matches Played" value={aggregates.matches} />
-            <SummaryRow label="Wins" value={aggregates.wins} />
-            <SummaryRow label="Losses" value={aggregates.losses} />
-            <SummaryRow label="Points For" value={aggregates.pointsFor} />
-            <SummaryRow label="Points Against" value={aggregates.pointsAgainst} />
-            <SummaryRow label="Point Differential" value={aggregates.pointDiff} />
-          </div>
-        )}
       </div>
 
       <div className="card">
@@ -445,6 +541,9 @@ export default function MyStatsPage() {
                       {match.wins === 1 ? 'Win' : match.losses === 1 ? 'Loss' : 'Tie'}
                     </div>
                     <div className="muted">{new Date(match.played_at).toLocaleDateString()}</div>
+                    <div className="muted" style={{ marginTop: 2 }}>
+                      {match.format === 'singles' ? 'Singles' : 'Doubles'}
+                    </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 800 }}>{match.points_for}-{match.points_against}</div>

@@ -6,10 +6,10 @@
   --muted: #94a3b8;
   --line: rgba(255, 255, 255, 0.08);
   --line-strong: rgba(255, 255, 255, 0.14);
-  --accent: #a3e635;
-  --accent-dark: #84cc16;
-  --accent-text: #081018;
-  --blue: #38bdf8;
+  --accent: #FFCB05;
+  --accent-dark: #e6b800;
+  --accent-text: #00274C;
+  --blue: #00274C;
   --danger: #f87171;
   --shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
   --radius: 18px;

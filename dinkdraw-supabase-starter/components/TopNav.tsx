@@ -28,7 +28,7 @@ export function TopNav() {
   async function loadUser() {
     const supabase = getSupabaseBrowserClient();
 
-    // Use getSession() first — reads from localStorage instantly, no network call
+    // Step 1: Check session instantly from localStorage
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
 
@@ -38,21 +38,28 @@ export function TopNav() {
       return;
     }
 
+    // Step 2: Set signed in immediately from session data
+    // Use email as fallback for initials while profile loads
     setIsSignedIn(true);
+    const emailInitial = user.email?.split('@')[0]?.[0]?.toUpperCase() || '?';
+    setInitials(emailInitial);
 
+    // Step 3: Load profile in background to get display name
     const { data: profile } = await supabase
       .from('profiles')
       .select('display_name')
       .eq('id', user.id)
       .maybeSingle();
 
-    const name = profile?.display_name?.trim() || user.email?.split('@')[0] || '';
-    const computed = name
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((p: string) => p[0]?.toUpperCase() || '')
-      .join('');
-    setInitials(computed || '?');
+    if (profile?.display_name?.trim()) {
+      const computed = profile.display_name
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((p: string) => p[0]?.toUpperCase() || '')
+        .join('');
+      setInitials(computed || emailInitial);
+    }
   }
 
   useEffect(() => {
@@ -74,6 +81,8 @@ export function TopNav() {
       }
 
       setIsSignedIn(true);
+      const emailInitial = user.email?.split('@')[0]?.[0]?.toUpperCase() || '?';
+      setInitials(emailInitial);
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -81,19 +90,19 @@ export function TopNav() {
         .eq('id', user.id)
         .maybeSingle();
 
-      const name = profile?.display_name?.trim() || user.email?.split('@')[0] || '';
-      const computed = name
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((p: string) => p[0]?.toUpperCase() || '')
-        .join('');
-      setInitials(computed || '?');
+      if (profile?.display_name?.trim()) {
+        const computed = profile.display_name
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((p: string) => p[0]?.toUpperCase() || '')
+          .join('');
+        setInitials(computed || emailInitial);
+      }
     });
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        loadUser();
-      }
+      if (document.visibilityState === 'visible') loadUser();
     };
 
     const handleFocus = () => {

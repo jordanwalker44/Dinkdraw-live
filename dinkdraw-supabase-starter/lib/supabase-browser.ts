@@ -19,5 +19,13 @@ export function getSupabaseBrowserClient(): SupabaseClient {
     },
   });
 
+  if (typeof window !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        client?.auth.getSession();
+      }
+    });
+  }
+
   return client;
 }

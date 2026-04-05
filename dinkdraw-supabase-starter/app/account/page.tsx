@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
 import { TopNav } from '../../components/TopNav';
 
@@ -8,6 +9,7 @@ type AuthMode = 'signup' | 'signin';
 
 export default function AccountPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const router = useRouter();
 
   const [mode, setMode] = useState<AuthMode>('signin');
   const [name, setName] = useState('');
@@ -92,7 +94,11 @@ export default function AccountPage() {
 
         if (data.user) {
           const displayName = name.trim() || email.trim().split('@')[0];
-          await supabase.from('profiles').upsert({ id: data.user.id, display_name: displayName, email: data.user.email });
+          await supabase.from('profiles').upsert({
+            id: data.user.id,
+            display_name: displayName,
+            email: data.user.email,
+          });
           await supabase.from('lifetime_stats').upsert({ user_id: data.user.id });
           setProfileName(displayName);
           setName(displayName);
@@ -125,8 +131,13 @@ export default function AccountPage() {
       const resolvedName = profile?.display_name || signedInEmail.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
-      setMessage('You are now signed in.');
       setPassword('');
+
+      if (profile?.display_name?.trim()) {
+        router.push('/');
+      } else {
+        setMessage('You are now signed in. Please set your display name below.');
+      }
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Something went wrong.');
     }

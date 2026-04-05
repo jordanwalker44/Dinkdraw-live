@@ -104,7 +104,7 @@ export default function LeaderboardPage() {
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">Leaderboard</h1>
           <p className="hero-subtitle">
-            Live player rankings powered by match-by-match Elo.
+            Live player rankings. Win matches, climb the board.
           </p>
         </div>
       </div>

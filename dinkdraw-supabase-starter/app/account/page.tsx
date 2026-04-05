@@ -14,7 +14,6 @@ export default function AccountPage() {
   const [profileName, setProfileName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
   const [message, setMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,9 +45,7 @@ export default function AccountPage() {
 
     loadUser();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       const user = session?.user;
 
       setUserEmail(user?.email ?? '');
@@ -71,9 +68,7 @@ export default function AccountPage() {
       setName(resolvedName);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => { subscription.unsubscribe(); };
   }, [supabase]);
 
   async function handleAuth() {
@@ -93,25 +88,12 @@ export default function AccountPage() {
           password,
         });
 
-        if (error) {
-          setMessage(error.message);
-          setIsLoading(false);
-          return;
-        }
+        if (error) { setMessage(error.message); setIsLoading(false); return; }
 
         if (data.user) {
           const displayName = name.trim() || email.trim().split('@')[0];
-
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            display_name: displayName,
-            email: data.user.email,
-          });
-
-          await supabase.from('lifetime_stats').upsert({
-            user_id: data.user.id,
-          });
-
+          await supabase.from('profiles').upsert({ id: data.user.id, display_name: displayName, email: data.user.email });
+          await supabase.from('lifetime_stats').upsert({ user_id: data.user.id });
           setProfileName(displayName);
           setName(displayName);
         }
@@ -129,11 +111,7 @@ export default function AccountPage() {
         password,
       });
 
-      if (error) {
-        setMessage(error.message);
-        setIsLoading(false);
-        return;
-      }
+      if (error) { setMessage(error.message); setIsLoading(false); return; }
 
       const signedInEmail = data.user.email ?? email.trim();
       setUserEmail(signedInEmail);
@@ -147,7 +125,6 @@ export default function AccountPage() {
       const resolvedName = profile?.display_name || signedInEmail.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
-
       setMessage('You are now signed in.');
       setPassword('');
     } catch (err) {
@@ -171,11 +148,7 @@ export default function AccountPage() {
       redirectTo: 'https://dinkdraw.app/reset-password',
     });
 
-    if (error) {
-      setMessage(error.message);
-      setIsLoading(false);
-      return;
-    }
+    if (error) { setMessage(error.message); setIsLoading(false); return; }
 
     setMessage('Password reset email sent! Check your inbox.');
     setIsLoading(false);
@@ -187,13 +160,9 @@ export default function AccountPage() {
     const { data } = await supabase.auth.getUser();
     const user = data.user;
 
-    if (!user) {
-      setMessage('Sign in first.');
-      return;
-    }
+    if (!user) { setMessage('Sign in first.'); return; }
 
     const nextName = profileName.trim() || user.email?.split('@')[0] || 'Player';
-
     setIsSavingProfile(true);
 
     const { error } = await supabase.from('profiles').upsert({
@@ -202,11 +171,7 @@ export default function AccountPage() {
       email: user.email,
     });
 
-    if (error) {
-      setMessage(error.message);
-      setIsSavingProfile(false);
-      return;
-    }
+    if (error) { setMessage(error.message); setIsSavingProfile(false); return; }
 
     setProfileName(nextName);
     setName(nextName);
@@ -217,9 +182,7 @@ export default function AccountPage() {
   async function handleSignOut() {
     setMessage('');
     setIsLoading(true);
-
     await supabase.auth.signOut();
-
     setUserEmail('');
     setProfileName('');
     setName('');
@@ -239,26 +202,27 @@ export default function AccountPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <div
-            style={{
-              width: 70,
-              height: 70,
-              borderRadius: '50%',
-              background: 'rgba(255,203,5,.12)',
-              border: '1px solid rgba(255,203,5,.22)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: 24,
-              margin: '0 auto 12px',
-            }}
-          >
-            {initials || 'DD'}
+          <div style={{
+            width: 70,
+            height: 70,
+            borderRadius: '50%',
+            background: userEmail ? 'rgba(255,203,5,.15)' : 'rgba(255,255,255,.08)',
+            border: userEmail ? '1px solid rgba(255,203,5,.4)' : '1px solid rgba(255,255,255,.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: 24,
+            color: userEmail ? '#FFCB05' : '#94a3b8',
+            margin: '0 auto 12px',
+          }}>
+            {userEmail ? (initials || 'DD') : '?'}
           </div>
           <h1 className="hero-title">Account</h1>
           <p className="hero-subtitle">
-            Sign in, manage your profile, and keep your tournaments connected to you.
+            {userEmail
+              ? `Signed in as ${userEmail}`
+              : 'Sign in to save tournaments, track stats, and show up on the leaderboard.'}
           </p>
         </div>
       </div>
@@ -267,178 +231,140 @@ export default function AccountPage() {
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Status</div>
-
-        {userEmail ? (
-          <div
-            className="list-item"
-            style={{
-              borderColor: 'rgba(255,203,5,.45)',
-              boxShadow: '0 0 0 1px rgba(255,203,5,.18) inset',
-            }}
-          >
-            <div className="row-between">
-              <div>
-                <div style={{ fontWeight: 800, marginBottom: 4 }}>Signed In</div>
-                <div className="muted">{userEmail}</div>
-                <div className="muted" style={{ marginTop: 4 }}>
-                  Display name: {profileName || 'Not set'}
-                </div>
-              </div>
-              <span className="tag green">Active</span>
-            </div>
-          </div>
-        ) : (
-          <div className="list-item">
-            <div className="row-between">
-              <div>
-                <div style={{ fontWeight: 800, marginBottom: 4 }}>Not Signed In</div>
-                <div className="muted">
-                  Sign in to save tournaments, track stats, and show up on the leaderboard.
-                </div>
-              </div>
-              <span className="tag">Guest</span>
-            </div>
-          </div>
-        )}
-      </div>
-
       {userEmail ? (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <div className="card-title">Profile</div>
+        <>
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Status</div>
+            <div
+              className="list-item"
+              style={{
+                borderColor: 'rgba(255,203,5,.45)',
+                boxShadow: '0 0 0 1px rgba(255,203,5,.18) inset',
+              }}
+            >
+              <div className="row-between">
+                <div>
+                  <div style={{ fontWeight: 800, marginBottom: 4 }}>Signed In</div>
+                  <div className="muted">{userEmail}</div>
+                  <div className="muted" style={{ marginTop: 4 }}>
+                    Display name: {profileName || 'Not set'}
+                  </div>
+                </div>
+                <span className="tag green">Active</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Profile</div>
+            <div className="card-subtitle">
+              This is the name DinkDraw uses when you create tournaments or claim spots.
+            </div>
+            <div className="grid">
+              <div>
+                <label className="label">Display Name</label>
+                <input
+                  className="input"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="Your display name"
+                />
+              </div>
+              <button className="button primary" onClick={handleSaveDisplayName} disabled={isSavingProfile}>
+                {isSavingProfile ? 'Saving...' : 'Save Display Name'}
+              </button>
+              <button className="button secondary" onClick={handleSignOut} disabled={isLoading}>
+                {isLoading ? 'Signing Out...' : 'Sign Out'}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="card">
+          <div className="card-title">{mode === 'signin' ? 'Sign In' : 'Create Account'}</div>
           <div className="card-subtitle">
-            This is the default name DinkDraw uses when you create tournaments or claim spots.
+            {mode === 'signin'
+              ? 'Use your account to access saved tournaments, rankings, and stats.'
+              : 'Create an account so your results and profile stay connected to you.'}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
+            <button
+              type="button"
+              className={`button ${mode === 'signin' ? 'primary' : 'secondary'}`}
+              onClick={() => setMode('signin')}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              className={`button ${mode === 'signup' ? 'primary' : 'secondary'}`}
+              onClick={() => setMode('signup')}
+            >
+              Create
+            </button>
           </div>
 
           <div className="grid">
+            {mode === 'signup' ? (
+              <div>
+                <label className="label">Name</label>
+                <input
+                  className="input"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                />
+              </div>
+            ) : null}
+
             <div>
-              <label className="label">Display Name</label>
+              <label className="label">Email</label>
               <input
                 className="input"
-                value={profileName}
-                onChange={(e) => setProfileName(e.target.value)}
-                placeholder="Your display name"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
               />
             </div>
 
-            <button
-              className="button primary"
-              onClick={handleSaveDisplayName}
-              disabled={isSavingProfile}
-            >
-              {isSavingProfile ? 'Saving...' : 'Save Display Name'}
-            </button>
-
-            <button
-              className="button secondary"
-              onClick={handleSignOut}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Working...' : 'Sign Out'}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="card">
-        <div className="card-title">{mode === 'signin' ? 'Sign In' : 'Create Account'}</div>
-        <div className="card-subtitle">
-          {mode === 'signin'
-            ? 'Use your account to access saved tournaments, rankings, and stats.'
-            : 'Create an account so your results and profile stay connected to you.'}
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: 8,
-            marginBottom: 14,
-          }}
-        >
-          <button
-            type="button"
-            className={`button ${mode === 'signin' ? 'primary' : 'secondary'}`}
-            onClick={() => setMode('signin')}
-          >
-            Sign In
-          </button>
-
-          <button
-            type="button"
-            className={`button ${mode === 'signup' ? 'primary' : 'secondary'}`}
-            onClick={() => setMode('signup')}
-          >
-            Create
-          </button>
-        </div>
-
-        <div className="grid">
-          {mode === 'signup' ? (
             <div>
-              <label className="label">Name</label>
+              <label className="label">Password</label>
               <input
                 className="input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isLoading) void handleAuth();
+                }}
               />
             </div>
-          ) : null}
 
-          <div>
-            <label className="label">Email</label>
-            <input
-              className="input"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </div>
-
-          <div>
-            <label className="label">Password</label>
-            <input
-              className="input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isLoading) {
-                  void handleAuth();
-                }
-              }}
-            />
-          </div>
-
-          <button className="button primary" onClick={handleAuth} disabled={isLoading}>
-            {isLoading
-              ? mode === 'signup'
-                ? 'Creating Account...'
-                : 'Signing In...'
-              : mode === 'signup'
-              ? 'Create Account'
-              : 'Sign In'}
-          </button>
-
-          {mode === 'signin' ? (
-            <button
-              type="button"
-              className="button secondary"
-              onClick={handleForgotPassword}
-              disabled={isLoading}
-            >
-              {isLoading ? 'Sending...' : 'Forgot Password'}
+            <button className="button primary" onClick={handleAuth} disabled={isLoading}>
+              {isLoading
+                ? mode === 'signup' ? 'Creating Account...' : 'Signing In...'
+                : mode === 'signup' ? 'Create Account' : 'Sign In'}
             </button>
-          ) : null}
+
+            {mode === 'signin' ? (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={handleForgotPassword}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Sending...' : 'Forgot Password'}
+              </button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }

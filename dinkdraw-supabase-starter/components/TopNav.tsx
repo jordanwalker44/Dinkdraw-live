@@ -27,8 +27,10 @@ export function TopNav() {
 
   async function loadUser() {
     const supabase = getSupabaseBrowserClient();
-    const { data: authData } = await supabase.auth.getUser();
-    const user = authData.user;
+
+    // Use getSession() first — reads from localStorage instantly, no network call
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
 
     if (!user) {
       setIsSignedIn(false);
@@ -88,7 +90,6 @@ export function TopNav() {
       setInitials(computed || '?');
     });
 
-    // Re-load user when screen wakes up
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         loadUser();
@@ -110,7 +111,6 @@ export function TopNav() {
   }, []);
 
   useEffect(() => {
-    // Re-check auth on every page navigation
     loadUser();
   }, [pathname]);
 

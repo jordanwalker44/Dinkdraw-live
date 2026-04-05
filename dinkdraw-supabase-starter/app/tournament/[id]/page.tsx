@@ -111,23 +111,15 @@ function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
-// ─── Singles schedule builder ───────────────────────────────────────────────
-
-function buildSinglesSchedule(
-  players: PlayerSlot[],
-  rounds: number,
-  courts: number
-): ScheduleRow[] {
+function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: number): ScheduleRow[] {
   const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
   if (activePlayers.length < 3) return [];
 
   const ids = activePlayers.map((p) => p.id);
   const maxParticipantsPerRound = Math.min(courts * 2, ids.length);
-
   const matchupCounts = new Map<string, number>();
   const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-
   const output: ScheduleRow[] = [];
 
   function getMatchupCount(a: string, b: string) {
@@ -142,8 +134,6 @@ function buildSinglesSchedule(
       if (playDiff !== 0) return playDiff;
       return Math.random() - 0.5;
     });
-
-    // Need even number for singles matchups
     const count = Math.min(maxParticipantsPerRound, sorted.length);
     return count % 2 === 0 ? sorted.slice(0, count) : sorted.slice(0, count - 1);
   }
@@ -156,19 +146,16 @@ function buildSinglesSchedule(
       const shuffled = shuffle(participants);
       const pairs = chunkIntoGroups(shuffled, 2).filter((g) => g.length === 2);
       let penalty = 0;
-
       for (const [a, b] of pairs) {
         penalty += getMatchupCount(a, b) * 1000;
         penalty += (playedCounts.get(a) || 0) + (playedCounts.get(b) || 0);
         penalty += Math.random();
       }
-
       if (penalty < bestPenalty) {
         bestPenalty = penalty;
         bestResult = pairs.map(([a, b]) => ({ playerA: a, playerB: b }));
       }
     }
-
     return bestResult || [];
   }
 
@@ -176,81 +163,38 @@ function buildSinglesSchedule(
     const participants = chooseParticipantsForRound();
     const benched = ids.filter((id) => !participants.includes(id));
     const matches = findBestSinglesMatches(participants);
-
     if (!matches.length) break;
 
     benched.forEach((id) => {
       byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({
-        round_number: round,
-        court_number: null,
-        team_a_player_1_id: id,
-        team_a_player_2_id: null,
-        team_b_player_1_id: null,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: true,
-        is_complete: false,
-      });
+      output.push({ round_number: round, court_number: null, team_a_player_1_id: id, team_a_player_2_id: null, team_b_player_1_id: null, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: true, is_complete: false });
     });
 
     matches.forEach((match, index) => {
       const { playerA, playerB } = match;
-
-      matchupCounts.set(
-        singlesMatchupKey(playerA, playerB),
-        getMatchupCount(playerA, playerB) + 1
-      );
-
+      matchupCounts.set(singlesMatchupKey(playerA, playerB), getMatchupCount(playerA, playerB) + 1);
       playedCounts.set(playerA, (playedCounts.get(playerA) || 0) + 1);
       playedCounts.set(playerB, (playedCounts.get(playerB) || 0) + 1);
-
-      output.push({
-        round_number: round,
-        court_number: index + 1,
-        team_a_player_1_id: playerA,
-        team_a_player_2_id: null,
-        team_b_player_1_id: playerB,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: false,
-        is_complete: false,
-      });
+      output.push({ round_number: round, court_number: index + 1, team_a_player_1_id: playerA, team_a_player_2_id: null, team_b_player_1_id: playerB, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: false, is_complete: false });
     });
   }
-
   return output;
 }
 
-// ─── Doubles schedule builder ────────────────────────────────────────────────
-
-function buildDoublesSchedule(
-  players: PlayerSlot[],
-  rounds: number,
-  courts: number
-): ScheduleRow[] {
+function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: number): ScheduleRow[] {
   const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
   if (activePlayers.length < 4) return [];
 
   const ids = activePlayers.map((p) => p.id);
   const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
-
   const partnerCounts = new Map<string, number>();
   const matchupCounts = new Map<string, number>();
   const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-
   const output: ScheduleRow[] = [];
 
-  function getPartnerCount(a: string, b: string) {
-    return partnerCounts.get(pairKey(a, b)) || 0;
-  }
-
-  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
-    return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
-  }
+  function getPartnerCount(a: string, b: string) { return partnerCounts.get(pairKey(a, b)) || 0; }
+  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) { return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0; }
 
   function chooseParticipantsForRound() {
     const sorted = [...ids].sort((a, b) => {
@@ -266,7 +210,6 @@ function buildDoublesSchedule(
   function bestLayoutsForParticipants(participants: string[]) {
     const groups = chunkIntoGroups(shuffle(participants), 4).filter((g) => g.length === 4);
     if (!groups.length) return null;
-
     let totalPenalty = 0;
     const matches: Array<{ teamA: [string, string]; teamB: [string, string] }> = [];
 
@@ -276,46 +219,27 @@ function buildDoublesSchedule(
         { teamA: [group[0], group[2]] as [string, string], teamB: [group[1], group[3]] as [string, string] },
         { teamA: [group[0], group[3]] as [string, string], teamB: [group[1], group[2]] as [string, string] },
       ];
-
       let best: { teamA: [string, string]; teamB: [string, string]; penalty: number } | null = null;
-
       for (const layout of layouts) {
         const [a1, a2] = layout.teamA;
         const [b1, b2] = layout.teamB;
-        const penalty =
-          getPartnerCount(a1, a2) * 1000 +
-          getPartnerCount(b1, b2) * 1000 +
-          getMatchupCount(a1, a2, b1, b2) * 400 +
-          (playedCounts.get(a1) || 0) +
-          (playedCounts.get(a2) || 0) +
-          (playedCounts.get(b1) || 0) +
-          (playedCounts.get(b2) || 0) +
-          Math.random();
-
-        if (!best || penalty < best.penalty) {
-          best = { teamA: [a1, a2], teamB: [b1, b2], penalty };
-        }
+        const penalty = getPartnerCount(a1, a2) * 1000 + getPartnerCount(b1, b2) * 1000 + getMatchupCount(a1, a2, b1, b2) * 400 + (playedCounts.get(a1) || 0) + (playedCounts.get(a2) || 0) + (playedCounts.get(b1) || 0) + (playedCounts.get(b2) || 0) + Math.random();
+        if (!best || penalty < best.penalty) best = { teamA: [a1, a2], teamB: [b1, b2], penalty };
       }
-
       if (!best) return null;
       matches.push({ teamA: best.teamA, teamB: best.teamB });
       totalPenalty += best.penalty;
     }
-
     return { matches, totalPenalty };
   }
 
   function findBestRoundMatches(participants: string[]) {
     let bestResult: { matches: Array<{ teamA: [string, string]; teamB: [string, string] }>; totalPenalty: number } | null = null;
-
     for (let attempt = 0; attempt < 700; attempt++) {
       const candidate = bestLayoutsForParticipants(participants);
       if (!candidate) continue;
-      if (!bestResult || candidate.totalPenalty < bestResult.totalPenalty) {
-        bestResult = candidate;
-      }
+      if (!bestResult || candidate.totalPenalty < bestResult.totalPenalty) bestResult = candidate;
     }
-
     return bestResult?.matches || [];
   }
 
@@ -323,63 +247,28 @@ function buildDoublesSchedule(
     const participants = chooseParticipantsForRound();
     const benched = ids.filter((id) => !participants.includes(id));
     const matches = findBestRoundMatches(participants);
-
     if (!matches.length) break;
 
     benched.forEach((id) => {
       byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({
-        round_number: round,
-        court_number: null,
-        team_a_player_1_id: id,
-        team_a_player_2_id: null,
-        team_b_player_1_id: null,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: true,
-        is_complete: false,
-      });
+      output.push({ round_number: round, court_number: null, team_a_player_1_id: id, team_a_player_2_id: null, team_b_player_1_id: null, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: true, is_complete: false });
     });
 
     matches.forEach((match, index) => {
       const [a1, a2] = match.teamA;
       const [b1, b2] = match.teamB;
-
       partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
       partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
       matchupCounts.set(matchupKey(a1, a2, b1, b2), getMatchupCount(a1, a2, b1, b2) + 1);
-      [a1, a2, b1, b2].forEach((id) => {
-        playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
-      });
-
-      output.push({
-        round_number: round,
-        court_number: index + 1,
-        team_a_player_1_id: a1,
-        team_a_player_2_id: a2,
-        team_b_player_1_id: b1,
-        team_b_player_2_id: b2,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: false,
-        is_complete: false,
-      });
+      [a1, a2, b1, b2].forEach((id) => { playedCounts.set(id, (playedCounts.get(id) || 0) + 1); });
+      output.push({ round_number: round, court_number: index + 1, team_a_player_1_id: a1, team_a_player_2_id: a2, team_b_player_1_id: b1, team_b_player_2_id: b2, team_a_score: null, team_b_score: null, is_bye: false, is_complete: false });
     });
   }
-
   return output;
 }
 
-function buildSchedule(
-  players: PlayerSlot[],
-  rounds: number,
-  courts: number,
-  format: string
-): ScheduleRow[] {
-  if (format === 'singles') {
-    return buildSinglesSchedule(players, rounds, courts);
-  }
+function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, format: string): ScheduleRow[] {
+  if (format === 'singles') return buildSinglesSchedule(players, rounds, courts);
   return buildDoublesSchedule(players, rounds, courts);
 }
 
@@ -408,18 +297,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
   const isLocked = isStarted || isCompleted;
-
   const minPlayersRequired = isSingles ? 3 : 4;
 
-  const claimedSlot = useMemo(
-    () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
-    [playerSlots, userId]
-  );
-
-  const playersById = useMemo(
-    () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
-    [playerSlots]
-  );
+  const claimedSlot = useMemo(() => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null, [playerSlots, userId]);
+  const playersById = useMemo(() => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])), [playerSlots]);
 
   const roundsAvailable = useMemo(() => {
     const roundSet = new Set<number>();
@@ -440,20 +321,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return roundsAvailable[roundsAvailable.length - 1] || 1;
   }, [matches, roundsAvailable]);
 
-  const finalRound = useMemo(
-    () => roundsAvailable[roundsAvailable.length - 1] || 1,
-    [roundsAvailable]
-  );
-
-  const completedMatchCount = useMemo(
-    () => matches.filter((m) => !m.is_bye && m.is_complete).length,
-    [matches]
-  );
-
-  const totalPlayableMatchCount = useMemo(
-    () => matches.filter((m) => !m.is_bye).length,
-    [matches]
-  );
+  const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
+  const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
+  const totalPlayableMatchCount = useMemo(() => matches.filter((m) => !m.is_bye).length, [matches]);
 
   const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
@@ -463,81 +333,32 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         statusMap.set(round, round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming');
         continue;
       }
-      if (roundMatches.every((m) => m.is_complete)) {
-        statusMap.set(round, 'complete');
-      } else if (round === currentRound) {
-        statusMap.set(round, 'current');
-      } else if (round < currentRound) {
-        statusMap.set(round, 'complete');
-      } else {
-        statusMap.set(round, 'upcoming');
-      }
+      if (roundMatches.every((m) => m.is_complete)) statusMap.set(round, 'complete');
+      else if (round === currentRound) statusMap.set(round, 'current');
+      else if (round < currentRound) statusMap.set(round, 'complete');
+      else statusMap.set(round, 'upcoming');
     }
     return statusMap;
   }, [matches, roundsAvailable, currentRound]);
 
-  const matchesForSelectedRound = useMemo(
-    () => matches.filter((m) => m.round_number === selectedRound && !m.is_bye),
-    [matches, selectedRound]
-  );
-
-  const byesForSelectedRound = useMemo(
-    () => matches.filter((m) => m.round_number === selectedRound && m.is_bye),
-    [matches, selectedRound]
-  );
+  const matchesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && !m.is_bye), [matches, selectedRound]);
+  const byesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && m.is_bye), [matches, selectedRound]);
 
   const standings = useMemo<StandingRow[]>(() => {
     const rows = new Map<string, StandingRow>();
-
     for (const slot of playerSlots) {
-      rows.set(slot.id, {
-        playerId: slot.id,
-        name: slot.display_name || `Player ${slot.slot_number}`,
-        played: 0,
-        wins: 0,
-        losses: 0,
-        pointsFor: 0,
-        pointsAgainst: 0,
-        pointDiff: 0,
-      });
+      rows.set(slot.id, { playerId: slot.id, name: slot.display_name || `Player ${slot.slot_number}`, played: 0, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, pointDiff: 0 });
     }
 
     for (const match of matches) {
-      if (
-        match.is_bye ||
-        !match.is_complete ||
-        match.team_a_score === null ||
-        match.team_b_score === null ||
-        match.team_a_player_1_id === null ||
-        match.team_b_player_1_id === null
-      ) continue;
+      if (match.is_bye || !match.is_complete || match.team_a_score === null || match.team_b_score === null || match.team_a_player_1_id === null || match.team_b_player_1_id === null) continue;
 
-      const aIds = isSingles
-        ? [match.team_a_player_1_id]
-        : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
+      const aIds = isSingles ? [match.team_a_player_1_id] : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
+      const bIds = isSingles ? [match.team_b_player_1_id] : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
 
-      const bIds = isSingles
-        ? [match.team_b_player_1_id]
-        : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
-
-      for (const id of [...aIds, ...bIds]) {
-        const row = rows.get(id);
-        if (row) row.played += 1;
-      }
-
-      for (const id of aIds) {
-        const row = rows.get(id);
-        if (!row) continue;
-        row.pointsFor += match.team_a_score;
-        row.pointsAgainst += match.team_b_score;
-      }
-
-      for (const id of bIds) {
-        const row = rows.get(id);
-        if (!row) continue;
-        row.pointsFor += match.team_b_score;
-        row.pointsAgainst += match.team_a_score;
-      }
+      for (const id of [...aIds, ...bIds]) { const row = rows.get(id); if (row) row.played += 1; }
+      for (const id of aIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += match.team_a_score; row.pointsAgainst += match.team_b_score; }
+      for (const id of bIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += match.team_b_score; row.pointsAgainst += match.team_a_score; }
 
       if (match.team_a_score > match.team_b_score) {
         aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
@@ -563,52 +384,28 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const canStartTournament = useMemo(() => {
     if (!tournament) return false;
     if (tournament.status === 'started' || tournament.status === 'completed') return false;
-    const namedCount = playerSlots.filter(
-      (slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== ''
-    ).length;
+    const namedCount = playerSlots.filter((slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== '').length;
     return namedCount >= minPlayersRequired;
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
-    const { data: tournamentData } = await supabase
-      .from('tournaments')
-      .select('*')
-      .eq('id', params.id)
-      .maybeSingle();
-
-    const { data: playersData } = await supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('slot_number', { ascending: true });
-
-    const { data: matchesData } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('round_number', { ascending: true })
-      .order('court_number', { ascending: true });
+    const { data: tournamentData } = await supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle();
+    const { data: playersData } = await supabase.from('tournament_players').select('*').eq('tournament_id', params.id).order('slot_number', { ascending: true });
+    const { data: matchesData } = await supabase.from('matches').select('*').eq('tournament_id', params.id).order('round_number', { ascending: true }).order('court_number', { ascending: true });
 
     setTournament(tournamentData || null);
     setPlayerSlots(playersData || []);
     setMatches(matchesData || []);
 
     if (tournamentData) {
-      try {
-        window.localStorage.setItem(
-          LAST_TOURNAMENT_KEY,
-          JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
-        );
-      } catch {}
+      try { window.localStorage.setItem(LAST_TOURNAMENT_KEY, JSON.stringify({ id: tournamentData.id, title: tournamentData.title })); } catch {}
     }
 
     if ((playersData || []).length > 0) {
       setNewNames((prev) => {
         const next = { ...prev };
         for (const slot of playersData || []) {
-          if (typeof next[slot.id] !== 'string') {
-            next[slot.id] = slot.display_name || '';
-          }
+          if (typeof next[slot.id] !== 'string') next[slot.id] = slot.display_name || '';
         }
         return next;
       });
@@ -620,14 +417,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         const existingA = prev[match.id]?.team_a_score;
         const existingB = prev[match.id]?.team_b_score;
         next[match.id] = {
-          team_a_score:
-            typeof existingA === 'string' && existingA !== '' && !match.is_complete
-              ? existingA
-              : match.team_a_score === null ? '' : String(match.team_a_score),
-          team_b_score:
-            typeof existingB === 'string' && existingB !== '' && !match.is_complete
-              ? existingB
-              : match.team_b_score === null ? '' : String(match.team_b_score),
+          team_a_score: typeof existingA === 'string' && existingA !== '' && !match.is_complete ? existingA : match.team_a_score === null ? '' : String(match.team_a_score),
+          team_b_score: typeof existingB === 'string' && existingB !== '' && !match.is_complete ? existingB : match.team_b_score === null ? '' : String(match.team_b_score),
         };
       }
       return next;
@@ -650,36 +441,24 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   useEffect(() => {
     const channel = supabase
       .channel(`tournament-live-${params.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${params.id}` },
-        async () => { setIsLive(true); await loadTournamentData(userId); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_players', filter: `tournament_id=eq.${params.id}` },
-        async () => { setIsLive(true); await loadTournamentData(userId); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${params.id}` },
-        async () => { setIsLive(true); await loadTournamentData(userId); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_players', filter: `tournament_id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
       .subscribe((status) => { setIsLive(status === 'SUBSCRIBED'); });
-
     return () => { void supabase.removeChannel(channel); };
   }, [params.id, supabase, userId]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;
     setSelectedRound((prev) => {
-      if (!roundsAvailable.includes(prev)) {
-        return isCompleted ? finalRound : currentRound;
-      }
+      if (!roundsAvailable.includes(prev)) return isCompleted ? finalRound : currentRound;
       return prev;
     });
   }, [roundsAvailable, currentRound, finalRound, isCompleted]);
 
   useEffect(() => {
-    if (isCompleted) {
-      setSelectedRound(finalRound);
-      setActiveTab('standings');
-      return;
-    }
-    if (isStarted && matches.length > 0) {
-      setSelectedRound(currentRound);
-    }
+    if (isCompleted) { setSelectedRound(finalRound); setActiveTab('standings'); return; }
+    if (isStarted && matches.length > 0) setSelectedRound(currentRound);
   }, [isStarted, isCompleted, matches.length, currentRound, finalRound]);
 
   async function copyJoinCode() {
@@ -689,9 +468,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       setCopied(true);
       setMessage('Join code copied.');
       setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setMessage('Could not copy join code.');
-    }
+    } catch { setMessage('Could not copy join code.'); }
   }
 
   async function shareJoinLink() {
@@ -699,44 +476,27 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       if (!tournament?.join_code) return;
       const url = `${window.location.origin}/tournament/join?code=${encodeURIComponent(tournament.join_code)}`;
       if (navigator.share) {
-        await navigator.share({
-          title: tournament.title || 'Join DinkDraw Tournament',
-          text: `Join ${tournament.title || 'this tournament'} on DinkDraw`,
-          url,
-        });
+        await navigator.share({ title: tournament.title || 'Join DinkDraw Tournament', text: `Join ${tournament.title || 'this tournament'} on DinkDraw`, url });
         setMessage('Share link opened.');
         return;
       }
       await navigator.clipboard.writeText(url);
       setMessage('Join link copied.');
-    } catch {
-      setMessage('Could not share join link.');
-    }
+    } catch { setMessage('Could not share join link.'); }
   }
 
   async function claimSlot(slotId: string) {
     setMessage('');
     const { data: authData } = await supabase.auth.getUser();
     const user = authData.user;
-
     if (!user) { setMessage('Sign in first.'); return; }
     if (claimedSlot) { setMessage('You already claimed a spot in this tournament.'); return; }
     if (isLocked) { setMessage('Tournament already started. Player spots are locked.'); return; }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
+    const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
     const claimedName = profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
 
-    const { error } = await supabase
-      .from('tournament_players')
-      .update({ claimed_by_user_id: user.id, display_name: claimedName })
-      .eq('id', slotId)
-      .is('claimed_by_user_id', null);
-
+    const { error } = await supabase.from('tournament_players').update({ claimed_by_user_id: user.id, display_name: claimedName }).eq('id', slotId).is('claimed_by_user_id', null);
     if (error) { setMessage(error.message); return; }
 
     setNewNames((prev) => ({ ...prev, [slotId]: claimedName }));
@@ -748,22 +508,15 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     if (isLocked) { setMessage('Player names are locked.'); return; }
     setMessage('');
     setIsSavingNames(true);
-
     try {
       for (const slot of playerSlots) {
         const nextName = (newNames[slot.id] ?? '').trim();
-        const { error } = await supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
+        const { error } = await supabase.from('tournament_players').update({ display_name: nextName }).eq('id', slot.id);
         if (error) { setMessage(`Save failed: ${error.message}`); setIsSavingNames(false); return; }
       }
       await loadTournamentData(userId);
       setMessage('Player names saved.');
-    } catch (err) {
-      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
-    }
-
+    } catch (err) { setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.'); }
     setIsSavingNames(false);
   }
 
@@ -771,65 +524,38 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     if (!tournament) return;
     setMessage('');
     setIsStarting(true);
-
     try {
       for (const slot of playerSlots) {
         const nextName = (newNames[slot.id] ?? '').trim();
-        const { error } = await supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
+        const { error } = await supabase.from('tournament_players').update({ display_name: nextName }).eq('id', slot.id);
         if (error) { setMessage(`Save failed: ${error.message}`); setIsStarting(false); return; }
       }
 
-      const { data: freshPlayers, error: freshPlayersError } = await supabase
-        .from('tournament_players')
-        .select('*')
-        .eq('tournament_id', tournament.id)
-        .order('slot_number', { ascending: true });
-
+      const { data: freshPlayers, error: freshPlayersError } = await supabase.from('tournament_players').select('*').eq('tournament_id', tournament.id).order('slot_number', { ascending: true });
       if (freshPlayersError) { setMessage(`Could not load players: ${freshPlayersError.message}`); setIsStarting(false); return; }
 
       const namedPlayers = (freshPlayers || []).filter((slot) => (slot.display_name || '').trim() !== '');
-
-      if (namedPlayers.length < minPlayersRequired) {
-        setMessage(`Please save at least ${minPlayersRequired} player names before starting.`);
-        setIsStarting(false);
-        return;
-      }
+      if (namedPlayers.length < minPlayersRequired) { setMessage(`Please save at least ${minPlayersRequired} player names before starting.`); setIsStarting(false); return; }
 
       const playersPerCourt = isSingles ? 2 : 4;
-      const availableCourts = Math.max(
-        1,
-        Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
-      );
-
+      const availableCourts = Math.max(1, Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt)));
       const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format);
-
       if (!scheduleRows.length) { setMessage('Could not generate a schedule.'); setIsStarting(false); return; }
 
       const { error: deleteError } = await supabase.from('matches').delete().eq('tournament_id', tournament.id);
       if (deleteError) { setMessage(`Delete old matches failed: ${deleteError.message}`); setIsStarting(false); return; }
 
-      const rowsToInsert = scheduleRows.map((row) => ({ tournament_id: tournament.id, ...row }));
-      const { error: insertError } = await supabase.from('matches').insert(rowsToInsert);
+      const { error: insertError } = await supabase.from('matches').insert(scheduleRows.map((row) => ({ tournament_id: tournament.id, ...row })));
       if (insertError) { setMessage(`Generate failed: ${insertError.message}`); setIsStarting(false); return; }
 
-      const { error: startError } = await supabase
-        .from('tournaments')
-        .update({ status: 'started', started_at: new Date().toISOString() })
-        .eq('id', tournament.id);
-
+      const { error: startError } = await supabase.from('tournaments').update({ status: 'started', started_at: new Date().toISOString() }).eq('id', tournament.id);
       if (startError) { setMessage(`Start failed: ${startError.message}`); setIsStarting(false); return; }
 
       await loadTournamentData(userId);
       setActiveTab('rounds');
       setSelectedRound(1);
       setMessage('Tournament started.');
-    } catch (err) {
-      setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.');
-    }
-
+    } catch (err) { setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.'); }
     setIsStarting(false);
   }
 
@@ -841,113 +567,52 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
     setIsRematching(true);
     setMessage('');
-
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const organizerName =
-        profile?.display_name?.trim() ||
-        user.email?.split('@')[0] ||
-        tournament.organizer_name ||
-        'Organizer';
-
-      const rematchTitle = tournament.title.toLowerCase().includes('rematch')
-        ? tournament.title
-        : `${tournament.title} Rematch`;
+      const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+      const organizerName = profile?.display_name?.trim() || user.email?.split('@')[0] || tournament.organizer_name || 'Organizer';
+      const rematchTitle = tournament.title.toLowerCase().includes('rematch') ? tournament.title : `${tournament.title} Rematch`;
 
       const { data: newTournament, error: tournamentError } = await supabase
         .from('tournaments')
-        .insert({
-          title: rematchTitle,
-          organizer_user_id: user.id,
-          organizer_name: organizerName,
-          join_code: makeJoinCode(),
-          event_date: tournament.event_date,
-          event_time: tournament.event_time,
-          location: tournament.location,
-          player_count: tournament.player_count,
-          courts: tournament.courts,
-          rounds: tournament.rounds,
-          games_to: tournament.games_to,
-          status: 'draft',
-          started_at: null,
-          format: tournament.format,
-        })
-        .select()
-        .single();
+        .insert({ title: rematchTitle, organizer_user_id: user.id, organizer_name: organizerName, join_code: makeJoinCode(), event_date: tournament.event_date, event_time: tournament.event_time, location: tournament.location, player_count: tournament.player_count, courts: tournament.courts, rounds: tournament.rounds, games_to: tournament.games_to, status: 'draft', started_at: null, format: tournament.format })
+        .select().single();
 
-      if (tournamentError || !newTournament) {
-        setMessage(tournamentError?.message || 'Could not create rematch tournament.');
-        setIsRematching(false);
-        return;
-      }
+      if (tournamentError || !newTournament) { setMessage(tournamentError?.message || 'Could not create rematch tournament.'); setIsRematching(false); return; }
 
       const playerRows = Array.from({ length: tournament.player_count }, (_, index) => {
         const oldSlot = playerSlots[index];
-        return {
-          tournament_id: newTournament.id,
-          slot_number: index + 1,
-          display_name: oldSlot?.display_name?.trim() || '',
-          claimed_by_user_id: null,
-        };
+        return { tournament_id: newTournament.id, slot_number: index + 1, display_name: oldSlot?.display_name?.trim() || '', claimed_by_user_id: null };
       });
 
       const { error: playersError } = await supabase.from('tournament_players').insert(playerRows);
       if (playersError) { setMessage(playersError.message); setIsRematching(false); return; }
 
-      try {
-        window.localStorage.setItem(
-          LAST_TOURNAMENT_KEY,
-          JSON.stringify({ id: newTournament.id, title: newTournament.title })
-        );
-      } catch {}
-
+      try { window.localStorage.setItem(LAST_TOURNAMENT_KEY, JSON.stringify({ id: newTournament.id, title: newTournament.title })); } catch {}
       window.location.href = `/tournament/${newTournament.id}`;
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.');
-      setIsRematching(false);
-    }
+    } catch (err) { setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.'); setIsRematching(false); }
   }
 
   function setDraftScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
     if (isCompleted) return;
     const sanitized = value.replace(/[^\d]/g, '');
-    setScoreDrafts((prev) => ({
-      ...prev,
-      [matchId]: {
-        team_a_score: prev[matchId]?.team_a_score ?? '',
-        team_b_score: prev[matchId]?.team_b_score ?? '',
-        [field]: sanitized,
-      },
-    }));
+    setScoreDrafts((prev) => ({ ...prev, [matchId]: { team_a_score: prev[matchId]?.team_a_score ?? '', team_b_score: prev[matchId]?.team_b_score ?? '', [field]: sanitized } }));
   }
 
   async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
     if (isCompleted) { setMessage('Final results are locked.'); return; }
     const match = matches.find((m) => m.id === matchId);
     if (match?.is_complete) return;
-
     const draft = scoreDrafts[matchId];
     if (!draft) return;
-
     const rawValue = draft[field];
-    const numeric = rawValue.trim() === '' || Number.isNaN(Number(rawValue))
-      ? null
-      : Math.max(0, Number(rawValue));
-
+    const numeric = rawValue.trim() === '' || Number.isNaN(Number(rawValue)) ? null : Math.max(0, Number(rawValue));
     const { error } = await supabase.from('matches').update({ [field]: numeric }).eq('id', matchId);
     if (error) { setMessage(`Score save failed: ${error.message}`); return; }
-
     setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, [field]: numeric } : m)));
   }
 
   async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
     if (!tournament) return true;
-
     const a1 = match.team_a_player_1_id ? playersById[match.team_a_player_1_id] : null;
     const a2 = match.team_a_player_2_id ? playersById[match.team_a_player_2_id] : null;
     const b1 = match.team_b_player_1_id ? playersById[match.team_b_player_1_id] : null;
@@ -964,62 +629,21 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     const playedAt = new Date().toISOString();
     const matchFormat = tournament.format || 'doubles';
 
-    function buildRow(
-      currentUserId: string,
-      partnerUserId: string | null,
-      opponentUserIds: string[],
-      side: 'A' | 'B'
-    ) {
+    function buildRow(currentUserId: string, partnerUserId: string | null, opponentUserIds: string[], side: 'A' | 'B') {
       const isTie = aScore === bScore;
       const isWin = side === 'A' ? aScore > bScore : bScore > aScore;
       const pointsFor = side === 'A' ? aScore : bScore;
       const pointsAgainst = side === 'A' ? bScore : aScore;
-
-      return {
-        user_id: currentUserId,
-        tournament_id: tournament!.id,
-        match_id: match.id,
-        round_number: match.round_number,
-        played_at: playedAt,
-        partner_user_id: partnerUserId,
-        opponent_1_user_id: opponentUserIds[0] || null,
-        opponent_2_user_id: opponentUserIds[1] || null,
-        result: isTie ? 'tie' : isWin ? 'win' : 'loss',
-        wins: isTie ? 0 : isWin ? 1 : 0,
-        losses: isTie ? 0 : isWin ? 0 : 1,
-        ties: isTie ? 1 : 0,
-        points_for: pointsFor,
-        points_against: pointsAgainst,
-        point_diff: pointsFor - pointsAgainst,
-        format: matchFormat,
-      };
+      return { user_id: currentUserId, tournament_id: tournament!.id, match_id: match.id, round_number: match.round_number, played_at: playedAt, partner_user_id: partnerUserId, opponent_1_user_id: opponentUserIds[0] || null, opponent_2_user_id: opponentUserIds[1] || null, result: isTie ? 'tie' : isWin ? 'win' : 'loss', wins: isTie ? 0 : isWin ? 1 : 0, losses: isTie ? 0 : isWin ? 0 : 1, ties: isTie ? 1 : 0, points_for: pointsFor, points_against: pointsAgainst, point_diff: pointsFor - pointsAgainst, format: matchFormat };
     }
 
     const rows = [
-      ...teamAUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          isSingles ? null : teamAUsers.find((id) => id !== currentUserId) || null,
-          teamBUsers,
-          'A'
-        )
-      ),
-      ...teamBUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          isSingles ? null : teamBUsers.find((id) => id !== currentUserId) || null,
-          teamAUsers,
-          'B'
-        )
-      ),
+      ...teamAUsers.map((currentUserId) => buildRow(currentUserId, isSingles ? null : teamAUsers.find((id) => id !== currentUserId) || null, teamBUsers, 'A')),
+      ...teamBUsers.map((currentUserId) => buildRow(currentUserId, isSingles ? null : teamBUsers.find((id) => id !== currentUserId) || null, teamAUsers, 'B')),
     ];
 
     if (!rows.length) return true;
-
-    const { error } = await supabase
-      .from('player_match_stats')
-      .upsert(rows, { onConflict: 'match_id,user_id' });
-
+    const { error } = await supabase.from('player_match_stats').upsert(rows, { onConflict: 'match_id,user_id' });
     if (error) { setMessage(`Score submitted, but stats update failed: ${error.message}`); return false; }
     return true;
   }
@@ -1046,51 +670,57 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     if (!tournament || !isOrganizer || !isStarted || isCompleted) return;
     const confirmed = window.confirm('End this tournament now? Any unfinished rounds will be locked and the current standings will become final.');
     if (!confirmed) return;
-
     setIsEndingEarly(true);
     setMessage('');
     const completed = await markTournamentCompleted();
-    if (completed) {
-      setActiveTab('standings');
-      setSelectedRound(currentRound);
-      setMessage('Tournament ended early. Final results are now locked.');
-    }
+    if (completed) { setActiveTab('standings'); setSelectedRound(currentRound); setMessage('Tournament ended early. Final results are now locked.'); }
     setIsEndingEarly(false);
+  }
+
+  async function deleteTournament() {
+    if (!tournament || !isOrganizer || isStarted || isCompleted) return;
+    const confirmed = window.confirm('Are you sure you want to delete this tournament? This cannot be undone.');
+    if (!confirmed) return;
+    setMessage('');
+
+    const { error: playersError } = await supabase.from('tournament_players').delete().eq('tournament_id', tournament.id);
+    if (playersError) { setMessage(`Delete failed: ${playersError.message}`); return; }
+
+    const { error: tournamentError } = await supabase.from('tournaments').delete().eq('id', tournament.id);
+    if (tournamentError) { setMessage(`Delete failed: ${tournamentError.message}`); return; }
+
+    try {
+      const saved = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.id === tournament.id) window.localStorage.removeItem(LAST_TOURNAMENT_KEY);
+      }
+    } catch {}
+
+    router.push('/my-tournaments');
   }
 
   async function submitMatchScore(matchId: string) {
     if (isCompleted) { setMessage('Final results are locked.'); return; }
-
     const draft = scoreDrafts[matchId];
     if (!draft) { setMessage('Enter both scores first.'); return; }
-
     const a = draft.team_a_score.trim();
     const b = draft.team_b_score.trim();
-
     if (a === '' || b === '') { setMessage('Enter both scores before submitting.'); return; }
-
     const aNum = Math.max(0, Number(a));
     const bNum = Math.max(0, Number(b));
-
     if (Number.isNaN(aNum) || Number.isNaN(bNum)) { setMessage('Scores must be valid numbers.'); return; }
 
-    const { error } = await supabase
-      .from('matches')
-      .update({ team_a_score: aNum, team_b_score: bNum, is_complete: true })
-      .eq('id', matchId);
-
+    const { error } = await supabase.from('matches').update({ team_a_score: aNum, team_b_score: bNum, is_complete: true }).eq('id', matchId);
     if (error) { setMessage(`Submit failed: ${error.message}`); return; }
 
-    const updatedMatches = matches.map((m) =>
-      m.id === matchId ? { ...m, team_a_score: aNum, team_b_score: bNum, is_complete: true } : m
-    );
+    const updatedMatches = matches.map((m) => m.id === matchId ? { ...m, team_a_score: aNum, team_b_score: bNum, is_complete: true } : m);
     setMatches(updatedMatches);
 
     const completedMatch = updatedMatches.find((m) => m.id === matchId);
     if (!completedMatch) { setMessage('Score submitted.'); return; }
 
     const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
-
     const submittedRound = completedMatch.round_number ?? selectedRound;
     const submittedRoundMatches = updatedMatches.filter((m) => m.round_number === submittedRound && !m.is_bye);
     const submittedRoundComplete = submittedRoundMatches.length > 0 && submittedRoundMatches.every((m) => m.is_complete);
@@ -1101,17 +731,13 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       if (!completed) return;
       setSelectedRound(finalRound);
       setActiveTab('standings');
-      setMessage(statsSaved
-        ? 'Score submitted. Tournament complete. Final results are now locked.'
-        : 'Score submitted. Tournament complete, but stats update failed.');
+      setMessage(statsSaved ? 'Score submitted. Tournament complete. Final results are now locked.' : 'Score submitted. Tournament complete, but stats update failed.');
       return;
     }
 
     if (submittedRoundComplete && nextRound !== submittedRound) {
       setSelectedRound(nextRound);
-      setMessage(statsSaved
-        ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
-        : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`);
+      setMessage(statsSaved ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.` : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`);
       return;
     }
 
@@ -1143,11 +769,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">{tournament?.title || 'Tournament'}</h1>
           <p className="hero-subtitle">
-            {isCompleted
-              ? 'Finished tournament'
-              : isStarted
-              ? `Live now • Round ${currentRound}`
-              : 'Set up players, then start when ready'}
+            {isCompleted ? 'Finished tournament' : isStarted ? `Live now • Round ${currentRound}` : 'Set up players, then start when ready'}
           </p>
         </div>
       </div>
@@ -1165,44 +787,22 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
             <div className="row-between">
               <strong style={{ letterSpacing: '0.08em' }}>{tournament?.join_code || '...'}</strong>
               <div style={{ display: 'flex', gap: 8 }}>
-                <span className={isLive ? 'tag green' : 'tag'}>
-                  {isLive ? 'Live' : 'Connecting'}
-                </span>
-                <span className="tag">
-                  {isSingles ? 'Singles' : 'Doubles'}
-                </span>
+                <span className={isLive ? 'tag green' : 'tag'}>{isLive ? 'Live' : 'Connecting'}</span>
+                <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
               </div>
             </div>
           </div>
 
           <div className="list-item">
-            <div className="row-between">
-              <span className="muted">Organizer</span>
-              <strong>{tournament?.organizer_name || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Status</span>
-              <strong>{isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Progress</span>
-              <strong>{completedMatchCount}/{totalPlayableMatchCount} matches</strong>
-            </div>
+            <div className="row-between"><span className="muted">Organizer</span><strong>{tournament?.organizer_name || '-'}</strong></div>
+            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Status</span><strong>{isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}</strong></div>
+            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Progress</span><strong>{completedMatchCount}/{totalPlayableMatchCount} matches</strong></div>
           </div>
 
           <div className="list-item">
-            <div className="row-between">
-              <span className="muted">Date</span>
-              <strong>{tournament?.event_date || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Time</span>
-              <strong>{tournament?.event_time || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Location</span>
-              <strong style={{ textAlign: 'right' }}>{tournament?.location || '-'}</strong>
-            </div>
+            <div className="row-between"><span className="muted">Date</span><strong>{tournament?.event_date || '-'}</strong></div>
+            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Time</span><strong>{tournament?.event_time || '-'}</strong></div>
+            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Location</span><strong style={{ textAlign: 'right' }}>{tournament?.location || '-'}</strong></div>
           </div>
         </div>
 
@@ -1222,25 +822,22 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           ) : null}
 
           {isCompleted ? (
-  <button
-    type="button"
-    className="button primary"
-    onClick={rematchTournament}
-    disabled={isRematching}
-  >
-    {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
-  </button>
-) : null}
+            <button type="button" className="button primary" onClick={rematchTournament} disabled={isRematching}>
+              {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
+            </button>
+          ) : null}
 
-{isCompleted ? (
-  <button
-    type="button"
-    className="button primary"
-    onClick={() => router.push(`/tournament/${params.id}/results`)}
-  >
-    View & Share Results
-  </button>
-) : null}
+          {isCompleted ? (
+            <button type="button" className="button primary" onClick={() => router.push(`/tournament/${params.id}/results`)}>
+              View & Share Results
+            </button>
+          ) : null}
+
+          {isOrganizer && !isStarted && !isCompleted ? (
+            <button type="button" className="button secondary" onClick={deleteTournament} style={{ borderColor: 'rgba(248,113,113,.4)', color: '#f87171' }}>
+              Delete Tournament
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -1254,13 +851,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         <div className="card">
           <div className="card-title">Players</div>
           <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament is complete. Player list is locked.'
-              : isStarted
-              ? 'Tournament has started. Player list is locked.'
-              : isSingles
-              ? 'Singles tournament — each player competes individually.'
-              : 'Players can claim a spot, or the organizer can type names manually.'}
+            {isCompleted ? 'Tournament is complete. Player list is locked.' : isStarted ? 'Tournament has started. Player list is locked.' : isSingles ? 'Singles tournament — each player competes individually.' : 'Players can claim a spot, or the organizer can type names manually.'}
           </div>
 
           {isLoading ? (
@@ -1274,43 +865,17 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 
                 return (
-                  <div
-                    key={slot.id}
-                    className="list-item"
-                    style={{
-                      borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
-                      boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
-                    }}
-                  >
+                  <div key={slot.id} className="list-item" style={{ borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined, boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined }}>
                     <div className="row-between" style={{ marginBottom: 10 }}>
                       <div>
                         <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
                         <div className="muted">{slot.display_name || 'Open spot'}</div>
                       </div>
-                      {isMine ? (
-                        <span className="tag green">Yours</span>
-                      ) : isClaimedBySomeone ? (
-                        <span className="tag green">Claimed</span>
-                      ) : isLocked ? (
-                        <span className="tag">Locked</span>
-                      ) : (
-                        <span className="tag">Open</span>
-                      )}
+                      {isMine ? <span className="tag green">Yours</span> : isClaimedBySomeone ? <span className="tag green">Claimed</span> : isLocked ? <span className="tag">Locked</span> : <span className="tag">Open</span>}
                     </div>
-
                     <div className="grid">
-                      <input
-                        className="input"
-                        value={newNames[slot.id] ?? ''}
-                        onChange={(e) => setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))}
-                        placeholder={`Name for Player ${slot.slot_number}`}
-                        disabled={!canEditName}
-                      />
-                      {!isLocked && canClaim ? (
-                        <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                          Claim Spot
-                        </button>
-                      ) : null}
+                      <input className="input" value={newNames[slot.id] ?? ''} onChange={(e) => setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))} placeholder={`Name for Player ${slot.slot_number}`} disabled={!canEditName} />
+                      {!isLocked && canClaim ? <button className="button primary" onClick={() => claimSlot(slot.id)}>Claim Spot</button> : null}
                     </div>
                   </div>
                 );
@@ -1318,14 +883,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
               {!isLocked ? (
                 <>
-                  <button className="button secondary" onClick={saveAllPlayerNames} disabled={isSavingNames}>
-                    {isSavingNames ? 'Saving...' : 'Save Player Names'}
-                  </button>
-                  {isOrganizer ? (
-                    <button className="button primary" onClick={generateScheduleAndStart} disabled={isStarting || !canStartTournament}>
-                      {isStarting ? 'Starting...' : 'Start Tournament'}
-                    </button>
-                  ) : null}
+                  <button className="button secondary" onClick={saveAllPlayerNames} disabled={isSavingNames}>{isSavingNames ? 'Saving...' : 'Save Player Names'}</button>
+                  {isOrganizer ? <button className="button primary" onClick={generateScheduleAndStart} disabled={isStarting || !canStartTournament}>{isStarting ? 'Starting...' : 'Start Tournament'}</button> : null}
                 </>
               ) : null}
             </div>
@@ -1337,11 +896,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         <div className="card">
           <div className="card-title">Rounds</div>
           <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Scores are locked.'
-              : isStarted
-              ? `Current live round: ${currentRound}`
-              : 'Round schedule appears here after the tournament starts.'}
+            {isCompleted ? 'Tournament complete. Scores are locked.' : isStarted ? `Current live round: ${currentRound}` : 'Round schedule appears here after the tournament starts.'}
           </div>
 
           <div className="grid" style={{ marginBottom: 14 }}>
@@ -1349,12 +904,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               const status = roundStatusByRound.get(round);
               const isSelected = selectedRound === round;
               return (
-                <button
-                  key={round}
-                  type="button"
-                  className={`button ${isSelected ? 'primary' : 'secondary'}`}
-                  onClick={() => setSelectedRound(round)}
-                >
+                <button key={round} type="button" className={`button ${isSelected ? 'primary' : 'secondary'}`} onClick={() => setSelectedRound(round)}>
                   {status === 'complete' ? `✓ Round ${round}` : status === 'current' ? `• Round ${round}` : `Round ${round}`}
                 </button>
               );
@@ -1366,62 +916,30 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           ) : (
             <div className="grid">
               {matchesForSelectedRound.map((match) => {
-                const draft = scoreDrafts[match.id] || {
-                  team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-                  team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-                };
+                const draft = scoreDrafts[match.id] || { team_a_score: match.team_a_score === null ? '' : String(match.team_a_score), team_b_score: match.team_b_score === null ? '' : String(match.team_b_score) };
 
                 return (
                   <div key={match.id} className="list-item">
                     <div className="row-between" style={{ marginBottom: 12 }}>
                       <strong>Court {match.court_number ?? '-'}</strong>
-                      <span className={match.is_complete ? 'tag green' : 'tag'}>
-                        {match.is_complete ? 'Complete' : 'Live'}
-                      </span>
+                      <span className={match.is_complete ? 'tag green' : 'tag'}>{match.is_complete ? 'Complete' : 'Live'}</span>
                     </div>
 
                     <div className="grid" style={{ marginBottom: 12 }}>
                       <div className="list-item" style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>
-                          {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
-                        </div>
-                        <input
-                          className="input"
-                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                          type="number"
-                          value={draft.team_a_score}
-                          disabled={match.is_complete || isCompleted}
-                          onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
-                          onBlur={() => saveScoreField(match.id, 'team_a_score')}
-                          placeholder="0"
-                        />
+                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</div>
+                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_a_score} disabled={match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_a_score')} placeholder="0" />
                       </div>
-
                       <div className="list-item" style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>
-                          {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
-                        </div>
-                        <input
-                          className="input"
-                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                          type="number"
-                          value={draft.team_b_score}
-                          disabled={match.is_complete || isCompleted}
-                          onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
-                          onBlur={() => saveScoreField(match.id, 'team_b_score')}
-                          placeholder="0"
-                        />
+                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</div>
+                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder="0" />
                       </div>
                     </div>
 
                     {match.is_complete || isCompleted ? (
-                      <button className="button secondary" disabled>
-                        {isCompleted ? 'Final Locked' : 'Score Submitted'}
-                      </button>
+                      <button className="button secondary" disabled>{isCompleted ? 'Final Locked' : 'Score Submitted'}</button>
                     ) : (
-                      <button className="button primary" onClick={() => submitMatchScore(match.id)}>
-                        Submit Score
-                      </button>
+                      <button className="button primary" onClick={() => submitMatchScore(match.id)}>Submit Score</button>
                     )}
                   </div>
                 );
@@ -1432,9 +950,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                   <div style={{ fontWeight: 800, marginBottom: 8 }}>Byes This Round</div>
                   <div className="grid">
                     {byesForSelectedRound.map((bye) => (
-                      <div key={bye.id} className="list-item" style={{ padding: 10 }}>
-                        {renderPlayerName(bye.team_a_player_1_id)}
-                      </div>
+                      <div key={bye.id} className="list-item" style={{ padding: 10 }}>{renderPlayerName(bye.team_a_player_1_id)}</div>
                     ))}
                   </div>
                 </div>
@@ -1448,9 +964,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         <div className="card">
           <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
           <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Final results are locked.'
-              : 'Ranked by wins, then point differential, then points scored.'}
+            {isCompleted ? 'Tournament complete. Final results are locked.' : 'Ranked by wins, then point differential, then points scored.'}
           </div>
 
           {!standings.length ? (
@@ -1460,31 +974,18 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               {standings.map((row, index) => {
                 const place = index + 1;
                 const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
-                const highlightStyle =
-                  place === 1
-                    ? { borderColor: 'rgba(255,203,5,.6)', boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset' }
-                    : place <= 3
-                    ? { borderColor: 'rgba(255,203,5,.35)' }
-                    : {};
+                const highlightStyle = place === 1 ? { borderColor: 'rgba(255,203,5,.6)', boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset' } : place <= 3 ? { borderColor: 'rgba(255,203,5,.35)' } : {};
 
                 return (
                   <div key={row.playerId} className="list-item" style={highlightStyle}>
                     <div className="row-between">
                       <div>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>
-                          {medal ? `${medal} ` : ''}{place}. {row.name}
-                        </div>
-                        <div className="muted" style={{ marginTop: 4 }}>
-                          {row.wins}-{row.losses} • {row.played} played
-                        </div>
-                        <div className="muted" style={{ marginTop: 2 }}>
-                          PF: {row.pointsFor} | PA: {row.pointsAgainst}
-                        </div>
+                        <div style={{ fontWeight: 800, fontSize: 18 }}>{medal ? `${medal} ` : ''}{place}. {row.name}</div>
+                        <div className="muted" style={{ marginTop: 4 }}>{row.wins}-{row.losses} • {row.played} played</div>
+                        <div className="muted" style={{ marginTop: 2 }}>PF: {row.pointsFor} | PA: {row.pointsAgainst}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>
-                          {row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}
-                        </div>
+                        <div style={{ fontWeight: 800, fontSize: 18 }}>{row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}</div>
                         <div className="muted">Diff</div>
                       </div>
                     </div>

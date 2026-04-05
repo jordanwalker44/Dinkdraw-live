@@ -3,28 +3,11 @@ const withPWA = require('next-pwa')({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/dinkdraw\.app\/.*$/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'pages',
-        networkTimeoutSeconds: 10,
-        expiration: {
-          maxEntries: 50,
-          maxAgeSeconds: 60 * 60 * 24,
-        },
-      },
-    },
-    {
-      urlPattern: /\.(?:js|css)$/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'static-resources',
-        networkTimeoutSeconds: 10,
-      },
-    },
-  ],
+  runtimeCaching: [],
+  dynamicStartUrl: false,
+  reloadOnOnline: true,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
 });
 
 /** @type {import('next').NextConfig} */

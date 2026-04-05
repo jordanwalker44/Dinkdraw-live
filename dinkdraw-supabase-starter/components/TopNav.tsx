@@ -25,6 +25,34 @@ export function TopNav() {
   const [initials, setInitials] = useState('');
   const [isSignedIn, setIsSignedIn] = useState(false);
 
+  async function loadUser() {
+    const supabase = getSupabaseBrowserClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+
+    if (!user) {
+      setIsSignedIn(false);
+      setInitials('');
+      return;
+    }
+
+    setIsSignedIn(true);
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const name = profile?.display_name?.trim() || user.email?.split('@')[0] || '';
+    const computed = name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p: string) => p[0]?.toUpperCase() || '')
+      .join('');
+    setInitials(computed || '?');
+  }
+
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
@@ -32,33 +60,6 @@ export function TopNav() {
     } catch {}
 
     const supabase = getSupabaseBrowserClient();
-
-    async function loadUser() {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData.user;
-
-      if (!user) {
-        setIsSignedIn(false);
-        setInitials('');
-        return;
-      }
-
-      setIsSignedIn(true);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const name = profile?.display_name?.trim() || user.email?.split('@')[0] || '';
-      const computed = name
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((p: string) => p[0]?.toUpperCase() || '')
-        .join('');
-      setInitials(computed || '?');
-    }
 
     loadUser();
 
@@ -87,8 +88,31 @@ export function TopNav() {
       setInitials(computed || '?');
     });
 
-    return () => { subscription.unsubscribe(); };
+    // Re-load user when screen wakes up
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadUser();
+      }
+    };
+
+    const handleFocus = () => {
+      loadUser();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
+
+  useEffect(() => {
+    // Re-check auth on every page navigation
+    loadUser();
+  }, [pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -120,21 +144,7 @@ export function TopNav() {
           <button
             type="button"
             onClick={() => router.push('/account')}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: '50%',
-              background: isSignedIn ? 'rgba(255,203,5,.15)' : 'rgba(255,255,255,.08)',
-              border: isSignedIn ? '1px solid rgba(255,203,5,.4)' : '1px solid rgba(255,255,255,.15)',
-              color: isSignedIn ? '#FFCB05' : '#94a3b8',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800,
-              fontSize: 13,
-              cursor: 'pointer',
-              flexShrink: 0,
-            }}
+            className={`nav-avatar ${isSignedIn ? 'signed-in' : 'signed-out'}`}
           >
             {isSignedIn ? initials : '?'}
           </button>
@@ -150,8 +160,6 @@ export function TopNav() {
       </div>
 
       <nav className={`top-nav ${menuOpen ? 'open' : ''}`}>
-
-        {/* Play group */}
         <div>
           <div style={{
             fontSize: 11,
@@ -181,7 +189,6 @@ export function TopNav() {
           </div>
         </div>
 
-        {/* My Profile group */}
         <div>
           <div style={{
             fontSize: 11,
@@ -205,7 +212,6 @@ export function TopNav() {
             ))}
           </div>
         </div>
-
       </nav>
     </div>
   );

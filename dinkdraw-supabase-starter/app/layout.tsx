@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import { AuthRefresh } from '../components/AuthRefresh';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',
@@ -29,7 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta httpEquiv="Pragma" content="no-cache" />
         <meta httpEquiv="Expires" content="0" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AuthRefresh />
+        {children}
+      </body>
     </html>
   );
 }

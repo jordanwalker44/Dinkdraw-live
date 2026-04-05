@@ -27,8 +27,10 @@ export default function HomePage() {
 
     async function loadUser() {
       setIsLoadingUser(true);
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
+
+      // Use getSession for instant localStorage read
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
       setUserEmail(user?.email ?? '');
 
       if (user) {
@@ -54,6 +56,37 @@ export default function HomePage() {
           <p className="hero-subtitle">
             Easy tournament creation. Stats. Pickle.
           </p>
+
+          {/* Sign in CTA — only shows when signed out */}
+          {!isLoadingUser && !userEmail ? (
+            <div style={{ marginTop: 16 }}>
+              <Link href="/account">
+                <button
+                  className="button primary"
+                  style={{
+                    width: 'auto',
+                    padding: '10px 24px',
+                    fontSize: 15,
+                    borderRadius: 999,
+                    margin: '0 auto',
+                    display: 'inline-block',
+                  }}
+                >
+                  Sign In or Create Account
+                </button>
+              </Link>
+              <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+                Track your stats, rating, and tournament history
+              </div>
+            </div>
+          ) : null}
+
+          {/* Greeting — only shows when signed in */}
+          {!isLoadingUser && userEmail ? (
+            <div style={{ marginTop: 12, color: '#FFCB05', fontWeight: 800, fontSize: 15 }}>
+              Hey, {displayName || userEmail}! 👋
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -104,8 +137,8 @@ export default function HomePage() {
       {/* Signed in state */}
       {!isLoadingUser && userEmail ? (
         <div className="card" style={{ marginBottom: 14 }}>
-          <div className="card-title">Hey, {displayName || userEmail}!</div>
-          <div className="card-subtitle">Here's everything connected to your account.</div>
+          <div className="card-title">Your DinkDraw</div>
+          <div className="card-subtitle">Everything connected to your account.</div>
           <div className="grid">
             <Link href="/my-tournaments">
               <button className="button secondary">My Tournaments</button>
@@ -123,12 +156,12 @@ export default function HomePage() {
         </div>
       ) : null}
 
-      {/* Signed out state — onboarding hint */}
+      {/* Signed out — new here card */}
       {!isLoadingUser && !userEmail ? (
         <div className="card" style={{ marginBottom: 14 }}>
           <div className="card-title">New here?</div>
           <div className="card-subtitle">
-            You can create or join a tournament without an account. Sign up to track your stats, Elo rating, and tournament history across every event you play.
+            You can create or join a tournament without an account. Sign up to track your stats, rating, and tournament history across every event you play.
           </div>
           <Link href="/account">
             <button className="button primary">Sign In or Create Account</button>

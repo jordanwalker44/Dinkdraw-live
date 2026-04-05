@@ -65,4 +65,96 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    setIsLoadin
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+
+      if (error) {
+        setMessage(error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      setMessage('Password updated successfully! Redirecting...');
+      setTimeout(() => { router.push('/account'); }, 2000);
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Something went wrong.');
+    }
+
+    setIsLoading(false);
+  }
+
+  return (
+    <main className="page-shell">
+      <div className="hero">
+        <div className="hero-inner">
+          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
+          <p className="hero-subtitle">Reset your password.</p>
+        </div>
+      </div>
+
+      <TopNav />
+
+      {isCheckingSession ? (
+        <div className="card">
+          <div className="muted">Verifying reset link...</div>
+        </div>
+      ) : !isValidSession ? (
+        <div className="card">
+          <div className="card-title">Invalid or Expired Link</div>
+          <div className="card-subtitle">
+            This reset link has expired or already been used. Request a new one from the account page.
+          </div>
+          <button className="button primary" onClick={() => router.push('/account')}>
+            Back to Account
+          </button>
+        </div>
+      ) : (
+        <div className="card">
+          <div className="card-title">Set New Password</div>
+          <div className="card-subtitle">
+            Choose a new password for your DinkDraw account.
+          </div>
+
+          <div className="grid">
+            <div>
+              <label className="label">New Password</label>
+              <input
+                className="input"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+              />
+            </div>
+
+            <div>
+              <label className="label">Confirm Password</label>
+              <input
+                className="input"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat your new password"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isLoading) void handleReset();
+                }}
+              />
+            </div>
+
+            <button
+              className="button primary"
+              onClick={handleReset}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Updating...' : 'Update Password'}
+            </button>
+
+            {message ? <div className="notice">{message}</div> : null}
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}

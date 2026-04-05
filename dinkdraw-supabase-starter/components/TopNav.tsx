@@ -94,22 +94,22 @@ export function TopNav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  const primaryNav: NavItem[] = [
+  function isActive(href: string) {
+    return pathname === href;
+  }
+
+  const playNav: NavItem[] = [
     { label: 'Home', href: '/' },
-    { label: 'Create', href: '/tournament/create' },
-    { label: 'Join', href: '/tournament/join' },
+    { label: 'Create Tournament', href: '/tournament/create' },
+    { label: 'Join Tournament', href: '/tournament/join' },
   ];
 
-  const secondaryNav: NavItem[] = [
+  const profileNav: NavItem[] = [
     { label: 'My Tournaments', href: '/my-tournaments' },
     { label: 'My Stats', href: '/my-stats' },
     { label: 'Leaderboard', href: '/leaderboard' },
     { label: 'Account', href: '/account' },
   ];
-
-  function isActive(href: string) {
-    return pathname === href;
-  }
 
   return (
     <div className="top-nav-shell">
@@ -117,7 +117,6 @@ export function TopNav() {
         <div className="top-nav-brand">DinkDraw</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* Avatar circle */}
           <button
             type="button"
             onClick={() => router.push('/account')}
@@ -151,27 +150,62 @@ export function TopNav() {
       </div>
 
       <nav className={`top-nav ${menuOpen ? 'open' : ''}`}>
-        <div className="top-nav-group">
-          {primaryNav.map((item) => (
-            <Link key={item.href} href={item.href} className={`nav-pill ${isActive(item.href) ? 'active' : ''}`}>
-              {item.label}
-            </Link>
-          ))}
+
+        {/* Play group */}
+        <div>
+          <div style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: '#94a3b8',
+            marginBottom: 8,
+          }}>
+            Play
+          </div>
+          <div className="top-nav-group">
+            {playNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-pill ${isActive(item.href) ? 'active' : ''}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            {lastTournament && pathname !== `/tournament/${lastTournament.id}` ? (
+              <Link href={`/tournament/${lastTournament.id}`} className="nav-pill accent">
+                Resume
+              </Link>
+            ) : null}
+          </div>
         </div>
 
-        <div className="top-nav-group">
-          {secondaryNav.map((item) => (
-            <Link key={item.href} href={item.href} className={`nav-pill ${isActive(item.href) ? 'active' : ''}`}>
-              {item.label}
-            </Link>
-          ))}
-
-          {lastTournament && pathname !== `/tournament/${lastTournament.id}` ? (
-            <Link href={`/tournament/${lastTournament.id}`} className="nav-pill accent">
-              Resume
-            </Link>
-          ) : null}
+        {/* My Profile group */}
+        <div>
+          <div style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: '#94a3b8',
+            marginBottom: 8,
+          }}>
+            {isSignedIn ? 'My Profile' : 'Account'}
+          </div>
+          <div className="top-nav-group">
+            {profileNav.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`nav-pill ${isActive(item.href) ? 'active' : ''}`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
+
       </nav>
     </div>
   );

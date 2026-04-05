@@ -5,25 +5,23 @@ const withPWA = require('next-pwa')({
   disable: process.env.NODE_ENV === 'development',
   runtimeCaching: [
     {
-      urlPattern: /^https:\/\/dinkdraw\.app\/tournament\/create/,
-      handler: 'NetworkFirst',
-      options: {
-        cacheName: 'create-page',
-        expiration: {
-          maxEntries: 1,
-          maxAgeSeconds: 0,
-        },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/dinkdraw\.app\/.*/,
+      urlPattern: /^https:\/\/dinkdraw\.app\/.*$/,
       handler: 'NetworkFirst',
       options: {
         cacheName: 'pages',
+        networkTimeoutSeconds: 10,
         expiration: {
           maxEntries: 50,
           maxAgeSeconds: 60 * 60 * 24,
         },
+      },
+    },
+    {
+      urlPattern: /\.(?:js|css)$/,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'static-resources',
+        networkTimeoutSeconds: 10,
       },
     },
   ],

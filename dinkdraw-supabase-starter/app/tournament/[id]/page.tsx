@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 
+export const dynamic = 'force-dynamic';
+
 type Tournament = {
   id: string;
   title: string;

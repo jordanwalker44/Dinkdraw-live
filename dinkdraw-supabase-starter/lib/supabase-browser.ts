@@ -10,6 +10,14 @@ export function getSupabaseBrowserClient(): SupabaseClient {
 
   if (!url || !key) throw new Error('Missing Supabase environment variables.');
 
-  client = createClient(url, key);
+  client = createClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storageKey: 'dinkdraw-auth',
+    },
+  });
+
   return client;
 }

@@ -1,31 +1,17 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
-let client: SupabaseClient | null = null;
-
-export function getSupabaseBrowserClient(): SupabaseClient {
-  if (client) return client;
-
+export function getSupabaseBrowserClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!url || !key) throw new Error('Missing Supabase environment variables.');
 
-  client = createClient(url, key, {
+  return createClient(url, key, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storageKey: 'dinkdraw-auth',
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
   });
-
-  if (typeof window !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        client?.auth.getSession();
-      }
-    });
-  }
-
-  return client;
 }

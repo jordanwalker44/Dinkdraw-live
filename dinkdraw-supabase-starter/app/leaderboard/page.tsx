@@ -158,7 +158,7 @@ export default function LeaderboardPage() {
           <SimpleStatCard label="Format" value={formatFilterLabel(formatFilter)} sub="Current filter" />
           <SimpleStatCard label="Time Window" value={filterLabel(timeFilter)} sub="Current leaderboard" />
           <SimpleStatCard label="Ranked Players" value={summary.players} sub={`${minMatches}+ matches`} />
-          <SimpleStatCard label="Top Elo" value={summary.topRating} sub="Current leader" />
+          <SimpleStatCard label="Top Rating" value={summary.topRating} sub="Current leader" />
         </div>
       </div>
 
@@ -198,7 +198,7 @@ export default function LeaderboardPage() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1 }}>{player.rating}</div>
-                    <div className="muted" style={{ marginTop: 4 }}>Elo</div>
+                    <div className="muted" style={{ marginTop: 4 }}>Rating</div>
                   </div>
                 </div>
 

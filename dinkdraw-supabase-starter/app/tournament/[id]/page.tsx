@@ -474,9 +474,13 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   async function shareJoinLink() {
     try {
       if (!tournament?.join_code) return;
-      const url = `${window.location.origin}/tournament/join?code=${encodeURIComponent(tournament.join_code)}`;
+      const url = `https://dinkdraw.app/tournament/join?code=${encodeURIComponent(tournament.join_code)}`;
       if (navigator.share) {
-        await navigator.share({ title: tournament.title || 'Join DinkDraw Tournament', text: `Join ${tournament.title || 'this tournament'} on DinkDraw`, url });
+        await navigator.share({
+          title: `Join ${tournament.title || 'DinkDraw Tournament'}`,
+          text: `Join ${tournament.title || 'this tournament'} on DinkDraw! Tap the link to claim your spot:`,
+          url,
+        });
         setMessage('Share link opened.');
         return;
       }
@@ -484,6 +488,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       setMessage('Join link copied.');
     } catch { setMessage('Could not share join link.'); }
   }
+
 
   async function claimSlot(slotId: string) {
     setMessage('');

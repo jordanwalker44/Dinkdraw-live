@@ -7,7 +7,6 @@ const withPWA = require('next-pwa')({
   dynamicStartUrl: false,
   reloadOnOnline: true,
   cacheOnFrontEndNav: false,
-  aggressiveFrontEndNavCaching: false,
 });
 
 /** @type {import('next').NextConfig} */

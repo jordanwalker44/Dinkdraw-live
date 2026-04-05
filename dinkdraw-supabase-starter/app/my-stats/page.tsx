@@ -419,10 +419,11 @@ export default function MyStatsPage() {
           {formatTab !== 'overall' ? (
             <div className="card" style={{ marginBottom: 14 }}>
               <div className="card-title">Ranking</div>
+<div className="card-subtitle">Your rating is calculated from every match result. It goes up with wins and down with losses.</div>
               <div className="two-col">
-                <SimpleStatCard label="Elo" value={activeElo.elo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
-                <SimpleStatCard label="Peak Elo" value={activeElo.peak} sub="Lifetime high" />
-                <SimpleStatCard label="Elo Change" value={activeElo.delta >= 0 ? `+${activeElo.delta}` : activeElo.delta} sub={filterLabel(timeFilter)} />
+                <SimpleStatCard label="Rating" value={activeElo.elo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
+                <SimpleStatCard label="Peak Rating" value={activeElo.peak} sub="Lifetime high" />
+                <SimpleStatCard label="Rating Change" value={activeElo.delta >= 0 ? `+${activeElo.delta}` : activeElo.delta} sub={filterLabel(timeFilter)} />
                 <SimpleStatCard label="Rank" value={activeRank.rank} sub={`${activeRank.totalRanked} ranked`} />
               </div>
             </div>

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#081018',
+  themeColor: '#00274C',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -25,6 +25,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
       </head>
       <body>{children}</body>
     </html>

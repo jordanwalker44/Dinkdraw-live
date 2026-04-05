@@ -17,13 +17,21 @@ function JoinTournamentInner() {
   const [code, setCode] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     const codeFromUrl = searchParams.get('code') || '';
     if (codeFromUrl) {
       setCode(normalizeJoinCode(codeFromUrl));
     }
-  }, [searchParams]);
+
+    async function checkAuth() {
+      const { data } = await supabase.auth.getSession();
+      setIsSignedIn(!!data.session?.user);
+    }
+
+    checkAuth();
+  }, [searchParams, supabase]);
 
   const normalizedCode = normalizeJoinCode(code);
   const canJoin = normalizedCode.length > 0 && !isLoading;
@@ -59,6 +67,41 @@ function JoinTournamentInner() {
     }
 
     router.push(`/tournament/${data.id}`);
+  }
+
+  // Still checking auth
+  if (isSignedIn === null) {
+    return (
+      <div className="card">
+        <div className="muted">Loading...</div>
+      </div>
+    );
+  }
+
+  // Not signed in — prompt to sign in
+  if (!isSignedIn) {
+    return (
+      <div className="card">
+        <div className="card-title">Sign in to join</div>
+        <div className="card-subtitle">
+          You need an account to claim your spot and track your stats. It only takes a minute to create one.
+        </div>
+        <div className="grid">
+          <button
+            className="button primary"
+            onClick={() => {
+              const codeParam = normalizedCode ? `?returnCode=${normalizedCode}` : '';
+              router.push(`/account${codeParam}`);
+            }}
+          >
+            Sign In or Create Account
+          </button>
+          <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+            Your join code <strong>{normalizedCode || '...'}</strong> will be saved and you'll be brought right back.
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

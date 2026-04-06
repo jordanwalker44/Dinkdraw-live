@@ -23,6 +23,7 @@ type Tournament = {
   status: string;
   started_at: string | null;
   format: string;
+  match_format: string;
 };
 
 type PlayerSlot = {
@@ -43,6 +44,12 @@ type Match = {
   team_b_player_2_id: string | null;
   team_a_score: number | null;
   team_b_score: number | null;
+  game_1_a: number | null;
+  game_1_b: number | null;
+  game_2_a: number | null;
+  game_2_b: number | null;
+  game_3_a: number | null;
+  game_3_b: number | null;
   is_bye: boolean;
   is_complete: boolean;
 };
@@ -61,6 +68,12 @@ type StandingRow = {
 type ScoreDraft = {
   team_a_score: string;
   team_b_score: string;
+  game_1_a: string;
+  game_1_b: string;
+  game_2_a: string;
+  game_2_b: string;
+  game_3_a: string;
+  game_3_b: string;
 };
 
 type ScheduleRow = {
@@ -274,6 +287,51 @@ function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, fo
   return buildDoublesSchedule(players, rounds, courts);
 }
 
+// Best of 3 helpers
+function getSeriesWins(match: Match): { aWins: number; bWins: number } {
+  let aWins = 0;
+  let bWins = 0;
+  if (match.game_1_a !== null && match.game_1_b !== null) {
+    if (match.game_1_a > match.game_1_b) aWins++;
+    else if (match.game_1_b > match.game_1_a) bWins++;
+  }
+  if (match.game_2_a !== null && match.game_2_b !== null) {
+    if (match.game_2_a > match.game_2_b) aWins++;
+    else if (match.game_2_b > match.game_2_a) bWins++;
+  }
+  if (match.game_3_a !== null && match.game_3_b !== null) {
+    if (match.game_3_a > match.game_3_b) aWins++;
+    else if (match.game_3_b > match.game_3_a) bWins++;
+  }
+  return { aWins, bWins };
+}
+
+function isSeriesComplete(match: Match): boolean {
+  const { aWins, bWins } = getSeriesWins(match);
+  if (aWins === 2 || bWins === 2) return true;
+  return false;
+}
+
+function needsGame3(match: Match): boolean {
+  if (match.game_1_a === null || match.game_1_b === null) return false;
+  if (match.game_2_a === null || match.game_2_b === null) return false;
+  const game1AWon = match.game_1_a > match.game_1_b;
+  const game2AWon = match.game_2_a > match.game_2_b;
+  return game1AWon !== game2AWon;
+}
+
+function getSeriesScore(match: Match): { aScore: number; bScore: number } {
+  let aTotal = 0;
+  let bTotal = 0;
+  if (match.game_1_a !== null) aTotal += match.game_1_a;
+  if (match.game_1_b !== null) bTotal += match.game_1_b;
+  if (match.game_2_a !== null) aTotal += match.game_2_a;
+  if (match.game_2_b !== null) bTotal += match.game_2_b;
+  if (match.game_3_a !== null) aTotal += match.game_3_a;
+  if (match.game_3_b !== null) bTotal += match.game_3_b;
+  return { aScore: aTotal, bScore: bTotal };
+}
+
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
@@ -296,6 +354,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isLive, setIsLive] = useState(false);
 
   const isSingles = tournament?.format === 'singles';
+  const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
   const isLocked = isStarted || isCompleted;
@@ -353,21 +412,45 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     }
 
     for (const match of matches) {
-      if (match.is_bye || !match.is_complete || match.team_a_score === null || match.team_b_score === null || match.team_a_player_1_id === null || match.team_b_player_1_id === null) continue;
+      if (match.is_bye || !match.is_complete || match.team_a_player_1_id === null || match.team_b_player_1_id === null) continue;
+
+      let aScore: number;
+      let bScore: number;
+
+      if (isBestOf3) {
+        const series = getSeriesScore(match);
+        aScore = series.aScore;
+        bScore = series.bScore;
+      } else {
+        if (match.team_a_score === null || match.team_b_score === null) continue;
+        aScore = match.team_a_score;
+        bScore = match.team_b_score;
+      }
 
       const aIds = isSingles ? [match.team_a_player_1_id] : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
       const bIds = isSingles ? [match.team_b_player_1_id] : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
 
       for (const id of [...aIds, ...bIds]) { const row = rows.get(id); if (row) row.played += 1; }
-      for (const id of aIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += match.team_a_score; row.pointsAgainst += match.team_b_score; }
-      for (const id of bIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += match.team_b_score; row.pointsAgainst += match.team_a_score; }
+      for (const id of aIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += aScore; row.pointsAgainst += bScore; }
+      for (const id of bIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += bScore; row.pointsAgainst += aScore; }
 
-      if (match.team_a_score > match.team_b_score) {
-        aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-        bIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-      } else if (match.team_b_score > match.team_a_score) {
-        bIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-        aIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
+      if (isBestOf3) {
+        const { aWins, bWins } = getSeriesWins(match);
+        if (aWins > bWins) {
+          aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
+          bIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
+        } else if (bWins > aWins) {
+          bIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
+          aIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
+        }
+      } else {
+        if (aScore > bScore) {
+          aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
+          bIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
+        } else if (bScore > aScore) {
+          bIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
+          aIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
+        }
       }
     }
 
@@ -379,7 +462,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
         if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
         return a.name.localeCompare(b.name);
       });
-  }, [playerSlots, matches, isSingles]);
+  }, [playerSlots, matches, isSingles, isBestOf3]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
 
@@ -416,11 +499,16 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setScoreDrafts((prev) => {
       const next = { ...prev };
       for (const match of matchesData || []) {
-        const existingA = prev[match.id]?.team_a_score;
-        const existingB = prev[match.id]?.team_b_score;
+        const existing = prev[match.id];
         next[match.id] = {
-          team_a_score: typeof existingA === 'string' && existingA !== '' && !match.is_complete ? existingA : match.team_a_score === null ? '' : String(match.team_a_score),
-          team_b_score: typeof existingB === 'string' && existingB !== '' && !match.is_complete ? existingB : match.team_b_score === null ? '' : String(match.team_b_score),
+          team_a_score: existing?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score)),
+          team_b_score: existing?.team_b_score ?? (match.team_b_score === null ? '' : String(match.team_b_score)),
+          game_1_a: existing?.game_1_a ?? (match.game_1_a === null ? '' : String(match.game_1_a)),
+          game_1_b: existing?.game_1_b ?? (match.game_1_b === null ? '' : String(match.game_1_b)),
+          game_2_a: existing?.game_2_a ?? (match.game_2_a === null ? '' : String(match.game_2_a)),
+          game_2_b: existing?.game_2_b ?? (match.game_2_b === null ? '' : String(match.game_2_b)),
+          game_3_a: existing?.game_3_a ?? (match.game_3_a === null ? '' : String(match.game_3_a)),
+          game_3_b: existing?.game_3_b ?? (match.game_3_b === null ? '' : String(match.game_3_b)),
         };
       }
       return next;
@@ -490,7 +578,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       setMessage('Join link copied.');
     } catch { setMessage('Could not share join link.'); }
   }
-
 
   async function claimSlot(slotId: string) {
     setMessage('');
@@ -581,7 +668,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       const { data: newTournament, error: tournamentError } = await supabase
         .from('tournaments')
-        .insert({ title: rematchTitle, organizer_user_id: user.id, organizer_name: organizerName, join_code: makeJoinCode(), event_date: tournament.event_date, event_time: tournament.event_time, location: tournament.location, player_count: tournament.player_count, courts: tournament.courts, rounds: tournament.rounds, games_to: tournament.games_to, status: 'draft', started_at: null, format: tournament.format })
+        .insert({ title: rematchTitle, organizer_user_id: user.id, organizer_name: organizerName, join_code: makeJoinCode(), event_date: tournament.event_date, event_time: tournament.event_time, location: tournament.location, player_count: tournament.player_count, courts: tournament.courts, rounds: tournament.rounds, games_to: tournament.games_to, status: 'draft', started_at: null, format: tournament.format, match_format: tournament.match_format })
         .select().single();
 
       if (tournamentError || !newTournament) { setMessage(tournamentError?.message || 'Could not create rematch tournament.'); setIsRematching(false); return; }
@@ -599,14 +686,27 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     } catch (err) { setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.'); setIsRematching(false); }
   }
 
-  function setDraftScore(matchId: string, field: 'team_a_score' | 'team_b_score', value: string) {
+  function setDraftScore(matchId: string, field: keyof ScoreDraft, value: string) {
     if (isCompleted) return;
     const sanitized = value.replace(/[^\d]/g, '');
-    setScoreDrafts((prev) => ({ ...prev, [matchId]: { team_a_score: prev[matchId]?.team_a_score ?? '', team_b_score: prev[matchId]?.team_b_score ?? '', [field]: sanitized } }));
+    setScoreDrafts((prev) => ({
+      ...prev,
+      [matchId]: {
+        team_a_score: prev[matchId]?.team_a_score ?? '',
+        team_b_score: prev[matchId]?.team_b_score ?? '',
+        game_1_a: prev[matchId]?.game_1_a ?? '',
+        game_1_b: prev[matchId]?.game_1_b ?? '',
+        game_2_a: prev[matchId]?.game_2_a ?? '',
+        game_2_b: prev[matchId]?.game_2_b ?? '',
+        game_3_a: prev[matchId]?.game_3_a ?? '',
+        game_3_b: prev[matchId]?.game_3_b ?? '',
+        [field]: sanitized,
+      },
+    }));
   }
 
   async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
-    if (isCompleted) { setMessage('Final results are locked.'); return; }
+    if (isCompleted) return;
     const match = matches.find((m) => m.id === matchId);
     if (match?.is_complete) return;
     const draft = scoreDrafts[matchId];
@@ -621,7 +721,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
     if (!tournament) return true;
 
-    // Fetch fresh player data directly from DB instead of relying on state
     const { data: freshPlayers } = await supabase
       .from('tournament_players')
       .select('*')
@@ -665,7 +764,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     if (error) { setMessage(`Score submitted, but stats update failed: ${error.message}`); return false; }
     return true;
   }
-
 
   function getNextIncompleteRound(updatedMatches: Match[]) {
     const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort((a, b) => a - b);
@@ -719,6 +817,100 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     router.push('/my-tournaments');
   }
 
+  async function submitGame(matchId: string, game: 1 | 2 | 3) {
+    if (isCompleted) { setMessage('Final results are locked.'); return; }
+    const draft = scoreDrafts[matchId];
+    if (!draft) return;
+
+    const aKey = `game_${game}_a` as keyof ScoreDraft;
+    const bKey = `game_${game}_b` as keyof ScoreDraft;
+    const aVal = draft[aKey].trim();
+    const bVal = draft[bKey].trim();
+
+    if (aVal === '' || bVal === '') { setMessage(`Enter both scores for Game ${game}.`); return; }
+
+    const aNum = Math.max(0, Number(aVal));
+    const bNum = Math.max(0, Number(bVal));
+    if (Number.isNaN(aNum) || Number.isNaN(bNum)) { setMessage('Scores must be valid numbers.'); return; }
+    if (aNum === bNum) { setMessage('Game cannot end in a tie — one team must win.'); return; }
+
+    const updateData: Record<string, number> = {
+      [`game_${game}_a`]: aNum,
+      [`game_${game}_b`]: bNum,
+    };
+
+    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
+    if (error) { setMessage(`Submit failed: ${error.message}`); return; }
+
+    const updatedMatch = matches.find((m) => m.id === matchId);
+    if (!updatedMatch) return;
+
+    const newMatch: Match = {
+      ...updatedMatch,
+      [`game_${game}_a`]: aNum,
+      [`game_${game}_b`]: bNum,
+    };
+
+    const seriesNowComplete = isSeriesComplete(newMatch);
+
+    let finalUpdatedMatch = newMatch;
+
+    if (seriesNowComplete) {
+      const { aWins, bWins } = getSeriesWins(newMatch);
+      const { aScore, bScore } = getSeriesScore(newMatch);
+      const seriesAWon = aWins > bWins;
+
+      const completeUpdate = {
+        [`game_${game}_a`]: aNum,
+        [`game_${game}_b`]: bNum,
+        team_a_score: aScore,
+        team_b_score: bScore,
+        is_complete: true,
+      };
+
+      const { error: completeError } = await supabase.from('matches').update(completeUpdate).eq('id', matchId);
+      if (completeError) { setMessage(`Complete failed: ${completeError.message}`); return; }
+
+      finalUpdatedMatch = {
+        ...newMatch,
+        team_a_score: aScore,
+        team_b_score: bScore,
+        is_complete: true,
+      };
+
+      const updatedMatches = matches.map((m) => m.id === matchId ? finalUpdatedMatch : m);
+      setMatches(updatedMatches);
+
+      await upsertPlayerMatchStats(finalUpdatedMatch, seriesAWon ? 1 : 0, seriesAWon ? 0 : 1);
+
+      const nextRound = getNextIncompleteRound(updatedMatches);
+
+      if (!nextRound) {
+        const completed = await markTournamentCompleted();
+        if (!completed) return;
+        setSelectedRound(finalRound);
+        setActiveTab('standings');
+        setMessage('Series complete. Tournament finished!');
+        return;
+      }
+
+      const submittedRound = finalUpdatedMatch.round_number ?? selectedRound;
+      const submittedRoundMatches = updatedMatches.filter((m) => m.round_number === submittedRound && !m.is_bye);
+      const submittedRoundComplete = submittedRoundMatches.every((m) => m.is_complete);
+
+      if (submittedRoundComplete && nextRound !== submittedRound) {
+        setSelectedRound(nextRound);
+        setMessage(`Series complete. Round ${submittedRound} done. Advancing to Round ${nextRound}.`);
+      } else {
+        setMessage(`Game ${game} submitted. Series complete — ${aWins > bWins ? 'Team A' : 'Team B'} wins!`);
+      }
+    } else {
+      const updatedMatches = matches.map((m) => m.id === matchId ? newMatch : m);
+      setMatches(updatedMatches);
+      setMessage(`Game ${game} submitted.`);
+    }
+  }
+
   async function submitMatchScore(matchId: string) {
     if (isCompleted) { setMessage('Final results are locked.'); return; }
     const draft = scoreDrafts[matchId];
@@ -750,7 +942,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       if (!completed) return;
       setSelectedRound(finalRound);
       setActiveTab('standings');
-      setMessage(statsSaved ? 'Score submitted. Tournament complete. Final results are now locked.' : 'Score submitted. Tournament complete, but stats update failed.');
+      setMessage(statsSaved ? 'Score submitted. Tournament complete.' : 'Score submitted. Tournament complete, but stats update failed.');
       return;
     }
 
@@ -774,11 +966,163 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
+    if (isBestOf3) {
+      if (!match.is_complete) return {};
+      const { aWins, bWins } = getSeriesWins(match);
+      const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
+      return isWinner ? { color: '#FFCB05' } : {};
+    }
     if (match.team_a_score === null || match.team_b_score === null) return {};
     const aWins = match.team_a_score > match.team_b_score;
     const bWins = match.team_b_score > match.team_a_score;
     const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
     return isWinner ? { color: '#FFCB05' } : {};
+  }
+
+  function renderBestOf3Match(match: Match) {
+    const draft = scoreDrafts[match.id] || { team_a_score: '', team_b_score: '', game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };
+    const { aWins, bWins } = getSeriesWins(match);
+    const game1Done = match.game_1_a !== null && match.game_1_b !== null;
+    const game2Done = match.game_2_a !== null && match.game_2_b !== null;
+    const showGame3 = game1Done && game2Done && needsGame3(match);
+    const seriesComplete = match.is_complete;
+    const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+    const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+
+    return (
+      <div key={match.id} className="list-item">
+        <div className="row-between" style={{ marginBottom: 12 }}>
+          <strong>Court {match.court_number ?? '-'}</strong>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
+              {aWins}-{bWins}
+            </span>
+            <span className={seriesComplete ? 'tag green' : 'tag'}>
+              {seriesComplete ? 'Complete' : 'Live'}
+            </span>
+          </div>
+        </div>
+
+        <div className="row-between" style={{ marginBottom: 12 }}>
+          <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>{teamAName}</div>
+          <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>{teamBName}</div>
+        </div>
+
+        {/* Game 1 */}
+        <div style={{ marginBottom: 10 }}>
+          <div className="muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Game 1</div>
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_1_a}
+              disabled={game1Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
+              placeholder="0"
+            />
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_1_b}
+              disabled={game1Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          {!game1Done && !seriesComplete && !isCompleted ? (
+            <button className="button primary" onClick={() => submitGame(match.id, 1)}>Submit Game 1</button>
+          ) : (
+            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+              {match.game_1_a}-{match.game_1_b} — {match.game_1_a! > match.game_1_b! ? teamAName : teamBName} wins
+            </div>
+          )}
+        </div>
+
+        {/* Game 2 */}
+        <div style={{ marginBottom: 10 }}>
+          <div className="muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Game 2</div>
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_2_a}
+              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
+              placeholder="0"
+            />
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_2_b}
+              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
+            <button className="button primary" onClick={() => submitGame(match.id, 2)}>Submit Game 2</button>
+          ) : game2Done ? (
+            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+              {match.game_2_a}-{match.game_2_b} — {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
+            </div>
+          ) : (
+            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>Waiting for Game 1</div>
+          )}
+        </div>
+
+        {/* Game 3 */}
+        {(showGame3 || (game1Done && game2Done && match.game_3_a !== null)) ? (
+          <div style={{ marginBottom: 10 }}>
+            <div className="muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Game 3</div>
+            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+              <input
+                className="input"
+                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+                type="number"
+                value={draft.game_3_a}
+                disabled={match.game_3_a !== null || seriesComplete || isCompleted}
+                onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
+                placeholder="0"
+              />
+              <input
+                className="input"
+                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+                type="number"
+                value={draft.game_3_b}
+                disabled={match.game_3_b !== null || seriesComplete || isCompleted}
+                onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            {match.game_3_a === null && !seriesComplete && !isCompleted ? (
+              <button className="button primary" onClick={() => submitGame(match.id, 3)}>Submit Game 3</button>
+            ) : match.game_3_a !== null ? (
+              <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+                {match.game_3_a}-{match.game_3_b} — {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
+              </div>
+            ) : null}
+          </div>
+        ) : game1Done && game2Done && !seriesComplete ? (
+          <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
+              {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
+            </div>
+          </div>
+        ) : null}
+
+        {seriesComplete ? (
+          <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
+            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
+              {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -808,6 +1152,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               <div style={{ display: 'flex', gap: 8 }}>
                 <span className={isLive ? 'tag green' : 'tag'}>{isLive ? 'Live' : 'Connecting'}</span>
                 <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
+                <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
               </div>
             </div>
           </div>
@@ -829,29 +1174,24 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <button type="button" className="button secondary" onClick={copyJoinCode}>
             {copied ? 'Join Code Copied' : 'Copy Join Code'}
           </button>
-
           <button type="button" className="button primary" onClick={shareJoinLink}>
             Share Join Link
           </button>
-
           {isOrganizer && isStarted && !isCompleted ? (
             <button type="button" className="button secondary" onClick={endTournamentEarly} disabled={isEndingEarly}>
               {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
             </button>
           ) : null}
-
           {isCompleted ? (
             <button type="button" className="button primary" onClick={rematchTournament} disabled={isRematching}>
               {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
             </button>
           ) : null}
-
           {isCompleted ? (
             <button type="button" className="button primary" onClick={() => router.push(`/tournament/${params.id}/results`)}>
               View & Share Results
             </button>
           ) : null}
-
           {isOrganizer && !isStarted && !isCompleted ? (
             <button type="button" className="button secondary" onClick={deleteTournament} style={{ borderColor: 'rgba(248,113,113,.4)', color: '#f87171' }}>
               Delete Tournament
@@ -872,7 +1212,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div className="card-subtitle">
             {isCompleted ? 'Tournament is complete. Player list is locked.' : isStarted ? 'Tournament has started. Player list is locked.' : isSingles ? 'Singles tournament — each player competes individually.' : 'Players can claim a spot, or the organizer can type names manually.'}
           </div>
-
           {isLoading ? (
             <div className="muted">Loading player spots...</div>
           ) : (
@@ -899,7 +1238,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                   </div>
                 );
               })}
-
               {!isLocked ? (
                 <>
                   <button className="button secondary" onClick={saveAllPlayerNames} disabled={isSavingNames}>{isSavingNames ? 'Saving...' : 'Save Player Names'}</button>
@@ -935,7 +1273,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           ) : (
             <div className="grid">
               {matchesForSelectedRound.map((match) => {
-                const draft = scoreDrafts[match.id] || { team_a_score: match.team_a_score === null ? '' : String(match.team_a_score), team_b_score: match.team_b_score === null ? '' : String(match.team_b_score) };
+                if (isBestOf3) return renderBestOf3Match(match);
+
+                const draft = scoreDrafts[match.id] || { team_a_score: match.team_a_score === null ? '' : String(match.team_a_score), team_b_score: match.team_b_score === null ? '' : String(match.team_b_score), game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };
 
                 return (
                   <div key={match.id} className="list-item">
@@ -943,7 +1283,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                       <strong>Court {match.court_number ?? '-'}</strong>
                       <span className={match.is_complete ? 'tag green' : 'tag'}>{match.is_complete ? 'Complete' : 'Live'}</span>
                     </div>
-
                     <div className="grid" style={{ marginBottom: 12 }}>
                       <div className="list-item" style={{ padding: 12 }}>
                         <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</div>
@@ -954,7 +1293,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                         <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder="0" />
                       </div>
                     </div>
-
                     {match.is_complete || isCompleted ? (
                       <button className="button secondary" disabled>{isCompleted ? 'Final Locked' : 'Score Submitted'}</button>
                     ) : (
@@ -985,7 +1323,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
           <div className="card-subtitle">
             {isCompleted ? 'Tournament complete. Final results are locked.' : 'Ranked by wins, then point differential, then points scored.'}
           </div>
-
           {!standings.length ? (
             <div className="muted">No players yet.</div>
           ) : (

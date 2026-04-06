@@ -11,17 +11,22 @@ export function AuthRefresh() {
       await supabase.auth.getSession();
     }
 
-    // Refresh on mount
-    refresh();
+    // Ping the DB to keep it warm
+    async function keepAlive() {
+      await supabase.from('tournaments').select('id').limit(1);
+    }
 
-    // Refresh when screen wakes up
+    // Refresh auth and warm up DB on mount
+    refresh();
+    keepAlive();
+
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         refresh();
+        keepAlive();
       }
     };
 
-    // Refresh when window gets focus
     const handleFocus = () => {
       refresh();
     };

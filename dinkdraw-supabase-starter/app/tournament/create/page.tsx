@@ -61,6 +61,7 @@ export default function CreateTournamentPage() {
   const router = useRouter();
 
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
+  const [matchFormat, setMatchFormat] = useState<'single' | 'best_of_3'>('single');
   const [title, setTitle] = useState('Saturday Round Robin');
   const [organizerName, setOrganizerName] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -164,6 +165,7 @@ export default function CreateTournamentPage() {
           games_to: gamesTo,
           status: 'draft',
           format,
+          match_format: matchFormat,
         })
         .select()
         .single();
@@ -208,7 +210,7 @@ export default function CreateTournamentPage() {
         <div className="grid">
 
           <div>
-            <label className="label">Format</label>
+            <label className="label">Player Format</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
               <button
                 type="button"
@@ -223,6 +225,26 @@ export default function CreateTournamentPage() {
                 onClick={() => setFormat('singles')}
               >
                 Singles
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Match Format</label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+              <button
+                type="button"
+                className={`button ${matchFormat === 'single' ? 'primary' : 'secondary'}`}
+                onClick={() => setMatchFormat('single')}
+              >
+                Single Game
+              </button>
+              <button
+                type="button"
+                className={`button ${matchFormat === 'best_of_3' ? 'primary' : 'secondary'}`}
+                onClick={() => setMatchFormat('best_of_3')}
+              >
+                Best of 3
               </button>
             </div>
           </div>
@@ -310,7 +332,7 @@ export default function CreateTournamentPage() {
           <div className="list-item">
             <div style={{ fontWeight: 700 }}>Quick summary</div>
             <div className="muted">
-              {format === 'singles' ? 'Singles' : 'Doubles'} • {playerCount} players • {courts} courts • {rounds} rounds
+              {format === 'singles' ? 'Singles' : 'Doubles'} • {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} • {playerCount} players • {courts} courts • {rounds} rounds
             </div>
           </div>
 
@@ -321,11 +343,4 @@ export default function CreateTournamentPage() {
             disabled={isCreating}
           >
             {isCreating ? 'Creating...' : 'Create Tournament'}
-          </button>
-
-          {message ? <div className="notice">{message}</div> : null}
-        </div>
-      </div>
-    </main>
-  );
-}
+          </button​​​​​​​​​​​​​​​​

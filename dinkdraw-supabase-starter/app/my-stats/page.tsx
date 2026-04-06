@@ -519,7 +519,7 @@ export default function MyStatsPage() {
                         <div style={{ fontWeight: 800 }}>
                           {match.wins === 1 ? 'Win' : match.losses === 1 ? 'Loss' : 'Tie'}
                         </div>
-                        <div className="muted">{new Date(match.played_at).toLocaleDateString()}</div>
+                        <div className="muted">{new Date(match.played_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}</div>
                         <div className="muted" style={{ marginTop: 2 }}>
                           {match.format === 'singles' ? 'Singles' : 'Doubles'}
                         </div>

@@ -343,4 +343,11 @@ export default function CreateTournamentPage() {
             disabled={isCreating}
           >
             {isCreating ? 'Creating...' : 'Create Tournament'}
-          </button​​​​​​​​​​​​​​​​
+          </button>
+
+          {message ? <div className="notice">{message}</div> : null}
+        </div>
+      </div>
+    </main>
+  );
+}

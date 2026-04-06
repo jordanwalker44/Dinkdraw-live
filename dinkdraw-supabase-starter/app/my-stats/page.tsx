@@ -50,59 +50,140 @@ export default function MyStatsPage() {
 
   useEffect(() => {
     async function load() {
-  setLoading(true);
+      setLoading(true);
 
-  // Use getSession() for instant localStorage read instead of getUser() network call
-  const { data: sessionData } = await supabase.auth.getSession();
-  const user = sessionData.session?.user;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
 
-  if (!user) {
-    setLoading(false);
-    return;
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      setUserId(user.id);
+
+      const [userStatResult, allStatResult, profileResult] = await Promise.all([
+        supabase.from('player_match_stats').select('*').eq('user_id', user.id).order('played_at', { ascending: false }),
+        supabase.from('player_match_stats').select('*').order('played_at', { ascending: true }),
+        supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
+      ]);
+
+      const userStatRows = userStatResult.data || [];
+      const allStatRows = allStatResult.data || [];
+
+      setDisplayName(profileResult.data?.display_name || user.email || 'Player');
+
+      const allUserIds = Array.from(
+        new Set((allStatRows as EloStatRow[]).map((r) => r.user_id).filter(Boolean))
+      );
+
+      const userTournamentIds = Array.from(
+        new Set(userStatRows.map((r) => r.tournament_id).filter(Boolean))
+      );
+
+      const [profileRowsResult, playersResult, matchesResult] = await Promise.all([
+        allUserIds.length > 0
+          ? supabase.from('profiles').select('id, display_name, email').in('id', allUserIds)
+          : Promise.resolve({ data: [] as EloProfile[] }),
+        userTournamentIds.length > 0
+          ? supabase.from('tournament_players').select('id, tournament_id, claimed_by_user_id, display_name').in('tournament_id', userTournamentIds)
+          : Promise.resolve({ data: [] as TournamentPlayer[] }),
+        userTournamentIds.length > 0
+          ? supabase.from('matches').select('tournament_id, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete').in('tournament_id', userTournamentIds).eq('is_complete', true)
+          : Promise.resolve({ data: [] as MatchRow[] }),
+      ]);
+
+      setStats(userStatRows as EloStatRow[]);
+      setAllStatsForElo(allStatRows as EloStatRow[]);
+      setProfiles((profileRowsResult.data || []) as EloProfile[]);
+      setAllTournamentPlayers((playersResult.data || []) as TournamentPlayer[]);
+      setAllCompletedMatches((matchesResult.data || []) as MatchRow[]);
+      setLoading(false);
+    }
+
+    load();
+  }, [supabase]);
+
+  const filteredStats = useMemo(() => {
+    const cutoff = getCutoffDate(timeFilter);
+    if (!cutoff) return stats;
+    return stats.filter((row) => new Date(row.played_at) >= cutoff);
+  }, [stats, timeFilter]);
+
+  const filteredSinglesStats = useMemo(
+    () => filteredStats.filter((row) => row.format === 'singles'),
+    [filteredStats]
+  );
+
+  const filteredDoublesStats = useMemo(
+    () => filteredStats.filter((row) => row.format === 'doubles'),
+    [filteredStats]
+  );
+
+  const filteredLeaderboardStats = useMemo(() => {
+    const cutoff = getCutoffDate(timeFilter);
+    if (!cutoff) return allStatsForElo;
+    return allStatsForElo.filter((row) => new Date(row.played_at) >= cutoff);
+  }, [allStatsForElo, timeFilter]);
+
+  const singlesLeaderboardRows = useMemo(
+    () => buildLeaderboardRows(filteredLeaderboardStats.filter((r) => r.format === 'singles'), profiles, 1),
+    [filteredLeaderboardStats, profiles]
+  );
+
+  const doublesLeaderboardRows = useMemo(
+    () => buildLeaderboardRows(filteredLeaderboardStats.filter((r) => r.format === 'doubles'), profiles, 1),
+    [filteredLeaderboardStats, profiles]
+  );
+
+  const singlesRank = useMemo(() => {
+    if (!userId) return { rank: '-', totalRanked: 0 };
+    const index = singlesLeaderboardRows.findIndex((r) => r.userId === userId);
+    return { rank: index >= 0 ? index + 1 : '-', totalRanked: singlesLeaderboardRows.length };
+  }, [singlesLeaderboardRows, userId]);
+
+  const doublesRank = useMemo(() => {
+    if (!userId) return { rank: '-', totalRanked: 0 };
+    const index = doublesLeaderboardRows.findIndex((r) => r.userId === userId);
+    return { rank: index >= 0 ? index + 1 : '-', totalRanked: doublesLeaderboardRows.length };
+  }, [doublesLeaderboardRows, userId]);
+
+  const filteredTournamentIds = useMemo(
+    () => Array.from(new Set(filteredStats.map((r) => r.tournament_id).filter(Boolean))),
+    [filteredStats]
+  );
+
+  const filteredTournamentPlayers = useMemo(
+    () => allTournamentPlayers.filter((r) => filteredTournamentIds.includes(r.tournament_id)),
+    [allTournamentPlayers, filteredTournamentIds]
+  );
+
+  const filteredCompletedMatches = useMemo(
+    () => allCompletedMatches.filter((r) => filteredTournamentIds.includes(r.tournament_id)),
+    [allCompletedMatches, filteredTournamentIds]
+  );
+
+  function calcAggregates(statRows: EloStatRow[]) {
+    let wins = 0, losses = 0, ties = 0, pointsFor = 0, pointsAgainst = 0;
+    const tournamentIds = new Set<string>();
+    for (const s of statRows) {
+      wins += s.wins;
+      losses += s.losses;
+      ties += s.ties;
+      pointsFor += s.points_for;
+      pointsAgainst += s.points_against;
+      if (s.tournament_id) tournamentIds.add(s.tournament_id);
+    }
+    const matches = wins + losses + ties;
+    return {
+      wins, losses, ties, matches,
+      winPct: matches ? Math.round((wins / matches) * 100) : 0,
+      pointsFor, pointsAgainst,
+      pointDiff: pointsFor - pointsAgainst,
+      avgPoints: matches ? Math.round(pointsFor / matches) : 0,
+      tournamentsPlayed: tournamentIds.size,
+    };
   }
-
-  setUserId(user.id);
-
-  // Fire user stats, all stats, and profile simultaneously
-  const [userStatResult, allStatResult, profileResult] = await Promise.all([
-    supabase.from('player_match_stats').select('*').eq('user_id', user.id).order('played_at', { ascending: false }),
-    supabase.from('player_match_stats').select('*').order('played_at', { ascending: true }),
-    supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
-  ]);
-
-  const userStatRows = userStatResult.data || [];
-  const allStatRows = allStatResult.data || [];
-
-  setDisplayName(profileResult.data?.display_name || user.email || 'Player');
-
-  const allUserIds = Array.from(
-    new Set((allStatRows as EloStatRow[]).map((r) => r.user_id).filter(Boolean))
-  );
-
-  const userTournamentIds = Array.from(
-    new Set(userStatRows.map((r) => r.tournament_id).filter(Boolean))
-  );
-
-  // Fire profiles, tournament players, and matches simultaneously
-  const [profileRowsResult, playersResult, matchesResult] = await Promise.all([
-    allUserIds.length > 0
-      ? supabase.from('profiles').select('id, display_name, email').in('id', allUserIds)
-      : Promise.resolve({ data: [] as EloProfile[] }),
-    userTournamentIds.length > 0
-      ? supabase.from('tournament_players').select('id, tournament_id, claimed_by_user_id, display_name').in('tournament_id', userTournamentIds)
-      : Promise.resolve({ data: [] as TournamentPlayer[] }),
-    userTournamentIds.length > 0
-      ? supabase.from('matches').select('tournament_id, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete').in('tournament_id', userTournamentIds).eq('is_complete', true)
-      : Promise.resolve({ data: [] as MatchRow[] }),
-  ]);
-
-  setStats(userStatRows as EloStatRow[]);
-  setAllStatsForElo(allStatRows as EloStatRow[]);
-  setProfiles((profileRowsResult.data || []) as EloProfile[]);
-  setAllTournamentPlayers((playersResult.data || []) as TournamentPlayer[]);
-  setAllCompletedMatches((matchesResult.data || []) as MatchRow[]);
-  setLoading(false);
-}
 
   const singlesAggregates = useMemo(() => calcAggregates(filteredSinglesStats), [filteredSinglesStats]);
   const doublesAggregates = useMemo(() => calcAggregates(filteredDoublesStats), [filteredDoublesStats]);
@@ -184,7 +265,6 @@ export default function MyStatsPage() {
   }, [filteredTournamentIds, filteredTournamentPlayers, filteredCompletedMatches, userId]);
 
   const streaks = useMemo(() => {
-    // Sort descending for current streak calculation
     const ordered = [...filteredStats].sort(
       (a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime()
     );
@@ -194,7 +274,6 @@ export default function MyStatsPage() {
     let bestWinStreak = 0;
     let tempWinStreak = 0;
 
-    // Calculate current streak from most recent match
     for (const row of ordered) {
       const result: 'W' | 'L' | 'T' = row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
       if (currentType === null) {
@@ -203,11 +282,10 @@ export default function MyStatsPage() {
       } else if (result === currentType) {
         currentCount += 1;
       } else {
-        break; // Stop at first change — that's the current streak
+        break;
       }
     }
 
-    // Calculate best win streak separately (needs full pass)
     for (const row of ordered) {
       const result: 'W' | 'L' | 'T' = row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
       if (result === 'W') {
@@ -299,14 +377,12 @@ export default function MyStatsPage() {
 
       <TopNav />
 
-      {/* Format Tab */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
         <button type="button" className={`button ${formatTab === 'doubles' ? 'primary' : 'secondary'}`} onClick={() => setFormatTab('doubles')}>Doubles</button>
         <button type="button" className={`button ${formatTab === 'singles' ? 'primary' : 'secondary'}`} onClick={() => setFormatTab('singles')}>Singles</button>
         <button type="button" className={`button ${formatTab === 'overall' ? 'primary' : 'secondary'}`} onClick={() => setFormatTab('overall')}>Overall</button>
       </div>
 
-      {/* Time Filter */}
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Time Filter</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
@@ -318,7 +394,6 @@ export default function MyStatsPage() {
         </div>
       </div>
 
-      {/* No data message */}
       {activeAggregates.matches === 0 && !loading ? (
         <div className="card" style={{ marginBottom: 14 }}>
           <div className="card-title">No {formatTab === 'overall' ? '' : formatTab} stats yet</div>
@@ -332,11 +407,10 @@ export default function MyStatsPage() {
         </div>
       ) : (
         <>
-          {/* Ranking */}
           {formatTab !== 'overall' ? (
             <div className="card" style={{ marginBottom: 14 }}>
               <div className="card-title">Ranking</div>
-<div className="card-subtitle">Your rating is calculated from every match result. It goes up with wins and down with losses.</div>
+              <div className="card-subtitle">Your rating is calculated from every match result. It goes up with wins and down with losses.</div>
               <div className="two-col">
                 <SimpleStatCard label="Rating" value={activeElo.elo} sub={timeFilter === 'lifetime' ? 'All time' : filterLabel(timeFilter)} />
                 <SimpleStatCard label="Peak Rating" value={activeElo.peak} sub="Lifetime high" />
@@ -346,7 +420,6 @@ export default function MyStatsPage() {
             </div>
           ) : null}
 
-          {/* Performance */}
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Performance</div>
             <div className="two-col">
@@ -357,7 +430,6 @@ export default function MyStatsPage() {
             </div>
           </div>
 
-          {/* Achievements — overall only */}
           {formatTab === 'overall' ? (
             <div className="card" style={{ marginBottom: 14 }}>
               <div className="card-title">Achievements</div>
@@ -370,7 +442,6 @@ export default function MyStatsPage() {
             </div>
           ) : null}
 
-          {/* Form */}
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Form</div>
             <div className="grid">
@@ -401,7 +472,6 @@ export default function MyStatsPage() {
             </div>
           </div>
 
-          {/* Recent Matches */}
           <div className="card">
             <div className="card-title">Recent Matches</div>
             {loading ? (

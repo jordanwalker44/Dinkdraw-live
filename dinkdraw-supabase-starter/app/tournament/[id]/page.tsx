@@ -881,7 +881,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       const updatedMatches = matches.map((m) => m.id === matchId ? finalUpdatedMatch : m);
       setMatches(updatedMatches);
 
-      await upsertPlayerMatchStats(finalUpdatedMatch, seriesAWon ? 1 : 0, seriesAWon ? 0 : 1);
+      await upsertPlayerMatchStats(finalUpdatedMatch, aScore, bScore);
+
 
       const nextRound = getNextIncompleteRound(updatedMatches);
 

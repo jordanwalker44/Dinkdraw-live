@@ -26,19 +26,34 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+  setLoading(true);
 
-      const { data: statsData, error: statsError } = await supabase
-        .from('player_match_stats')
-        .select('*')
-        .order('played_at', { ascending: true });
+  const { data: statsData, error: statsError } = await supabase
+    .from('player_match_stats')
+    .select('*')
+    .order('played_at', { ascending: true });
 
-      if (statsError) {
-        setStats([]);
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
+  if (statsError) {
+    setStats([]);
+    setProfiles([]);
+    setLoading(false);
+    return;
+  }
+
+  const rows = (statsData || []) as EloStatRow[];
+  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
+
+  // Fire profiles fetch immediately in parallel with setting stats
+  const profilePromise = userIds.length > 0
+    ? supabase.from('profiles').select('id, display_name, email').in('id', userIds)
+    : Promise.resolve({ data: [] as EloProfile[] });
+
+  const { data: profileData } = await profilePromise;
+
+  setStats(rows);
+  setProfiles((profileData || []) as EloProfile[]);
+  setLoading(false);
+}
 
       const rows = (statsData || []) as EloStatRow[];
       setStats(rows);

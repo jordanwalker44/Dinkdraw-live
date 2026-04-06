@@ -474,78 +474,90 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
-    // Fire all 3 queries simultaneously instead of one at a time
-    const [tournamentResult, playersResult, matchesResult] = await Promise.all([
-      supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-      supabase.from('tournament_players').select('*').eq('tournament_id', params.id).order('slot_number', { ascending: true }),
-      supabase.from('matches').select('*').eq('tournament_id', params.id).order('round_number', { ascending: true }).order('court_number', { ascending: true }),
-    ]);
+  const [tournamentResult, playersResult, matchesResult] = await Promise.all([
+    supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
+    supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('slot_number', { ascending: true }),
+    supabase
+      .from('matches')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('round_number', { ascending: true })
+      .order('court_number', { ascending: true }),
+  ]);
 
-    const tournamentData = tournamentResult.data;
-    const playersData = playersResult.data;
-    const matchesData = matchesResult.data;
+  const tournamentData = tournamentResult.data;
+  const playersData = playersResult.data;
+  const matchesData = matchesResult.data;
 
-    setTournament(tournamentData || null);
-    setPlayerSlots(playersData || []);
-    setMatches(matchesData || []);
+  setTournament(tournamentData || null);
+  setPlayerSlots(playersData || []);
+  setMatches(matchesData || []);
 
-    if (tournamentData) {
-      try { window.localStorage.setItem(LAST_TOURNAMENT_KEY, JSON.stringify({ id: tournamentData.id, title: tournamentData.title })); } catch {}
-    }
+  if (tournamentData) {
+    try {
+      window.localStorage.setItem(
+        LAST_TOURNAMENT_KEY,
+        JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
+      );
+    } catch {}
+  }
 
-    if ((playersData || []).length > 0) {
-      setNewNames((prev) => {
-        const next = { ...prev };
-        for (const slot of playersData || []) {
-          if (typeof next[slot.id] !== 'string') next[slot.id] = slot.display_name || '';
+  if ((playersData || []).length > 0) {
+    setNewNames((prev) => {
+      const next = { ...prev };
+      for (const slot of playersData || []) {
+        if (typeof next[slot.id] !== 'string') {
+          next[slot.id] = slot.display_name || '';
         }
-        return next;
-      });
+      }
+      return next;
+    });
+  }
+
+  setScoreDrafts((prev) => {
+    const next = { ...prev };
+    for (const match of matchesData || []) {
+      const existing = prev[match.id];
+      next[match.id] = {
+        team_a_score:
+          existing?.team_a_score ??
+          (match.team_a_score === null ? '' : String(match.team_a_score)),
+        team_b_score:
+          existing?.team_b_score ??
+          (match.team_b_score === null ? '' : String(match.team_b_score)),
+        game_1_a:
+          existing?.game_1_a ??
+          (match.game_1_a === null ? '' : String(match.game_1_a)),
+        game_1_b:
+          existing?.game_1_b ??
+          (match.game_1_b === null ? '' : String(match.game_1_b)),
+        game_2_a:
+          existing?.game_2_a ??
+          (match.game_2_a === null ? '' : String(match.game_2_a)),
+        game_2_b:
+          existing?.game_2_b ??
+          (match.game_2_b === null ? '' : String(match.game_2_b)),
+        game_3_a:
+          existing?.game_3_a ??
+          (match.game_3_a === null ? '' : String(match.game_3_a)),
+        game_3_b:
+          existing?.game_3_b ??
+          (match.game_3_b === null ? '' : String(match.game_3_b)),
+      };
     }
+    return next;
+  });
 
-    setScoreDrafts((prev) => {
-      const next = { ...prev };
-      for (const match of matchesData || []) {
-        const existing = prev[match.id];
-        next[match.id] = {
-          team_a_score: existing?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score)),
-          team_b_score: existing?.team_b_score ?? (match.team_b_score === null ? '' : String(match.team_b_score)),
-          game_1_a: existing?.game_1_a ?? (match.game_1_a === null ? '' : String(match.game_1_a)),
-          game_1_b: existing?.game_1_b ?? (match.game_1_b === null ? '' : String(match.game_1_b)),
-          game_2_a: existing?.game_2_a ?? (match.game_2_a === null ? '' : String(match.game_2_a)),
-          game_2_b: existing?.game_2_b ?? (match.game_2_b === null ? '' : String(match.game_2_b)),
-          game_3_a: existing?.game_3_a ?? (match.game_3_a === null ? '' : String(match.game_3_a)),
-          game_3_b: existing?.game_3_b ?? (match.game_3_b === null ? '' : String(match.game_3_b)),
-        };
-      }
-      return next;
-    });
-
-    if (currentUserId) setUserId(currentUserId);
+  if (currentUserId) {
+    setUserId(currentUserId);
   }
+}
 
-    setScoreDrafts((prev) => {
-      const next = { ...prev };
-      for (const match of matchesData || []) {
-        const existing = prev[match.id];
-        next[match.id] = {
-          team_a_score: existing?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score)),
-          team_b_score: existing?.team_b_score ?? (match.team_b_score === null ? '' : String(match.team_b_score)),
-          game_1_a: existing?.game_1_a ?? (match.game_1_a === null ? '' : String(match.game_1_a)),
-          game_1_b: existing?.game_1_b ?? (match.game_1_b === null ? '' : String(match.game_1_b)),
-          game_2_a: existing?.game_2_a ?? (match.game_2_a === null ? '' : String(match.game_2_a)),
-          game_2_b: existing?.game_2_b ?? (match.game_2_b === null ? '' : String(match.game_2_b)),
-          game_3_a: existing?.game_3_a ?? (match.game_3_a === null ? '' : String(match.game_3_a)),
-          game_3_b: existing?.game_3_b ?? (match.game_3_b === null ? '' : String(match.game_3_b)),
-        };
-      }
-      return next;
-    });
-
-    if (currentUserId) setUserId(currentUserId);
-  }
-
-  useEffect(() => {
+useEffect(() => {
     async function load() {
       setIsLoading(true);
       const { data: authData } = await supabase.auth.getUser();

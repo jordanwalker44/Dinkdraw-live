@@ -50,161 +50,59 @@ export default function MyStatsPage() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
+  setLoading(true);
 
-      const { data: auth } = await supabase.auth.getUser();
-      const user = auth.user;
+  // Use getSession() for instant localStorage read instead of getUser() network call
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
 
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-
-      setUserId(user.id);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      setDisplayName(profile?.display_name || user.email || 'Player');
-
-      const { data: userStatRows } = await supabase
-        .from('player_match_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('played_at', { ascending: false });
-
-      const { data: allStatRows } = await supabase
-        .from('player_match_stats')
-        .select('*')
-        .order('played_at', { ascending: true });
-
-      const allUserIds = Array.from(
-        new Set(((allStatRows || []) as EloStatRow[]).map((r) => r.user_id).filter(Boolean))
-      );
-
-      const { data: profileRows } =
-        allUserIds.length > 0
-          ? await supabase.from('profiles').select('id, display_name, email').in('id', allUserIds)
-          : { data: [] as EloProfile[] };
-
-      const userTournamentIds = Array.from(
-        new Set((userStatRows || []).map((r) => r.tournament_id).filter(Boolean))
-      );
-
-      let tournamentPlayers: TournamentPlayer[] = [];
-      let completedMatches: MatchRow[] = [];
-
-      if (userTournamentIds.length > 0) {
-        const { data: playersData } = await supabase
-          .from('tournament_players')
-          .select('id, tournament_id, claimed_by_user_id, display_name')
-          .in('tournament_id', userTournamentIds);
-
-        tournamentPlayers = playersData || [];
-
-        const { data: matchesData } = await supabase
-          .from('matches')
-          .select('tournament_id, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete')
-          .in('tournament_id', userTournamentIds)
-          .eq('is_complete', true);
-
-        completedMatches = matchesData || [];
-      }
-
-      setStats((userStatRows || []) as EloStatRow[]);
-      setAllStatsForElo((allStatRows || []) as EloStatRow[]);
-      setProfiles((profileRows || []) as EloProfile[]);
-      setAllTournamentPlayers(tournamentPlayers);
-      setAllCompletedMatches(completedMatches);
-      setLoading(false);
-    }
-
-    load();
-  }, [supabase]);
-
-  const filteredStats = useMemo(() => {
-    const cutoff = getCutoffDate(timeFilter);
-    if (!cutoff) return stats;
-    return stats.filter((row) => new Date(row.played_at) >= cutoff);
-  }, [stats, timeFilter]);
-
-  const filteredSinglesStats = useMemo(
-    () => filteredStats.filter((row) => row.format === 'singles'),
-    [filteredStats]
-  );
-
-  const filteredDoublesStats = useMemo(
-    () => filteredStats.filter((row) => row.format === 'doubles'),
-    [filteredStats]
-  );
-
-  const filteredLeaderboardStats = useMemo(() => {
-    const cutoff = getCutoffDate(timeFilter);
-    if (!cutoff) return allStatsForElo;
-    return allStatsForElo.filter((row) => new Date(row.played_at) >= cutoff);
-  }, [allStatsForElo, timeFilter]);
-
-  const singlesLeaderboardRows = useMemo(
-    () => buildLeaderboardRows(filteredLeaderboardStats.filter((r) => r.format === 'singles'), profiles, 1),
-    [filteredLeaderboardStats, profiles]
-  );
-
-  const doublesLeaderboardRows = useMemo(
-    () => buildLeaderboardRows(filteredLeaderboardStats.filter((r) => r.format === 'doubles'), profiles, 1),
-    [filteredLeaderboardStats, profiles]
-  );
-
-  const singlesRank = useMemo(() => {
-    if (!userId) return { rank: '-', totalRanked: 0 };
-    const index = singlesLeaderboardRows.findIndex((r) => r.userId === userId);
-    return { rank: index >= 0 ? index + 1 : '-', totalRanked: singlesLeaderboardRows.length };
-  }, [singlesLeaderboardRows, userId]);
-
-  const doublesRank = useMemo(() => {
-    if (!userId) return { rank: '-', totalRanked: 0 };
-    const index = doublesLeaderboardRows.findIndex((r) => r.userId === userId);
-    return { rank: index >= 0 ? index + 1 : '-', totalRanked: doublesLeaderboardRows.length };
-  }, [doublesLeaderboardRows, userId]);
-
-  const filteredTournamentIds = useMemo(
-    () => Array.from(new Set(filteredStats.map((r) => r.tournament_id).filter(Boolean))),
-    [filteredStats]
-  );
-
-  const filteredTournamentPlayers = useMemo(
-    () => allTournamentPlayers.filter((r) => filteredTournamentIds.includes(r.tournament_id)),
-    [allTournamentPlayers, filteredTournamentIds]
-  );
-
-  const filteredCompletedMatches = useMemo(
-    () => allCompletedMatches.filter((r) => filteredTournamentIds.includes(r.tournament_id)),
-    [allCompletedMatches, filteredTournamentIds]
-  );
-
-  function calcAggregates(statRows: EloStatRow[]) {
-    let wins = 0, losses = 0, ties = 0, pointsFor = 0, pointsAgainst = 0;
-    const tournamentIds = new Set<string>();
-    for (const s of statRows) {
-      wins += s.wins;
-      losses += s.losses;
-      ties += s.ties;
-      pointsFor += s.points_for;
-      pointsAgainst += s.points_against;
-      if (s.tournament_id) tournamentIds.add(s.tournament_id);
-    }
-    const matches = wins + losses + ties;
-    return {
-      wins, losses, ties, matches,
-      winPct: matches ? Math.round((wins / matches) * 100) : 0,
-      pointsFor, pointsAgainst,
-      pointDiff: pointsFor - pointsAgainst,
-      avgPoints: matches ? Math.round(pointsFor / matches) : 0,
-      tournamentsPlayed: tournamentIds.size,
-    };
+  if (!user) {
+    setLoading(false);
+    return;
   }
+
+  setUserId(user.id);
+
+  // Fire user stats, all stats, and profile simultaneously
+  const [userStatResult, allStatResult, profileResult] = await Promise.all([
+    supabase.from('player_match_stats').select('*').eq('user_id', user.id).order('played_at', { ascending: false }),
+    supabase.from('player_match_stats').select('*').order('played_at', { ascending: true }),
+    supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
+  ]);
+
+  const userStatRows = userStatResult.data || [];
+  const allStatRows = allStatResult.data || [];
+
+  setDisplayName(profileResult.data?.display_name || user.email || 'Player');
+
+  const allUserIds = Array.from(
+    new Set((allStatRows as EloStatRow[]).map((r) => r.user_id).filter(Boolean))
+  );
+
+  const userTournamentIds = Array.from(
+    new Set(userStatRows.map((r) => r.tournament_id).filter(Boolean))
+  );
+
+  // Fire profiles, tournament players, and matches simultaneously
+  const [profileRowsResult, playersResult, matchesResult] = await Promise.all([
+    allUserIds.length > 0
+      ? supabase.from('profiles').select('id, display_name, email').in('id', allUserIds)
+      : Promise.resolve({ data: [] as EloProfile[] }),
+    userTournamentIds.length > 0
+      ? supabase.from('tournament_players').select('id, tournament_id, claimed_by_user_id, display_name').in('tournament_id', userTournamentIds)
+      : Promise.resolve({ data: [] as TournamentPlayer[] }),
+    userTournamentIds.length > 0
+      ? supabase.from('matches').select('tournament_id, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete').in('tournament_id', userTournamentIds).eq('is_complete', true)
+      : Promise.resolve({ data: [] as MatchRow[] }),
+  ]);
+
+  setStats(userStatRows as EloStatRow[]);
+  setAllStatsForElo(allStatRows as EloStatRow[]);
+  setProfiles((profileRowsResult.data || []) as EloProfile[]);
+  setAllTournamentPlayers((playersResult.data || []) as TournamentPlayer[]);
+  setAllCompletedMatches((matchesResult.data || []) as MatchRow[]);
+  setLoading(false);
+}
 
   const singlesAggregates = useMemo(() => calcAggregates(filteredSinglesStats), [filteredSinglesStats]);
   const doublesAggregates = useMemo(() => calcAggregates(filteredDoublesStats), [filteredDoublesStats]);

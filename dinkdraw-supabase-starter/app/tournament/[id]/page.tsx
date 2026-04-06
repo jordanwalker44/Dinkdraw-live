@@ -474,90 +474,50 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
-  const [tournamentResult, playersResult, matchesResult] = await Promise.all([
-    supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-    supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('slot_number', { ascending: true }),
-    supabase
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('round_number', { ascending: true })
-      .order('court_number', { ascending: true }),
-  ]);
+    const { data: tournamentData } = await supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle();
+    const { data: playersData } = await supabase.from('tournament_players').select('*').eq('tournament_id', params.id).order('slot_number', { ascending: true });
+    const { data: matchesData } = await supabase.from('matches').select('*').eq('tournament_id', params.id).order('round_number', { ascending: true }).order('court_number', { ascending: true });
 
-  const tournamentData = tournamentResult.data;
-  const playersData = playersResult.data;
-  const matchesData = matchesResult.data;
+    setTournament(tournamentData || null);
+    setPlayerSlots(playersData || []);
+    setMatches(matchesData || []);
 
-  setTournament(tournamentData || null);
-  setPlayerSlots(playersData || []);
-  setMatches(matchesData || []);
+    if (tournamentData) {
+      try { window.localStorage.setItem(LAST_TOURNAMENT_KEY, JSON.stringify({ id: tournamentData.id, title: tournamentData.title })); } catch {}
+    }
 
-  if (tournamentData) {
-    try {
-      window.localStorage.setItem(
-        LAST_TOURNAMENT_KEY,
-        JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
-      );
-    } catch {}
-  }
-
-  if ((playersData || []).length > 0) {
-    setNewNames((prev) => {
-      const next = { ...prev };
-      for (const slot of playersData || []) {
-        if (typeof next[slot.id] !== 'string') {
-          next[slot.id] = slot.display_name || '';
+    if ((playersData || []).length > 0) {
+      setNewNames((prev) => {
+        const next = { ...prev };
+        for (const slot of playersData || []) {
+          if (typeof next[slot.id] !== 'string') next[slot.id] = slot.display_name || '';
         }
+        return next;
+      });
+    }
+
+    setScoreDrafts((prev) => {
+      const next = { ...prev };
+      for (const match of matchesData || []) {
+        const existing = prev[match.id];
+        next[match.id] = {
+          team_a_score: existing?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score)),
+          team_b_score: existing?.team_b_score ?? (match.team_b_score === null ? '' : String(match.team_b_score)),
+          game_1_a: existing?.game_1_a ?? (match.game_1_a === null ? '' : String(match.game_1_a)),
+          game_1_b: existing?.game_1_b ?? (match.game_1_b === null ? '' : String(match.game_1_b)),
+          game_2_a: existing?.game_2_a ?? (match.game_2_a === null ? '' : String(match.game_2_a)),
+          game_2_b: existing?.game_2_b ?? (match.game_2_b === null ? '' : String(match.game_2_b)),
+          game_3_a: existing?.game_3_a ?? (match.game_3_a === null ? '' : String(match.game_3_a)),
+          game_3_b: existing?.game_3_b ?? (match.game_3_b === null ? '' : String(match.game_3_b)),
+        };
       }
       return next;
     });
+
+    if (currentUserId) setUserId(currentUserId);
   }
 
-  setScoreDrafts((prev) => {
-    const next = { ...prev };
-    for (const match of matchesData || []) {
-      const existing = prev[match.id];
-      next[match.id] = {
-        team_a_score:
-          existing?.team_a_score ??
-          (match.team_a_score === null ? '' : String(match.team_a_score)),
-        team_b_score:
-          existing?.team_b_score ??
-          (match.team_b_score === null ? '' : String(match.team_b_score)),
-        game_1_a:
-          existing?.game_1_a ??
-          (match.game_1_a === null ? '' : String(match.game_1_a)),
-        game_1_b:
-          existing?.game_1_b ??
-          (match.game_1_b === null ? '' : String(match.game_1_b)),
-        game_2_a:
-          existing?.game_2_a ??
-          (match.game_2_a === null ? '' : String(match.game_2_a)),
-        game_2_b:
-          existing?.game_2_b ??
-          (match.game_2_b === null ? '' : String(match.game_2_b)),
-        game_3_a:
-          existing?.game_3_a ??
-          (match.game_3_a === null ? '' : String(match.game_3_a)),
-        game_3_b:
-          existing?.game_3_b ??
-          (match.game_3_b === null ? '' : String(match.game_3_b)),
-      };
-    }
-    return next;
-  });
-
-  if (currentUserId) {
-    setUserId(currentUserId);
-  }
-}
-
-useEffect(() => {
+  useEffect(() => {
     async function load() {
       setIsLoading(true);
       const { data: authData } = await supabase.auth.getUser();
@@ -569,158 +529,14 @@ useEffect(() => {
   }, [params.id, supabase]);
 
   useEffect(() => {
-  const channel = supabase
-    .channel(`tournament-live-${params.id}`)
-
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'tournaments',
-        filter: `id=eq.${params.id}`,
-      },
-      (payload: any) => {
-        setIsLive(true);
-
-        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-          setTournament(payload.new as Tournament);
-        } else if (payload.eventType === 'DELETE') {
-          setTournament(null);
-        }
-      }
-    )
-
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'tournament_players',
-        filter: `tournament_id=eq.${params.id}`,
-      },
-      (payload: any) => {
-        setIsLive(true);
-
-        setPlayerSlots((prev) => {
-          if (payload.eventType === 'INSERT') {
-            const next = [...prev, payload.new as PlayerSlot];
-            return next.sort((a, b) => a.slot_number - b.slot_number);
-          }
-
-          if (payload.eventType === 'UPDATE') {
-            return prev
-              .map((player) =>
-                player.id === payload.new.id ? (payload.new as PlayerSlot) : player
-              )
-              .sort((a, b) => a.slot_number - b.slot_number);
-          }
-
-          if (payload.eventType === 'DELETE') {
-            return prev.filter((player) => player.id !== payload.old.id);
-          }
-
-          return prev;
-        });
-
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const slot = payload.new as PlayerSlot;
-          setNewNames((prev) => ({
-            ...prev,
-            [slot.id]: prev[slot.id] ?? slot.display_name ?? '',
-          }));
-        }
-      }
-    )
-
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'matches',
-        filter: `tournament_id=eq.${params.id}`,
-      },
-      (payload: any) => {
-        setIsLive(true);
-
-        setMatches((prev) => {
-          if (payload.eventType === 'INSERT') {
-            const next = [...prev, payload.new as Match];
-            return next.sort((a, b) => {
-              if (a.round_number !== b.round_number) {
-                return a.round_number - b.round_number;
-              }
-              return (a.court_number ?? 999) - (b.court_number ?? 999);
-            });
-          }
-
-          if (payload.eventType === 'UPDATE') {
-            return prev
-              .map((match) =>
-                match.id === payload.new.id ? (payload.new as Match) : match
-              )
-              .sort((a, b) => {
-                if (a.round_number !== b.round_number) {
-                  return a.round_number - b.round_number;
-                }
-                return (a.court_number ?? 999) - (b.court_number ?? 999);
-              });
-          }
-
-          if (payload.eventType === 'DELETE') {
-            return prev.filter((match) => match.id !== payload.old.id);
-          }
-
-          return prev;
-        });
-
-        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          const match = payload.new as Match;
-          setScoreDrafts((prev) => {
-            const existing = prev[match.id];
-            return {
-              ...prev,
-              [match.id]: {
-                team_a_score:
-                  existing?.team_a_score ??
-                  (match.team_a_score === null ? '' : String(match.team_a_score)),
-                team_b_score:
-                  existing?.team_b_score ??
-                  (match.team_b_score === null ? '' : String(match.team_b_score)),
-                game_1_a:
-                  existing?.game_1_a ??
-                  (match.game_1_a === null ? '' : String(match.game_1_a)),
-                game_1_b:
-                  existing?.game_1_b ??
-                  (match.game_1_b === null ? '' : String(match.game_1_b)),
-                game_2_a:
-                  existing?.game_2_a ??
-                  (match.game_2_a === null ? '' : String(match.game_2_a)),
-                game_2_b:
-                  existing?.game_2_b ??
-                  (match.game_2_b === null ? '' : String(match.game_2_b)),
-                game_3_a:
-                  existing?.game_3_a ??
-                  (match.game_3_a === null ? '' : String(match.game_3_a)),
-                game_3_b:
-                  existing?.game_3_b ??
-                  (match.game_3_b === null ? '' : String(match.game_3_b)),
-              },
-            };
-          });
-        }
-      }
-    )
-
-    .subscribe((status) => {
-      setIsLive(status === 'SUBSCRIBED');
-    });
-
-  return () => {
-    void supabase.removeChannel(channel);
-  };
-}, [params.id, supabase]);
+    const channel = supabase
+      .channel(`tournament-live-${params.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_players', filter: `tournament_id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
+      .subscribe((status) => { setIsLive(status === 'SUBSCRIBED'); });
+    return () => { void supabase.removeChannel(channel); };
+  }, [params.id, supabase, userId]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;

@@ -72,7 +72,8 @@ export function TopNav() {
 
     loadUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+  const subscription = data.subscription;
       const user = session?.user;
       if (!user) {
         setIsSignedIn(false);
@@ -113,7 +114,7 @@ export function TopNav() {
     window.addEventListener('focus', handleFocus);
 
     return () => {
-      subscription.unsubscribe();
+      data.subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleFocus);
     };

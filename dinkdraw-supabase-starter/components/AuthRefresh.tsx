@@ -11,12 +11,12 @@ export function AuthRefresh() {
       await supabase.auth.getSession();
     }
 
-    // Ping the DB to keep it warm
     async function keepAlive() {
-      await supabase.from('tournaments').select('id').limit(1);
+      try {
+        await supabase.from('tournaments').select('id').limit(1);
+      } catch {}
     }
 
-    // Refresh auth and warm up DB on mount
     refresh();
     keepAlive();
 

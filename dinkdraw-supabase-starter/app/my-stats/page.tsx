@@ -286,22 +286,41 @@ export default function MyStatsPage() {
   }, [filteredTournamentIds, filteredTournamentPlayers, filteredCompletedMatches, userId]);
 
   const streaks = useMemo(() => {
+    // Sort descending for current streak calculation
     const ordered = [...filteredStats].sort(
-      (a, b) => new Date(a.played_at).getTime() - new Date(b.played_at).getTime()
+      (a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime()
     );
+
     let currentType: 'W' | 'L' | 'T' | null = null;
     let currentCount = 0;
     let bestWinStreak = 0;
+    let tempWinStreak = 0;
 
+    // Calculate current streak from most recent match
     for (const row of ordered) {
       const result: 'W' | 'L' | 'T' = row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
-      if (result === currentType) { currentCount += 1; }
-      else { currentType = result; currentCount = 1; }
-      if (result === 'W') bestWinStreak = Math.max(bestWinStreak, currentCount);
+      if (currentType === null) {
+        currentType = result;
+        currentCount = 1;
+      } else if (result === currentType) {
+        currentCount += 1;
+      } else {
+        break; // Stop at first change — that's the current streak
+      }
     }
 
-    const recentForm = [...filteredStats]
-      .sort((a, b) => new Date(b.played_at).getTime() - new Date(a.played_at).getTime())
+    // Calculate best win streak separately (needs full pass)
+    for (const row of ordered) {
+      const result: 'W' | 'L' | 'T' = row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
+      if (result === 'W') {
+        tempWinStreak += 1;
+        bestWinStreak = Math.max(bestWinStreak, tempWinStreak);
+      } else {
+        tempWinStreak = 0;
+      }
+    }
+
+    const recentForm = ordered
       .slice(0, 5)
       .map((row) => (row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T'))
       .join(' ');

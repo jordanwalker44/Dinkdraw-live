@@ -620,10 +620,21 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
     if (!tournament) return true;
-    const a1 = match.team_a_player_1_id ? playersById[match.team_a_player_1_id] : null;
-    const a2 = match.team_a_player_2_id ? playersById[match.team_a_player_2_id] : null;
-    const b1 = match.team_b_player_1_id ? playersById[match.team_b_player_1_id] : null;
-    const b2 = match.team_b_player_2_id ? playersById[match.team_b_player_2_id] : null;
+
+    // Fetch fresh player data directly from DB instead of relying on state
+    const { data: freshPlayers } = await supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', tournament.id);
+
+    if (!freshPlayers) return true;
+
+    const freshPlayersById = Object.fromEntries(freshPlayers.map((p) => [p.id, p]));
+
+    const a1 = match.team_a_player_1_id ? freshPlayersById[match.team_a_player_1_id] : null;
+    const a2 = match.team_a_player_2_id ? freshPlayersById[match.team_a_player_2_id] : null;
+    const b1 = match.team_b_player_1_id ? freshPlayersById[match.team_b_player_1_id] : null;
+    const b2 = match.team_b_player_2_id ? freshPlayersById[match.team_b_player_2_id] : null;
 
     const teamAUsers = isSingles
       ? [a1].filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id).map((s) => s.claimed_by_user_id as string)
@@ -654,6 +665,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     if (error) { setMessage(`Score submitted, but stats update failed: ${error.message}`); return false; }
     return true;
   }
+
 
   function getNextIncompleteRound(updatedMatches: Match[]) {
     const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort((a, b) => a - b);

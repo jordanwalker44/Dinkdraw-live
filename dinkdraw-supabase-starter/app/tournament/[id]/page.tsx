@@ -331,7 +331,134 @@ function getSeriesScore(match: Match): { aScore: number; bScore: number } {
   if (match.game_3_b !== null) bTotal += match.game_3_b;
   return { aScore: aTotal, bScore: bTotal };
 }
+function computeStandings(
+  playerSlots: PlayerSlot[],
+  matches: Match[],
+  isSingles: boolean,
+  isBestOf3: boolean
+): StandingRow[] {
+  const rows = new Map<string, StandingRow>();
 
+  for (const slot of playerSlots) {
+    rows.set(slot.id, {
+      playerId: slot.id,
+      name: slot.display_name || `Player ${slot.slot_number}`,
+      played: 0,
+      wins: 0,
+      losses: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      pointDiff: 0,
+    });
+  }
+
+  for (const match of matches) {
+    if (
+      match.is_bye ||
+      !match.is_complete ||
+      match.team_a_player_1_id === null ||
+      match.team_b_player_1_id === null
+    ) {
+      continue;
+    }
+
+    let aScore: number;
+    let bScore: number;
+
+    if (isBestOf3) {
+      const series = getSeriesScore(match);
+      aScore = series.aScore;
+      bScore = series.bScore;
+    } else {
+      if (match.team_a_score === null || match.team_b_score === null) continue;
+      aScore = match.team_a_score;
+      bScore = match.team_b_score;
+    }
+
+    const aIds = isSingles
+      ? [match.team_a_player_1_id]
+      : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
+
+    const bIds = isSingles
+      ? [match.team_b_player_1_id]
+      : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
+
+    for (const id of [...aIds, ...bIds]) {
+      const row = rows.get(id);
+      if (row) row.played += 1;
+    }
+
+    for (const id of aIds) {
+      const row = rows.get(id);
+      if (!row) continue;
+      row.pointsFor += aScore;
+      row.pointsAgainst += bScore;
+    }
+
+    for (const id of bIds) {
+      const row = rows.get(id);
+      if (!row) continue;
+      row.pointsFor += bScore;
+      row.pointsAgainst += aScore;
+    }
+
+    if (isBestOf3) {
+      const { aWins, bWins } = getSeriesWins(match);
+
+      if (aWins > bWins) {
+        aIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.wins += 1;
+        });
+        bIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.losses += 1;
+        });
+      } else if (bWins > aWins) {
+        bIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.wins += 1;
+        });
+        aIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.losses += 1;
+        });
+      }
+    } else {
+      if (aScore > bScore) {
+        aIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.wins += 1;
+        });
+        bIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.losses += 1;
+        });
+      } else if (bScore > aScore) {
+        bIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.wins += 1;
+        });
+        aIds.forEach((id) => {
+          const r = rows.get(id);
+          if (r) r.losses += 1;
+        });
+      }
+    }
+  }
+
+  return Array.from(rows.values())
+    .map((row) => ({
+      ...row,
+      pointDiff: row.pointsFor - row.pointsAgainst,
+    }))
+    .sort((a, b) => {
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
+      return a.name.localeCompare(b.name);
+    });
+}
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
@@ -339,6 +466,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [standings, setStandings] = useState<StandingRow[]>([]);
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
   const [newNames, setNewNames] = useState<Record<string, string>>({});
@@ -405,64 +533,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const matchesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && !m.is_bye), [matches, selectedRound]);
   const byesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && m.is_bye), [matches, selectedRound]);
 
-  const standings = useMemo<StandingRow[]>(() => {
-    const rows = new Map<string, StandingRow>();
-    for (const slot of playerSlots) {
-      rows.set(slot.id, { playerId: slot.id, name: slot.display_name || `Player ${slot.slot_number}`, played: 0, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, pointDiff: 0 });
-    }
-
-    for (const match of matches) {
-      if (match.is_bye || !match.is_complete || match.team_a_player_1_id === null || match.team_b_player_1_id === null) continue;
-
-      let aScore: number;
-      let bScore: number;
-
-      if (isBestOf3) {
-        const series = getSeriesScore(match);
-        aScore = series.aScore;
-        bScore = series.bScore;
-      } else {
-        if (match.team_a_score === null || match.team_b_score === null) continue;
-        aScore = match.team_a_score;
-        bScore = match.team_b_score;
-      }
-
-      const aIds = isSingles ? [match.team_a_player_1_id] : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
-      const bIds = isSingles ? [match.team_b_player_1_id] : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
-
-      for (const id of [...aIds, ...bIds]) { const row = rows.get(id); if (row) row.played += 1; }
-      for (const id of aIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += aScore; row.pointsAgainst += bScore; }
-      for (const id of bIds) { const row = rows.get(id); if (!row) continue; row.pointsFor += bScore; row.pointsAgainst += aScore; }
-
-      if (isBestOf3) {
-        const { aWins, bWins } = getSeriesWins(match);
-        if (aWins > bWins) {
-          aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-          bIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-        } else if (bWins > aWins) {
-          bIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-          aIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-        }
-      } else {
-        if (aScore > bScore) {
-          aIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-          bIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-        } else if (bScore > aScore) {
-          bIds.forEach((id) => { const r = rows.get(id); if (r) r.wins += 1; });
-          aIds.forEach((id) => { const r = rows.get(id); if (r) r.losses += 1; });
-        }
-      }
-    }
-
-    return Array.from(rows.values())
-      .map((row) => ({ ...row, pointDiff: row.pointsFor - row.pointsAgainst }))
-      .sort((a, b) => {
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-        if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-        return a.name.localeCompare(b.name);
-      });
-  }, [playerSlots, matches, isSingles, isBestOf3]);
+  useEffect(() => {
+  setStandings(computeStandings(playerSlots, matches, isSingles, isBestOf3));
+}, [playerSlots, matches, isSingles, isBestOf3]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
 
@@ -1003,6 +1076,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   );
 
   setMatches(optimisticMatches);
+setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
 
   const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
   const submittedRoundMatches = optimisticMatches.filter(
@@ -1052,10 +1126,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     .eq('id', matchId);
 
   if (error) {
-    setMatches(previousMatches);
-    setMessage(`Submit failed: ${error.message}`);
-    return;
-  }
+  setMatches(previousMatches);
+  setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
+  setMessage(`Submit failed: ${error.message}`);
+  return;
+}
 
   if (seriesNowComplete) {
     const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
@@ -1115,8 +1190,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       : m
   );
 
-  setMatches(optimisticMatches);
-  setMessage('Score submitted.');
+setMatches(optimisticMatches);
+setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
+setMessage('Score submitted.');
 
   const completedMatch = optimisticMatches.find((m) => m.id === matchId);
   if (!completedMatch) return;
@@ -1150,10 +1226,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   // ❌ IF FAILED → ROLLBACK UI
   if (error) {
-    setMatches(previousMatches);
-    setMessage(`Submit failed: ${error.message}`);
-    return;
-  }
+  setMatches(previousMatches);
+  setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
+  setMessage(`Submit failed: ${error.message}`);
+  return;
+}
 
   const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
 

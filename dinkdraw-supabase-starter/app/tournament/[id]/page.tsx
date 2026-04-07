@@ -1786,7 +1786,7 @@ const isNextUp =
           >
             <div>
               <div style={{ fontWeight: 800, fontSize: 18 }}>
-                Round {currentRound} • Next Up
+                Round {currentRound} • Current Match
               </div>
               <div className="muted" style={{ marginTop: 4 }}>
                 Court {nextUpMatch.court_number ?? '-'}
@@ -1857,7 +1857,7 @@ const isNextUp =
 >
                     <div className="row-between" style={{ marginBottom: 12 }}>
                       <strong>Court {match.court_number ?? '-'}</strong>
-                      {isNextUp ? <span className="tag">Next Up</span> : null}
+                      {isNextUp ? <span className="tag">Current Match</span> : null}
                       <span className={match.is_complete ? 'tag green' : 'tag'}>{match.is_complete ? 'Complete' : 'Live'}</span>
                     </div>
                     <div className="grid" style={{ marginBottom: 12 }}>

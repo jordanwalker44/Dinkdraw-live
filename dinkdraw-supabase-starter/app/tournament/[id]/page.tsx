@@ -573,13 +573,94 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   useEffect(() => {
     const channel = supabase
-      .channel(`tournament-live-${params.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_players', filter: `tournament_id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${params.id}` }, async () => { setIsLive(true); await loadTournamentData(userId); })
-      .subscribe((status) => { setIsLive(status === 'SUBSCRIBED'); });
+  .channel(`tournament-live-${params.id}`)
+
+  // Tournament updates
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'tournaments', filter: `id=eq.${params.id}` },
+    async () => {
+      const { data } = await supabase
+        .from('tournaments')
+        .select('*')
+        .eq('id', params.id)
+        .maybeSingle();
+
+      if (data) setTournament(data);
+    }
+  )
+
+  // Player updates
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'tournament_players', filter: `tournament_id=eq.${params.id}` },
+    async () => {
+      const { data } = await supabase
+        .from('tournament_players')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('slot_number', { ascending: true });
+
+      setPlayerSlots(data || []);
+    }
+  )
+
+  // Match updates
+  .on(
+    'postgres_changes',
+    { event: '*', schema: 'public', table: 'matches', filter: `tournament_id=eq.${params.id}` },
+    async () => {
+      const { data } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('round_number', { ascending: true })
+        .order('court_number', { ascending: true });
+
+      const safeMatches = data || [];
+      setMatches(safeMatches);
+
+      setScoreDrafts((prev) => {
+        const next = { ...prev };
+        for (const match of safeMatches) {
+          const existing = prev[match.id];
+          next[match.id] = {
+            team_a_score:
+              existing?.team_a_score ??
+              (match.team_a_score === null ? '' : String(match.team_a_score)),
+            team_b_score:
+              existing?.team_b_score ??
+              (match.team_b_score === null ? '' : String(match.team_b_score)),
+            game_1_a:
+              existing?.game_1_a ??
+              (match.game_1_a === null ? '' : String(match.game_1_a)),
+            game_1_b:
+              existing?.game_1_b ??
+              (match.game_1_b === null ? '' : String(match.game_1_b)),
+            game_2_a:
+              existing?.game_2_a ??
+              (match.game_2_a === null ? '' : String(match.game_2_a)),
+            game_2_b:
+              existing?.game_2_b ??
+              (match.game_2_b === null ? '' : String(match.game_2_b)),
+            game_3_a:
+              existing?.game_3_a ??
+              (match.game_3_a === null ? '' : String(match.game_3_a)),
+            game_3_b:
+              existing?.game_3_b ??
+              (match.game_3_b === null ? '' : String(match.game_3_b)),
+          };
+        }
+        return next;
+      });
+    }
+  )
+
+  .subscribe((status) => {
+    setIsLive(status === 'SUBSCRIBED');
+  });
     return () => { void supabase.removeChannel(channel); };
-  }, [params.id, supabase, userId]);
+  }, [params.id, supabase]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;

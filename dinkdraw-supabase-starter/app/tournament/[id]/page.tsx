@@ -868,6 +868,21 @@ const currentRoundComplete = useMemo(
     if (isCompleted) { setSelectedRound(finalRound); setActiveTab('standings'); return; }
     if (isStarted && matches.length > 0) setSelectedRound(currentRound);
   }, [isStarted, isCompleted, matches.length, currentRound, finalRound]);
+  useEffect(() => {
+  if (!isStarted || isCompleted || !nextUpMatch) return;
+
+  const timeout = window.setTimeout(() => {
+    const el = document.getElementById(getMatchElementId(nextUpMatch.id));
+    if (!el) return;
+
+    el.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }, 150);
+
+  return () => window.clearTimeout(timeout);
+}, [nextUpMatch?.id, isStarted, isCompleted]);
 
   async function copyJoinCode() {
     try {
@@ -1424,6 +1439,9 @@ setMessage('Score submitted.');
   )}`;
 }
 
+  function getMatchElementId(matchId: string) {
+  return `live-match-${matchId}`;
+}
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
     if (isBestOf3) {
       if (!match.is_complete) return {};
@@ -1452,7 +1470,8 @@ const isNextUp =
   match.round_number === currentRound &&
   nextUpMatch?.id === match.id;
     return (
-      <div
+    <div
+  id={getMatchElementId(match.id)}
   key={match.id}
   className="list-item"
   style={

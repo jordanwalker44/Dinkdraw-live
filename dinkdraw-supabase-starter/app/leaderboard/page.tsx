@@ -262,23 +262,6 @@ export default function LeaderboardPage() {
               <option value={20}>20+</option>
             </select>
           </div>
-
-          <div>
-            <label className="label">Sort By</label>
-            <select
-              className="input"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortBy)}
-            >
-              <option value="elo">ELO</option>
-              <option value="wins">Wins</option>
-              <option value="winPct">Win %</option>
-              <option value="pointDiff">Point Differential</option>
-              <option value="pointsFor">Points For</option>
-              <option value="matches">Matches Played</option>
-              <option value="name">Name</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -306,14 +289,61 @@ export default function LeaderboardPage() {
             sub="Current leader"
           />
           <SimpleStatCard
+            label="Top Win Rate"
+            value={`${summary.topWinRate}%`}
+            sub="Current leader"
+          />
+          <SimpleStatCard
             label="Sorting"
             value={sortLabel(sortBy)}
             sub="Current order"
           />
-          <SimpleStatCard
-            label="Top Win Rate"
-            value={`${summary.topWinRate}%`}
-            sub="Current leader"
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Sort Leaderboard</div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: 8,
+          }}
+        >
+          <SortButton
+            active={sortBy === 'elo'}
+            label="ELO"
+            onClick={() => setSortBy('elo')}
+          />
+          <SortButton
+            active={sortBy === 'wins'}
+            label="Wins"
+            onClick={() => setSortBy('wins')}
+          />
+          <SortButton
+            active={sortBy === 'winPct'}
+            label="Win %"
+            onClick={() => setSortBy('winPct')}
+          />
+          <SortButton
+            active={sortBy === 'pointDiff'}
+            label="Point Diff"
+            onClick={() => setSortBy('pointDiff')}
+          />
+          <SortButton
+            active={sortBy === 'pointsFor'}
+            label="Points For"
+            onClick={() => setSortBy('pointsFor')}
+          />
+          <SortButton
+            active={sortBy === 'matches'}
+            label="Matches"
+            onClick={() => setSortBy('matches')}
+          />
+          <SortButton
+            active={sortBy === 'name'}
+            label="Name"
+            onClick={() => setSortBy('name')}
           />
         </div>
       </div>
@@ -415,6 +445,27 @@ export default function LeaderboardPage() {
 }
 
 function FilterButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`button ${active ? 'primary' : 'secondary'}`}
+      onClick={onClick}
+      style={{ minHeight: 44, fontWeight: 800 }}
+    >
+      {label}
+    </button>
+  );
+}
+
+function SortButton({
   label,
   active,
   onClick,

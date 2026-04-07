@@ -942,99 +942,135 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function submitGame(matchId: string, game: 1 | 2 | 3) {
-    if (isCompleted) { setMessage('Final results are locked.'); return; }
-    const draft = scoreDrafts[matchId];
-    if (!draft) return;
+  if (isCompleted) {
+    setMessage('Final results are locked.');
+    return;
+  }
 
-    const aKey = `game_${game}_a` as keyof ScoreDraft;
-    const bKey = `game_${game}_b` as keyof ScoreDraft;
-    const aVal = draft[aKey].trim();
-    const bVal = draft[bKey].trim();
+  const draft = scoreDrafts[matchId];
+  if (!draft) return;
 
-    if (aVal === '' || bVal === '') { setMessage(`Enter both scores for Game ${game}.`); return; }
+  const aKey = `game_${game}_a` as keyof ScoreDraft;
+  const bKey = `game_${game}_b` as keyof ScoreDraft;
+  const aVal = draft[aKey].trim();
+  const bVal = draft[bKey].trim();
 
-    const aNum = Math.max(0, Number(aVal));
-    const bNum = Math.max(0, Number(bVal));
-    if (Number.isNaN(aNum) || Number.isNaN(bNum)) { setMessage('Scores must be valid numbers.'); return; }
-    if (aNum === bNum) { setMessage('Game cannot end in a tie — one team must win.'); return; }
+  if (aVal === '' || bVal === '') {
+    setMessage(`Enter both scores for Game ${game}.`);
+    return;
+  }
 
-    const updateData: Record<string, number> = {
-      [`game_${game}_a`]: aNum,
-      [`game_${game}_b`]: bNum,
+  const aNum = Math.max(0, Number(aVal));
+  const bNum = Math.max(0, Number(bVal));
+
+  if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+    setMessage('Scores must be valid numbers.');
+    return;
+  }
+
+  if (aNum === bNum) {
+    setMessage('Game cannot end in a tie — one team must win.');
+    return;
+  }
+
+  const previousMatches = matches;
+
+  const currentMatch = matches.find((m) => m.id === matchId);
+  if (!currentMatch) return;
+
+  const optimisticMatch: Match = {
+    ...currentMatch,
+    [`game_${game}_a`]: aNum,
+    [`game_${game}_b`]: bNum,
+  };
+
+  const seriesNowComplete = isSeriesComplete(optimisticMatch);
+
+  let finalOptimisticMatch: Match = optimisticMatch;
+
+  if (seriesNowComplete) {
+    const { aScore, bScore } = getSeriesScore(optimisticMatch);
+    finalOptimisticMatch = {
+      ...optimisticMatch,
+      team_a_score: aScore,
+      team_b_score: bScore,
+      is_complete: true,
     };
+  }
 
-    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
-    if (error) { setMessage(`Submit failed: ${error.message}`); return; }
+  const optimisticMatches = matches.map((m) =>
+    m.id === matchId ? finalOptimisticMatch : m
+  );
 
-    const updatedMatch = matches.find((m) => m.id === matchId);
-    if (!updatedMatch) return;
+  setMatches(optimisticMatches);
 
-    const newMatch: Match = {
-      ...updatedMatch,
-      [`game_${game}_a`]: aNum,
-      [`game_${game}_b`]: bNum,
-    };
+  const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
+  const submittedRoundMatches = optimisticMatches.filter(
+    (m) => m.round_number === submittedRound && !m.is_bye
+  );
+  const submittedRoundComplete =
+    submittedRoundMatches.length > 0 &&
+    submittedRoundMatches.every((m) => m.is_complete);
 
-    const seriesNowComplete = isSeriesComplete(newMatch);
+  const nextRound = getNextIncompleteRound(optimisticMatches);
 
-    let finalUpdatedMatch = newMatch;
-
-    if (seriesNowComplete) {
-      const { aWins, bWins } = getSeriesWins(newMatch);
-      const { aScore, bScore } = getSeriesScore(newMatch);
-      const seriesAWon = aWins > bWins;
-
-      const completeUpdate = {
-        [`game_${game}_a`]: aNum,
-        [`game_${game}_b`]: bNum,
-        team_a_score: aScore,
-        team_b_score: bScore,
-        is_complete: true,
-      };
-
-      const { error: completeError } = await supabase.from('matches').update(completeUpdate).eq('id', matchId);
-      if (completeError) { setMessage(`Complete failed: ${completeError.message}`); return; }
-
-      finalUpdatedMatch = {
-        ...newMatch,
-        team_a_score: aScore,
-        team_b_score: bScore,
-        is_complete: true,
-      };
-
-      const updatedMatches = matches.map((m) => m.id === matchId ? finalUpdatedMatch : m);
-      setMatches(updatedMatches);
-
-      await upsertPlayerMatchStats(finalUpdatedMatch, aScore, bScore);
-
-
-      const nextRound = getNextIncompleteRound(updatedMatches);
-
-      if (!nextRound) {
-        const completed = await markTournamentCompleted();
-        if (!completed) return;
-        setSelectedRound(finalRound);
-        setActiveTab('standings');
-        setMessage('Series complete. Tournament finished!');
-        return;
-      }
-
-      const submittedRound = finalUpdatedMatch.round_number ?? selectedRound;
-      const submittedRoundMatches = updatedMatches.filter((m) => m.round_number === submittedRound && !m.is_bye);
-      const submittedRoundComplete = submittedRoundMatches.every((m) => m.is_complete);
-
-      if (submittedRoundComplete && nextRound !== submittedRound) {
-        setSelectedRound(nextRound);
-        setMessage(`Series complete. Round ${submittedRound} done. Advancing to Round ${nextRound}.`);
-      } else {
-        setMessage(`Game ${game} submitted. Series complete — ${aWins > bWins ? 'Team A' : 'Team B'} wins!`);
-      }
+  if (seriesNowComplete) {
+    if (!nextRound) {
+      setSelectedRound(finalRound);
+      setActiveTab('standings');
+      setMessage('Series complete. Tournament finished!');
+    } else if (submittedRoundComplete && nextRound !== submittedRound) {
+      setSelectedRound(nextRound);
+      setMessage(
+        `Series complete. Round ${submittedRound} done. Advancing to Round ${nextRound}.`
+      );
     } else {
-      const updatedMatches = matches.map((m) => m.id === matchId ? newMatch : m);
-      setMatches(updatedMatches);
-      setMessage(`Game ${game} submitted.`);
+      const { aWins, bWins } = getSeriesWins(finalOptimisticMatch);
+      setMessage(
+        `Game ${game} submitted. Series complete — ${aWins > bWins ? 'Team A' : 'Team B'} wins!`
+      );
+    }
+  } else {
+    setMessage(`Game ${game} submitted.`);
+  }
+
+  const updateData: Record<string, number | boolean> = {
+    [`game_${game}_a`]: aNum,
+    [`game_${game}_b`]: bNum,
+  };
+
+  if (seriesNowComplete) {
+    const { aScore, bScore } = getSeriesScore(optimisticMatch);
+    updateData.team_a_score = aScore;
+    updateData.team_b_score = bScore;
+    updateData.is_complete = true;
+  }
+
+  const { error } = await supabase
+    .from('matches')
+    .update(updateData)
+    .eq('id', matchId);
+
+  if (error) {
+    setMatches(previousMatches);
+    setMessage(`Submit failed: ${error.message}`);
+    return;
+  }
+
+  if (seriesNowComplete) {
+    const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
+    await upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore);
+
+    if (!nextRound) {
+      const completed = await markTournamentCompleted();
+      if (!completed) return;
+      setSelectedRound(finalRound);
+      setActiveTab('standings');
+      setMessage('Series complete. Tournament finished!');
+      return;
     }
   }
+}
 
   async function submitMatchScore(matchId: string) {
   if (isCompleted) {

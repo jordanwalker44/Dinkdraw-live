@@ -912,6 +912,19 @@ const currentRoundComplete = useMemo(
     } catch { setMessage('Could not share join link.'); }
   }
 
+  async function copyPublicLink() {
+  try {
+    if (!tournament?.id) return;
+
+    const url = `${window.location.origin}/tournament/view/${tournament.id}`;
+    await navigator.clipboard.writeText(url);
+
+    setMessage('Public link copied.');
+  } catch {
+    setMessage('Could not copy public link.');
+  }
+}
+
   async function claimSlot(slotId: string) {
     setMessage('');
     const { data: authData } = await supabase.auth.getUser();
@@ -1649,6 +1662,15 @@ const isNextUp =
                 <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
               </div>
             </div>
+            {isOrganizer ? (
+    <button
+      className="button secondary"
+      style={{ marginTop: 10 }}
+      onClick={copyPublicLink}
+    >
+      Copy Public Link
+    </button>
+  ) : null}
           </div>
 
           <div className="list-item">

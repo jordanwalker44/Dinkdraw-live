@@ -13,6 +13,14 @@ import {
 
 type TimeFilter = 'lifetime' | '12m' | '6m' | '30d' | '7d';
 type FormatFilter = 'all' | 'singles' | 'doubles';
+type SortBy =
+  | 'elo'
+  | 'wins'
+  | 'winPct'
+  | 'pointDiff'
+  | 'pointsFor'
+  | 'matches'
+  | 'name';
 
 export default function LeaderboardPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
@@ -23,6 +31,7 @@ export default function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [minMatches, setMinMatches] = useState(5);
+  const [sortBy, setSortBy] = useState<SortBy>('elo');
 
   useEffect(() => {
     async function load() {
@@ -85,10 +94,42 @@ export default function LeaderboardPage() {
     return result;
   }, [stats, timeFilter, formatFilter]);
 
-  const leaderboard = useMemo(
-    () => buildLeaderboardRows(filteredStats, profiles, minMatches),
-    [filteredStats, profiles, minMatches]
-  );
+  const leaderboard = useMemo(() => {
+    const rows = buildLeaderboardRows(filteredStats, profiles, minMatches);
+
+    return [...rows].sort((a, b) => {
+      switch (sortBy) {
+        case 'elo':
+          return b.rating - a.rating;
+
+        case 'wins':
+          if (b.wins !== a.wins) return b.wins - a.wins;
+          return b.rating - a.rating;
+
+        case 'winPct':
+          if (b.winPct !== a.winPct) return b.winPct - a.winPct;
+          return b.rating - a.rating;
+
+        case 'pointDiff':
+          if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+          return b.rating - a.rating;
+
+        case 'pointsFor':
+          if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
+          return b.rating - a.rating;
+
+        case 'matches':
+          if (b.matches !== a.matches) return b.matches - a.matches;
+          return b.rating - a.rating;
+
+        case 'name':
+          return a.name.localeCompare(b.name);
+
+        default:
+          return b.rating - a.rating;
+      }
+    });
+  }, [filteredStats, profiles, minMatches, sortBy]);
 
   const summary = useMemo(
     () => ({
@@ -103,6 +144,27 @@ export default function LeaderboardPage() {
     if (f === 'singles') return 'Singles';
     if (f === 'doubles') return 'Doubles';
     return 'All Formats';
+  }
+
+  function sortLabel(s: SortBy) {
+    switch (s) {
+      case 'elo':
+        return 'ELO';
+      case 'wins':
+        return 'Wins';
+      case 'winPct':
+        return 'Win %';
+      case 'pointDiff':
+        return 'Point Differential';
+      case 'pointsFor':
+        return 'Points For';
+      case 'matches':
+        return 'Matches Played';
+      case 'name':
+        return 'Name';
+      default:
+        return 'ELO';
+    }
   }
 
   return (
@@ -200,6 +262,23 @@ export default function LeaderboardPage() {
               <option value={20}>20+</option>
             </select>
           </div>
+
+          <div>
+            <label className="label">Sort By</label>
+            <select
+              className="input"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+            >
+              <option value="elo">ELO</option>
+              <option value="wins">Wins</option>
+              <option value="winPct">Win %</option>
+              <option value="pointDiff">Point Differential</option>
+              <option value="pointsFor">Points For</option>
+              <option value="matches">Matches Played</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -224,6 +303,16 @@ export default function LeaderboardPage() {
           <SimpleStatCard
             label="Top Rating"
             value={summary.topRating}
+            sub="Current leader"
+          />
+          <SimpleStatCard
+            label="Sorting"
+            value={sortLabel(sortBy)}
+            sub="Current order"
+          />
+          <SimpleStatCard
+            label="Top Win Rate"
+            value={`${summary.topWinRate}%`}
             sub="Current leader"
           />
         </div>

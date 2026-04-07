@@ -315,7 +315,7 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
       }
     }
 
-    backtrack([...participants], [], 0);
+    backtrack(shuffle([...participants]), [], 0);
     return bestMatches;
   }
 
@@ -323,12 +323,18 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     const participants = chooseParticipantsForRound();
     const benched = ids.filter((id) => !participants.includes(id));
 
-    let matches = buildRoundMatches(participants, false);
+   let matches = null;
 
-    // Fallback only if a no-repeat partner round is impossible
-    if (!matches) {
-      matches = buildRoundMatches(participants, true);
-    }
+// Try HARD to find no-repeat solution
+for (let attempt = 0; attempt < 25; attempt++) {
+  matches = buildRoundMatches(shuffle(participants), false);
+  if (matches) break;
+}
+
+// Only fallback if truly impossible
+if (!matches) {
+  matches = buildRoundMatches(participants, true);
+}
 
     if (!matches || !matches.length) break;
 

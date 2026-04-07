@@ -25,48 +25,59 @@ export default function LeaderboardPage() {
   const [minMatches, setMinMatches] = useState(5);
 
   useEffect(() => {
-  async function load() {
-    setLoading(true);
+    async function load() {
+      setLoading(true);
 
-    const { data: statsData, error: statsError } = await supabase
-      .from('player_match_stats')
-      .select('*');
+      const { data: statsData, error: statsError } = await supabase
+        .from('player_match_stats')
+        .select('*');
 
-    if (statsError) {
+      if (statsError) {
+        setStats([]);
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
+
+      const safeStats = (statsData || []) as EloStatRow[];
+      setStats(safeStats);
+
+      const userIds = Array.from(
+        new Set(safeStats.map((row) => row.user_id).filter(Boolean))
+      );
+
+      if (userIds.length === 0) {
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, display_name, email')
+        .in('id', userIds);
+
+      if (profileError) {
+        setProfiles([]);
+        setLoading(false);
+        return;
+      }
+
+      setProfiles((profileData || []) as EloProfile[]);
       setLoading(false);
-      return;
     }
 
-    const userIds = Array.from(new Set((statsData || []).map((row) => row.user_id).filter(Boolean)));
+    load();
+  }, [supabase]);
 
-    if (userIds.length === 0) {
-      setRows([]);
-      setLoading(false);
-      return;
-    }
-
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, display_name, email')
-      .in('id', userIds);
-
-    // keep your existing leaderboard-building logic here
-
-    setLoading(false);
-  }
-
-  load();
-}, [supabase]);
   const filteredStats = useMemo(() => {
     let result = stats;
 
-    // Filter by time
     const cutoff = getCutoffDate(timeFilter);
     if (cutoff) {
       result = result.filter((row) => new Date(row.played_at) >= cutoff);
     }
 
-    // Filter by format
     if (formatFilter !== 'all') {
       result = result.filter((row) => row.format === formatFilter);
     }
@@ -79,11 +90,14 @@ export default function LeaderboardPage() {
     [filteredStats, profiles, minMatches]
   );
 
-  const summary = useMemo(() => ({
-    players: leaderboard.length,
-    topRating: leaderboard[0]?.rating ?? 1000,
-    topWinRate: leaderboard[0]?.winPct ?? 0,
-  }), [leaderboard]);
+  const summary = useMemo(
+    () => ({
+      players: leaderboard.length,
+      topRating: leaderboard[0]?.rating ?? 1000,
+      topWinRate: leaderboard[0]?.winPct ?? 0,
+    }),
+    [leaderboard]
+  );
 
   function formatFilterLabel(f: FormatFilter) {
     if (f === 'singles') return 'Singles';
@@ -108,24 +122,67 @@ export default function LeaderboardPage() {
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Filters</div>
         <div className="grid">
-
           <div>
             <label className="label">Format</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
-              <FilterButton active={formatFilter === 'all'} label="All" onClick={() => setFormatFilter('all')} />
-              <FilterButton active={formatFilter === 'doubles'} label="Doubles" onClick={() => setFormatFilter('doubles')} />
-              <FilterButton active={formatFilter === 'singles'} label="Singles" onClick={() => setFormatFilter('singles')} />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                gap: 8,
+              }}
+            >
+              <FilterButton
+                active={formatFilter === 'all'}
+                label="All"
+                onClick={() => setFormatFilter('all')}
+              />
+              <FilterButton
+                active={formatFilter === 'doubles'}
+                label="Doubles"
+                onClick={() => setFormatFilter('doubles')}
+              />
+              <FilterButton
+                active={formatFilter === 'singles'}
+                label="Singles"
+                onClick={() => setFormatFilter('singles')}
+              />
             </div>
           </div>
 
           <div>
             <label className="label">Time Period</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 8 }}>
-              <FilterButton active={timeFilter === 'lifetime'} label="All" onClick={() => setTimeFilter('lifetime')} />
-              <FilterButton active={timeFilter === '12m'} label="12M" onClick={() => setTimeFilter('12m')} />
-              <FilterButton active={timeFilter === '6m'} label="6M" onClick={() => setTimeFilter('6m')} />
-              <FilterButton active={timeFilter === '30d'} label="30D" onClick={() => setTimeFilter('30d')} />
-              <FilterButton active={timeFilter === '7d'} label="7D" onClick={() => setTimeFilter('7d')} />
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+                gap: 8,
+              }}
+            >
+              <FilterButton
+                active={timeFilter === 'lifetime'}
+                label="All"
+                onClick={() => setTimeFilter('lifetime')}
+              />
+              <FilterButton
+                active={timeFilter === '12m'}
+                label="12M"
+                onClick={() => setTimeFilter('12m')}
+              />
+              <FilterButton
+                active={timeFilter === '6m'}
+                label="6M"
+                onClick={() => setTimeFilter('6m')}
+              />
+              <FilterButton
+                active={timeFilter === '30d'}
+                label="30D"
+                onClick={() => setTimeFilter('30d')}
+              />
+              <FilterButton
+                active={timeFilter === '7d'}
+                label="7D"
+                onClick={() => setTimeFilter('7d')}
+              />
             </div>
           </div>
 
@@ -149,10 +206,26 @@ export default function LeaderboardPage() {
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Overview</div>
         <div className="two-col">
-          <SimpleStatCard label="Format" value={formatFilterLabel(formatFilter)} sub="Current filter" />
-          <SimpleStatCard label="Time Window" value={filterLabel(timeFilter)} sub="Current leaderboard" />
-          <SimpleStatCard label="Ranked Players" value={summary.players} sub={`${minMatches}+ matches`} />
-          <SimpleStatCard label="Top Rating" value={summary.topRating} sub="Current leader" />
+          <SimpleStatCard
+            label="Format"
+            value={formatFilterLabel(formatFilter)}
+            sub="Current filter"
+          />
+          <SimpleStatCard
+            label="Time Window"
+            value={filterLabel(timeFilter)}
+            sub="Current leaderboard"
+          />
+          <SimpleStatCard
+            label="Ranked Players"
+            value={summary.players}
+            sub={`${minMatches}+ matches`}
+          />
+          <SimpleStatCard
+            label="Top Rating"
+            value={summary.topRating}
+            sub="Current leader"
+          />
         </div>
       </div>
 
@@ -164,50 +237,82 @@ export default function LeaderboardPage() {
         <div className="card">
           <div className="card-title">No Ranked Players Yet</div>
           <div className="card-subtitle">
-            Try lowering the minimum matches filter, changing the format, or complete more matches.
+            Try lowering the minimum matches filter, changing the format, or complete
+            more matches.
           </div>
         </div>
       ) : (
         <div className="grid">
           {leaderboard.map((player, index) => {
             const place = index + 1;
-            const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
+            const medal =
+              place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
             const highlightStyle =
               place === 1
-                ? { borderColor: 'rgba(255,203,5,.6)', boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset' }
+                ? {
+                    borderColor: 'rgba(255,203,5,.6)',
+                    boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset',
+                  }
                 : place <= 3
                 ? { borderColor: 'rgba(255,203,5,.35)' }
                 : {};
 
             return (
               <div key={player.userId} className="card" style={highlightStyle}>
-                <div className="row-between" style={{ marginBottom: 12, alignItems: 'flex-start' }}>
+                <div
+                  className="row-between"
+                  style={{ marginBottom: 12, alignItems: 'flex-start' }}
+                >
                   <div>
                     <div style={{ fontWeight: 800, fontSize: 20, lineHeight: 1.15 }}>
-                      {medal ? `${medal} ` : ''}{place}. {player.name}
+                      {medal ? `${medal} ` : ''}
+                      {place}. {player.name}
                     </div>
                     <div className="muted" style={{ marginTop: 6 }}>
                       {player.matches} matches • {player.tournamentsPlayed} tournaments
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1 }}>{player.rating}</div>
+                    <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1 }}>
+                      {player.rating}
+                    </div>
                     <div className="muted" style={{ marginTop: 4 }}>Rating</div>
                   </div>
                 </div>
 
                 <div className="two-col" style={{ marginBottom: 12 }}>
-                  <MiniStat label="Record" value={`${player.wins}-${player.losses}${player.ties > 0 ? `-${player.ties}` : ''}`} />
+                  <MiniStat
+                    label="Record"
+                    value={`${player.wins}-${player.losses}${
+                      player.ties > 0 ? `-${player.ties}` : ''
+                    }`}
+                  />
                   <MiniStat label="Win Rate" value={`${player.winPct}%`} />
-                  <MiniStat label="Point Diff" value={player.pointDiff >= 0 ? `+${player.pointDiff}` : player.pointDiff} />
-                  <MiniStat label="Points" value={`${player.pointsFor}-${player.pointsAgainst}`} />
+                  <MiniStat
+                    label="Point Diff"
+                    value={
+                      player.pointDiff >= 0
+                        ? `+${player.pointDiff}`
+                        : player.pointDiff
+                    }
+                  />
+                  <MiniStat
+                    label="Points"
+                    value={`${player.pointsFor}-${player.pointsAgainst}`}
+                  />
                 </div>
 
                 <div className="list-item" style={{ padding: 12 }}>
                   <div className="row-between">
                     <span className="muted">Standing</span>
                     <strong>
-                      {place === 1 ? 'Leader' : place <= 3 ? 'Podium' : place <= 10 ? 'Top 10' : `#${place}`}
+                      {place === 1
+                        ? 'Leader'
+                        : place <= 3
+                        ? 'Podium'
+                        : place <= 10
+                        ? 'Top 10'
+                        : `#${place}`}
                     </strong>
                   </div>
                 </div>
@@ -220,7 +325,15 @@ export default function LeaderboardPage() {
   );
 }
 
-function FilterButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function FilterButton({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -233,20 +346,40 @@ function FilterButton({ label, active, onClick }: { label: string; active: boole
   );
 }
 
-function SimpleStatCard({ label, value, sub }: { label: string; value: string | number; sub: string }) {
+function SimpleStatCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string | number;
+  sub: string;
+}) {
   return (
     <div className="list-item">
-      <div className="muted" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="muted" style={{ marginBottom: 6 }}>
+        {label}
+      </div>
       <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.05 }}>{value}</div>
-      <div className="muted" style={{ marginTop: 6 }}>{sub}</div>
+      <div className="muted" style={{ marginTop: 6 }}>
+        {sub}
+      </div>
     </div>
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string | number }) {
+function MiniStat({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
   return (
     <div className="list-item" style={{ padding: 12 }}>
-      <div className="muted" style={{ marginBottom: 6 }}>{label}</div>
+      <div className="muted" style={{ marginBottom: 6 }}>
+        {label}
+      </div>
       <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.05 }}>{value}</div>
     </div>
   );

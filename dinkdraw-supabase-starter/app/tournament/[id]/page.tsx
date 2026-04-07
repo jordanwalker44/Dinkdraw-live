@@ -474,48 +474,91 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
-    const { data: tournamentData } = await supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle();
-    const { data: playersData } = await supabase.from('tournament_players').select('*').eq('tournament_id', params.id).order('slot_number', { ascending: true });
-    const { data: matchesData } = await supabase.from('matches').select('*').eq('tournament_id', params.id).order('round_number', { ascending: true }).order('court_number', { ascending: true });
+  const [tournamentResult, playersResult] = await Promise.all([
+    supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
+    supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('slot_number', { ascending: true }),
+  ]);
 
-    setTournament(tournamentData || null);
-    setPlayerSlots(playersData || []);
-    setMatches(matchesData || []);
+  const tournamentData = tournamentResult.data;
+  const playersData = playersResult.data;
 
-    if (tournamentData) {
-      try { window.localStorage.setItem(LAST_TOURNAMENT_KEY, JSON.stringify({ id: tournamentData.id, title: tournamentData.title })); } catch {}
-    }
+  setTournament(tournamentData || null);
+  setPlayerSlots(playersData || []);
 
-    if ((playersData || []).length > 0) {
-      setNewNames((prev) => {
-        const next = { ...prev };
-        for (const slot of playersData || []) {
-          if (typeof next[slot.id] !== 'string') next[slot.id] = slot.display_name || '';
+  if (tournamentData) {
+    try {
+      window.localStorage.setItem(
+        LAST_TOURNAMENT_KEY,
+        JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
+      );
+    } catch {}
+  }
+
+  if ((playersData || []).length > 0) {
+    setNewNames((prev) => {
+      const next = { ...prev };
+      for (const slot of playersData || []) {
+        if (typeof next[slot.id] !== 'string') {
+          next[slot.id] = slot.display_name || '';
         }
-        return next;
-      });
-    }
+      }
+      return next;
+    });
+  }
+
+  if (currentUserId) setUserId(currentUserId);
+
+  // 👇 load matches AFTER UI renders
+  setTimeout(async () => {
+    const { data: matchesData } = await supabase
+      .from('matches')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('round_number', { ascending: true })
+      .order('court_number', { ascending: true });
+
+    const safeMatches = matchesData || [];
+    setMatches(safeMatches);
 
     setScoreDrafts((prev) => {
       const next = { ...prev };
-      for (const match of matchesData || []) {
+      for (const match of safeMatches) {
         const existing = prev[match.id];
         next[match.id] = {
-          team_a_score: existing?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score)),
-          team_b_score: existing?.team_b_score ?? (match.team_b_score === null ? '' : String(match.team_b_score)),
-          game_1_a: existing?.game_1_a ?? (match.game_1_a === null ? '' : String(match.game_1_a)),
-          game_1_b: existing?.game_1_b ?? (match.game_1_b === null ? '' : String(match.game_1_b)),
-          game_2_a: existing?.game_2_a ?? (match.game_2_a === null ? '' : String(match.game_2_a)),
-          game_2_b: existing?.game_2_b ?? (match.game_2_b === null ? '' : String(match.game_2_b)),
-          game_3_a: existing?.game_3_a ?? (match.game_3_a === null ? '' : String(match.game_3_a)),
-          game_3_b: existing?.game_3_b ?? (match.game_3_b === null ? '' : String(match.game_3_b)),
+          team_a_score:
+            existing?.team_a_score ??
+            (match.team_a_score === null ? '' : String(match.team_a_score)),
+          team_b_score:
+            existing?.team_b_score ??
+            (match.team_b_score === null ? '' : String(match.team_b_score)),
+          game_1_a:
+            existing?.game_1_a ??
+            (match.game_1_a === null ? '' : String(match.game_1_a)),
+          game_1_b:
+            existing?.game_1_b ??
+            (match.game_1_b === null ? '' : String(match.game_1_b)),
+          game_2_a:
+            existing?.game_2_a ??
+            (match.game_2_a === null ? '' : String(match.game_2_a)),
+          game_2_b:
+            existing?.game_2_b ??
+            (match.game_2_b === null ? '' : String(match.game_2_b)),
+          game_3_a:
+            existing?.game_3_a ??
+            (match.game_3_a === null ? '' : String(match.game_3_a)),
+          game_3_b:
+            existing?.game_3_b ??
+            (match.game_3_b === null ? '' : String(match.game_3_b)),
         };
       }
       return next;
     });
-
-    if (currentUserId) setUserId(currentUserId);
-  }
+  }, 0);
+}
 
   useEffect(() => {
     async function load() {

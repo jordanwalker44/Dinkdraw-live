@@ -25,59 +25,38 @@ export default function LeaderboardPage() {
   const [minMatches, setMinMatches] = useState(5);
 
   useEffect(() => {
-    async function load() {
-  setLoading(true);
+  async function load() {
+    setLoading(true);
 
-  const { data: statsData, error: statsError } = await supabase
-    .from('player_match_stats')
-    .select('*')
-    .order('played_at', { ascending: true });
+    const { data: statsData, error: statsError } = await supabase
+      .from('player_match_stats')
+      .select('*');
 
-  if (statsError) {
-    setStats([]);
-    setProfiles([]);
-    setLoading(false);
-    return;
-  }
-
-  const rows = (statsData || []) as EloStatRow[];
-  const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
-
-  // Fire profiles fetch immediately in parallel with setting stats
-  const profilePromise = userIds.length > 0
-    ? supabase.from('profiles').select('id, display_name, email').in('id', userIds)
-    : Promise.resolve({ data: [] as EloProfile[] });
-
-  const { data: profileData } = await profilePromise;
-
-  setStats(rows);
-  setProfiles((profileData || []) as EloProfile[]);
-  setLoading(false);
-}
-
-      const rows = (statsData || []) as EloStatRow[];
-      setStats(rows);
-
-      const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean)));
-
-      if (!userIds.length) {
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, display_name, email')
-        .in('id', userIds);
-
-      setProfiles((profileData || []) as EloProfile[]);
+    if (statsError) {
       setLoading(false);
+      return;
     }
 
-    load();
-  }, [supabase]);
+    const userIds = Array.from(new Set((statsData || []).map((row) => row.user_id).filter(Boolean)));
 
+    if (userIds.length === 0) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('id, display_name, email')
+      .in('id', userIds);
+
+    // keep your existing leaderboard-building logic here
+
+    setLoading(false);
+  }
+
+  load();
+}, [supabase]);
   const filteredStats = useMemo(() => {
     let result = stats;
 

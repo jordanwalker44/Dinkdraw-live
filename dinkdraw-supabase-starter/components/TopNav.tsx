@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase-browser';
 
 const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
@@ -24,27 +24,29 @@ export function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [initials, setInitials] = useState('');
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const hasLoadedProfileRef = useRef(false);
 
-  async function loadUser() {
+  async function loadUser(forceProfile = false) {
     const supabase = getSupabaseBrowserClient();
 
-    // Step 1: Check session instantly from localStorage
     const { data: sessionData } = await supabase.auth.getSession();
     const user = sessionData.session?.user;
 
     if (!user) {
       setIsSignedIn(false);
       setInitials('');
+      hasLoadedProfileRef.current = false;
       return;
     }
 
-    // Step 2: Set signed in immediately from session data
-    // Use email as fallback for initials while profile loads
     setIsSignedIn(true);
     const emailInitial = user.email?.split('@')[0]?.[0]?.toUpperCase() || '?';
     setInitials(emailInitial);
 
-    // Step 3: Load profile in background to get display name
+    if (hasLoadedProfileRef.current && !forceProfile) {
+      return;
+    }
+
     const { data: profile } = await supabase
       .from('profiles')
       .select('display_name')
@@ -60,6 +62,8 @@ export function TopNav() {
         .join('');
       setInitials(computed || emailInitial);
     }
+
+    hasLoadedProfileRef.current = true;
   }
 
   useEffect(() => {
@@ -72,57 +76,34 @@ export function TopNav() {
 
     loadUser();
 
-    const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
-  const subscription = data.subscription;
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user;
       if (!user) {
         setIsSignedIn(false);
         setInitials('');
+        hasLoadedProfileRef.current = false;
         return;
       }
 
       setIsSignedIn(true);
       const emailInitial = user.email?.split('@')[0]?.[0]?.toUpperCase() || '?';
       setInitials(emailInitial);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profile?.display_name?.trim()) {
-        const computed = profile.display_name
-          .trim()
-          .split(/\s+/)
-          .slice(0, 2)
-          .map((p: string) => p[0]?.toUpperCase() || '')
-          .join('');
-        setInitials(computed || emailInitial);
-      }
+      void loadUser(true);
     });
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') loadUser();
-    };
-
-    const handleFocus = () => {
-      loadUser();
+      if (document.visibilityState === 'visible') {
+        void loadUser();
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('focus', handleFocus);
 
     return () => {
       data.subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('focus', handleFocus);
     };
   }, []);
-
-  useEffect(() => {
-    loadUser();
-  }, [pathname]);
 
   useEffect(() => {
     setMenuOpen(false);
@@ -171,14 +152,16 @@ export function TopNav() {
 
       <nav className={`top-nav ${menuOpen ? 'open' : ''}`}>
         <div>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: '#94a3b8',
-            marginBottom: 8,
-          }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#94a3b8',
+              marginBottom: 8,
+            }}
+          >
             Play
           </div>
           <div className="top-nav-group">
@@ -200,14 +183,16 @@ export function TopNav() {
         </div>
 
         <div>
-          <div style={{
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            color: '#94a3b8',
-            marginBottom: 8,
-          }}>
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#94a3b8',
+              marginBottom: 8,
+            }}
+          >
             {isSignedIn ? 'My Profile' : 'Account'}
           </div>
           <div className="top-nav-group">

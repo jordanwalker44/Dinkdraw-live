@@ -208,77 +208,176 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
   const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const output: ScheduleRow[] = [];
 
-  function getPartnerCount(a: string, b: string) { return partnerCounts.get(pairKey(a, b)) || 0; }
-  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) { return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0; }
+  function getPartnerCount(a: string, b: string) {
+    return partnerCounts.get(pairKey(a, b)) || 0;
+  }
+
+  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
+    return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
+  }
 
   function chooseParticipantsForRound() {
     const sorted = [...ids].sort((a, b) => {
       const byeDiff = (byeCounts.get(b) || 0) - (byeCounts.get(a) || 0);
       if (byeDiff !== 0) return byeDiff;
+
       const playDiff = (playedCounts.get(a) || 0) - (playedCounts.get(b) || 0);
       if (playDiff !== 0) return playDiff;
+
       return Math.random() - 0.5;
     });
+
     return sorted.slice(0, maxParticipantsPerRound);
   }
 
-  function bestLayoutsForParticipants(participants: string[]) {
-    const groups = chunkIntoGroups(shuffle(participants), 4).filter((g) => g.length === 4);
-    if (!groups.length) return null;
-    let totalPenalty = 0;
-    const matches: Array<{ teamA: [string, string]; teamB: [string, string] }> = [];
-
-    for (const group of groups) {
-      const layouts = [
-        { teamA: [group[0], group[1]] as [string, string], teamB: [group[2], group[3]] as [string, string] },
-        { teamA: [group[0], group[2]] as [string, string], teamB: [group[1], group[3]] as [string, string] },
-        { teamA: [group[0], group[3]] as [string, string], teamB: [group[1], group[2]] as [string, string] },
-      ];
-      let best: { teamA: [string, string]; teamB: [string, string]; penalty: number } | null = null;
-      for (const layout of layouts) {
-        const [a1, a2] = layout.teamA;
-        const [b1, b2] = layout.teamB;
-        const penalty = getPartnerCount(a1, a2) * 1000 + getPartnerCount(b1, b2) * 1000 + getMatchupCount(a1, a2, b1, b2) * 400 + (playedCounts.get(a1) || 0) + (playedCounts.get(a2) || 0) + (playedCounts.get(b1) || 0) + (playedCounts.get(b2) || 0) + Math.random();
-        if (!best || penalty < best.penalty) best = { teamA: [a1, a2], teamB: [b1, b2], penalty };
-      }
-      if (!best) return null;
-      matches.push({ teamA: best.teamA, teamB: best.teamB });
-      totalPenalty += best.penalty;
-    }
-    return { matches, totalPenalty };
+  function getAllPairings(group: string[]): Array<{ teamA: [string, string]; teamB: [string, string] }> {
+    if (group.length !== 4) return [];
+    const [a, b, c, d] = group;
+    return [
+      { teamA: [a, b], teamB: [c, d] },
+      { teamA: [a, c], teamB: [b, d] },
+      { teamA: [a, d], teamB: [b, c] },
+    ];
   }
 
-  function findBestRoundMatches(participants: string[]) {
-    let bestResult: { matches: Array<{ teamA: [string, string]; teamB: [string, string] }>; totalPenalty: number } | null = null;
-    for (let attempt = 0; attempt < 700; attempt++) {
-      const candidate = bestLayoutsForParticipants(participants);
-      if (!candidate) continue;
-      if (!bestResult || candidate.totalPenalty < bestResult.totalPenalty) bestResult = candidate;
+  function scoreMatch(teamA: [string, string], teamB: [string, string], allowRepeatPartners: boolean) {
+    const [a1, a2] = teamA;
+    const [b1, b2] = teamB;
+
+    const partnerRepeatA = getPartnerCount(a1, a2);
+    const partnerRepeatB = getPartnerCount(b1, b2);
+
+    if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
+      return null;
     }
-    return bestResult?.matches || [];
+
+    let penalty = 0;
+
+    penalty += partnerRepeatA * 100000;
+    penalty += partnerRepeatB * 100000;
+    penalty += getMatchupCount(a1, a2, b1, b2) * 1000;
+
+    penalty += (playedCounts.get(a1) || 0);
+    penalty += (playedCounts.get(a2) || 0);
+    penalty += (playedCounts.get(b1) || 0);
+    penalty += (playedCounts.get(b2) || 0);
+
+    penalty += Math.random();
+
+    return penalty;
+  }
+
+  function buildRoundMatches(
+    participants: string[],
+    allowRepeatPartners: boolean
+  ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
+    if (participants.length % 4 !== 0) return null;
+
+    let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+    let bestPenalty = Infinity;
+
+    function backtrack(
+      remaining: string[],
+      current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
+      currentPenalty: number
+    ) {
+      if (remaining.length === 0) {
+        if (currentPenalty < bestPenalty) {
+          bestPenalty = currentPenalty;
+          bestMatches = [...current];
+        }
+        return;
+      }
+
+      if (currentPenalty >= bestPenalty) return;
+
+      const first = remaining[0];
+
+      for (let i = 1; i < remaining.length; i++) {
+        for (let j = i + 1; j < remaining.length; j++) {
+          for (let k = j + 1; k < remaining.length; k++) {
+            const group = [first, remaining[i], remaining[j], remaining[k]];
+            const pairings = getAllPairings(group);
+
+            for (const pairing of pairings) {
+              const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners);
+              if (score === null) continue;
+
+              const used = new Set(group);
+              const nextRemaining = remaining.filter((id) => !used.has(id));
+
+              current.push(pairing);
+              backtrack(nextRemaining, current, currentPenalty + score);
+              current.pop();
+            }
+          }
+        }
+      }
+    }
+
+    backtrack([...participants], [], 0);
+    return bestMatches;
   }
 
   for (let round = 1; round <= rounds; round++) {
     const participants = chooseParticipantsForRound();
     const benched = ids.filter((id) => !participants.includes(id));
-    const matches = findBestRoundMatches(participants);
-    if (!matches.length) break;
+
+    let matches = buildRoundMatches(participants, false);
+
+    // Fallback only if a no-repeat partner round is impossible
+    if (!matches) {
+      matches = buildRoundMatches(participants, true);
+    }
+
+    if (!matches || !matches.length) break;
 
     benched.forEach((id) => {
       byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({ round_number: round, court_number: null, team_a_player_1_id: id, team_a_player_2_id: null, team_b_player_1_id: null, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: true, is_complete: false });
+      output.push({
+        round_number: round,
+        court_number: null,
+        team_a_player_1_id: id,
+        team_a_player_2_id: null,
+        team_b_player_1_id: null,
+        team_b_player_2_id: null,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: true,
+        is_complete: false,
+      });
     });
 
     matches.forEach((match, index) => {
       const [a1, a2] = match.teamA;
       const [b1, b2] = match.teamB;
+
       partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
       partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
-      matchupCounts.set(matchupKey(a1, a2, b1, b2), getMatchupCount(a1, a2, b1, b2) + 1);
-      [a1, a2, b1, b2].forEach((id) => { playedCounts.set(id, (playedCounts.get(id) || 0) + 1); });
-      output.push({ round_number: round, court_number: index + 1, team_a_player_1_id: a1, team_a_player_2_id: a2, team_b_player_1_id: b1, team_b_player_2_id: b2, team_a_score: null, team_b_score: null, is_bye: false, is_complete: false });
+      matchupCounts.set(
+        matchupKey(a1, a2, b1, b2),
+        getMatchupCount(a1, a2, b1, b2) + 1
+      );
+
+      [a1, a2, b1, b2].forEach((id) => {
+        playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
+      });
+
+      output.push({
+        round_number: round,
+        court_number: index + 1,
+        team_a_player_1_id: a1,
+        team_a_player_2_id: a2,
+        team_b_player_1_id: b1,
+        team_b_player_2_id: b2,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: false,
+        is_complete: false,
+      });
     });
   }
+
   return output;
 }
 

@@ -1037,48 +1037,118 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function submitMatchScore(matchId: string) {
-    if (isCompleted) { setMessage('Final results are locked.'); return; }
-    const draft = scoreDrafts[matchId];
-    if (!draft) { setMessage('Enter both scores first.'); return; }
-    const a = draft.team_a_score.trim();
-    const b = draft.team_b_score.trim();
-    if (a === '' || b === '') { setMessage('Enter both scores before submitting.'); return; }
-    const aNum = Math.max(0, Number(a));
-    const bNum = Math.max(0, Number(b));
-    if (Number.isNaN(aNum) || Number.isNaN(bNum)) { setMessage('Scores must be valid numbers.'); return; }
-
-    const { error } = await supabase.from('matches').update({ team_a_score: aNum, team_b_score: bNum, is_complete: true }).eq('id', matchId);
-    if (error) { setMessage(`Submit failed: ${error.message}`); return; }
-
-    const updatedMatches = matches.map((m) => m.id === matchId ? { ...m, team_a_score: aNum, team_b_score: bNum, is_complete: true } : m);
-    setMatches(updatedMatches);
-
-    const completedMatch = updatedMatches.find((m) => m.id === matchId);
-    if (!completedMatch) { setMessage('Score submitted.'); return; }
-
-    const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
-    const submittedRound = completedMatch.round_number ?? selectedRound;
-    const submittedRoundMatches = updatedMatches.filter((m) => m.round_number === submittedRound && !m.is_bye);
-    const submittedRoundComplete = submittedRoundMatches.length > 0 && submittedRoundMatches.every((m) => m.is_complete);
-    const nextRound = getNextIncompleteRound(updatedMatches);
-
-    if (!nextRound) {
-      const completed = await markTournamentCompleted();
-      if (!completed) return;
-      setSelectedRound(finalRound);
-      setActiveTab('standings');
-      setMessage(statsSaved ? 'Score submitted. Tournament complete.' : 'Score submitted. Tournament complete, but stats update failed.');
-      return;
-    }
-
-    if (submittedRoundComplete && nextRound !== submittedRound) {
-      setSelectedRound(nextRound);
-      setMessage(statsSaved ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.` : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`);
-      return;
-    }
-
-    setMessage(statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.');
+  if (isCompleted) {
+    setMessage('Final results are locked.');
+    return;
   }
+
+  const draft = scoreDrafts[matchId];
+  if (!draft) {
+    setMessage('Enter both scores first.');
+    return;
+  }
+
+  const a = draft.team_a_score.trim();
+  const b = draft.team_b_score.trim();
+
+  if (a === '' || b === '') {
+    setMessage('Enter both scores before submitting.');
+    return;
+  }
+
+  const aNum = Math.max(0, Number(a));
+  const bNum = Math.max(0, Number(b));
+
+  if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+    setMessage('Scores must be valid numbers.');
+    return;
+  }
+
+  // ✅ SAVE CURRENT STATE (for rollback if needed)
+  const previousMatches = matches;
+
+  // ✅ UPDATE UI IMMEDIATELY (optimistic update)
+  const optimisticMatches = matches.map((m) =>
+    m.id === matchId
+      ? {
+          ...m,
+          team_a_score: aNum,
+          team_b_score: bNum,
+          is_complete: true,
+        }
+      : m
+  );
+
+  setMatches(optimisticMatches);
+  setMessage('Score submitted.');
+
+  const completedMatch = optimisticMatches.find((m) => m.id === matchId);
+  if (!completedMatch) return;
+
+  const submittedRound = completedMatch.round_number ?? selectedRound;
+  const submittedRoundMatches = optimisticMatches.filter(
+    (m) => m.round_number === submittedRound && !m.is_bye
+  );
+  const submittedRoundComplete =
+    submittedRoundMatches.length > 0 &&
+    submittedRoundMatches.every((m) => m.is_complete);
+
+  const nextRound = getNextIncompleteRound(optimisticMatches);
+
+  if (!nextRound) {
+    setSelectedRound(finalRound);
+    setActiveTab('standings');
+  } else if (submittedRoundComplete && nextRound !== submittedRound) {
+    setSelectedRound(nextRound);
+  }
+
+  // ✅ SAVE TO DATABASE AFTER UI UPDATE
+  const { error } = await supabase
+    .from('matches')
+    .update({
+      team_a_score: aNum,
+      team_b_score: bNum,
+      is_complete: true,
+    })
+    .eq('id', matchId);
+
+  // ❌ IF FAILED → ROLLBACK UI
+  if (error) {
+    setMatches(previousMatches);
+    setMessage(`Submit failed: ${error.message}`);
+    return;
+  }
+
+  const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
+
+  if (!nextRound) {
+    const completed = await markTournamentCompleted();
+    if (!completed) return;
+
+    setSelectedRound(finalRound);
+    setActiveTab('standings');
+
+    setMessage(
+      statsSaved
+        ? 'Score submitted. Tournament complete.'
+        : 'Score submitted. Tournament complete, but stats update failed.'
+    );
+    return;
+  }
+
+  if (submittedRoundComplete && nextRound !== submittedRound) {
+    setMessage(
+      statsSaved
+        ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
+        : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`
+    );
+    return;
+  }
+
+  setMessage(
+    statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
+  );
+}
 
   function renderPlayerName(id: string | null) {
     if (!id) return '-';

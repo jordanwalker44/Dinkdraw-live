@@ -589,8 +589,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
-  const isCompleted = tournament?.status === 'completed';
-  const isLocked = isStarted || isCompleted;
+const isCompleted = tournament?.status === 'completed';
+const isLocked = isStarted || isCompleted;
+const isScheduleLocked = isStarted || isCompleted || matches.length > 0;
   const minPlayersRequired = isSingles ? 3 : 4;
 
   const claimedSlot = useMemo(() => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null, [playerSlots, userId]);
@@ -917,9 +918,15 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function generateScheduleAndStart() {
-    if (!tournament) return;
-    setMessage('');
-    setIsStarting(true);
+  if (!tournament) return;
+
+  if (isScheduleLocked) {
+    setMessage('Schedule is locked once the tournament has started.');
+    return;
+  }
+
+  setMessage('');
+  setIsStarting(true);
     try {
       for (const slot of playerSlots) {
         const nextName = (newNames[slot.id] ?? '').trim();
@@ -928,6 +935,23 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       }
 
       const { data: freshPlayers, error: freshPlayersError } = await supabase.from('tournament_players').select('*').eq('tournament_id', tournament.id).order('slot_number', { ascending: true });
+      const { data: existingMatches, error: existingMatchesError } = await supabase
+  .from('matches')
+  .select('id')
+  .eq('tournament_id', tournament.id)
+  .limit(1);
+
+if (existingMatchesError) {
+  setMessage(`Could not verify schedule lock: ${existingMatchesError.message}`);
+  setIsStarting(false);
+  return;
+}
+
+if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
+  setMessage('Schedule is locked once the tournament has started.');
+  setIsStarting(false);
+  return;
+}
       if (freshPlayersError) { setMessage(`Could not load players: ${freshPlayersError.message}`); setIsStarting(false); return; }
 
       const namedPlayers = (freshPlayers || []).filter((slot) => (slot.display_name || '').trim() !== '');
@@ -1654,7 +1678,25 @@ setMessage('Score submitted.');
               {!isLocked ? (
                 <>
                   <button className="button secondary" onClick={saveAllPlayerNames} disabled={isSavingNames}>{isSavingNames ? 'Saving...' : 'Save Player Names'}</button>
-                  {isOrganizer ? <button className="button primary" onClick={generateScheduleAndStart} disabled={isStarting || !canStartTournament}>{isStarting ? 'Starting...' : 'Start Tournament'}</button> : null}
+                  {isOrganizer ? (
+  <button
+    className="button primary"
+    onClick={generateScheduleAndStart}
+    disabled={isStarting || !canStartTournament || isScheduleLocked}
+  >
+    {isScheduleLocked
+      ? 'Schedule Locked'
+      : isStarting
+      ? 'Starting...'
+      : 'Start Tournament'}
+  </button>
+) : null}
+
+                  {isScheduleLocked && (
+  <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+    Schedule is locked after the tournament starts.
+  </div>
+)}
                 </>
               ) : null}
             </div>

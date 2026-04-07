@@ -1442,6 +1442,7 @@ setMessage('Score submitted.');
   function getMatchElementId(matchId: string) {
   return `live-match-${matchId}`;
 }
+
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
     if (isBestOf3) {
       if (!match.is_complete) return {};
@@ -1861,19 +1862,20 @@ const isNextUp =
 
                 const draft = scoreDrafts[match.id] || { team_a_score: match.team_a_score === null ? '' : String(match.team_a_score), team_b_score: match.team_b_score === null ? '' : String(match.team_b_score), game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };
 
-                return (
-                  <div
-  key={match.id}
-  className="list-item"
-  style={
-    isNextUp
-      ? {
-          borderColor: 'rgba(255,203,5,.55)',
-          boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-        }
-      : undefined
-  }
->
+    return (
+  <div
+    id={getMatchElementId(match.id)}
+    key={match.id}
+    className="list-item"
+    style={
+      isNextUp
+        ? {
+            borderColor: 'rgba(255,203,5,.55)',
+            boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+          }
+        : undefined
+    }
+  >
                     <div className="row-between" style={{ marginBottom: 12 }}>
                       <strong>Court {match.court_number ?? '-'}</strong>
                       {isNextUp ? <span className="tag">Current Match</span> : null}

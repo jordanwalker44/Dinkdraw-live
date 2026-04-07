@@ -638,7 +638,22 @@ const isScheduleLocked = isStarted || isCompleted || matches.length > 0;
 
   const matchesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && !m.is_bye), [matches, selectedRound]);
   const byesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && m.is_bye), [matches, selectedRound]);
+const currentRoundMatches = useMemo(
+  () => matches.filter((m) => m.round_number === currentRound && !m.is_bye),
+  [matches, currentRound]
+);
 
+const nextUpMatch = useMemo(
+  () => currentRoundMatches.find((m) => !m.is_complete) || null,
+  [currentRoundMatches]
+);
+
+const currentRoundComplete = useMemo(
+  () =>
+    currentRoundMatches.length > 0 &&
+    currentRoundMatches.every((m) => m.is_complete),
+  [currentRoundMatches]
+);
   useEffect(() => {
   setStandings(computeStandings(playerSlots, matches, isSingles, isBestOf3));
 }, [playerSlots, matches, isSingles, isBestOf3]);
@@ -1402,6 +1417,13 @@ setMessage('Score submitted.');
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
+  function renderMatchLabel(match: Match) {
+  return `${renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)} vs ${renderTeam(
+    match.team_b_player_1_id,
+    match.team_b_player_2_id
+  )}`;
+}
+
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
     if (isBestOf3) {
       if (!match.is_complete) return {};
@@ -1425,12 +1447,27 @@ setMessage('Score submitted.');
     const seriesComplete = match.is_complete;
     const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
     const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
-
+const isNextUp =
+  !isCompleted &&
+  match.round_number === currentRound &&
+  nextUpMatch?.id === match.id;
     return (
-      <div key={match.id} className="list-item">
+      <div
+  key={match.id}
+  className="list-item"
+  style={
+    isNextUp
+      ? {
+          borderColor: 'rgba(255,203,5,.55)',
+          boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+        }
+      : undefined
+  }
+>
         <div className="row-between" style={{ marginBottom: 12 }}>
-          <strong>Court {match.court_number ?? '-'}</strong>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+  <strong>Court {match.court_number ?? '-'}</strong>
+  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+    {isNextUp ? <span className="tag">Next Up</span> : null}
             <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
               {aWins}-{bWins}
             </span>
@@ -1675,30 +1712,39 @@ setMessage('Score submitted.');
                   </div>
                 );
               })}
-              {!isLocked ? (
-                <>
-                  <button className="button secondary" onClick={saveAllPlayerNames} disabled={isSavingNames}>{isSavingNames ? 'Saving...' : 'Save Player Names'}</button>
-                  {isOrganizer ? (
-  <button
-    className="button primary"
-    onClick={generateScheduleAndStart}
-    disabled={isStarting || !canStartTournament || isScheduleLocked}
-  >
-    {isScheduleLocked
-      ? 'Schedule Locked'
-      : isStarting
-      ? 'Starting...'
-      : 'Start Tournament'}
-  </button>
-) : null}
+              <>
+  {!isLocked ? (
+    <button
+      className="button secondary"
+      onClick={saveAllPlayerNames}
+      disabled={isSavingNames}
+    >
+      {isSavingNames ? 'Saving...' : 'Save Player Names'}
+    </button>
+  ) : null}
 
-                  {isScheduleLocked && (
-  <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
-    Schedule is locked after the tournament starts.
-  </div>
-)}
-                </>
-              ) : null}
+  {isOrganizer ? (
+    <>
+      <button
+        className="button primary"
+        onClick={generateScheduleAndStart}
+        disabled={isStarting || !canStartTournament || isScheduleLocked}
+      >
+        {isScheduleLocked
+          ? 'Schedule Locked'
+          : isStarting
+          ? 'Starting...'
+          : 'Start Tournament'}
+      </button>
+
+      {isScheduleLocked ? (
+        <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+          Schedule is locked after the tournament starts.
+        </div>
+      ) : null}
+    </>
+  ) : null}
+</>
             </div>
           )}
         </div>
@@ -1710,6 +1756,66 @@ setMessage('Score submitted.');
           <div className="card-subtitle">
             {isCompleted ? 'Tournament complete. Scores are locked.' : isStarted ? `Current live round: ${currentRound}` : 'Round schedule appears here after the tournament starts.'}
           </div>
+
+          <div className="card" style={{ marginTop: 12 }}>
+      <div className="card-title">Current Round</div>
+
+      {!isStarted ? (
+        <div className="muted">Tournament has not started yet.</div>
+      ) : isCompleted ? (
+        <div className="muted">Tournament is complete. Final results are locked.</div>
+      ) : currentRoundComplete ? (
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+            Round {currentRound} is complete
+          </div>
+          <div className="muted">
+            All matches in the current round have been finished.
+          </div>
+        </div>
+      ) : nextUpMatch ? (
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              marginBottom: 8,
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 18 }}>
+                Round {currentRound} • Next Up
+              </div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                Court {nextUpMatch.court_number ?? '-'}
+              </div>
+            </div>
+            <span className="tag green">Live</span>
+          </div>
+
+          <div className="list-item" style={{ padding: 12 }}>
+            <div style={{ fontWeight: 800, lineHeight: 1.35 }}>
+              {renderMatchLabel(nextUpMatch)}
+            </div>
+          </div>
+
+          {selectedRound !== currentRound ? (
+            <button
+              type="button"
+              className="button secondary"
+              style={{ marginTop: 10 }}
+              onClick={() => setSelectedRound(currentRound)}
+            >
+              Jump to Current Round
+            </button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="muted">Waiting for the next match.</div>
+      )}
+    </div>
 
           <div className="grid" style={{ marginBottom: 14 }}>
             {roundsAvailable.map((round) => {
@@ -1728,14 +1834,30 @@ setMessage('Score submitted.');
           ) : (
             <div className="grid">
               {matchesForSelectedRound.map((match) => {
+              const isNextUp =
+  !isCompleted &&
+  match.round_number === currentRound &&
+  nextUpMatch?.id === match.id;
                 if (isBestOf3) return renderBestOf3Match(match);
 
                 const draft = scoreDrafts[match.id] || { team_a_score: match.team_a_score === null ? '' : String(match.team_a_score), team_b_score: match.team_b_score === null ? '' : String(match.team_b_score), game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };
 
                 return (
-                  <div key={match.id} className="list-item">
+                  <div
+  key={match.id}
+  className="list-item"
+  style={
+    isNextUp
+      ? {
+          borderColor: 'rgba(255,203,5,.55)',
+          boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+        }
+      : undefined
+  }
+>
                     <div className="row-between" style={{ marginBottom: 12 }}>
                       <strong>Court {match.court_number ?? '-'}</strong>
+                      {isNextUp ? <span className="tag">Next Up</span> : null}
                       <span className={match.is_complete ? 'tag green' : 'tag'}>{match.is_complete ? 'Complete' : 'Live'}</span>
                     </div>
                     <div className="grid" style={{ marginBottom: 12 }}>

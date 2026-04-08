@@ -1815,7 +1815,7 @@ const isNextUp =
             All matches in the current round have been finished.
           </div>
         </div>
-     ) : currentMatch ? (
+     ) : nextUpMatch ? (
   <div>
     <div
       style={{
@@ -1858,7 +1858,7 @@ const isNextUp =
           marginBottom: 10,
         }}
       >
-        Court {currentMatch.court_number ?? '-'}
+        Court {nextUpMatch.court_number ?? '-'}
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1880,7 +1880,7 @@ const isNextUp =
           fontSize: 20,
         }}
       >
-        {renderMatchLabel(currentMatch)}
+        {renderMatchLabel(nextUpMatch)}
       </div>
     </div>
 

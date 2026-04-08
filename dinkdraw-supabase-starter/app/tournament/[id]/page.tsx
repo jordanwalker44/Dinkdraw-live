@@ -1817,84 +1817,126 @@ const isNextUp =
         </div>
      ) : nextUpMatch ? (
   <div>
+  <div
+    style={{
+      textAlign: 'center',
+      marginBottom: 14,
+      padding: '10px 12px 4px',
+    }}
+  >
     <div
+      className="muted"
       style={{
-        textAlign: 'center',
-        marginBottom: 14,
-        padding: '10px 12px 4px',
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        marginBottom: 8,
       }}
     >
-      <div
-        className="muted"
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          marginBottom: 8,
-        }}
-      >
-        Round {currentRound}
-      </div>
+      Round {currentRound}
+    </div>
 
-      <div
-        style={{
-          fontSize: 30,
-          fontWeight: 900,
-          lineHeight: 1,
-          marginBottom: 8,
-          color: '#FFCB05',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        Live Match
+    <div
+      style={{
+        fontSize: 30,
+        fontWeight: 900,
+        lineHeight: 1,
+        marginBottom: 8,
+        color: '#FFCB05',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+      }}
+    >
+      Live Match
+    </div>
+
+    <div
+      style={{
+        fontSize: 18,
+        fontWeight: 800,
+        marginBottom: 10,
+      }}
+    >
+      Court {nextUpMatch.court_number ?? '-'}
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <span className="tag green">Live</span>
+    </div>
+  </div>
+
+  <div
+    className="list-item"
+    style={{
+      padding: 16,
+      textAlign: 'center',
+    }}
+  >
+    <div
+      style={{
+        fontWeight: 900,
+        lineHeight: 1.35,
+        fontSize: 20,
+        marginBottom: 14,
+      }}
+    >
+      {renderMatchLabel(nextUpMatch)}
+    </div>
+
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      <div style={{ textAlign: 'center' }}>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+          Team A
+        </div>
+        <div style={{ fontSize: 34, fontWeight: 900 }}>
+          {isBestOf3
+            ? getSeriesScore(nextUpMatch).aScore
+            : nextUpMatch.team_a_score ?? '-'}
+        </div>
       </div>
 
       <div
         style={{
           fontSize: 18,
-          fontWeight: 800,
-          marginBottom: 10,
-        }}
-      >
-        Court {nextUpMatch.court_number ?? '-'}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <span className="tag green">Live</span>
-      </div>
-    </div>
-
-    <div
-      className="list-item"
-      style={{
-        padding: 16,
-        textAlign: 'center',
-      }}
-    >
-      <div
-        style={{
           fontWeight: 900,
-          lineHeight: 1.35,
-          fontSize: 20,
+          opacity: 0.7,
         }}
       >
-        {renderMatchLabel(nextUpMatch)}
+        —
+      </div>
+
+      <div style={{ textAlign: 'center' }}>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+          Team B
+        </div>
+        <div style={{ fontSize: 34, fontWeight: 900 }}>
+          {isBestOf3
+            ? getSeriesScore(nextUpMatch).bScore
+            : nextUpMatch.team_b_score ?? '-'}
+        </div>
       </div>
     </div>
-
-    {selectedRound !== currentRound ? (
-      <button
-        type="button"
-        className="button secondary"
-        style={{ marginTop: 10 }}
-        onClick={() => setSelectedRound(currentRound)}
-      >
-        Jump to Current Round
-      </button>
-    ) : null}
   </div>
+
+  {selectedRound !== currentRound ? (
+    <button
+      type="button"
+      className="button secondary"
+      style={{ marginTop: 10 }}
+      onClick={() => setSelectedRound(currentRound)}
+    >
+      Jump to Current Round
+    </button>
+  ) : null}
+</div>
 ) : (
         <div className="muted">Waiting for the next match.</div>
       )}

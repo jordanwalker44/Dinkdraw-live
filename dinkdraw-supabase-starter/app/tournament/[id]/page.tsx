@@ -392,26 +392,20 @@ if (!matches) {
 
       partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
       partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
-      matchupCounts.set(
-        matchupKey(a1, a2, b1, b2),
-        getMatchupCount(a1, a2, b1, b2) + 1
-      );
-
- [a1, a2, b1, b2].forEach((id) => {
-  playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
-});
+ matchupCounts.set(
+  matchupKey(a1, a2, b1, b2),
+  getMatchupCount(a1, a2, b1, b2) + 1
+);
 
 [a1, a2, b1, b2].forEach((id) => {
-  const history = courtHistory.get(id) || [];
-  history.push(index + 1);
-  courtHistory.set(id, history);
-});
+  playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
+
   const history = courtHistory.get(id) || [];
   history.push(index + 1);
   courtHistory.set(id, history);
 });
 
-      output.push({
+output.push({
         round_number: round,
         court_number: index + 1,
         team_a_player_1_id: a1,

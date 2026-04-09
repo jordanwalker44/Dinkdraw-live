@@ -1433,20 +1433,20 @@ setMessage('Score submitted.');
 
   setMessage(
     statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
-  );
+ );
 }
 
-  function renderPlayerName(id: string | null) {
-    if (!id) return '-';
-    return playersById[id]?.display_name || 'Player';
-  }
+function renderPlayerName(id: string | null) {
+  if (!id) return '-';
+  return playersById[id]?.display_name || 'Player';
+}
 
-  function renderTeam(a: string | null, b: string | null) {
-    if (isSingles) return renderPlayerName(a);
-    return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
-  }
+function renderTeam(a: string | null, b: string | null) {
+  if (isSingles) return renderPlayerName(a);
+  return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
+}
 
-  function renderMatchLabel(match: Match) {
+function renderMatchLabel(match: Match) {
   return `${renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)} vs ${renderTeam(
     match.team_b_player_1_id,
     match.team_b_player_2_id
@@ -1464,6 +1464,15 @@ function getWinnerStyle(team: 'a' | 'b', match: Match) {
     const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
     return isWinner ? { color: '#FFCB05' } : {};
   }
+
+  if (match.team_a_score === null || match.team_b_score === null) return {};
+
+  const aWins = match.team_a_score > match.team_b_score;
+  const bWins = match.team_b_score > match.team_a_score;
+  const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
+
+  return isWinner ? { color: '#FFCB05' } : {};
+}
 
 function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
   if (isBestOf3) {
@@ -1490,168 +1499,219 @@ function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
     : { opacity: 0.78 };
 }
 
-  function renderBestOf3Match(match: Match) {
-    const draft = scoreDrafts[match.id] || { team_a_score: '', team_b_score: '', game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };
-    const { aWins, bWins } = getSeriesWins(match);
-    const game1Done = match.game_1_a !== null && match.game_1_b !== null;
-    const game2Done = match.game_2_a !== null && match.game_2_b !== null;
-    const showGame3 = game1Done && game2Done && needsGame3(match);
-    const seriesComplete = match.is_complete;
-    const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
-    const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
-const isNextUp =
-  !isCompleted &&
-  match.round_number === currentRound &&
-  nextUpMatch?.id === match.id;
-    return (
+function renderBestOf3Match(match: Match) {
+  const draft = scoreDrafts[match.id] || {
+    team_a_score: '',
+    team_b_score: '',
+    game_1_a: '',
+    game_1_b: '',
+    game_2_a: '',
+    game_2_b: '',
+    game_3_a: '',
+    game_3_b: '',
+  };
+
+  const { aWins, bWins } = getSeriesWins(match);
+  const game1Done = match.game_1_a !== null && match.game_1_b !== null;
+  const game2Done = match.game_2_a !== null && match.game_2_b !== null;
+  const showGame3 = game1Done && game2Done && needsGame3(match);
+  const seriesComplete = match.is_complete;
+  const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+  const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+  const isNextUp =
+    !isCompleted &&
+    match.round_number === currentRound &&
+    nextUpMatch?.id === match.id;
+
+  return (
     <div
-  id={getMatchElementId(match.id)}
-  key={match.id}
-  className="list-item"
-  style={
-    isNextUp
-      ? {
-          borderColor: 'rgba(255,203,5,.55)',
-          boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-        }
-      : undefined
-  }
->
-        <div className="row-between" style={{ marginBottom: 12 }}>
-  <strong>Court {match.court_number ?? '-'}</strong>
-  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-    {isNextUp ? <span className="tag">Next Up</span> : null}
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
-              {aWins}-{bWins}
-            </span>
-            <span className={seriesComplete ? 'tag green' : 'tag'}>
-              {seriesComplete ? 'Complete' : 'Live'}
-            </span>
-          </div>
+      id={getMatchElementId(match.id)}
+      key={match.id}
+      className="list-item"
+      style={
+        isNextUp
+          ? {
+              borderColor: 'rgba(255,203,5,.55)',
+              boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+            }
+          : undefined
+      }
+    >
+      <div className="row-between" style={{ marginBottom: 12 }}>
+        <strong>Court {match.court_number ?? '-'}</strong>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {isNextUp ? <span className="tag">Next Up</span> : null}
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
+            {aWins}-{bWins}
+          </span>
+          <span className={seriesComplete ? 'tag green' : 'tag'}>
+            {seriesComplete ? 'Complete' : 'Live'}
+          </span>
         </div>
-
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>{teamAName}</div>
-          <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>{teamBName}</div>
-        </div>
-
-        {/* Game 1 */}
-        <div style={{ marginBottom: 10 }}>
-          <div className="muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Game 1</div>
-          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_1_a}
-              disabled={game1Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
-              placeholder="0"
-            />
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_1_b}
-              disabled={game1Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          {!game1Done && !seriesComplete && !isCompleted ? (
-            <button className="button primary" onClick={() => submitGame(match.id, 1)}>Submit Game 1</button>
-          ) : (
-            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-              {match.game_1_a}-{match.game_1_b} — {match.game_1_a! > match.game_1_b! ? teamAName : teamBName} wins
-            </div>
-          )}
-        </div>
-
-        {/* Game 2 */}
-        <div style={{ marginBottom: 10 }}>
-          <div className="muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Game 2</div>
-          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_2_a}
-              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
-              placeholder="0"
-            />
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_2_b}
-              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
-            <button className="button primary" onClick={() => submitGame(match.id, 2)}>Submit Game 2</button>
-          ) : game2Done ? (
-            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-              {match.game_2_a}-{match.game_2_b} — {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
-            </div>
-          ) : (
-            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>Waiting for Game 1</div>
-          )}
-        </div>
-
-        {/* Game 3 */}
-        {(showGame3 || (game1Done && game2Done && match.game_3_a !== null)) ? (
-          <div style={{ marginBottom: 10 }}>
-            <div className="muted" style={{ fontSize: 12, fontWeight: 800, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Game 3</div>
-            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-              <input
-                className="input"
-                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-                type="number"
-                value={draft.game_3_a}
-                disabled={match.game_3_a !== null || seriesComplete || isCompleted}
-                onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
-                placeholder="0"
-              />
-              <input
-                className="input"
-                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-                type="number"
-                value={draft.game_3_b}
-                disabled={match.game_3_b !== null || seriesComplete || isCompleted}
-                onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
-                placeholder="0"
-              />
-            </div>
-            {match.game_3_a === null && !seriesComplete && !isCompleted ? (
-              <button className="button primary" onClick={() => submitGame(match.id, 3)}>Submit Game 3</button>
-            ) : match.game_3_a !== null ? (
-              <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-                {match.game_3_a}-{match.game_3_b} — {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
-              </div>
-            ) : null}
-          </div>
-        ) : game1Done && game2Done && !seriesComplete ? (
-          <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
-              {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
-            </div>
-          </div>
-        ) : null}
-
-        {seriesComplete ? (
-          <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
-            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
-              {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
-            </div>
-          </div>
-        ) : null}
       </div>
-    );
-  }
 
+      <div className="row-between" style={{ marginBottom: 12 }}>
+        <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>{teamAName}</div>
+        <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>{teamBName}</div>
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <div
+          className="muted"
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            marginBottom: 6,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
+          Game 1
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <input
+            className="input"
+            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+            type="number"
+            value={draft.game_1_a}
+            disabled={game1Done || seriesComplete || isCompleted}
+            onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
+            placeholder="0"
+          />
+          <input
+            className="input"
+            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+            type="number"
+            value={draft.game_1_b}
+            disabled={game1Done || seriesComplete || isCompleted}
+            onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
+            placeholder="0"
+          />
+        </div>
+        {!game1Done && !seriesComplete && !isCompleted ? (
+          <button className="button primary" onClick={() => submitGame(match.id, 1)}>
+            Submit Game 1
+          </button>
+        ) : (
+          <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+            {match.game_1_a}-{match.game_1_b} —{' '}
+            {match.game_1_a! > match.game_1_b! ? teamAName : teamBName} wins
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: 10 }}>
+        <div
+          className="muted"
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            marginBottom: 6,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
+          Game 2
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <input
+            className="input"
+            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+            type="number"
+            value={draft.game_2_a}
+            disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+            onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
+            placeholder="0"
+          />
+          <input
+            className="input"
+            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+            type="number"
+            value={draft.game_2_b}
+            disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+            onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
+            placeholder="0"
+          />
+        </div>
+        {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
+          <button className="button primary" onClick={() => submitGame(match.id, 2)}>
+            Submit Game 2
+          </button>
+        ) : game2Done ? (
+          <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+            {match.game_2_a}-{match.game_2_b} —{' '}
+            {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
+          </div>
+        ) : (
+          <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+            Waiting for Game 1
+          </div>
+        )}
+      </div>
+
+      {(showGame3 || (game1Done && game2Done && match.game_3_a !== null)) ? (
+        <div style={{ marginBottom: 10 }}>
+          <div
+            className="muted"
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              marginBottom: 6,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            Game 3
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_3_a}
+              disabled={match.game_3_a !== null || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
+              placeholder="0"
+            />
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_3_b}
+              disabled={match.game_3_b !== null || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
+              placeholder="0"
+            />
+          </div>
+          {match.game_3_a === null && !seriesComplete && !isCompleted ? (
+            <button className="button primary" onClick={() => submitGame(match.id, 3)}>
+              Submit Game 3
+            </button>
+          ) : match.game_3_a !== null ? (
+            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+              {match.game_3_a}-{match.game_3_b} —{' '}
+              {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
+            </div>
+          ) : null}
+        </div>
+      ) : game1Done && game2Done && !seriesComplete ? (
+        <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+          <div style={{ fontWeight: 800, color: '#FFCB05' }}>
+            {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
+          </div>
+        </div>
+      ) : null}
+
+      {seriesComplete ? (
+        <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
+          <div style={{ fontWeight: 800, color: '#FFCB05' }}>
+            {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
   return (
     <main className="page-shell">
       <div className="hero">

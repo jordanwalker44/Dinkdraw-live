@@ -2063,12 +2063,37 @@ const isNextUp =
         : 'Ranked by wins, then point differential, then points scored.'}
     </div>
 
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 10,
+        marginTop: 12,
+        marginBottom: 12,
+      }}
+    >
+      <button
+        type="button"
+        className={`button ${standingsView === 'leaderboard' ? 'primary' : 'secondary'}`}
+        onClick={() => setStandingsView('leaderboard')}
+      >
+        Leaderboard
+      </button>
+      <button
+        type="button"
+        className={`button ${standingsView === 'day' ? 'primary' : 'secondary'}`}
+        onClick={() => setStandingsView('day')}
+      >
+        Day Summary
+      </button>
+    </div>
+
     {!standings.length ? (
       <div className="muted">No players yet.</div>
     ) : (
       <div
         style={{
-          marginTop: 12,
+          marginTop: 4,
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 16,
           overflow: 'hidden',
@@ -2078,9 +2103,10 @@ const isNextUp =
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '82px 1fr 70px 70px',
+            gridTemplateColumns:
+              standingsView === 'leaderboard' ? '56px 1fr 62px 62px' : '56px 1fr 84px 62px',
             gap: 0,
-            padding: '10px 12px',
+            padding: '10px 8px',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
             fontSize: 12,
             fontWeight: 800,
@@ -2089,10 +2115,14 @@ const isNextUp =
             color: 'rgba(255,255,255,0.65)',
           }}
         >
-          <div style={{ textAlign: 'center' }}>Diff</div>
+          <div style={{ textAlign: 'center' }}>Place</div>
           <div>Player</div>
-          <div style={{ textAlign: 'center' }}>W-L</div>
-          <div style={{ textAlign: 'center' }}>PF</div>
+          <div style={{ textAlign: 'center' }}>
+            {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
+          </div>
         </div>
 
         {standings.map((row, index) => {
@@ -2103,6 +2133,9 @@ const isNextUp =
             .join('')
             .slice(0, 2)
             .toUpperCase();
+
+          const medal =
+            place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 
           const rowBackground =
             place === 1
@@ -2116,7 +2149,8 @@ const isNextUp =
               key={row.playerId}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '82px 1fr 70px 70px',
+                gridTemplateColumns:
+                  standingsView === 'leaderboard' ? '56px 1fr 62px 62px' : '56px 1fr 84px 62px',
                 gap: 0,
                 alignItems: 'center',
                 minHeight: 74,
@@ -2129,41 +2163,22 @@ const isNextUp =
             >
               <div
                 style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  padding: '10px 8px',
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  fontSize: 20,
+                  padding: '10px 4px',
+                  color: place <= 3 ? '#FFCB05' : undefined,
                 }}
               >
-                <div
-                  style={{
-                    minWidth: 56,
-                    padding: '8px 6px',
-                    borderRadius: 10,
-                    border: '1px solid rgba(255,255,255,0.16)',
-                    textAlign: 'center',
-                    background:
-                      place === 1 ? 'rgba(255,203,5,0.12)' : 'rgba(255,255,255,0.04)',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontWeight: 900,
-                      fontSize: 24,
-                      lineHeight: 1,
-                      color: row.pointDiff > 0 ? '#FFCB05' : undefined,
-                    }}
-                  >
-                    {row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff}
-                  </div>
-                </div>
+                {place}
               </div>
 
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 12px',
+                  gap: 10,
+                  padding: '10px 8px',
                   minWidth: 0,
                 }}
               >
@@ -2194,7 +2209,7 @@ const isNextUp =
                       textOverflow: 'ellipsis',
                     }}
                   >
-                    {place === 1 ? '🥇 ' : place === 2 ? '🥈 ' : place === 3 ? '🥉 ' : ''}
+                    {medal ? `${medal} ` : ''}
                     {row.name}
                   </div>
                   <div className="muted" style={{ marginTop: 2, fontSize: 13 }}>
@@ -2207,11 +2222,17 @@ const isNextUp =
                 style={{
                   textAlign: 'center',
                   fontWeight: 800,
-                  fontSize: 18,
-                  padding: '10px 6px',
+                  fontSize: standingsView === 'leaderboard' ? 22 : 16,
+                  padding: '10px 4px',
+                  color:
+                    standingsView === 'leaderboard' && row.pointDiff > 0 ? '#FFCB05' : undefined,
                 }}
               >
-                {row.wins}-{row.losses}
+                {standingsView === 'leaderboard'
+                  ? row.pointDiff > 0
+                    ? `+${row.pointDiff}`
+                    : row.pointDiff
+                  : `${row.wins}-${row.losses}`}
               </div>
 
               <div
@@ -2219,10 +2240,10 @@ const isNextUp =
                   textAlign: 'center',
                   fontWeight: 800,
                   fontSize: 18,
-                  padding: '10px 6px',
+                  padding: '10px 4px',
                 }}
               >
-                {row.pointsFor}
+                {standingsView === 'leaderboard' ? `${row.wins}-${row.losses}` : row.pointsFor}
               </div>
             </div>
           );
@@ -2231,6 +2252,3 @@ const isNextUp =
     )}
   </div>
 )}
-    </main>
-  );
-}

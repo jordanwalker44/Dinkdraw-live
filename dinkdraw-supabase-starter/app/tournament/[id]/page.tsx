@@ -2307,3 +2307,6 @@ function renderBestOf3Match(match: Match) {
     )}
   </div>
 )}
+    </main>
+    );
+}

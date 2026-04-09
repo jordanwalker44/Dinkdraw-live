@@ -254,32 +254,45 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
   const partnerRepeatA = getPartnerCount(a1, a2);
   const partnerRepeatB = getPartnerCount(b1, b2);
 
+  // 🚫 HARD STOP: don't allow same partners unless forced
   if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
     return null;
   }
 
   let penalty = 0;
 
+  // 🔥 VERY STRONG penalties (these matter most)
   penalty += partnerRepeatA * 100000;
   penalty += partnerRepeatB * 100000;
-  penalty += getMatchupCount(a1, a2, b1, b2) * 1000;
+  penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
 
-  penalty += (playedCounts.get(a1) || 0);
-  penalty += (playedCounts.get(a2) || 0);
-  penalty += (playedCounts.get(b1) || 0);
-  penalty += (playedCounts.get(b2) || 0);
+  // ⚖️ Balance play counts
+  penalty += (playedCounts.get(a1) || 0) * 10;
+  penalty += (playedCounts.get(a2) || 0) * 10;
+  penalty += (playedCounts.get(b1) || 0) * 10;
+  penalty += (playedCounts.get(b2) || 0) * 10;
 
   const allPlayers = [a1, a2, b1, b2];
 
+  // 🚫 HARD RULE: no 3 same courts in a row
+  for (const id of allPlayers) {
+    const history = courtHistory.get(id) || [];
+    const lastTwo = history.slice(-2);
+
+    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+      return null; // reject this match completely
+    }
+  }
+
+  // ⚠️ Soft penalties for recent court repeats
   for (const id of allPlayers) {
     const history = courtHistory.get(id) || [];
     const lastCourt = history[history.length - 1];
-    const lastTwo = history.slice(-2);
 
-    if (lastCourt === courtNumber) penalty += 120;
-    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) penalty += 250;
+    if (lastCourt === courtNumber) penalty += 300; // much stronger now
   }
 
+  // slight randomness
   penalty += Math.random();
 
   return penalty;
@@ -384,9 +397,15 @@ if (!matches) {
         getMatchupCount(a1, a2, b1, b2) + 1
       );
 
-     [a1, a2, b1, b2].forEach((id) => {
+ [a1, a2, b1, b2].forEach((id) => {
   playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
+});
 
+[a1, a2, b1, b2].forEach((id) => {
+  const history = courtHistory.get(id) || [];
+  history.push(index + 1);
+  courtHistory.set(id, history);
+});
   const history = courtHistory.get(id) || [];
   history.push(index + 1);
   courtHistory.set(id, history);

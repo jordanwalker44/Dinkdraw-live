@@ -1711,6 +1711,7 @@ function renderBestOf3Match(match: Match) {
       ) : null}
     </div>
   );
+}
   return (
     <main className="page-shell">
       <div className="hero">

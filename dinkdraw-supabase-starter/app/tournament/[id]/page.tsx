@@ -135,6 +135,7 @@ function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: num
   const matchupCounts = new Map<string, number>();
   const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
   const output: ScheduleRow[] = [];
 
   function getMatchupCount(a: string, b: string) {
@@ -207,6 +208,7 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
   const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const output: ScheduleRow[] = [];
+  const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
 
   function getPartnerCount(a: string, b: string) {
     return partnerCounts.get(pairKey(a, b)) || 0;
@@ -240,32 +242,48 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     ];
   }
 
-  function scoreMatch(teamA: [string, string], teamB: [string, string], allowRepeatPartners: boolean) {
-    const [a1, a2] = teamA;
-    const [b1, b2] = teamB;
+  function scoreMatch(
+  teamA: [string, string],
+  teamB: [string, string],
+  allowRepeatPartners: boolean,
+  courtNumber: number
+) {
+  const [a1, a2] = teamA;
+  const [b1, b2] = teamB;
 
-    const partnerRepeatA = getPartnerCount(a1, a2);
-    const partnerRepeatB = getPartnerCount(b1, b2);
+  const partnerRepeatA = getPartnerCount(a1, a2);
+  const partnerRepeatB = getPartnerCount(b1, b2);
 
-    if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
-      return null;
-    }
-
-    let penalty = 0;
-
-    penalty += partnerRepeatA * 100000;
-    penalty += partnerRepeatB * 100000;
-    penalty += getMatchupCount(a1, a2, b1, b2) * 1000;
-
-    penalty += (playedCounts.get(a1) || 0);
-    penalty += (playedCounts.get(a2) || 0);
-    penalty += (playedCounts.get(b1) || 0);
-    penalty += (playedCounts.get(b2) || 0);
-
-    penalty += Math.random();
-
-    return penalty;
+  if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
+    return null;
   }
+
+  let penalty = 0;
+
+  penalty += partnerRepeatA * 100000;
+  penalty += partnerRepeatB * 100000;
+  penalty += getMatchupCount(a1, a2, b1, b2) * 1000;
+
+  penalty += (playedCounts.get(a1) || 0);
+  penalty += (playedCounts.get(a2) || 0);
+  penalty += (playedCounts.get(b1) || 0);
+  penalty += (playedCounts.get(b2) || 0);
+
+  const allPlayers = [a1, a2, b1, b2];
+
+  for (const id of allPlayers) {
+    const history = courtHistory.get(id) || [];
+    const lastCourt = history[history.length - 1];
+    const lastTwo = history.slice(-2);
+
+    if (lastCourt === courtNumber) penalty += 120;
+    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) penalty += 250;
+  }
+
+  penalty += Math.random();
+
+  return penalty;
+}
 
   function buildRoundMatches(
     participants: string[],
@@ -300,7 +318,8 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
             const pairings = getAllPairings(group);
 
             for (const pairing of pairings) {
-              const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners);
+              const courtNumber = current.length + 1;
+const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners, courtNumber);
               if (score === null) continue;
 
               const used = new Set(group);
@@ -365,9 +384,13 @@ if (!matches) {
         getMatchupCount(a1, a2, b1, b2) + 1
       );
 
-      [a1, a2, b1, b2].forEach((id) => {
-        playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
-      });
+     [a1, a2, b1, b2].forEach((id) => {
+  playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
+
+  const history = courtHistory.get(id) || [];
+  history.push(index + 1);
+  courtHistory.set(id, history);
+});
 
       output.push({
         round_number: round,
@@ -385,6 +408,35 @@ if (!matches) {
   }
 
   return output;
+}
+
+function getRecentCourtPenalty(playerIds: string[], courtNumber: number) {
+  let penalty = 0;
+
+  for (const id of playerIds) {
+    const history = courtHistory.get(id) || [];
+    const lastCourt = history[history.length - 1];
+    const lastTwo = history.slice(-2);
+
+    if (lastCourt === courtNumber) penalty += 120;
+    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) penalty += 250;
+  }
+
+  return penalty;
+}
+
+function getRecentPlayerMixPenalty(playerIds: string[]) {
+  let penalty = 0;
+
+  for (let i = 0; i < playerIds.length; i++) {
+    for (let j = i + 1; j < playerIds.length; j++) {
+      const a = playerIds[i];
+      const b = playerIds[j];
+      penalty += (playedCounts.get(a) || 0) > 0 && (playedCounts.get(b) || 0) > 0 ? 0 : 0;
+    }
+  }
+
+  return penalty;
 }
 
 function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, format: string): ScheduleRow[] {

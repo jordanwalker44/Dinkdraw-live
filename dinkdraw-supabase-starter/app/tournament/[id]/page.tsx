@@ -410,20 +410,6 @@ if (!matches) {
   return output;
 }
 
-function getRecentPlayerMixPenalty(playerIds: string[]) {
-  let penalty = 0;
-
-  for (let i = 0; i < playerIds.length; i++) {
-    for (let j = i + 1; j < playerIds.length; j++) {
-      const a = playerIds[i];
-      const b = playerIds[j];
-      penalty += (playedCounts.get(a) || 0) > 0 && (playedCounts.get(b) || 0) > 0 ? 0 : 0;
-    }
-  }
-
-  return penalty;
-}
-
 function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, format: string): ScheduleRow[] {
   if (format === 'singles') return buildSinglesSchedule(players, rounds, courts);
   return buildDoublesSchedule(players, rounds, courts);

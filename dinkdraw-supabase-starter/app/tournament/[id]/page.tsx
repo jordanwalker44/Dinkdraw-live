@@ -2213,9 +2213,6 @@ const isNextUp =
                     {medal ? `${medal} ` : ''}
                     {row.name}
                   </div>
-                  <div className="muted" style={{ marginTop: 2, fontSize: 13 }}>
-                    {row.played} played
-                  </div>
                 </div>
               </div>
 

@@ -1948,16 +1948,22 @@ const isNextUp =
         —
       </div>
 
-      <div style={{ textAlign: 'center' }}>
-        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-          Team B
-        </div>
-        <div style={{ fontSize: 34, fontWeight: 900 }}>
-          {isBestOf3
-            ? getSeriesScore(nextUpMatch).bScore
-            : nextUpMatch.team_b_score ?? '-'}
-        </div>
-      </div>
+      <div
+  style={{
+    textAlign: 'center',
+    transition: 'all 160ms ease',
+    ...getLiveBannerWinnerStyle('b', nextUpMatch),
+  }}
+>
+  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+    Team B
+  </div>
+  <div style={{ fontSize: 34, fontWeight: 900 }}>
+    {isBestOf3
+      ? getSeriesScore(nextUpMatch).bScore
+      : nextUpMatch.team_b_score ?? '-'}
+  </div>
+</div>
     </div>
   </div>
 

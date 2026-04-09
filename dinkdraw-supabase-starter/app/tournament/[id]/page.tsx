@@ -1499,6 +1499,18 @@ function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
     : { opacity: 0.78 };
 }
 
+  if (match.team_a_score === null || match.team_b_score === null) return {};
+  if (match.team_a_score === match.team_b_score) return {};
+
+  const isWinner =
+    (side === 'a' && match.team_a_score > match.team_b_score) ||
+    (side === 'b' && match.team_b_score > match.team_a_score);
+
+  return isWinner
+    ? { color: '#FFCB05', transform: 'scale(1.04)' }
+    : { opacity: 0.78 };
+}
+
 function renderBestOf3Match(match: Match) {
   const draft = scoreDrafts[match.id] || {
     team_a_score: '',

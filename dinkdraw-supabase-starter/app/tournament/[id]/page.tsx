@@ -2049,40 +2049,182 @@ const isNextUp =
       )}
 
       {activeTab === 'standings' && (
-        <div className="card">
-          <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
-          <div className="card-subtitle">
-            {isCompleted ? 'Tournament complete. Final results are locked.' : 'Ranked by wins, then point differential, then points scored.'}
-          </div>
-          {!standings.length ? (
-            <div className="muted">No players yet.</div>
-          ) : (
-            <div className="grid">
-              {standings.map((row, index) => {
-                const place = index + 1;
-                const medal = place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
-                const highlightStyle = place === 1 ? { borderColor: 'rgba(255,203,5,.6)', boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset' } : place <= 3 ? { borderColor: 'rgba(255,203,5,.35)' } : {};
+  <div className="card">
+    <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
+    <div className="card-subtitle">
+      {isCompleted
+        ? 'Tournament complete. Final results are locked.'
+        : 'Ranked by wins, then point differential, then points scored.'}
+    </div>
 
-                return (
-                  <div key={row.playerId} className="list-item" style={highlightStyle}>
-                    <div className="row-between">
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>{medal ? `${medal} ` : ''}{place}. {row.name}</div>
-                        <div className="muted" style={{ marginTop: 4 }}>{row.wins}-{row.losses} • {row.played} played</div>
-                        <div className="muted" style={{ marginTop: 2 }}>PF: {row.pointsFor} | PA: {row.pointsAgainst}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>{row.pointDiff >= 0 ? `+${row.pointDiff}` : row.pointDiff}</div>
-                        <div className="muted">Diff</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+    {!standings.length ? (
+      <div className="muted">No players yet.</div>
+    ) : (
+      <div
+        style={{
+          marginTop: 12,
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 16,
+          overflow: 'hidden',
+          background: 'rgba(255,255,255,0.03)',
+        }}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '82px 1fr 70px 70px',
+            gap: 0,
+            padding: '10px 12px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'rgba(255,255,255,0.65)',
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>Diff</div>
+          <div>Player</div>
+          <div style={{ textAlign: 'center' }}>W-L</div>
+          <div style={{ textAlign: 'center' }}>PF</div>
         </div>
-      )}
+
+        {standings.map((row, index) => {
+          const place = index + 1;
+          const initials = row.name
+            .split(' ')
+            .map((part) => part[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase();
+
+          const rowBackground =
+            place === 1
+              ? 'rgba(255,203,5,0.08)'
+              : place <= 3
+              ? 'rgba(255,255,255,0.02)'
+              : 'transparent';
+
+          return (
+            <div
+              key={row.playerId}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '82px 1fr 70px 70px',
+                gap: 0,
+                alignItems: 'center',
+                minHeight: 74,
+                borderBottom:
+                  index === standings.length - 1
+                    ? 'none'
+                    : '1px solid rgba(255,255,255,0.08)',
+                background: rowBackground,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  padding: '10px 8px',
+                }}
+              >
+                <div
+                  style={{
+                    minWidth: 56,
+                    padding: '8px 6px',
+                    borderRadius: 10,
+                    border: '1px solid rgba(255,255,255,0.16)',
+                    textAlign: 'center',
+                    background:
+                      place === 1 ? 'rgba(255,203,5,0.12)' : 'rgba(255,255,255,0.04)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 900,
+                      fontSize: 24,
+                      lineHeight: 1,
+                      color: row.pointDiff > 0 ? '#FFCB05' : undefined,
+                    }}
+                  >
+                    {row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff}
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  padding: '10px 12px',
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: 999,
+                    background: 'rgba(255,255,255,0.10)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 800,
+                    fontSize: 14,
+                    flexShrink: 0,
+                  }}
+                >
+                  {initials}
+                </div>
+
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      fontSize: 18,
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}
+                  >
+                    {place === 1 ? '🥇 ' : place === 2 ? '🥈 ' : place === 3 ? '🥉 ' : ''}
+                    {row.name}
+                  </div>
+                  <div className="muted" style={{ marginTop: 2, fontSize: 13 }}>
+                    {row.played} played
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 800,
+                  fontSize: 18,
+                  padding: '10px 6px',
+                }}
+              >
+                {row.wins}-{row.losses}
+              </div>
+
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 800,
+                  fontSize: 18,
+                  padding: '10px 6px',
+                }}
+              >
+                {row.pointsFor}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+)}
     </main>
   );
 }

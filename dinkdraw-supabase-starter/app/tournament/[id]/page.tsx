@@ -1702,7 +1702,7 @@ function renderBestOf3Match(match: Match) {
         </div>
       ) : null}
 
-      {seriesComplete ? (
+            {seriesComplete ? (
         <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
           <div style={{ fontWeight: 800, color: '#FFCB05' }}>
             {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!

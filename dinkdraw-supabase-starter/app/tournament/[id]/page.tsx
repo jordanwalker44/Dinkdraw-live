@@ -585,6 +585,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [selectedRound, setSelectedRound] = useState(1);
   const [copied, setCopied] = useState(false);
   const [isLive, setIsLive] = useState(false);
+const [standingsView, setStandingsView] = useState<'leaderboard' | 'day'>('leaderboard');
 
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';

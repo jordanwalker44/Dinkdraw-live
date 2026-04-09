@@ -1920,16 +1920,22 @@ const isNextUp =
         gap: 12,
       }}
     >
-      <div style={{ textAlign: 'center' }}>
-        <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-          Team A
-        </div>
-        <div style={{ fontSize: 34, fontWeight: 900 }}>
-          {isBestOf3
-            ? getSeriesScore(nextUpMatch).aScore
-            : nextUpMatch.team_a_score ?? '-'}
-        </div>
-      </div>
+      <div
+  style={{
+    textAlign: 'center',
+    transition: 'all 160ms ease',
+    ...getLiveBannerWinnerStyle('a', nextUpMatch),
+  }}
+>
+  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+    Team A
+  </div>
+  <div style={{ fontSize: 34, fontWeight: 900 }}>
+    {isBestOf3
+      ? getSeriesScore(nextUpMatch).aScore
+      : nextUpMatch.team_a_score ?? '-'}
+  </div>
+</div>
 
       <div
         style={{

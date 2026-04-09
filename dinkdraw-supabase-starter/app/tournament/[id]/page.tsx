@@ -1456,13 +1456,42 @@ setMessage('Score submitted.');
   return `live-match-${matchId}`;
 }
 
-  function getWinnerStyle(team: 'a' | 'b', match: Match) {
-    if (isBestOf3) {
-      if (!match.is_complete) return {};
-      const { aWins, bWins } = getSeriesWins(match);
-      const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
-      return isWinner ? { color: '#FFCB05' } : {};
-    }
+ function getWinnerStyle(team: 'a' | 'b', match: Match) {
+  if (isBestOf3) {
+    if (!match.is_complete) return {};
+    const { aWins, bWins } = getSeriesWins(match);
+    const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
+    return isWinner ? { color: '#FFCB05' } : {};
+  }
+  if (match.team_a_score === null || match.team_b_score === null) return {};
+  const aWins = match.team_a_score > match.team_b_score;
+  const bWins = match.team_b_score > match.team_a_score;
+  const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
+  return isWinner ? { color: '#FFCB05' } : {};
+}
+
+function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
+  if (isBestOf3) {
+    const { aScore, bScore } = getSeriesScore(match);
+    if (aScore === bScore) return {};
+    const isWinner = (side === 'a' && aScore > bScore) || (side === 'b' && bScore > aScore);
+    return isWinner
+      ? { color: '#FFCB05', transform: 'scale(1.04)' }
+      : { opacity: 0.78 };
+  }
+
+  if (match.team_a_score === null || match.team_b_score === null) return {};
+  if (match.team_a_score === match.team_b_score) return {};
+
+  const isWinner =
+    (side === 'a' && match.team_a_score > match.team_b_score) ||
+    (side === 'b' && match.team_b_score > match.team_a_score);
+
+  return isWinner
+    ? { color: '#FFCB05', transform: 'scale(1.04)' }
+    : { opacity: 0.78 };
+}
+  
     if (match.team_a_score === null || match.team_b_score === null) return {};
     const aWins = match.team_a_score > match.team_b_score;
     const bWins = match.team_b_score > match.team_a_score;

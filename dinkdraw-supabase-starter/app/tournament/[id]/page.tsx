@@ -1452,21 +1452,24 @@ setMessage('Score submitted.');
   )}`;
 }
 
-  function getMatchElementId(matchId: string) {
+function getMatchElementId(matchId: string) {
   return `live-match-${matchId}`;
 }
 
- function getWinnerStyle(team: 'a' | 'b', match: Match) {
+function getWinnerStyle(team: 'a' | 'b', match: Match) {
   if (isBestOf3) {
     if (!match.is_complete) return {};
     const { aWins, bWins } = getSeriesWins(match);
     const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
     return isWinner ? { color: '#FFCB05' } : {};
   }
+
   if (match.team_a_score === null || match.team_b_score === null) return {};
+
   const aWins = match.team_a_score > match.team_b_score;
   const bWins = match.team_b_score > match.team_a_score;
   const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
+
   return isWinner ? { color: '#FFCB05' } : {};
 }
 
@@ -1474,7 +1477,10 @@ function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
   if (isBestOf3) {
     const { aScore, bScore } = getSeriesScore(match);
     if (aScore === bScore) return {};
-    const isWinner = (side === 'a' && aScore > bScore) || (side === 'b' && bScore > aScore);
+
+    const isWinner =
+      (side === 'a' && aScore > bScore) || (side === 'b' && bScore > aScore);
+
     return isWinner
       ? { color: '#FFCB05', transform: 'scale(1.04)' }
       : { opacity: 0.78 };
@@ -1491,13 +1497,6 @@ function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
     ? { color: '#FFCB05', transform: 'scale(1.04)' }
     : { opacity: 0.78 };
 }
-  
-    if (match.team_a_score === null || match.team_b_score === null) return {};
-    const aWins = match.team_a_score > match.team_b_score;
-    const bWins = match.team_b_score > match.team_a_score;
-    const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
-    return isWinner ? { color: '#FFCB05' } : {};
-  }
 
   function renderBestOf3Match(match: Match) {
     const draft = scoreDrafts[match.id] || { team_a_score: '', team_b_score: '', game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };

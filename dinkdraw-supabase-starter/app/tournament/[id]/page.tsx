@@ -410,21 +410,6 @@ if (!matches) {
   return output;
 }
 
-function getRecentCourtPenalty(playerIds: string[], courtNumber: number) {
-  let penalty = 0;
-
-  for (const id of playerIds) {
-    const history = courtHistory.get(id) || [];
-    const lastCourt = history[history.length - 1];
-    const lastTwo = history.slice(-2);
-
-    if (lastCourt === courtNumber) penalty += 120;
-    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) penalty += 250;
-  }
-
-  return penalty;
-}
-
 function getRecentPlayerMixPenalty(playerIds: string[]) {
   let penalty = 0;
 

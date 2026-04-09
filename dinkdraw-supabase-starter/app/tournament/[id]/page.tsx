@@ -1465,15 +1465,6 @@ function getWinnerStyle(team: 'a' | 'b', match: Match) {
     return isWinner ? { color: '#FFCB05' } : {};
   }
 
-  if (match.team_a_score === null || match.team_b_score === null) return {};
-
-  const aWins = match.team_a_score > match.team_b_score;
-  const bWins = match.team_b_score > match.team_a_score;
-  const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
-
-  return isWinner ? { color: '#FFCB05' } : {};
-}
-
 function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
   if (isBestOf3) {
     const { aScore, bScore } = getSeriesScore(match);

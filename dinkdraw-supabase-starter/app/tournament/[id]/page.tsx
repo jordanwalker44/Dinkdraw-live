@@ -458,7 +458,7 @@ output.push({
   return output;
 }
 
-function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, format: string): ScheduleRow[] {
+function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, format: string, doublesMode: string | null): ScheduleRow[] {
   if (format === 'singles') return buildSinglesSchedule(players, rounds, courts);
   return buildDoublesSchedule(players, rounds, courts);
 }
@@ -1075,7 +1075,7 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
 
       const playersPerCourt = isSingles ? 2 : 4;
       const availableCourts = Math.max(1, Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt)));
-      const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format);
+      const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format, tournament.doubles_mode);
       if (!scheduleRows.length) { setMessage('Could not generate a schedule.'); setIsStarting(false); return; }
 
       const { error: deleteError } = await supabase.from('matches').delete().eq('tournament_id', tournament.id);

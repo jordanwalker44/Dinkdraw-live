@@ -458,6 +458,99 @@ output.push({
   return output;
 }
 
+function buildFixedPartnersSchedule(
+  players: PlayerSlot[],
+  rounds: number,
+  courts: number
+): ScheduleRow[] {
+  const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
+  if (activePlayers.length < 4) return [];
+  if (activePlayers.length % 2 !== 0) return [];
+
+  const teams = [];
+  for (let i = 0; i < activePlayers.length; i += 2) {
+    const player1 = activePlayers[i];
+    const player2 = activePlayers[i + 1];
+
+    if (!player1 || !player2) return [];
+
+    teams.push({
+      player1Id: player1.id,
+      player2Id: player2.id,
+    });
+  }
+
+  if (teams.length < 2) return [];
+
+  const allMatchups: Array<{
+    teamA: { player1Id: string; player2Id: string };
+    teamB: { player1Id: string; player2Id: string };
+  }> = [];
+
+  for (let i = 0; i < teams.length; i += 1) {
+    for (let j = i + 1; j < teams.length; j += 1) {
+      allMatchups.push({
+        teamA: teams[i],
+        teamB: teams[j],
+      });
+    }
+  }
+
+  if (!allMatchups.length) return [];
+
+  const output: ScheduleRow[] = [];
+  let matchupIndex = 0;
+
+  for (let round = 1; round <= rounds; round += 1) {
+    let courtsUsedThisRound = 0;
+    const usedTeamIndexes = new Set<number>();
+
+    for (let i = 0; i < allMatchups.length; i += 1) {
+      if (courtsUsedThisRound >= courts) break;
+
+      const currentIndex = (matchupIndex + i) % allMatchups.length;
+      const matchup = allMatchups[currentIndex];
+
+      const teamAIndex = teams.findIndex(
+        (t) =>
+          t.player1Id === matchup.teamA.player1Id &&
+          t.player2Id === matchup.teamA.player2Id
+      );
+
+      const teamBIndex = teams.findIndex(
+        (t) =>
+          t.player1Id === matchup.teamB.player1Id &&
+          t.player2Id === matchup.teamB.player2Id
+      );
+
+      if (usedTeamIndexes.has(teamAIndex) || usedTeamIndexes.has(teamBIndex)) {
+        continue;
+      }
+
+      usedTeamIndexes.add(teamAIndex);
+      usedTeamIndexes.add(teamBIndex);
+      courtsUsedThisRound += 1;
+
+      output.push({
+        round_number: round,
+        court_number: courtsUsedThisRound,
+        team_a_player_1_id: matchup.teamA.player1Id,
+        team_a_player_2_id: matchup.teamA.player2Id,
+        team_b_player_1_id: matchup.teamB.player1Id,
+        team_b_player_2_id: matchup.teamB.player2Id,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: false,
+        is_complete: false,
+      });
+    }
+
+    matchupIndex = (matchupIndex + courtsUsedThisRound) % allMatchups.length;
+  }
+
+  return output;
+}
+
 function buildSchedule(
   players: PlayerSlot[],
   rounds: number,

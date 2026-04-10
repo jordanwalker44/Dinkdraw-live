@@ -203,12 +203,13 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
   const ids = activePlayers.map((p) => p.id);
   const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
-  const partnerCounts = new Map<string, number>();
-  const matchupCounts = new Map<string, number>();
-  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const output: ScheduleRow[] = [];
-  const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
+ const partnerCounts = new Map<string, number>();
+const matchupCounts = new Map<string, number>();
+const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
+const recentMatchHistory = new Map<string, string[]>(ids.map((id) => [id, []]));
+const output: ScheduleRow[] = [];
 
   function getPartnerCount(a: string, b: string) {
     return partnerCounts.get(pairKey(a, b)) || 0;
@@ -254,19 +255,16 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
   const partnerRepeatA = getPartnerCount(a1, a2);
   const partnerRepeatB = getPartnerCount(b1, b2);
 
-  // 🚫 HARD STOP: don't allow same partners unless forced
   if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
     return null;
   }
 
   let penalty = 0;
 
-  // 🔥 VERY STRONG penalties (these matter most)
   penalty += partnerRepeatA * 100000;
   penalty += partnerRepeatB * 100000;
   penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
 
-  // ⚖️ Balance play counts
   penalty += (playedCounts.get(a1) || 0) * 10;
   penalty += (playedCounts.get(a2) || 0) * 10;
   penalty += (playedCounts.get(b1) || 0) * 10;
@@ -274,25 +272,40 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
   const allPlayers = [a1, a2, b1, b2];
 
-  // 🚫 HARD RULE: no 3 same courts in a row
   for (const id of allPlayers) {
     const history = courtHistory.get(id) || [];
     const lastTwo = history.slice(-2);
 
     if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
-      return null; // reject this match completely
+      return null;
     }
   }
 
-  // ⚠️ Soft penalties for recent court repeats
   for (const id of allPlayers) {
     const history = courtHistory.get(id) || [];
     const lastCourt = history[history.length - 1];
 
-    if (lastCourt === courtNumber) penalty += 300; // much stronger now
+    if (lastCourt === courtNumber) penalty += 300;
   }
 
-  // slight randomness
+  const recentPairs: Array<[string, string]> = [
+    [a1, a2],
+    [a1, b1],
+    [a1, b2],
+    [a2, b1],
+    [a2, b2],
+    [b1, b2],
+  ];
+
+  for (const [p1, p2] of recentPairs) {
+    const history1 = recentMatchHistory.get(p1) || [];
+    const history2 = recentMatchHistory.get(p2) || [];
+
+    if (history1.includes(p2) || history2.includes(p1)) {
+      penalty += 800;
+    }
+  }
+
   penalty += Math.random();
 
   return penalty;
@@ -400,9 +413,29 @@ if (!matches) {
 [a1, a2, b1, b2].forEach((id) => {
   playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
 
-  const history = courtHistory.get(id) || [];
-  history.push(index + 1);
-  courtHistory.set(id, history);
+  const courtEntries = courtHistory.get(id) || [];
+  courtEntries.push(index + 1);
+  courtHistory.set(id, courtEntries);
+});
+
+const sameMatchPairs: Array<[string, string]> = [
+  [a1, a2],
+  [a1, b1],
+  [a1, b2],
+  [a2, b1],
+  [a2, b2],
+  [b1, b2],
+];
+
+sameMatchPairs.forEach(([p1, p2]) => {
+  const p1History = recentMatchHistory.get(p1) || [];
+  const p2History = recentMatchHistory.get(p2) || [];
+
+  p1History.push(p2);
+  p2History.push(p1);
+
+  recentMatchHistory.set(p1, p1History.slice(-4));
+  recentMatchHistory.set(p2, p2History.slice(-4));
 });
 
 output.push({

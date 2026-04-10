@@ -34,6 +34,7 @@ type PlayerSlot = {
   slot_number: number;
   display_name: string | null;
   claimed_by_user_id: string | null;
+  gender: string | null;
 };
 
 type Match = {

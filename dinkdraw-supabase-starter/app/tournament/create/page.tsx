@@ -167,6 +167,7 @@ export default function CreateTournamentPage() {
           status: 'draft',
           format,
           match_format: matchFormat,
+          doubles_mode: doublesMode,
         })
         .select()
         .single();

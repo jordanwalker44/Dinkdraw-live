@@ -1164,11 +1164,8 @@ const currentRoundComplete = useMemo(
       return;
     }
 
-    setPlayerSlots((prev) =>
-      prev.map((slot) =>
-        slot.id === slotId ? { ...slot, gender: nextGender } : slot
-      )
-    );
+    await loadTournamentData(userId);
+    setMessage('Player gender saved.');
   }
   
   async function generateScheduleAndStart() {

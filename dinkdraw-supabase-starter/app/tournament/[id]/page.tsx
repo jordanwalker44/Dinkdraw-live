@@ -458,8 +458,25 @@ output.push({
   return output;
 }
 
-function buildSchedule(players: PlayerSlot[], rounds: number, courts: number, format: string, doublesMode: string | null): ScheduleRow[] {
-  if (format === 'singles') return buildSinglesSchedule(players, rounds, courts);
+function buildSchedule(
+  players: PlayerSlot[],
+  rounds: number,
+  courts: number,
+  format: string,
+  doublesMode: string | null
+): ScheduleRow[] {
+  if (format === 'singles') {
+    return buildSinglesSchedule(players, rounds, courts);
+  }
+
+  if (doublesMode === 'fixed') {
+    return buildDoublesSchedule(players, rounds, courts);
+  }
+
+  if (doublesMode === 'mixed') {
+    return buildDoublesSchedule(players, rounds, courts);
+  }
+
   return buildDoublesSchedule(players, rounds, courts);
 }
 

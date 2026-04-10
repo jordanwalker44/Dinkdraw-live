@@ -2112,9 +2112,57 @@ function renderBestOf3Match(match: Match) {
                       </div>
                       {isMine ? <span className="tag green">Yours</span> : isClaimedBySomeone ? <span className="tag green">Claimed</span> : isLocked ? <span className="tag">Locked</span> : <span className="tag">Open</span>}
                     </div>
-                    <div className="grid">
-                      <input className="input" value={newNames[slot.id] ?? ''} onChange={(e) => setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))} placeholder={`Name for Player ${slot.slot_number}`} disabled={!canEditName} />
-                      {!isLocked && canClaim ? <button className="button primary" onClick={() => claimSlot(slot.id)}>Claim Spot</button> : null}
+                                        <div className="grid">
+                      <input
+                        className="input"
+                        value={newNames[slot.id] ?? ''}
+                        onChange={(e) =>
+                          setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
+                        }
+                        placeholder={`Name for Player ${slot.slot_number}`}
+                        disabled={!canEditName}
+                      />
+
+                      {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                            gap: 8,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
+                            onClick={() => updatePlayerGender(slot.id, 'male')}
+                            disabled={isLocked}
+                          >
+                            Male
+                          </button>
+                          <button
+                            type="button"
+                            className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
+                            onClick={() => updatePlayerGender(slot.id, 'female')}
+                            disabled={isLocked}
+                          >
+                            Female
+                          </button>
+                          <button
+                            type="button"
+                            className="button secondary"
+                            onClick={() => updatePlayerGender(slot.id, '')}
+                            disabled={isLocked}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      ) : null}
+
+                      {!isLocked && canClaim ? (
+                        <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                          Claim Spot
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 );

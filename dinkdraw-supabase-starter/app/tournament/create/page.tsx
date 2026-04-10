@@ -62,6 +62,7 @@ export default function CreateTournamentPage() {
 
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const [matchFormat, setMatchFormat] = useState<'single' | 'best_of_3'>('single');
+  const [doublesMode, setDoublesMode] = useState<'rotating' | 'fixed' | 'mixed'>('rotating');
   const [title, setTitle] = useState('Saturday Round Robin');
   const [organizerName, setOrganizerName] = useState('');
   const [eventDate, setEventDate] = useState('');

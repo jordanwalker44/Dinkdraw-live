@@ -25,6 +25,7 @@ type Tournament = {
   started_at: string | null;
   format: string;
   match_format: string;
+  doubles_mode: string | null;
 };
 
 type PlayerSlot = {

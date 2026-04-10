@@ -250,6 +250,41 @@ export default function CreateTournamentPage() {
             </div>
           </div>
 
+                    {format === 'doubles' ? (
+            <div>
+              <label className="label">Doubles Mode</label>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gap: 8,
+                }}
+              >
+                <button
+                  type="button"
+                  className={`button ${doublesMode === 'rotating' ? 'primary' : 'secondary'}`}
+                  onClick={() => setDoublesMode('rotating')}
+                >
+                  Rotating
+                </button>
+                <button
+                  type="button"
+                  className={`button ${doublesMode === 'fixed' ? 'primary' : 'secondary'}`}
+                  onClick={() => setDoublesMode('fixed')}
+                >
+                  Fixed Partners
+                </button>
+                <button
+                  type="button"
+                  className={`button ${doublesMode === 'mixed' ? 'primary' : 'secondary'}`}
+                  onClick={() => setDoublesMode('mixed')}
+                >
+                  Mixed Rotate
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <div>
             <label className="label">Event name</label>
             <input

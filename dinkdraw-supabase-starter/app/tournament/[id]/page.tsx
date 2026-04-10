@@ -1211,6 +1211,31 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
       const namedPlayers = (freshPlayers || []).filter((slot) => (slot.display_name || '').trim() !== '');
       if (namedPlayers.length < minPlayersRequired) { setMessage(`Please save at least ${minPlayersRequired} player names before starting.`); setIsStarting(false); return; }
 
+      if (tournament.format === 'doubles' && tournament.doubles_mode === 'mixed') {
+        const playersMissingGender = namedPlayers.filter((slot) => !slot.gender);
+
+      if (playersMissingGender.length > 0) {
+          setMessage('Every player in a mixed doubles tournament must be marked male or female before starting.');
+          setIsStarting(false);
+          return;
+        }
+
+        const maleCount = namedPlayers.filter((slot) => slot.gender === 'male').length;
+        const femaleCount = namedPlayers.filter((slot) => slot.gender === 'female').length;
+
+        if (namedPlayers.length % 2 !== 0) {
+          setMessage('Mixed doubles requires an even number of players.');
+          setIsStarting(false);
+          return;
+        }
+
+        if (maleCount !== femaleCount) {
+          setMessage('Mixed doubles requires the same number of male and female players.');
+          setIsStarting(false);
+          return;
+        }
+      }
+
       const playersPerCourt = isSingles ? 2 : 4;
       const availableCourts = Math.max(1, Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt)));
       const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format, tournament.doubles_mode);

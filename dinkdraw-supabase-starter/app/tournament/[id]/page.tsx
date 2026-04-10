@@ -657,12 +657,16 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isLive, setIsLive] = useState(false);
   const [standingsView, setStandingsView] = useState<'leaderboard' | 'day'>('leaderboard');
 
-  const isSingles = tournament?.format === 'singles';
+   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
-const isCompleted = tournament?.status === 'completed';
-const isLocked = isStarted || isCompleted;
-const isScheduleLocked = isStarted || isCompleted || matches.length > 0;
+  const isCompleted = tournament?.status === 'completed';
+  const isLocked = isStarted || isCompleted;
+  const isScheduleLocked = isStarted || isCompleted || matches.length > 0;
+  const publicViewUrl =
+    typeof window !== 'undefined' && tournament?.id
+      ? `${window.location.origin}/tournament/view/${tournament.id}`
+      : '';
   const minPlayersRequired = isSingles ? 3 : 4;
 
   const claimedSlot = useMemo(() => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null, [playerSlots, userId]);

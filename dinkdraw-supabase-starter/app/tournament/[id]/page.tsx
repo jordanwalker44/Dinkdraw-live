@@ -1837,6 +1837,81 @@ function renderBestOf3Match(match: Match) {
           </div>
         </div>
 
+                {publicViewUrl ? (
+          <div
+            className="card"
+            style={{
+              marginBottom: 14,
+              textAlign: 'center',
+            }}
+          >
+            <div className="card-title">Public Tournament QR Code</div>
+            <div className="card-subtitle" style={{ marginBottom: 16 }}>
+              Players and spectators can scan this to open the live public tournament page.
+            </div>
+
+            <div
+              style={{
+                display: 'inline-flex',
+                padding: 12,
+                background: '#ffffff',
+                borderRadius: 16,
+                marginBottom: 12,
+              }}
+            >
+              <QRCodeSVG
+                value={publicViewUrl}
+                size={220}
+                bgColor="#ffffff"
+                fgColor="#111111"
+                includeMargin={true}
+              />
+            </div>
+
+            <div
+              style={{
+                fontSize: 12,
+                color: 'rgba(255,255,255,.72)',
+                wordBreak: 'break-all',
+                marginBottom: 12,
+              }}
+            >
+              {publicViewUrl}
+            </div>
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 8,
+              }}
+            >
+              <button
+                type="button"
+                className="button secondary"
+                onClick={copyPublicLink}
+              >
+                Copy Public Link
+              </button>
+
+              <a
+                href={publicViewUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="button primary"
+                style={{
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                Open Public View
+              </a>
+            </div>
+          </div>
+        ) : null}
+        
         <div className="grid">
           <button type="button" className="button secondary" onClick={copyJoinCode}>
             {copied ? 'Join Code Copied' : 'Copy Join Code'}

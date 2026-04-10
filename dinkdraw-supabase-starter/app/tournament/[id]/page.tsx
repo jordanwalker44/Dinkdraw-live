@@ -562,8 +562,8 @@ function buildSchedule(
     return buildSinglesSchedule(players, rounds, courts);
   }
 
-  if (doublesMode === 'fixed') {
-    return buildDoublesSchedule(players, rounds, courts);
+    if (doublesMode === 'fixed') {
+    return buildFixedPartnersSchedule(players, rounds, courts);
   }
 
   if (doublesMode === 'mixed') {

@@ -1144,6 +1144,33 @@ const currentRoundComplete = useMemo(
     setIsSavingNames(false);
   }
 
+  async function updatePlayerGender(slotId: string, gender: 'male' | 'female' | '') {
+    if (isLocked) {
+      setMessage('Player settings are locked.');
+      return;
+    }
+
+    setMessage('');
+
+    const nextGender = gender === '' ? null : gender;
+
+    const { error } = await supabase
+      .from('tournament_players')
+      .update({ gender: nextGender })
+      .eq('id', slotId);
+
+    if (error) {
+      setMessage(`Gender save failed: ${error.message}`);
+      return;
+    }
+
+    setPlayerSlots((prev) =>
+      prev.map((slot) =>
+        slot.id === slotId ? { ...slot, gender: nextGender } : slot
+      )
+    );
+  }
+  
   async function generateScheduleAndStart() {
   if (!tournament) return;
 

@@ -988,17 +988,14 @@ const currentRoundComplete = useMemo(
   }
 
   async function copyPublicLink() {
-  try {
-    if (!tournament?.id) return;
-
-    const url = `${window.location.origin}/tournament/view/${tournament.id}`;
-    await navigator.clipboard.writeText(url);
-
-    setMessage('Public link copied.');
-  } catch {
-    setMessage('Could not copy public link.');
+    try {
+      if (!publicViewUrl) return;
+      await navigator.clipboard.writeText(publicViewUrl);
+      setMessage('Public link copied.');
+    } catch {
+      setMessage('Could not copy public link.');
+    }
   }
-}
 
   async function claimSlot(slotId: string) {
     setMessage('');

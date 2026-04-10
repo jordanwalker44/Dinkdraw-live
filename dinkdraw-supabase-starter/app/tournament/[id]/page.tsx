@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 

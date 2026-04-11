@@ -1182,6 +1182,7 @@ const currentRoundComplete = useMemo(
 }, [playerSlots, matches, isSingles, isBestOf3]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
+  const tournamentWinner = standings[0] || null;
 
   const canStartTournament = useMemo(() => {
     if (!tournament) return false;

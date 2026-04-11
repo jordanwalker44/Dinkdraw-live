@@ -2305,6 +2305,7 @@ function renderBestOf3Match(match: Match) {
     </div>
   );
 }
+
   return (
     <main className="page-shell">
       <div className="hero">

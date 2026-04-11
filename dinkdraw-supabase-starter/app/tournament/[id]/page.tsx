@@ -1115,6 +1115,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       ? `${window.location.origin}/tournament/view/${tournament.id}`
       : '';
   const minPlayersRequired = isSingles ? 3 : 4;
+  const tournamentModeBadges = getTournamentModeBadges(tournament);
 
   const claimedSlot = useMemo(() => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null, [playerSlots, userId]);
   const playersById = useMemo(() => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])), [playerSlots]);
@@ -2024,6 +2025,30 @@ function getMatchElementId(matchId: string) {
   return `live-match-${matchId}`;
 }
 
+function getTournamentModeBadges(tournament: Tournament | null) {
+  if (!tournament) return [];
+
+  const badges = [];
+
+  badges.push(tournament.format === 'singles' ? 'Singles' : 'Doubles');
+
+  if (tournament.format === 'doubles') {
+    if (tournament.doubles_mode === 'fixed') {
+      badges.push('Fixed Partners');
+    } else if (tournament.doubles_mode === 'mixed') {
+      badges.push('Mixed Rotate');
+    } else {
+      badges.push('Rotating Partners');
+    }
+  }
+
+  badges.push(
+    tournament.match_format === 'best_of_3' ? 'Best of 3' : 'Single Game'
+  );
+
+  return badges;
+}  
+
 function getWinnerStyle(team: 'a' | 'b', match: Match) {
   if (isBestOf3) {
     if (!match.is_complete) return {};
@@ -2285,6 +2310,25 @@ function renderBestOf3Match(match: Match) {
         <div className="hero-inner">
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">{tournament?.title || 'Tournament'}</h1>
+
+                    {tournamentModeBadges.length ? (
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
+                marginTop: 10,
+                justifyContent: 'center',
+              }}
+            >
+              {tournamentModeBadges.map((badge) => (
+                <span key={badge} className="tag">
+                  {badge}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          
           <p className="hero-subtitle">
             {isCompleted ? 'Finished tournament' : isStarted ? `Live now • Round ${currentRound}` : 'Set up players, then start when ready'}
           </p>

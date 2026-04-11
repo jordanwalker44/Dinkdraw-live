@@ -535,7 +535,41 @@ export default function TournamentResultsPage({
         </div>
 
         {message ? <div className="notice">{message}</div> : null}
+<div
+  style={{
+    marginBottom: 20,
+    padding: 18,
+    borderRadius: 18,
+    background: 'linear-gradient(135deg, #0f1722, #0b1220)',
+    border: '1px solid rgba(255,255,255,.12)',
+    textAlign: 'center',
+  }}
+>
+  <div style={{ fontSize: 14, opacity: 0.7, marginBottom: 6 }}>
+    DinkDraw Results
+  </div>
 
+  <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 10 }}>
+    {tournament?.title}
+  </div>
+
+  {winner ? (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 12, opacity: 0.7 }}>🏆 Champion</div>
+      <div style={{ fontSize: 18, fontWeight: 900, color: '#FFCB05' }}>
+        {winner.name}
+      </div>
+    </div>
+  ) : null}
+
+  <div style={{ display: 'grid', gap: 4 }}>
+    {standings.slice(0, 3).map((row, index) => (
+      <div key={row.playerId} style={{ fontSize: 14 }}>
+        {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'} {row.name}
+      </div>
+    ))}
+  </div>
+</div>
         <div className="list-item" style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 800, marginBottom: 10 }}>Final Standings</div>
 

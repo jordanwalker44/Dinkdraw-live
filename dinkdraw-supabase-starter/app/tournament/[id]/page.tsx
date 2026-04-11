@@ -2329,6 +2329,7 @@ function renderBestOf3Match(match: Match) {
       ) : null}
     </div>
   );
+}
 
   return (
     <main className="page-shell">
@@ -2400,13 +2401,25 @@ function renderBestOf3Match(match: Match) {
                 {tournamentWinner?.name || 'Winner'}
               </div>
 
-              <div className="muted" style={{ marginBottom: 12 }}>
+                           <div className="muted" style={{ marginBottom: 12 }}>
                 Final standings are locked and ready to share.
               </div>
 
-             
-<div className="card-title">Tournament</div>
+              <button
+                type="button"
+                className="button primary"
+                onClick={() => router.push(`/tournament/${params.id}/results`)}
+                style={{
+                  fontWeight: 800,
+                  fontSize: 16,
+                }}
+              >
+                🏆 View Results
+              </button>
+            </div>
+          ) : null}
 
+          <div className="card-title">Tournament</div>
         <div className="grid" style={{ marginBottom: 14 }}>
           <div className="list-item">
             <div className="label">Join Code</div>

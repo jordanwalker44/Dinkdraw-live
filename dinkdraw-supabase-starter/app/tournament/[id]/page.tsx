@@ -2379,19 +2379,7 @@ function renderBestOf3Match(match: Match) {
                 Final standings are locked and ready to share.
               </div>
 
-              <button
-                type="button"
-                className="button primary"
-                onClick={() => router.push(`/tournament/${params.id}/results`)}
-                style={{
-                  fontWeight: 800,
-                  fontSize: 16,
-                }}
-              >
-                🏆 View Results
-              </button>
-            </div>
-          ) : null}
+             
 <div className="card-title">Tournament</div>
 
         <div className="grid" style={{ marginBottom: 14 }}>

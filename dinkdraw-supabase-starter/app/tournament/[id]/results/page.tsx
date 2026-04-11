@@ -349,6 +349,41 @@ export default function TournamentResultsPage({
     setIsLoading(false);
   }
 
+    async function copyResultsLink() {
+    try {
+      if (!tournament?.id) return;
+
+      const url = `${window.location.origin}/tournament/${tournament.id}/results`;
+      await navigator.clipboard.writeText(url);
+      setMessage('Results link copied.');
+    } catch {
+      setMessage('Could not copy results link.');
+    }
+  }
+
+  async function shareResultsLink() {
+    try {
+      if (!tournament?.id) return;
+
+      const url = `${window.location.origin}/tournament/${tournament.id}/results`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `${tournament.title || 'Tournament Results'} - DinkDraw`,
+          text: `Check out the results for ${tournament.title || 'this tournament'} on DinkDraw.`,
+          url,
+        });
+        setMessage('Share opened.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(url);
+      setMessage('Results link copied.');
+    } catch {
+      setMessage('Could not share results link.');
+    }
+  }
+
   useEffect(() => {
     void loadResults();
   }, [params.id, supabase]);

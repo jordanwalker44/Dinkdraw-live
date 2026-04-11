@@ -505,7 +505,12 @@ export default function TournamentResultsPage({
           <a
             href={publicViewUrl || '#'}
             className="button primary"
-            style={{ textDecoration: 'none', textAlign: 'center' }}
+            style={{
+  textDecoration: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}}
             target="_blank"
             rel="noreferrer"
           >

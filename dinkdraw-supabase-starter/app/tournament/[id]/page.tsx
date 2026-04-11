@@ -2144,8 +2144,12 @@ function renderBestOf3Match(match: Match) {
       </div>
 
       <div className="row-between" style={{ marginBottom: 12 }}>
-        <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>{teamAName}</div>
-        <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>{teamBName}</div>
+        <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>
+          {teamAName}
+        </div>
+        <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>
+          {teamBName}
+        </div>
       </div>
 
       <div style={{ marginBottom: 10 }}>
@@ -2161,7 +2165,14 @@ function renderBestOf3Match(match: Match) {
         >
           Game 1
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
           <input
             className="input"
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
@@ -2206,7 +2217,14 @@ function renderBestOf3Match(match: Match) {
         >
           Game 2
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
           <input
             className="input"
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
@@ -2242,7 +2260,7 @@ function renderBestOf3Match(match: Match) {
         )}
       </div>
 
-      {(showGame3 || (game1Done && game2Done && match.game_3_a !== null)) ? (
+      {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
         <div style={{ marginBottom: 10 }}>
           <div
             className="muted"
@@ -2256,7 +2274,14 @@ function renderBestOf3Match(match: Match) {
           >
             Game 3
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
             <input
               className="input"
               style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
@@ -2295,7 +2320,7 @@ function renderBestOf3Match(match: Match) {
         </div>
       ) : null}
 
-            {seriesComplete ? (
+      {seriesComplete ? (
         <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
           <div style={{ fontWeight: 800, color: '#FFCB05' }}>
             {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!

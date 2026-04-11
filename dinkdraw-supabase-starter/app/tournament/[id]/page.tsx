@@ -902,8 +902,8 @@ function buildSchedule(
     return buildFixedPartnersSchedule(players, rounds, courts);
   }
 
-  if (doublesMode === 'mixed') {
-    return buildDoublesSchedule(players, rounds, courts);
+    if (doublesMode === 'mixed') {
+    return buildMixedDoublesSchedule(players, rounds, courts);
   }
 
   return buildDoublesSchedule(players, rounds, courts);

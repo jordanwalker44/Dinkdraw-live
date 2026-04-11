@@ -492,6 +492,22 @@ export default function TournamentResultsPage({
           >
             Open Public View
           </a>
+
+          <button
+            type="button"
+            className="button secondary"
+            onClick={copyResultsLink}
+          >
+            Copy Results Link
+          </button>
+
+          <button
+            type="button"
+            className="button primary"
+            onClick={shareResultsLink}
+          >
+            Share Results
+          </button>
         </div>
 
         {message ? <div className="notice">{message}</div> : null}

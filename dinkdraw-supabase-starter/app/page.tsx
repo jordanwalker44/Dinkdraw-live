@@ -54,7 +54,8 @@ export default function HomePage() {
         <div className="hero-inner">
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <p className="hero-subtitle">
-            Easy tournament creation. Stats. Pickle.
+            Create tournaments, track scores, and share live results
+</p>
           </p>
 
           {/* Sign in CTA — only shows when signed out */}

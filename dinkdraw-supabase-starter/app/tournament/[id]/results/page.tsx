@@ -430,6 +430,25 @@ export default function TournamentResultsPage({
           <p className="hero-subtitle" style={{ marginTop: 12 }}>
             Final results and completed match summary
           </p>
+{winner ? (
+  <div
+    style={{
+      marginTop: 18,
+      padding: '14px 18px',
+      borderRadius: 16,
+      background: 'linear-gradient(135deg, #111, #1a1a1a)',
+      border: '1px solid rgba(255,255,255,.12)',
+      textAlign: 'center',
+    }}
+  >
+    <div style={{ fontSize: 12, opacity: 0.7, marginBottom: 6 }}>
+      🏆 Champion
+    </div>
+    <div style={{ fontSize: 20, fontWeight: 900, color: '#FFCB05' }}>
+      {winner.name}
+    </div>
+  </div>
+) : null}
         </div>
       </div>
 

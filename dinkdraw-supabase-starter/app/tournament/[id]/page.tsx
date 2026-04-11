@@ -2470,10 +2470,18 @@ function renderBestOf3Match(match: Match) {
             </button>
           ) : null}
           {isCompleted ? (
-            <button type="button" className="button primary" onClick={() => router.push(`/tournament/${params.id}/results`)}>
-              View & Share Results
-            </button>
-          ) : null}
+  <button
+    type="button"
+    className="button primary"
+    onClick={() => router.push(`/tournament/${params.id}/results`)}
+    style={{
+      fontWeight: 800,
+      fontSize: 16,
+    }}
+  >
+    🏆 View Results
+  </button>
+) : null}
           {isOrganizer && !isStarted && !isCompleted ? (
             <button type="button" className="button secondary" onClick={deleteTournament} style={{ borderColor: 'rgba(248,113,113,.4)', color: '#f87171' }}>
               Delete Tournament

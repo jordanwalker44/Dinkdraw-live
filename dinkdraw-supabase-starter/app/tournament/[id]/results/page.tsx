@@ -563,7 +563,14 @@ export default function TournamentResultsPage({
                     }}
                   >
                     <td style={{ padding: '8px 6px' }}>{index + 1}</td>
-                    <td style={{ padding: '8px 6px' }}>{row.name}</td>
+                    <td style={{ padding: '8px 6px' }}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <span>
+      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : ''}
+    </span>
+    <span>{row.name}</span>
+  </div>
+</td>
                     <td style={{ padding: '8px 6px' }}>{row.wins}</td>
                     <td style={{ padding: '8px 6px' }}>{row.losses}</td>
                     <td style={{ padding: '8px 6px' }}>{row.pointsFor}</td>

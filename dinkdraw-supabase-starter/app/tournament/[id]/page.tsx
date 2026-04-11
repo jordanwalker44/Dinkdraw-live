@@ -2341,7 +2341,58 @@ function renderBestOf3Match(match: Match) {
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Tournament</div>
+                 {isCompleted ? (
+            <div
+              style={{
+                marginBottom: 18,
+                padding: 18,
+                borderRadius: 18,
+                background: 'linear-gradient(135deg, #0f1722, #0b1220)',
+                border: '1px solid rgba(255,255,255,.12)',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  opacity: 0.72,
+                  marginBottom: 6,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                🏆 Tournament Complete
+              </div>
+
+              <div
+                style={{
+                  fontSize: 24,
+                  fontWeight: 900,
+                  color: '#FFCB05',
+                  marginBottom: 6,
+                }}
+              >
+                {tournamentWinner?.name || 'Winner'}
+              </div>
+
+              <div className="muted" style={{ marginBottom: 12 }}>
+                Final standings are locked and ready to share.
+              </div>
+
+              <button
+                type="button"
+                className="button primary"
+                onClick={() => router.push(`/tournament/${params.id}/results`)}
+                style={{
+                  fontWeight: 800,
+                  fontSize: 16,
+                }}
+              >
+                🏆 View Results
+              </button>
+            </div>
+          ) : null}
+<div className="card-title">Tournament</div>
 
         <div className="grid" style={{ marginBottom: 14 }}>
           <div className="list-item">

@@ -1471,7 +1471,7 @@ const currentRoundComplete = useMemo(
     setIsSavingNames(true);
     try {
       for (const slot of playerSlots) {
-        const nextName = (newNames[slot.id] ?? '').trim();
+        const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
         const { error } = await supabase.from('tournament_players').update({ display_name: nextName }).eq('id', slot.id);
         if (error) { setMessage(`Save failed: ${error.message}`); setIsSavingNames(false); return; }
       }
@@ -1517,7 +1517,7 @@ const currentRoundComplete = useMemo(
   setIsStarting(true);
     try {
       for (const slot of playerSlots) {
-        const nextName = (newNames[slot.id] ?? '').trim();
+        const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
         const { error } = await supabase.from('tournament_players').update({ display_name: nextName }).eq('id', slot.id);
         if (error) { setMessage(`Save failed: ${error.message}`); setIsStarting(false); return; }
       }

@@ -56,7 +56,6 @@ export default function HomePage() {
           <p className="hero-subtitle">
             Create tournaments, track scores, and share live results
 </p>
-          </p>
 
           {/* Sign in CTA — only shows when signed out */}
           {!isLoadingUser && !userEmail ? (

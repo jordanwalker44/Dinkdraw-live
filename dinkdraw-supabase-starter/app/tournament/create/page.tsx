@@ -68,6 +68,7 @@ export default function CreateTournamentPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
+  const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
 
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
@@ -151,26 +152,27 @@ export default function CreateTournamentPage() {
       const joinCode = makeJoinCode();
 
       const { data: tournament, error } = await supabase
-        .from('tournaments')
-        .insert({
-          title: title.trim(),
-          organizer_user_id: user.id,
-          organizer_name: safeOrganizerName,
-          join_code: joinCode,
-          event_date: eventDate || null,
-          event_time: eventTime || null,
-          location: location.trim() || null,
-          player_count: playerCount,
-          courts,
-          rounds,
-          games_to: gamesTo,
-          status: 'draft',
-          format,
-          match_format: matchFormat,
-          doubles_mode: doublesMode,
-        })
-        .select()
-        .single();
+  .from('tournaments')
+  .insert({
+    title: title.trim(),
+    organizer_user_id: user.id,
+    organizer_name: safeOrganizerName,
+    join_code: joinCode,
+    event_date: eventDate || null,
+    event_time: eventTime || null,
+    location: location.trim() || null,
+    player_count: playerCount,
+    courts,
+    rounds,
+    games_to: gamesTo,
+    status: 'draft',
+    format,
+    match_format: matchFormat,
+    doubles_mode: doublesMode,
+    allow_player_score_reporting: allowPlayerScoreReporting,
+  })
+  .select()
+  .single();
 
       if (error || !tournament) {
         setMessage(error?.message || 'Failed to create tournament.');
@@ -333,6 +335,20 @@ export default function CreateTournamentPage() {
               placeholder="Courts, gym, park..."
             />
           </div>
+
+          <div>
+  <label className="label">Allow players to report scores</label>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+    <input
+      type="checkbox"
+      checked={allowPlayerScoreReporting}
+      onChange={(e) => setAllowPlayerScoreReporting(e.target.checked)}
+    />
+    <span className="muted">
+      Players in a match can submit scores themselves
+    </span>
+  </div>
+</div>
 
           <Stepper
             label={`Players (min ${minPlayers})`}

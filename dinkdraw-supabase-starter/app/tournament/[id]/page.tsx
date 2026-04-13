@@ -1242,41 +1242,23 @@ const currentRoundComplete = useMemo(
     const safeMatches = matchesData || [];
     setMatches(safeMatches);
 
-    setScoreDrafts((prev) => {
-      const next = { ...prev };
-      for (const match of safeMatches) {
-        const existing = prev[match.id];
-        next[match.id] = {
-          team_a_score:
-            existing?.team_a_score ??
-            (match.team_a_score === null ? '' : String(match.team_a_score)),
-          team_b_score:
-            existing?.team_b_score ??
-            (match.team_b_score === null ? '' : String(match.team_b_score)),
-          game_1_a:
-            existing?.game_1_a ??
-            (match.game_1_a === null ? '' : String(match.game_1_a)),
-          game_1_b:
-            existing?.game_1_b ??
-            (match.game_1_b === null ? '' : String(match.game_1_b)),
-          game_2_a:
-            existing?.game_2_a ??
-            (match.game_2_a === null ? '' : String(match.game_2_a)),
-          game_2_b:
-            existing?.game_2_b ??
-            (match.game_2_b === null ? '' : String(match.game_2_b)),
-          game_3_a:
-            existing?.game_3_a ??
-            (match.game_3_a === null ? '' : String(match.game_3_a)),
-          game_3_b:
-            existing?.game_3_b ??
-            (match.game_3_b === null ? '' : String(match.game_3_b)),
-        };
-      }
-      return next;
-    });
+  setScoreDrafts(() => {
+  const next: Record<string, ScoreDraft> = {};
+  for (const match of safeMatches) {
+    next[match.id] = {
+      team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+      team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+      game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
+      game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
+      game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
+      game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
+      game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
+      game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
+    };
+  }
+  return next;
+});
   }, 0);
-}
 
   useEffect(() => {
     async function load() {
@@ -1338,41 +1320,22 @@ const currentRoundComplete = useMemo(
       const safeMatches = data || [];
       setMatches(safeMatches);
 
-      setScoreDrafts((prev) => {
-        const next = { ...prev };
-        for (const match of safeMatches) {
-          const existing = prev[match.id];
-          next[match.id] = {
-            team_a_score:
-              existing?.team_a_score ??
-              (match.team_a_score === null ? '' : String(match.team_a_score)),
-            team_b_score:
-              existing?.team_b_score ??
-              (match.team_b_score === null ? '' : String(match.team_b_score)),
-            game_1_a:
-              existing?.game_1_a ??
-              (match.game_1_a === null ? '' : String(match.game_1_a)),
-            game_1_b:
-              existing?.game_1_b ??
-              (match.game_1_b === null ? '' : String(match.game_1_b)),
-            game_2_a:
-              existing?.game_2_a ??
-              (match.game_2_a === null ? '' : String(match.game_2_a)),
-            game_2_b:
-              existing?.game_2_b ??
-              (match.game_2_b === null ? '' : String(match.game_2_b)),
-            game_3_a:
-              existing?.game_3_a ??
-              (match.game_3_a === null ? '' : String(match.game_3_a)),
-            game_3_b:
-              existing?.game_3_b ??
-              (match.game_3_b === null ? '' : String(match.game_3_b)),
-          };
-        }
-        return next;
-      });
-    }
-  )
+   setScoreDrafts(() => {
+  const next: Record<string, ScoreDraft> = {};
+  for (const match of safeMatches) {
+    next[match.id] = {
+      team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+      team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+      game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
+      game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
+      game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
+      game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
+      game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
+      game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
+    };
+  }
+  return next;
+});
 
   .subscribe((status) => {
     setIsLive(status === 'SUBSCRIBED');

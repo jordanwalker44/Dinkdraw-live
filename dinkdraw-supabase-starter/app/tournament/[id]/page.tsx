@@ -1182,6 +1182,11 @@ const currentRoundComplete = useMemo(
 }, [playerSlots, matches, isSingles, isBestOf3]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
+  useEffect(() => {
+  if (!isOrganizer && isStarted) {
+    setActiveTab('rounds');
+  }
+}, [isOrganizer, isStarted]);
   const tournamentWinner = standings[0] || null;
 
   const canStartTournament = useMemo(() => {
@@ -2435,7 +2440,7 @@ function renderBestOf3Match(match: Match) {
           </div>
         </div>
 
-                {publicViewUrl ? (
+                {isOrganizer && publicViewUrl ? (
           <div
             className="card"
             style={{
@@ -2510,6 +2515,7 @@ function renderBestOf3Match(match: Match) {
           </div>
         ) : null}
         
+        {isOrganizer ? (
         <div className="grid">
           <button type="button" className="button secondary" onClick={copyJoinCode}>
             {copied ? 'Join Code Copied' : 'Copy Join Code'}
@@ -2546,7 +2552,7 @@ function renderBestOf3Match(match: Match) {
             </button>
           ) : null}
         </div>
-      </div>
+) : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
         <button type="button" className={`button ${activeTab === 'players' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('players')}>Players</button>

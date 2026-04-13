@@ -1283,9 +1283,14 @@ useEffect(() => {
         table: 'matches',
         filter: `tournament_id=eq.${params.id}`,
       },
-      async () => {
-        await loadTournamentData();
-      }
+      async (payload) => {
+  setMatches((prev) => {
+    const updated = prev.map((m) =>
+      m.id === payload.new.id ? payload.new : m
+    );
+    return updated;
+  });
+}
     )
     .on(
       'postgres_changes',

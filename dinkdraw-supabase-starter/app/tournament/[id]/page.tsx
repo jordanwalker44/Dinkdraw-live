@@ -2825,6 +2825,45 @@ function renderBestOf3Match(match: Match) {
         </button>
       ) : null}
     </div>
+    {/* UP NEXT MATCH */}
+{(() => {
+  const upcomingMatch = currentRoundMatches.find(
+    (m) => !m.is_complete && m.id !== nextUpMatch.id
+  );
+
+  if (!upcomingMatch) return null;
+
+  return (
+    <div
+      className="list-item"
+      style={{
+        padding: 14,
+        marginTop: 10,
+        opacity: 0.85,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginBottom: 6,
+        }}
+      >
+        Up Next
+      </div>
+
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>
+        {renderMatchLabel(upcomingMatch)}
+      </div>
+
+      <div className="muted" style={{ fontSize: 13 }}>
+        Court {upcomingMatch.court_number ?? '-'}
+      </div>
+    </div>
+  );
+})()}
   </div>
 ) : (
   <div className="muted">Waiting for the next match.</div>

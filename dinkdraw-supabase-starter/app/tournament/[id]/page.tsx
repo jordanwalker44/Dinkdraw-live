@@ -2875,17 +2875,23 @@ function renderBestOf3Match(match: Match) {
                     <div className="grid" style={{ marginBottom: 12 }}>
                       <div className="list-item" style={{ padding: 12 }}>
                         <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</div>
-                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_a_score} disabled={match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_a_score')} placeholder="0" />
+                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_a_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_a_score')} placeholder="0" />
                       </div>
                       <div className="list-item" style={{ padding: 12 }}>
                         <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</div>
-                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder="0" />
+                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder="0" />
                       </div>
                     </div>
                     {match.is_complete || isCompleted ? (
                       <button className="button secondary" disabled>{isCompleted ? 'Final Locked' : 'Score Submitted'}</button>
                     ) : (
-                      <button className="button primary" onClick={() => submitMatchScore(match.id)}>Submit Score</button>
+                     <button
+  className="button primary"
+  onClick={() => submitMatchScore(match.id)}
+  disabled={!isOrganizer}
+>
+  Submit Score
+</button>
                     )}
                   </div>
                 );

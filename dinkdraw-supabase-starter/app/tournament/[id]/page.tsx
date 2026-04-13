@@ -2827,9 +2827,14 @@ function renderBestOf3Match(match: Match) {
     </div>
     {/* UP NEXT MATCH */}
 {(() => {
-  const upcomingMatch = currentRoundMatches.find(
-    (m) => !m.is_complete && m.id !== nextUpMatch.id
-  );
+  const upcomingMatch = matches.find(
+  (m) =>
+    !m.is_complete &&
+    m.id !== nextUpMatch.id &&
+    (m.round_number > nextUpMatch.round_number ||
+      (m.round_number === nextUpMatch.round_number &&
+        m.court_number > nextUpMatch.court_number))
+);
 
   if (!upcomingMatch) return null;
 

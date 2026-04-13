@@ -2144,7 +2144,7 @@ function renderBestOf3Match(match: Match) {
             value={draft.game_1_a}
             disabled={game1Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
-            placeholder="0"
+            placeholder={isOrganizer ? "0" : "Organizer only"}
           />
           <input
             className="input"
@@ -2153,7 +2153,7 @@ function renderBestOf3Match(match: Match) {
             value={draft.game_1_b}
             disabled={game1Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
-            placeholder="0"
+            placeholder={isOrganizer ? "0" : "Organizer only"}
           />
         </div>
         {!game1Done && !seriesComplete && !isCompleted ? (
@@ -2196,7 +2196,7 @@ function renderBestOf3Match(match: Match) {
             value={draft.game_2_a}
             disabled={!game1Done || game2Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
-            placeholder="0"
+            placeholder={isOrganizer ? "0" : "Organizer only"}
           />
           <input
             className="input"
@@ -2205,7 +2205,7 @@ function renderBestOf3Match(match: Match) {
             value={draft.game_2_b}
             disabled={!game1Done || game2Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
-            placeholder="0"
+            placeholder={isOrganizer ? "0" : "Organizer only"}
           />
         </div>
         {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
@@ -2253,7 +2253,7 @@ function renderBestOf3Match(match: Match) {
               value={draft.game_3_a}
               disabled={match.game_3_a !== null || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
-              placeholder="0"
+              placeholder={isOrganizer ? "0" : "Organizer only"}
             />
             <input
               className="input"
@@ -2262,7 +2262,7 @@ function renderBestOf3Match(match: Match) {
               value={draft.game_3_b}
               disabled={match.game_3_b !== null || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
-              placeholder="0"
+              placeholder={isOrganizer ? "0" : "Organizer only"}
             />
           </div>
           {match.game_3_a === null && !seriesComplete && !isCompleted ? (
@@ -2875,11 +2875,11 @@ function renderBestOf3Match(match: Match) {
                     <div className="grid" style={{ marginBottom: 12 }}>
                       <div className="list-item" style={{ padding: 12 }}>
                         <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</div>
-                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_a_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_a_score')} placeholder="0" />
+                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_a_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_a_score')} placeholder={isOrganizer ? "0" : "Organizer only"} />
                       </div>
                       <div className="list-item" style={{ padding: 12 }}>
                         <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</div>
-                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder="0" />
+                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder={isOrganizer ? "0" : "Organizer only"} />
                       </div>
                     </div>
                     {match.is_complete || isCompleted ? (

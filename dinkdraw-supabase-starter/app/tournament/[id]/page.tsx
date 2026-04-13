@@ -2667,8 +2667,8 @@ function renderBestOf3Match(match: Match) {
     : 'Round schedule appears here after the tournament starts.'}
 
   {!isCompleted && isStarted ? (
-    <div style={{ marginTop: 6, fontSize: 13, opacity: 0.75 }}>
-      Organizer enters official scores
+    <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
+  Organizer enters official scores
     </div>
   ) : null}
 </div>

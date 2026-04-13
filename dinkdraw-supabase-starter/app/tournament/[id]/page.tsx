@@ -2523,7 +2523,7 @@ function renderBestOf3Match(match: Match) {
           <button type="button" className="button primary" onClick={shareJoinLink}>
             Share Join Link
           </button>
-          {isOrganizer && isStarted && !isCompleted ? (
+          {isStarted && !isCompleted ? (
             <button type="button" className="button secondary" onClick={endTournamentEarly} disabled={isEndingEarly}>
               {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
             </button>
@@ -2546,7 +2546,7 @@ function renderBestOf3Match(match: Match) {
     🏆 View Results
   </button>
 ) : null}
-          {isOrganizer && !isStarted && !isCompleted ? (
+          {!isStarted && !isCompleted ? (
             <button type="button" className="button secondary" onClick={deleteTournament} style={{ borderColor: 'rgba(248,113,113,.4)', color: '#f87171' }}>
               Delete Tournament
             </button>

@@ -2853,9 +2853,13 @@ function renderBestOf3Match(match: Match) {
   (m) =>
     !m.is_complete &&
     m.id !== nextUpMatch.id &&
-    (m.round_number > nextUpMatch.round_number ||
-      (m.round_number === nextUpMatch.round_number &&
-        (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)))
+    (
+      m.round_number > nextUpMatch.round_number ||
+      (
+        m.round_number === nextUpMatch.round_number &&
+        (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)
+      )
+    )
 );
 
   if (!upcomingMatch) return null;

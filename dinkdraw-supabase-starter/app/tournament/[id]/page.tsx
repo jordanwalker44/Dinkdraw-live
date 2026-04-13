@@ -1171,6 +1171,26 @@ const nextUpMatch = useMemo(
   [currentRoundMatches]
 );
 
+const upcomingMatch = useMemo(
+  () =>
+    nextUpMatch
+      ? matches.find(
+          (m) =>
+            !m.is_complete &&
+            !m.is_bye &&
+            m.id !== nextUpMatch.id &&
+            (
+              m.round_number > nextUpMatch.round_number ||
+              (
+                m.round_number === nextUpMatch.round_number &&
+                (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)
+              )
+            )
+        ) || null
+      : null,
+  [matches, nextUpMatch]
+);
+
 const currentRoundComplete = useMemo(
   () =>
     currentRoundMatches.length > 0 &&
@@ -2848,54 +2868,36 @@ function renderBestOf3Match(match: Match) {
       ) : null}
     </div>
 
-    {(() => {
-      const upcomingMatch = matches.find(
-        (m) =>
-          !m.is_complete &&
-          !m.is_bye &&
-          m.id !== nextUpMatch.id &&
-          (
-            m.round_number > nextUpMatch.round_number ||
-            (
-              m.round_number === nextUpMatch.round_number &&
-              (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)
-            )
-          )
-      );
+   {upcomingMatch ? (
+  <div
+    className="list-item"
+    style={{
+      padding: 14,
+      marginTop: 10,
+      opacity: 0.85,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        marginBottom: 6,
+      }}
+    >
+      Up Next
+    </div>
 
-      if (!upcomingMatch) return null;
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>
+      {renderMatchLabel(upcomingMatch)}
+    </div>
 
-      return (
-        <div
-          className="list-item"
-          style={{
-            padding: 14,
-            marginTop: 10,
-            opacity: 0.85,
-          }}
-        >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            Up Next
-          </div>
-
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>
-            {renderMatchLabel(upcomingMatch)}
-          </div>
-
-          <div className="muted" style={{ fontSize: 13 }}>
-            Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
-          </div>
-        </div>
-      );
-    })()}
+    <div className="muted" style={{ fontSize: 13 }}>
+      Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
+    </div>
+  </div>
+) : null}
   </div>
 ) : (
   <div className="muted">Waiting for the next match.</div>

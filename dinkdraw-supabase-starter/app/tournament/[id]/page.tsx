@@ -2699,19 +2699,19 @@ function renderBestOf3Match(match: Match) {
       <div className="card-title">Current Round</div>
 
       {!isStarted ? (
-        <div className="muted">Tournament has not started yet.</div>
-      ) : isCompleted ? (
-        <div className="muted">Tournament is complete. Final results are locked.</div>
-      ) : currentRoundComplete ? (
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-            Round {currentRound} is complete
-          </div>
-          <div className="muted">
-            All matches in the current round have been finished.
-          </div>
-        </div>
-     ) : nextUpMatch ? (
+  <div className="muted">Tournament has not started yet.</div>
+) : isCompleted ? (
+  <div className="muted">Tournament is complete. Final results are locked.</div>
+) : currentRoundComplete ? (
+  <div>
+    <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+      Round {currentRound} is complete
+    </div>
+    <div className="muted">
+      All matches in the current round have been finished.
+    </div>
+  </div>
+) : nextUpMatch ? (
   <div>
     <div
       style={{
@@ -2798,8 +2798,8 @@ function renderBestOf3Match(match: Match) {
             }}
           >
             <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-  {getInitials(nextUpMatch.team_a_player_1_id, nextUpMatch.team_a_player_2_id)}
-</div>
+              {getInitials(nextUpMatch.team_a_player_1_id, nextUpMatch.team_a_player_2_id)}
+            </div>
             <div style={{ fontSize: 34, fontWeight: 900 }}>
               {isBestOf3
                 ? getSeriesScore(nextUpMatch).aScore
@@ -2825,8 +2825,8 @@ function renderBestOf3Match(match: Match) {
             }}
           >
             <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-  {getInitials(nextUpMatch.team_b_player_1_id, nextUpMatch.team_b_player_2_id)}
-</div>
+              {getInitials(nextUpMatch.team_b_player_1_id, nextUpMatch.team_b_player_2_id)}
+            </div>
             <div style={{ fontSize: 34, fontWeight: 900 }}>
               {isBestOf3
                 ? getSeriesScore(nextUpMatch).bScore
@@ -2847,54 +2847,55 @@ function renderBestOf3Match(match: Match) {
         </button>
       ) : null}
     </div>
-    {/* UP NEXT MATCH */}
-{(() => {
- const upcomingMatch = matches.find(
-  (m) =>
-    !m.is_complete &&
-    m.id !== nextUpMatch.id &&
-    (
-      m.round_number > nextUpMatch.round_number ||
-      (
-        m.round_number === nextUpMatch.round_number &&
-        (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)
-      )
-    )
-);
 
-  if (!upcomingMatch) return null;
+    {(() => {
+      const upcomingMatch = matches.find(
+        (m) =>
+          !m.is_complete &&
+          !m.is_bye &&
+          m.id !== nextUpMatch.id &&
+          (
+            m.round_number > nextUpMatch.round_number ||
+            (
+              m.round_number === nextUpMatch.round_number &&
+              (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)
+            )
+          )
+      );
 
-  return (
-    <div
-      className="list-item"
-      style={{
-        padding: 14,
-        marginTop: 10,
-        opacity: 0.85,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          marginBottom: 6,
-        }}
-      >
-        Up Next
-      </div>
+      if (!upcomingMatch) return null;
 
-      <div style={{ fontWeight: 800, marginBottom: 6 }}>
-        {renderMatchLabel(upcomingMatch)}
-      </div>
+      return (
+        <div
+          className="list-item"
+          style={{
+            padding: 14,
+            marginTop: 10,
+            opacity: 0.85,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              marginBottom: 6,
+            }}
+          >
+            Up Next
+          </div>
 
-      <div className="muted" style={{ fontSize: 13 }}>
-        Court {upcomingMatch.court_number ?? '-'}
-      </div>
-    </div>
-  );
-})()}
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>
+            {renderMatchLabel(upcomingMatch)}
+          </div>
+
+          <div className="muted" style={{ fontSize: 13 }}>
+            Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
+          </div>
+        </div>
+      );
+    })()}
   </div>
 ) : (
   <div className="muted">Waiting for the next match.</div>

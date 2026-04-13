@@ -7,6 +7,8 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
+const INSTALL_PROMPT_DISMISSED_KEY = 'dinkdraw_install_prompt_dismissed';
+
 function isIos() {
   if (typeof window === 'undefined') return false;
   return /iphone|ipad|ipod/i.test(window.navigator.userAgent);
@@ -26,8 +28,10 @@ export function InstallPrompt() {
 
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem('dinkdraw_install_prompt_dismissed');
-      if (saved === 'true') setDismissed(true);
+      const saved = window.localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY);
+      if (saved === 'true') {
+        setDismissed(true);
+      }
     } catch {}
   }, []);
 
@@ -52,14 +56,23 @@ export function InstallPrompt() {
   function dismissPrompt() {
     setDismissed(true);
     try {
-      window.localStorage.setItem('dinkdraw_install_prompt_dismissed', 'true');
+      window.localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, 'true');
     } catch {}
   }
 
   async function handleInstall() {
     if (!deferredPrompt) return;
+
     await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+    const choice = await deferredPrompt.userChoice;
+
+    if (choice.outcome === 'accepted') {
+      setDismissed(true);
+      try {
+        window.localStorage.setItem(INSTALL_PROMPT_DISMISSED_KEY, 'true');
+      } catch {}
+    }
+
     setDeferredPrompt(null);
   }
 

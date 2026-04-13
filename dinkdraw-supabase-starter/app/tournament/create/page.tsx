@@ -334,8 +334,6 @@ export default function CreateTournamentPage() {
             />
           </div>
 
-          <div>
- 
           <Stepper
             label={`Players (min ${minPlayers})`}
             value={playerCount}

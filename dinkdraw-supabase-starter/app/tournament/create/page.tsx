@@ -68,8 +68,7 @@ export default function CreateTournamentPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
-  const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
-
+  
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
   const [rounds, setRounds] = useState(4);
@@ -169,8 +168,7 @@ export default function CreateTournamentPage() {
     format,
     match_format: matchFormat,
     doubles_mode: doublesMode,
-    allow_player_score_reporting: allowPlayerScoreReporting,
-  })
+    })
   .select()
   .single();
 
@@ -337,19 +335,7 @@ export default function CreateTournamentPage() {
           </div>
 
           <div>
-  <label className="label">Allow players to report scores</label>
-  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-    <input
-      type="checkbox"
-      checked={allowPlayerScoreReporting}
-      onChange={(e) => setAllowPlayerScoreReporting(e.target.checked)}
-    />
-    <span className="muted">
-      Players in a match can submit scores themselves
-    </span>
-  </div>
-</div>
-
+ 
           <Stepper
             label={`Players (min ${minPlayers})`}
             value={playerCount}

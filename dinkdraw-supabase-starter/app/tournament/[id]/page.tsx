@@ -1782,8 +1782,7 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
     m.id === matchId ? finalOptimisticMatch : m
   );
 
-  setMatches(optimisticMatches);
-setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
+  setMessage(`Submitting Game ${game}...`);
 
   const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
   const submittedRoundMatches = optimisticMatches.filter(
@@ -1838,6 +1837,8 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   setMessage(`Submit failed: ${error.message}`);
   return;
 }
+
+await loadTournamentData(userId);
 
   if (seriesNowComplete) {
     const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
@@ -1897,9 +1898,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
       : m
   );
 
-setMatches(optimisticMatches);
-setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
-setMessage('Score submitted.');
+setMessage('Submitting score...');
 
   const completedMatch = optimisticMatches.find((m) => m.id === matchId);
   if (!completedMatch) return;

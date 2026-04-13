@@ -2740,6 +2740,7 @@ function renderBestOf3Match(match: Match) {
     </div>
   </div>
 
+) : nextUpMatch ? (
   <div
   className="list-item"
   style={{

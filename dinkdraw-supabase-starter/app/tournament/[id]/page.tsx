@@ -1986,6 +1986,22 @@ function renderMatchLabel(match: Match) {
   )}`;
 }
 
+function getInitials(playerId1?: string | null, playerId2?: string | null) {
+  const getInitial = (id?: string | null) => {
+    if (!id) return '?';
+
+    const player = playerSlots.find((p) => p.id === id);
+    const name = player?.display_name || '';
+
+    return name.trim().charAt(0).toUpperCase() || '?';
+  };
+
+  const a = getInitial(playerId1);
+  const b = getInitial(playerId2);
+
+  return `${a} & ${b}`;
+}  
+
 function getMatchElementId(matchId: string) {
   return `live-match-${matchId}`;
 }
@@ -2776,8 +2792,8 @@ function renderBestOf3Match(match: Match) {
             }}
           >
             <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Team A
-            </div>
+  {getInitials(nextUpMatch.team_a_player_1_id, nextUpMatch.team_a_player_2_id)}
+</div>
             <div style={{ fontSize: 34, fontWeight: 900 }}>
               {isBestOf3
                 ? getSeriesScore(nextUpMatch).aScore
@@ -2803,8 +2819,8 @@ function renderBestOf3Match(match: Match) {
             }}
           >
             <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Team B
-            </div>
+  {getInitials(nextUpMatch.team_b_player_1_id, nextUpMatch.team_b_player_2_id)}
+</div>
             <div style={{ fontSize: 34, fontWeight: 900 }}>
               {isBestOf3
                 ? getSeriesScore(nextUpMatch).bScore

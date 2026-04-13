@@ -2747,27 +2747,78 @@ function renderBestOf3Match(match: Match) {
       textAlign: 'center',
     }}
   >
+      <div style={{ marginBottom: 14 }}>
+  {/* Team Names */}
+  <div
+    style={{
+      fontWeight: 800,
+      fontSize: 16,
+      marginBottom: 10,
+      textAlign: 'center',
+      opacity: 0.85,
+    }}
+  >
+    {renderMatchLabel(nextUpMatch)}
+  </div>
+
+  {/* BIG LIVE SCORE */}
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
+      alignItems: 'center',
+      gap: 12,
+    }}
+  >
+    {/* TEAM A */}
     <div
       style={{
-        fontWeight: 900,
-        lineHeight: 1.35,
-        fontSize: 20,
-        marginBottom: 14,
+        textAlign: 'center',
+        transition: 'all 160ms ease',
+        ...getLiveBannerWinnerStyle('a', nextUpMatch),
       }}
     >
-      {renderMatchLabel(nextUpMatch)}
+      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+        Team A
+      </div>
+      <div style={{ fontSize: 34, fontWeight: 900 }}>
+        {isBestOf3
+          ? getSeriesScore(nextUpMatch).aScore
+          : nextUpMatch.team_a_score ?? '-'}
+      </div>
     </div>
 
+    {/* DASH */}
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto 1fr',
-        alignItems: 'center',
-        gap: 12,
+        fontSize: 18,
+        fontWeight: 900,
+        opacity: 0.7,
       }}
     >
-      <div
-  style={{
+      —
+    </div>
+
+    {/* TEAM B */}
+    <div
+      style={{
+        textAlign: 'center',
+        transition: 'all 160ms ease',
+        ...getLiveBannerWinnerStyle('b', nextUpMatch),
+      }}
+    >
+      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+        Team B
+      </div>
+      <div style={{ fontSize: 34, fontWeight: 900 }}>
+        {isBestOf3
+          ? getSeriesScore(nextUpMatch).bScore
+          : nextUpMatch.team_b_score ?? '-'}
+      </div>
+    </div>
+  </div>
+</div>
+      
     textAlign: 'center',
     transition: 'all 160ms ease',
     ...getLiveBannerWinnerStyle('a', nextUpMatch),

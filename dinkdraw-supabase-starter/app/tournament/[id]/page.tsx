@@ -1259,6 +1259,7 @@ const currentRoundComplete = useMemo(
   return next;
 });
   }, 0);
+}
 
   useEffect(() => {
     async function load() {

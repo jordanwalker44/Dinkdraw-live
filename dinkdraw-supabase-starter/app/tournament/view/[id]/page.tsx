@@ -507,72 +507,48 @@ export default function PublicTournamentViewPage({
 
   useEffect(() => {
     const channel = supabase
-      .channel(`public-tournament-live-${params.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tournaments',
-          filter: `id=eq.${params.id}`,
-        },
-        async () => {
-          const { data } = await supabase
-            .from('tournaments')
-            .select('*')
-            .eq('id', params.id)
-            .maybeSingle();
+  .channel(`public-tournament-live-${params.id}`)
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'matches',
+      filter: `tournament_id=eq.${params.id}`,
+    },
+    () => {
+      void loadTournamentData();
+    }
+  )
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'tournament_players',
+      filter: `tournament_id=eq.${params.id}`,
+    },
+    () => {
+      void loadTournamentData();
+    }
+  )
+  .on(
+    'postgres_changes',
+    {
+      event: '*',
+      schema: 'public',
+      table: 'tournaments',
+      filter: `id=eq.${params.id}`,
+    },
+    () => {
+      void loadTournamentData();
+    }
+  )
+  .subscribe();
 
-          setIsLive(true);
-          if (data) setTournament(data);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tournament_players',
-          filter: `tournament_id=eq.${params.id}`,
-        },
-        async () => {
-          const { data } = await supabase
-            .from('tournament_players')
-            .select('*')
-            .eq('tournament_id', params.id)
-            .order('slot_number', { ascending: true });
-
-          setIsLive(true);
-          setPlayerSlots(data || []);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'matches',
-          filter: `tournament_id=eq.${params.id}`,
-        },
-        async () => {
-          const { data } = await supabase
-            .from('matches')
-            .select('*')
-            .eq('tournament_id', params.id)
-            .order('round_number', { ascending: true })
-            .order('court_number', { ascending: true });
-
-          setIsLive(true);
-          setMatches(data || []);
-        }
-      )
-      .subscribe((status) => {
-        setIsLive(status === 'SUBSCRIBED');
-      });
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
+return () => {
+  void supabase.removeChannel(channel);
+};
   }, [params.id, supabase]);
 
   useEffect(() => {

@@ -37,6 +37,7 @@ type Match = {
   id: string;
   round_number: number;
   court_number: number | null;
+  court_label: string | null;
   team_a_player_1_id: string | null;
   team_a_player_2_id: string | null;
   team_b_player_1_id: string | null;
@@ -526,6 +527,10 @@ export default function PublicTournamentViewPage({
     );
   }
 
+  function renderCourtLabel(match: Match) {
+  return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
+}
+
   function getInitials(playerId1?: string | null, playerId2?: string | null) {
     const getInitialsFromName = (name: string) => {
       const trimmed = name.trim();
@@ -610,7 +615,7 @@ export default function PublicTournamentViewPage({
         }
       >
         <div className="row-between" style={{ marginBottom: 12 }}>
-          <strong>Court {match.court_number ?? '-'}</strong>
+          <strong>{renderCourtLabel(match)}</strong>
           <div
             style={{
               display: 'flex',
@@ -685,7 +690,7 @@ export default function PublicTournamentViewPage({
         >
           <div>
             <div style={{ fontWeight: 800, marginBottom: 4 }}>
-              Court {match.court_number ?? '-'}
+              {renderCourtLabel(match)}
             </div>
             <div className="muted" style={{ fontSize: 12 }}>
               Round {match.round_number}
@@ -945,7 +950,7 @@ export default function PublicTournamentViewPage({
                     Featured Match
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>
-                    Round {currentRound} • Court {featuredLiveMatch.court_number ?? '-'}
+                    Round {currentRound} • {renderCourtLabel(featuredLiveMatch)}
                   </div>
                   <div className="muted" style={{ fontSize: 13 }}>
                     {liveMatches.length} live court{liveMatches.length === 1 ? '' : 's'} right now
@@ -1059,7 +1064,7 @@ export default function PublicTournamentViewPage({
                 </div>
                 <div style={{ marginBottom: 6 }}>{renderStyledMatchLabel(nextUpMatch)}</div>
                 <div className="muted" style={{ fontSize: 13 }}>
-                  Round {nextUpMatch.round_number} • Court {nextUpMatch.court_number ?? '-'}
+                  Round {nextUpMatch.round_number} • {renderCourtLabel(nextUpMatch)}
                 </div>
               </div>
             ) : null}
@@ -1132,7 +1137,7 @@ export default function PublicTournamentViewPage({
                     className="row-between"
                     style={{ marginBottom: 12, flexWrap: 'wrap' }}
                   >
-                    <strong>Court {match.court_number ?? '-'}</strong>
+                    <strong>{renderCourtLabel(match)}</strong>
                     <div
                       style={{
                         display: 'flex',

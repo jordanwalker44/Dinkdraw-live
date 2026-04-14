@@ -955,8 +955,7 @@ export default function PublicTournamentViewPage({
 
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <span className="tag green">Live</span>
-                  <span className="tag">Featured</span>
-                </div>
+                  </div>
               </div>
 
               <div style={{ marginBottom: 16 }}>

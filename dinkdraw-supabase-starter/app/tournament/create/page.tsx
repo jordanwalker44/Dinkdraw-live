@@ -71,6 +71,7 @@ export default function CreateTournamentPage() {
   
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
+  const [courtLabels, setCourtLabels] = useState<string[]>([]);
   const [rounds, setRounds] = useState(4);
   const [gamesTo, setGamesTo] = useState(11);
 
@@ -105,6 +106,11 @@ export default function CreateTournamentPage() {
       setCourts(maxCourtsAllowed);
     }
   }, [playerCount, format, courts, maxCourtsAllowed]);
+    useEffect(() => {
+    setCourtLabels((prev) =>
+      Array.from({ length: courts }, (_, i) => prev[i] ?? `Court ${i + 1}`)
+    );
+  }, [courts]);
 
   useEffect(() => {
     if (format === 'singles' && playerCount < 3) {
@@ -150,27 +156,28 @@ export default function CreateTournamentPage() {
 
       const joinCode = makeJoinCode();
 
-      const { data: tournament, error } = await supabase
-  .from('tournaments')
-  .insert({
-    title: title.trim(),
-    organizer_user_id: user.id,
-    organizer_name: safeOrganizerName,
-    join_code: joinCode,
-    event_date: eventDate || null,
-    event_time: eventTime || null,
-    location: location.trim() || null,
-    player_count: playerCount,
-    courts,
-    rounds,
-    games_to: gamesTo,
-    status: 'draft',
-    format,
-    match_format: matchFormat,
-    doubles_mode: doublesMode,
-    })
-  .select()
-  .single();
+          const { data: tournament, error } = await supabase
+        .from('tournaments')
+        .insert({
+          title: title.trim(),
+          organizer_user_id: user.id,
+          organizer_name: safeOrganizerName,
+          join_code: joinCode,
+          event_date: eventDate || null,
+          event_time: eventTime || null,
+          location: location.trim() || null,
+          player_count: playerCount,
+          courts,
+          rounds,
+          games_to: gamesTo,
+          status: 'draft',
+          format,
+          match_format: matchFormat,
+          doubles_mode: doublesMode,
+          court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
+        })
+        .select()
+        .single();
 
       if (error || !tournament) {
         setMessage(error?.message || 'Failed to create tournament.');
@@ -349,6 +356,28 @@ export default function CreateTournamentPage() {
             max={maxCourtsAllowed}
             onChange={setCourts}
           />
+                    <div>
+            <label className="label">Court Names (optional)</label>
+            <div className="grid" style={{ gap: 10 }}>
+              {courtLabels.map((label, index) => (
+                <div key={index}>
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
+                    Court Slot {index + 1}
+                  </div>
+                  <input
+                    className="input"
+                    value={label}
+                    onChange={(e) => {
+                      const next = [...courtLabels];
+                      next[index] = e.target.value;
+                      setCourtLabels(next);
+                    }}
+                    placeholder={`Court ${index + 1}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
 
           <Stepper
             label="Rounds"

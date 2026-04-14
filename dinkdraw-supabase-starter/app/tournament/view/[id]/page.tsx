@@ -763,8 +763,16 @@ export default function PublicTournamentViewPage({
                 ? `${completedMatchCount} of ${totalPlayableMatchCount} matches complete`
                 : 'Live match coverage will appear here as soon as play begins.'}
             </div>
-          </div>
-
+         
+<div
+  style={{
+    height: 1,
+    background: 'linear-gradient(90deg, transparent, rgba(255,203,5,0.5), transparent)',
+    margin: '12px 0 0 0',
+  }}
+/>
+  </div>        
+          
        </div>
 
         {!isStarted ? (

@@ -357,12 +357,15 @@ export default function CreateTournamentPage() {
             onChange={setCourts}
           />
                     <div>
-            <label className="label">Court Names (optional)</label>
-            <div className="grid" style={{ gap: 10 }}>
+  <label className="label">Court Names (optional)</label>
+  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+    Customize court numbers or names (e.g. Court 4, Championship Court)
+  </div>
+  <div className="grid" style={{ gap: 10 }}>
               {courtLabels.map((label, index) => (
                 <div key={index}>
                   <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-                    Court Slot {index + 1}
+                    Court {index + 1}
                   </div>
                   <input
                     className="input"

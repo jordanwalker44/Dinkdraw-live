@@ -2718,7 +2718,7 @@ function renderBestOf3Match(match: Match) {
           <div className="card" style={{ marginTop: 12 }}>
       <div className="card-title">Current Round</div>
 
-      {!isStarted ? (
+   {!isStarted ? (
   <div className="muted">Tournament has not started yet.</div>
 ) : isCompleted ? (
   <div className="muted">Tournament is complete. Final results are locked.</div>
@@ -2868,41 +2868,40 @@ function renderBestOf3Match(match: Match) {
       ) : null}
     </div>
 
-   {upcomingMatch ? (
-  <div
-    className="list-item"
-    style={{
-      padding: 14,
-      marginTop: 10,
-      opacity: 0.85,
-    }}
-  >
-    <div
-      style={{
-        fontSize: 12,
-        fontWeight: 800,
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        marginBottom: 6,
-      }}
-    >
-      Up Next
-    </div>
+    {upcomingMatch ? (
+      <div
+        className="list-item"
+        style={{
+          padding: 14,
+          marginTop: 10,
+          opacity: 0.85,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            marginBottom: 6,
+          }}
+        >
+          Up Next
+        </div>
 
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-      {renderMatchLabel(upcomingMatch)}
-    </div>
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>
+          {renderMatchLabel(upcomingMatch)}
+        </div>
 
-    <div className="muted" style={{ fontSize: 13 }}>
-      Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
-    </div>
-  </div>
-) : null}
+        <div className="muted" style={{ fontSize: 13 }}>
+          Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
+        </div>
+      </div>
+    ) : null}
   </div>
 ) : (
   <div className="muted">Waiting for the next match.</div>
 )}
-    </div>
 
           <div className="grid" style={{ marginBottom: 14 }}>
             {roundsAvailable.map((round) => {

@@ -694,8 +694,7 @@ export default function PublicTournamentViewPage({
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <span className="tag green">Live</span>
-            <span className="tag">In Progress</span>
-          </div>
+            </div>
         </div>
 
         <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>

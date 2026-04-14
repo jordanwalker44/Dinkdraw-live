@@ -730,8 +730,13 @@ export default function PublicTournamentViewPage({
           boxShadow: isStarted && !isCompleted ? '0 0 0 1px rgba(255,203,5,0.08) inset, var(--shadow)' : undefined,
         }}
       >
-        <div className="row-between" style={{ alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap' }}>
-          <div>
+        <div
+  style={{
+    marginBottom: 18,
+    textAlign: 'center',
+  }}
+>
+          <div style={{ width: '100%' }}>
             <div
               className="muted"
               style={{
@@ -760,18 +765,7 @@ export default function PublicTournamentViewPage({
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {selectedRound !== currentRound && isStarted && !isCompleted ? (
-              <button
-                type="button"
-                className="button secondary"
-                onClick={() => setSelectedRound(currentRound)}
-              >
-                Jump to Live Round
-              </button>
-            ) : null}
-          </div>
-        </div>
+       </div>
 
         {!isStarted ? (
           <div className="list-item" style={{ padding: 16 }}>

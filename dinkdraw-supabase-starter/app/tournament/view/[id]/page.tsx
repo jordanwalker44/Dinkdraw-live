@@ -631,26 +631,33 @@ return () => {
       <TopNav />
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Public Tournament View</div>
+  <div className="row-between" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+  <span
+    className={
+      isCompleted
+        ? 'tag'
+        : isStarted
+        ? 'tag green'
+        : 'tag'
+    }
+  >
+    {isCompleted ? 'Complete' : isStarted ? 'Live' : 'Waiting'}
+  </span>
 
-        <div className="grid" style={{ marginBottom: 14 }}>
-          <div className="list-item">
-            <div className="label">Join Code</div>
-            <div className="row-between">
-              <strong style={{ letterSpacing: '0.08em' }}>
-                {tournament.join_code || '...'}
-              </strong>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span className={isLive ? 'tag green' : 'tag'}>
-                  {isLive ? 'Live' : 'Connecting'}
-                </span>
-                <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
-                <span className="tag">
-                  {isBestOf3 ? 'Best of 3' : 'Single Game'}
-                </span>
-              </div>
-            </div>
-          </div>
+  <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
+  <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
+
+  {!isLive ? <span className="tag">Connecting</span> : null}
+</div>
+
+    <div className="muted" style={{ fontSize: 13 }}>
+      {tournament.location
+        ? `${tournament.location}${tournament.event_time ? ` • ${tournament.event_time}` : ''}`
+        : tournament.event_time || tournament.event_date || ''}
+    </div>
+  </div>
+</div>
 
           <div className="list-item">
             <div className="row-between">
@@ -688,21 +695,7 @@ return () => {
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Players</div>
-        <div className="grid">
-          {playerSlots.map((slot) => (
-            <div key={slot.id} className="list-item">
-              <div className="row-between">
-                <span className="muted">Player {slot.slot_number}</span>
-                <strong>{slot.display_name || 'Open'}</strong>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 14 }}>
+     <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Rounds</div>
         <div className="card-subtitle">
           {isCompleted

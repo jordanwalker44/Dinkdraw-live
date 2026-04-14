@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
-import { TopNav } from '../../../../components/TopNav';
 
 export const dynamic = 'force-dynamic';
 
@@ -702,9 +701,7 @@ return () => {
         </div>
       </div>
 
-      <TopNav />
-
-      <div className="card" style={{ marginBottom: 14 }}>
+           <div className="card" style={{ marginBottom: 14 }}>
   <div className="row-between" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
   <span

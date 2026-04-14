@@ -661,25 +661,6 @@ return () => {
 
           <div className="list-item">
             <div className="row-between">
-              <span className="muted">Organizer</span>
-              <strong>{tournament.organizer_name || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Status</span>
-              <strong>
-                {isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}
-              </strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Progress</span>
-              <strong>
-                {completedMatchCount}/{totalPlayableMatchCount} matches
-              </strong>
-            </div>
-          </div>
-
-          <div className="list-item">
-            <div className="row-between">
               <span className="muted">Date</span>
               <strong>{tournament.event_date || '-'}</strong>
             </div>

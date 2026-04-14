@@ -1161,8 +1161,8 @@ return () => {
         <div style={{ textAlign: 'center' }}>Diff</div>
       </div>
 
-      {standings.map((row, index) => {
-        const place = index + 1;
+      {standings.slice(1).map((row, index) => {
+        const place = index + 2;
         const medal =
           place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 

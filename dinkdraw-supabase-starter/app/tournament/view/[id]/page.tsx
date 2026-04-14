@@ -340,6 +340,26 @@ export default function PublicTournamentViewPage({
     () => currentRoundMatches.find((m) => !m.is_complete) || null,
     [currentRoundMatches]
   );
+  
+  const upcomingMatch = useMemo(
+  () =>
+    currentMatch
+      ? matches.find(
+          (m) =>
+            !m.is_complete &&
+            !m.is_bye &&
+            m.id !== currentMatch.id &&
+            (
+              m.round_number > currentMatch.round_number ||
+              (
+                m.round_number === currentMatch.round_number &&
+                (m.court_number ?? 0) > (currentMatch.court_number ?? 0)
+              )
+            )
+        ) || null
+      : null,
+  [matches, currentMatch]
+);
 
   const currentRoundComplete = useMemo(
     () =>
@@ -739,22 +759,108 @@ return () => {
     </div>
 
     <div
-      className="list-item"
+  className="list-item"
+  style={{
+    padding: 16,
+    textAlign: 'center',
+  }}
+>
+  <div
+    style={{
+      fontWeight: 800,
+      fontSize: 16,
+      marginBottom: 10,
+      textAlign: 'center',
+      opacity: 0.85,
+    }}
+  >
+    {renderMatchLabel(currentMatch)}
+  </div>
+
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr auto 1fr',
+      alignItems: 'center',
+      gap: 12,
+    }}
+  >
+    <div
       style={{
-        padding: 16,
         textAlign: 'center',
+        transition: 'all 160ms ease',
+        ...getWinnerStyle('a', currentMatch),
       }}
     >
-      <div
-        style={{
-          fontWeight: 900,
-          lineHeight: 1.35,
-          fontSize: 20,
-        }}
-      >
-        {renderMatchLabel(currentMatch)}
+      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+        Team 1
+      </div>
+      <div style={{ fontSize: 34, fontWeight: 900 }}>
+        {isBestOf3
+          ? getSeriesScore(currentMatch).aScore
+          : currentMatch.team_a_score ?? '-'}
       </div>
     </div>
+
+    <div
+      style={{
+        fontSize: 18,
+        fontWeight: 900,
+        opacity: 0.7,
+      }}
+    >
+      —
+    </div>
+
+    <div
+      style={{
+        textAlign: 'center',
+        transition: 'all 160ms ease',
+        ...getWinnerStyle('b', currentMatch),
+      }}
+    >
+      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+        Team 2
+      </div>
+      <div style={{ fontSize: 34, fontWeight: 900 }}>
+        {isBestOf3
+          ? getSeriesScore(currentMatch).bScore
+          : currentMatch.team_b_score ?? '-'}
+      </div>
+    </div>
+  </div>
+</div>
+
+{upcomingMatch ? (
+  <div
+    className="list-item"
+    style={{
+      padding: 14,
+      marginTop: 10,
+      opacity: 0.85,
+    }}
+  >
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 800,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        marginBottom: 6,
+      }}
+    >
+      Up Next
+    </div>
+
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>
+      {renderMatchLabel(upcomingMatch)}
+    </div>
+
+    <div className="muted" style={{ fontSize: 13 }}>
+      Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
+    </div>
+  </div>
+) : null}              
 
     {selectedRound !== currentRound ? (
       <button

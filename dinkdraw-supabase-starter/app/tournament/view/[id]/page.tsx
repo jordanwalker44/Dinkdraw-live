@@ -390,6 +390,32 @@ export default function PublicTournamentViewPage({
     )} vs ${renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}`;
   }
 
+  function renderStyledMatchLabel(match: Match) {
+  return (
+    <div
+      style={{
+        fontWeight: 800,
+        textAlign: 'center',
+        lineHeight: 1.35,
+      }}
+    >
+      <span>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</span>
+      <span
+        style={{
+          margin: '0 8px',
+          color: '#FFCB05',
+          fontWeight: 900,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+        }}
+      >
+        vs
+      </span>
+      <span>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</span>
+    </div>
+  );
+}
+
   function getInitials(playerId1?: string | null, playerId2?: string | null) {
   const getInitialsFromName = (name: string) => {
     const trimmed = name.trim();
@@ -481,14 +507,9 @@ export default function PublicTournamentViewPage({
           </div>
         </div>
 
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>
-            {teamAName}
-          </div>
-          <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>
-            {teamBName}
-          </div>
-        </div>
+        <div style={{ marginBottom: 12 }}>
+  {renderStyledMatchLabel(match)}
+</div>
 
         <div className="grid" style={{ gap: 8 }}>
           <div className="list-item" style={{ padding: 10 }}>
@@ -803,16 +824,14 @@ return () => {
   }}
 >
   <div
-    style={{
-      fontWeight: 800,
-      fontSize: 16,
-      marginBottom: 10,
-      textAlign: 'center',
-      opacity: 0.85,
-    }}
-  >
-    {renderMatchLabel(currentMatch)}
-  </div>
+  style={{
+    fontSize: 16,
+    marginBottom: 10,
+    opacity: 0.85,
+  }}
+>
+  {renderStyledMatchLabel(currentMatch)}
+</div>
 
   <div
     style={{
@@ -889,9 +908,9 @@ return () => {
       Up Next
     </div>
 
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-      {renderMatchLabel(upcomingMatch)}
-    </div>
+    <div style={{ marginBottom: 6 }}>
+  {renderStyledMatchLabel(upcomingMatch)}
+</div>
 
     <div className="muted" style={{ fontSize: 13 }}>
       Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
@@ -971,6 +990,10 @@ return () => {
                       </span>
                     </div>
                   </div>
+
+                  <div style={{ marginBottom: 10 }}>
+  {renderStyledMatchLabel(match)}
+</div>
 
                   <div className="grid" style={{ marginBottom: 12 }}>
                     <div className="list-item" style={{ padding: 12 }}>

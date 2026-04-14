@@ -391,21 +391,34 @@ export default function PublicTournamentViewPage({
   }
 
   function getInitials(playerId1?: string | null, playerId2?: string | null) {
-  const getInitial = (id?: string | null) => {
+  const getInitialsFromName = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return '?';
+
+    const parts = trimmed.split(/\s+/);
+
+    // First + last name → use first letter of each
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+
+    // Single name → use first 2 letters
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const getPlayerInitials = (id?: string | null) => {
     if (!id) return '?';
 
     const player = playerSlots.find((p) => p.id === id);
-    const name = player?.display_name || '';
-
-    return name.trim().charAt(0).toUpperCase() || '?';
+    return getInitialsFromName(player?.display_name || '');
   };
 
   if (isSingles) {
-    return getInitial(playerId1);
+    return getPlayerInitials(playerId1);
   }
 
-  const a = getInitial(playerId1);
-  const b = getInitial(playerId2);
+  const a = getPlayerInitials(playerId1);
+  const b = getPlayerInitials(playerId2);
 
   return `${a} & ${b}`;
 }

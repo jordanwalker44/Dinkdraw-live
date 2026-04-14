@@ -2698,294 +2698,345 @@ function renderBestOf3Match(match: Match) {
         </div>
       )}
 
-      {activeTab === 'rounds' && (
-      <div className="card">
+     {activeTab === 'rounds' && (
+  <div className="card">
     <div className="card-title">Rounds</div>
-        <div className="card-subtitle">
-  {isCompleted
-    ? 'Tournament complete. Scores are locked.'
-    : isStarted
-    ? `Current live round: ${currentRound}`
-    : 'Round schedule appears here after the tournament starts.'}
+    <div className="card-subtitle">
+      {isCompleted
+        ? 'Tournament complete. Scores are locked.'
+        : isStarted
+        ? `Current live round: ${currentRound}`
+        : 'Round schedule appears here after the tournament starts.'}
 
-  {!isCompleted && isStarted ? (
-    <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
-  Organizer enters official scores
-    </div>
-  ) : null}
-</div>
-
-          <div className="card" style={{ marginTop: 12 }}>
-      <div className="card-title">Current Round</div>
-
-   {!isStarted ? (
-  <div className="muted">Tournament has not started yet.</div>
-) : isCompleted ? (
-  <div className="muted">Tournament is complete. Final results are locked.</div>
-) : currentRoundComplete ? (
-  <div>
-    <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-      Round {currentRound} is complete
-    </div>
-    <div className="muted">
-      All matches in the current round have been finished.
-    </div>
-  </div>
-) : nextUpMatch ? (
-  <div>
-    <div
-      style={{
-        textAlign: 'center',
-        marginBottom: 14,
-        padding: '10px 12px 4px',
-      }}
-    >
-      <div
-        className="muted"
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          marginBottom: 8,
-        }}
-      >
-        Round {currentRound}
-      </div>
-
-      <div
-        style={{
-          fontSize: 30,
-          fontWeight: 900,
-          lineHeight: 1,
-          marginBottom: 8,
-          color: '#FFCB05',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        Live Match
-      </div>
-
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 800,
-          marginBottom: 10,
-        }}
-      >
-        Court {nextUpMatch.court_number ?? '-'}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <span className="tag green">Live</span>
-      </div>
-    </div>
-
-    <div
-      className="list-item"
-      style={{
-        padding: 16,
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ marginBottom: 14 }}>
-        <div
-          style={{
-            fontWeight: 800,
-            fontSize: 16,
-            marginBottom: 10,
-            textAlign: 'center',
-            opacity: 0.85,
-          }}
-        >
-          {renderMatchLabel(nextUpMatch)}
+      {!isCompleted && isStarted ? (
+        <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
+          Organizer enters official scores
         </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
-            alignItems: 'center',
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              textAlign: 'center',
-              transition: 'all 160ms ease',
-              ...getLiveBannerWinnerStyle('a', nextUpMatch),
-            }}
-          >
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              {getInitials(nextUpMatch.team_a_player_1_id, nextUpMatch.team_a_player_2_id)}
-            </div>
-            <div style={{ fontSize: 34, fontWeight: 900 }}>
-              {isBestOf3
-                ? getSeriesScore(nextUpMatch).aScore
-                : nextUpMatch.team_a_score ?? '-'}
-            </div>
-          </div>
-
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 900,
-              opacity: 0.7,
-            }}
-          >
-            —
-          </div>
-
-          <div
-            style={{
-              textAlign: 'center',
-              transition: 'all 160ms ease',
-              ...getLiveBannerWinnerStyle('b', nextUpMatch),
-            }}
-          >
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              {getInitials(nextUpMatch.team_b_player_1_id, nextUpMatch.team_b_player_2_id)}
-            </div>
-            <div style={{ fontSize: 34, fontWeight: 900 }}>
-              {isBestOf3
-                ? getSeriesScore(nextUpMatch).bScore
-                : nextUpMatch.team_b_score ?? '-'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {selectedRound !== currentRound ? (
-        <button
-          type="button"
-          className="button secondary"
-          style={{ marginTop: 10 }}
-          onClick={() => setSelectedRound(currentRound)}
-        >
-          Jump to Current Round
-        </button>
       ) : null}
     </div>
 
-    {upcomingMatch ? (
-      <div
-        className="list-item"
-        style={{
-          padding: 14,
-          marginTop: 10,
-          opacity: 0.85,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-            marginBottom: 6,
-          }}
-        >
-          Up Next
-        </div>
+    <div className="card" style={{ marginTop: 12 }}>
+      <div className="card-title">Current Round</div>
 
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>
-          {renderMatchLabel(upcomingMatch)}
+      {!isStarted ? (
+        <div className="muted">Tournament has not started yet.</div>
+      ) : isCompleted ? (
+        <div className="muted">Tournament is complete. Final results are locked.</div>
+      ) : currentRoundComplete ? (
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+            Round {currentRound} is complete
+          </div>
+          <div className="muted">
+            All matches in the current round have been finished.
+          </div>
         </div>
+      ) : nextUpMatch ? (
+        <div>
+          <div
+            style={{
+              textAlign: 'center',
+              marginBottom: 14,
+              padding: '10px 12px 4px',
+            }}
+          >
+            <div
+              className="muted"
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              Round {currentRound}
+            </div>
 
-        <div className="muted" style={{ fontSize: 13 }}>
-          Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
-        </div>
-      </div>
-    ) : null}
-  </div>
-) : (
-  <div className="muted">Waiting for the next match.</div>
-)}
+            <div
+              style={{
+                fontSize: 30,
+                fontWeight: 900,
+                lineHeight: 1,
+                marginBottom: 8,
+                color: '#FFCB05',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              Live Match
+            </div>
 
-          <div className="grid" style={{ marginBottom: 14 }}>
-            {roundsAvailable.map((round) => {
-              const status = roundStatusByRound.get(round);
-              const isSelected = selectedRound === round;
-              return (
-                <button key={round} type="button" className={`button ${isSelected ? 'primary' : 'secondary'}`} onClick={() => setSelectedRound(round)}>
-                  {status === 'complete' ? `✓ Round ${round}` : status === 'current' ? `• Round ${round}` : `Round ${round}`}
-                </button>
-              );
-            })}
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                marginBottom: 10,
+              }}
+            >
+              Court {nextUpMatch.court_number ?? '-'}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <span className="tag green">Live</span>
+            </div>
           </div>
 
-          {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
-            <div className="muted">No matches in this round yet.</div>
-          ) : (
-            <div className="grid">
-              {matchesForSelectedRound.map((match) => {
-              const isNextUp =
-  !isCompleted &&
-  match.round_number === currentRound &&
-  nextUpMatch?.id === match.id;
-                if (isBestOf3) return renderBestOf3Match(match);
+          <div
+            className="list-item"
+            style={{
+              padding: 16,
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ marginBottom: 14 }}>
+              <div
+                style={{
+                  fontWeight: 800,
+                  fontSize: 16,
+                  marginBottom: 10,
+                  textAlign: 'center',
+                  opacity: 0.85,
+                }}
+              >
+                {renderMatchLabel(nextUpMatch)}
+              </div>
 
-                const draft = scoreDrafts[match.id] || { team_a_score: match.team_a_score === null ? '' : String(match.team_a_score), team_b_score: match.team_b_score === null ? '' : String(match.team_b_score), game_1_a: '', game_1_b: '', game_2_a: '', game_2_b: '', game_3_a: '', game_3_b: '' };
-
-    return (
-  <div
-    id={getMatchElementId(match.id)}
-    key={match.id}
-    className="list-item"
-    style={
-      isNextUp
-        ? {
-            borderColor: 'rgba(255,203,5,.55)',
-            boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-          }
-        : undefined
-    }
-  >
-                    <div className="row-between" style={{ marginBottom: 12 }}>
-                      <strong>Court {match.court_number ?? '-'}</strong>
-                      {isNextUp ? <span className="tag">Current Match</span> : null}
-                      <span className={match.is_complete ? 'tag green' : 'tag'}>{match.is_complete ? 'Complete' : 'Live'}</span>
-                    </div>
-                    <div className="grid" style={{ marginBottom: 12 }}>
-                      <div className="list-item" style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</div>
-                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_a_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_a_score')} placeholder={isOrganizer ? "0" : "Organizer only"} />
-                      </div>
-                      <div className="list-item" style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</div>
-                        <input className="input" style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }} type="number" value={draft.team_b_score} disabled={!isOrganizer || match.is_complete || isCompleted} onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)} onBlur={() => saveScoreField(match.id, 'team_b_score')} placeholder={isOrganizer ? "0" : "Organizer only"} />
-                      </div>
-                    </div>
-                    {match.is_complete || isCompleted ? (
-                      <button className="button secondary" disabled>{isCompleted ? 'Final Locked' : 'Score Submitted'}</button>
-                    ) : (
-                     <button
-  className="button primary"
-  onClick={() => submitMatchScore(match.id)}
-  disabled={!isOrganizer}
->
-  Submit Score
-</button>
-                    )}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto 1fr',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    textAlign: 'center',
+                    transition: 'all 160ms ease',
+                    ...getLiveBannerWinnerStyle('a', nextUpMatch),
+                  }}
+                >
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                    {getInitials(nextUpMatch.team_a_player_1_id, nextUpMatch.team_a_player_2_id)}
                   </div>
-                );
-              })}
-
-              {byesForSelectedRound.length ? (
-                <div className="list-item">
-                  <div style={{ fontWeight: 800, marginBottom: 8 }}>Byes This Round</div>
-                  <div className="grid">
-                    {byesForSelectedRound.map((bye) => (
-                      <div key={bye.id} className="list-item" style={{ padding: 10 }}>{renderPlayerName(bye.team_a_player_1_id)}</div>
-                    ))}
+                  <div style={{ fontSize: 34, fontWeight: 900 }}>
+                    {isBestOf3
+                      ? getSeriesScore(nextUpMatch).aScore
+                      : nextUpMatch.team_a_score ?? '-'}
                   </div>
                 </div>
-              ) : null}
+
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 900,
+                    opacity: 0.7,
+                  }}
+                >
+                  —
+                </div>
+
+                <div
+                  style={{
+                    textAlign: 'center',
+                    transition: 'all 160ms ease',
+                    ...getLiveBannerWinnerStyle('b', nextUpMatch),
+                  }}
+                >
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                    {getInitials(nextUpMatch.team_b_player_1_id, nextUpMatch.team_b_player_2_id)}
+                  </div>
+                  <div style={{ fontSize: 34, fontWeight: 900 }}>
+                    {isBestOf3
+                      ? getSeriesScore(nextUpMatch).bScore
+                      : nextUpMatch.team_b_score ?? '-'}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+
+            {selectedRound !== currentRound ? (
+              <button
+                type="button"
+                className="button secondary"
+                style={{ marginTop: 10 }}
+                onClick={() => setSelectedRound(currentRound)}
+              >
+                Jump to Current Round
+              </button>
+            ) : null}
+          </div>
+
+          {upcomingMatch ? (
+            <div
+              className="list-item"
+              style={{
+                padding: 14,
+                marginTop: 10,
+                opacity: 0.85,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  marginBottom: 6,
+                }}
+              >
+                Up Next
+              </div>
+
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>
+                {renderMatchLabel(upcomingMatch)}
+              </div>
+
+              <div className="muted" style={{ fontSize: 13 }}>
+                Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
+              </div>
+            </div>
+          ) : null}
         </div>
+      ) : (
+        <div className="muted">Waiting for the next match.</div>
       )}
+    </div>
+
+    <div className="grid" style={{ marginBottom: 14 }}>
+      {roundsAvailable.map((round) => {
+        const status = roundStatusByRound.get(round);
+        const isSelected = selectedRound === round;
+        return (
+          <button
+            key={round}
+            type="button"
+            className={`button ${isSelected ? 'primary' : 'secondary'}`}
+            onClick={() => setSelectedRound(round)}
+          >
+            {status === 'complete'
+              ? `✓ Round ${round}`
+              : status === 'current'
+              ? `• Round ${round}`
+              : `Round ${round}`}
+          </button>
+        );
+      })}
+    </div>
+
+    {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
+      <div className="muted">No matches in this round yet.</div>
+    ) : (
+      <div className="grid">
+        {matchesForSelectedRound.map((match) => {
+          const isNextUp =
+            !isCompleted &&
+            match.round_number === currentRound &&
+            nextUpMatch?.id === match.id;
+
+          if (isBestOf3) return renderBestOf3Match(match);
+
+          const draft = scoreDrafts[match.id] || {
+            team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+            team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+            game_1_a: '',
+            game_1_b: '',
+            game_2_a: '',
+            game_2_b: '',
+            game_3_a: '',
+            game_3_b: '',
+          };
+
+          return (
+            <div
+              id={getMatchElementId(match.id)}
+              key={match.id}
+              className="list-item"
+              style={
+                isNextUp
+                  ? {
+                      borderColor: 'rgba(255,203,5,.55)',
+                      boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+                    }
+                  : undefined
+              }
+            >
+              <div className="row-between" style={{ marginBottom: 12 }}>
+                <strong>Court {match.court_number ?? '-'}</strong>
+                {isNextUp ? <span className="tag">Current Match</span> : null}
+                <span className={match.is_complete ? 'tag green' : 'tag'}>
+                  {match.is_complete ? 'Complete' : 'Live'}
+                </span>
+              </div>
+
+              <div className="grid" style={{ marginBottom: 12 }}>
+                <div className="list-item" style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>
+                    {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                  </div>
+                  <input
+                    className="input"
+                    style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
+                    type="number"
+                    value={draft.team_a_score}
+                    disabled={!isOrganizer || match.is_complete || isCompleted}
+                    onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
+                    onBlur={() => saveScoreField(match.id, 'team_a_score')}
+                    placeholder={isOrganizer ? '0' : 'Organizer only'}
+                  />
+                </div>
+
+                <div className="list-item" style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>
+                    {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+                  </div>
+                  <input
+                    className="input"
+                    style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
+                    type="number"
+                    value={draft.team_b_score}
+                    disabled={!isOrganizer || match.is_complete || isCompleted}
+                    onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
+                    onBlur={() => saveScoreField(match.id, 'team_b_score')}
+                    placeholder={isOrganizer ? '0' : 'Organizer only'}
+                  />
+                </div>
+              </div>
+
+              {match.is_complete || isCompleted ? (
+                <button className="button secondary" disabled>
+                  {isCompleted ? 'Final Locked' : 'Score Submitted'}
+                </button>
+              ) : (
+                <button
+                  className="button primary"
+                  onClick={() => submitMatchScore(match.id)}
+                  disabled={!isOrganizer}
+                >
+                  Submit Score
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        {byesForSelectedRound.length ? (
+          <div className="list-item">
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>Byes This Round</div>
+            <div className="grid">
+              {byesForSelectedRound.map((bye) => (
+                <div key={bye.id} className="list-item" style={{ padding: 10 }}>
+                  {renderPlayerName(bye.team_a_player_1_id)}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    )}
+  </div>
+)}
 
       {activeTab === 'standings' && (
   <div className="card">

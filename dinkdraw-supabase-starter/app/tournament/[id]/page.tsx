@@ -1568,7 +1568,9 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
       const { error: deleteError } = await supabase.from('matches').delete().eq('tournament_id', tournament.id);
       if (deleteError) { setMessage(`Delete old matches failed: ${deleteError.message}`); setIsStarting(false); return; }
 
-      const { error: insertError } = await supabase.from('matches').insert(scheduleRows.map((row) => ({ tournament_id: tournament.id, ...row })));
+      const { error: insertError } = await supabase
+  .from('matches')
+  .insert(scheduleRows.map((row) => ({ tournament_id: tournament.id, ...row })));
       if (insertError) { setMessage(`Generate failed: ${insertError.message}`); setIsStarting(false); return; }
 
       const { error: startError } = await supabase.from('tournaments').update({ status: 'started', started_at: new Date().toISOString() }).eq('id', tournament.id);

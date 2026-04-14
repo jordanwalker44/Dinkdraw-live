@@ -659,24 +659,7 @@ return () => {
   </div>
 </div>
 
-          <div className="list-item">
-            <div className="row-between">
-              <span className="muted">Date</span>
-              <strong>{tournament.event_date || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Time</span>
-              <strong>{tournament.event_time || '-'}</strong>
-            </div>
-            <div className="row-between" style={{ marginTop: 8 }}>
-              <span className="muted">Location</span>
-              <strong>{tournament.location || '-'}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-     <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Rounds</div>
         <div className="card-subtitle">
           {isCompleted

@@ -564,7 +564,9 @@ export default function PublicTournamentViewPage({
       void loadTournamentData();
     }
   )
-  .subscribe();
+  .subscribe((status) => {
+  setIsLive(status === 'SUBSCRIBED');
+});
 
 return () => {
   void supabase.removeChannel(channel);
@@ -668,7 +670,9 @@ return () => {
   <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
   <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
 
-  {!isLive ? <span className="tag">Connecting</span> : null}
+  {!isLive && isStarted ? (
+  <span className="tag">Connecting</span>
+) : null}
 </div>
 
     <div className="muted" style={{ fontSize: 13 }}>

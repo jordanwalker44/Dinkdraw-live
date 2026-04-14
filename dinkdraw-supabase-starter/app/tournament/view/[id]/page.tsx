@@ -672,9 +672,7 @@ return () => {
           </div>
         </div>
 
-        <TopNav />
-
-        <div className="card">
+         <div className="card">
           <div className="card-title">Back to DinkDraw</div>
           <Link href="/" className="button primary">
             Go Home

@@ -26,6 +26,7 @@ type Tournament = {
   format: string;
   match_format: string;
   doubles_mode: string | null;
+  court_labels: string[] | null;
 };
 
 type PlayerSlot = {
@@ -41,6 +42,7 @@ type Match = {
   id: string;
   round_number: number;
   court_number: number | null;
+  court_label: string | null;
   team_a_player_1_id: string | null;
   team_a_player_2_id: string | null;
   team_b_player_1_id: string | null;
@@ -82,6 +84,7 @@ type ScoreDraft = {
 type ScheduleRow = {
   round_number: number;
   court_number: number | null;
+  court_label: string | null;
   team_a_player_1_id: string | null;
   team_a_player_2_id: string | null;
   team_b_player_1_id: string | null;
@@ -127,6 +130,14 @@ function chunkIntoGroups<T>(items: T[], size: number) {
 
 function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+function getCourtLabel(
+  tournament: Tournament | null,
+  courtNumber: number | null
+) {
+  if (courtNumber === null) return null;
+  return tournament?.court_labels?.[courtNumber - 1]?.trim() || `Court ${courtNumber}`;
 }
 
 function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: number): ScheduleRow[] {
@@ -186,7 +197,7 @@ function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
     benched.forEach((id) => {
       byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({ round_number: round, court_number: null, team_a_player_1_id: id, team_a_player_2_id: null, team_b_player_1_id: null, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: true, is_complete: false });
+      output.push({ round_number: round, court_number: null, court_label: null, team_a_player_1_id: id, team_a_player_2_id: null, team_b_player_1_id: null, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: true, is_complete: false });
     });
 
     matches.forEach((match, index) => {
@@ -194,8 +205,7 @@ function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: num
       matchupCounts.set(singlesMatchupKey(playerA, playerB), getMatchupCount(playerA, playerB) + 1);
       playedCounts.set(playerA, (playedCounts.get(playerA) || 0) + 1);
       playedCounts.set(playerB, (playedCounts.get(playerB) || 0) + 1);
-      output.push({ round_number: round, court_number: index + 1, team_a_player_1_id: playerA, team_a_player_2_id: null, team_b_player_1_id: playerB, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: false, is_complete: false });
-    });
+output.push({ round_number: round, court_number: index + 1, court_label: null, team_a_player_1_id: playerA, team_a_player_2_id: null, team_b_player_1_id: playerB, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: false, is_complete: false });    });
   }
   return output;
 }
@@ -391,6 +401,7 @@ if (!matches) {
       output.push({
         round_number: round,
         court_number: null,
+        court_label: null,
         team_a_player_1_id: id,
         team_a_player_2_id: null,
         team_b_player_1_id: null,
@@ -444,6 +455,7 @@ sameMatchPairs.forEach(([p1, p2]) => {
 output.push({
         round_number: round,
         court_number: index + 1,
+        court_label: null,
         team_a_player_1_id: a1,
         team_a_player_2_id: a2,
         team_b_player_1_id: b1,
@@ -535,6 +547,7 @@ function buildFixedPartnersSchedule(
       output.push({
         round_number: round,
         court_number: courtsUsedThisRound,
+        court_label: null,
         team_a_player_1_id: matchup.teamA.player1Id,
         team_a_player_2_id: matchup.teamA.player2Id,
         team_b_player_1_id: matchup.teamB.player1Id,
@@ -818,6 +831,7 @@ function buildMixedDoublesSchedule(
       output.push({
         round_number: round,
         court_number: null,
+        court_label: null,
         team_a_player_1_id: id,
         team_a_player_2_id: null,
         team_b_player_1_id: null,
@@ -872,6 +886,7 @@ function buildMixedDoublesSchedule(
       output.push({
         round_number: round,
         court_number: index + 1,
+        court_label: null,
         team_a_player_1_id: a1,
         team_a_player_2_id: a2,
         team_b_player_1_id: b1,
@@ -1570,7 +1585,13 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
 
       const { error: insertError } = await supabase
   .from('matches')
-  .insert(scheduleRows.map((row) => ({ tournament_id: tournament.id, ...row })));
+  .insert(
+    scheduleRows.map((row) => ({
+      tournament_id: tournament.id,
+      ...row,
+      court_label: getCourtLabel(tournament, row.court_number),
+    }))
+  );
       if (insertError) { setMessage(`Generate failed: ${insertError.message}`); setIsStarting(false); return; }
 
       const { error: startError } = await supabase.from('tournaments').update({ status: 'started', started_at: new Date().toISOString() }).eq('id', tournament.id);
@@ -1599,8 +1620,25 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
 
       const { data: newTournament, error: tournamentError } = await supabase
         .from('tournaments')
-        .insert({ title: rematchTitle, organizer_user_id: user.id, organizer_name: organizerName, join_code: makeJoinCode(), event_date: tournament.event_date, event_time: tournament.event_time, location: tournament.location, player_count: tournament.player_count, courts: tournament.courts, rounds: tournament.rounds, games_to: tournament.games_to, status: 'draft', started_at: null, format: tournament.format, match_format: tournament.match_format })
-        .select().single();
+.insert({
+  title: rematchTitle,
+  organizer_user_id: user.id,
+  organizer_name: organizerName,
+  join_code: makeJoinCode(),
+  event_date: tournament.event_date,
+  event_time: tournament.event_time,
+  location: tournament.location,
+  player_count: tournament.player_count,
+  courts: tournament.courts,
+  rounds: tournament.rounds,
+  games_to: tournament.games_to,
+  status: 'draft',
+  started_at: null,
+  format: tournament.format,
+  match_format: tournament.match_format,
+  doubles_mode: tournament.doubles_mode,
+  court_labels: tournament.court_labels,
+})        .select().single();
 
       if (tournamentError || !newTournament) { setMessage(tournamentError?.message || 'Could not create rematch tournament.'); setIsRematching(false); return; }
 

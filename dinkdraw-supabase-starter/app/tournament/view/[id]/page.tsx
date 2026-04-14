@@ -339,26 +339,22 @@ export default function PublicTournamentViewPage({
     () => currentRoundMatches.find((m) => !m.is_complete) || null,
     [currentRoundMatches]
   );
-  
+
   const upcomingMatch = useMemo(
-  () =>
-    currentMatch
-      ? matches.find(
-          (m) =>
-            !m.is_complete &&
-            !m.is_bye &&
-            m.id !== currentMatch.id &&
-            (
-              m.round_number > currentMatch.round_number ||
-              (
-                m.round_number === currentMatch.round_number &&
-                (m.court_number ?? 0) > (currentMatch.court_number ?? 0)
-              )
-            )
-        ) || null
-      : null,
-  [matches, currentMatch]
-);
+    () =>
+      currentMatch
+        ? matches.find(
+            (m) =>
+              !m.is_complete &&
+              !m.is_bye &&
+              m.id !== currentMatch.id &&
+              (m.round_number > currentMatch.round_number ||
+                (m.round_number === currentMatch.round_number &&
+                  (m.court_number ?? 0) > (currentMatch.court_number ?? 0)))
+          ) || null
+        : null,
+    [matches, currentMatch]
+  );
 
   const currentRoundComplete = useMemo(
     () =>
@@ -372,6 +368,104 @@ export default function PublicTournamentViewPage({
     [playerSlots, matches, isSingles, isBestOf3]
   );
 
+  const eventMeta = useMemo(
+    () =>
+      [tournament?.event_date, tournament?.event_time, tournament?.location]
+        .filter(Boolean)
+        .join(' • '),
+    [tournament?.event_date, tournament?.event_time, tournament?.location]
+  );
+
+  async function loadTournamentData() {
+    const [tournamentResult, playersResult, matchesResult] = await Promise.all([
+      supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
+      supabase
+        .from('tournament_players')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('slot_number', { ascending: true }),
+      supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('round_number', { ascending: true })
+        .order('court_number', { ascending: true }),
+    ]);
+
+    setTournament(tournamentResult.data || null);
+    setPlayerSlots(playersResult.data || []);
+    setMatches(matchesResult.data || []);
+  }
+
+  useEffect(() => {
+    async function load() {
+      setIsLoading(true);
+      await loadTournamentData();
+      setIsLoading(false);
+    }
+
+    load();
+  }, [params.id, supabase]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`public-tournament-live-${params.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matches',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        () => {
+          void loadTournamentData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tournament_players',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        () => {
+          void loadTournamentData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tournaments',
+          filter: `id=eq.${params.id}`,
+        },
+        () => {
+          void loadTournamentData();
+        }
+      )
+      .subscribe((status) => {
+        setIsLive(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [params.id, supabase]);
+
+  useEffect(() => {
+    if (!roundsAvailable.length) return;
+
+    setSelectedRound((prev) => {
+      if (!roundsAvailable.includes(prev)) {
+        return isCompleted ? finalRound : currentRound;
+      }
+      return prev;
+    });
+  }, [roundsAvailable, currentRound, finalRound, isCompleted]);
+
   function renderPlayerName(id: string | null) {
     if (!id) return '-';
     return playersById[id]?.display_name || 'Player';
@@ -382,71 +476,62 @@ export default function PublicTournamentViewPage({
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
-  function renderMatchLabel(match: Match) {
-    return `${renderTeam(
-      match.team_a_player_1_id,
-      match.team_a_player_2_id
-    )} vs ${renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}`;
-  }
-
   function renderStyledMatchLabel(match: Match) {
-  return (
-    <div
-      style={{
-        fontWeight: 800,
-        textAlign: 'center',
-        lineHeight: 1.35,
-      }}
-    >
-      <span>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</span>
-      <span
+    return (
+      <div
         style={{
-          margin: '0 8px',
-          color: '#FFCB05',
-          fontWeight: 900,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
+          fontWeight: 800,
+          textAlign: 'center',
+          lineHeight: 1.35,
         }}
       >
-        vs
-      </span>
-      <span>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</span>
-    </div>
-  );
-}
-
-  function getInitials(playerId1?: string | null, playerId2?: string | null) {
-  const getInitialsFromName = (name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) return '?';
-
-    const parts = trimmed.split(/\s+/);
-
-    // First + last name → use first letter of each
-    if (parts.length >= 2) {
-      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-    }
-
-    // Single name → use first 2 letters
-    return parts[0].slice(0, 2).toUpperCase();
-  };
-
-  const getPlayerInitials = (id?: string | null) => {
-    if (!id) return '?';
-
-    const player = playerSlots.find((p) => p.id === id);
-    return getInitialsFromName(player?.display_name || '');
-  };
-
-  if (isSingles) {
-    return getPlayerInitials(playerId1);
+        <span>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</span>
+        <span
+          style={{
+            margin: '0 8px',
+            color: '#FFCB05',
+            fontWeight: 900,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          vs
+        </span>
+        <span>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</span>
+      </div>
+    );
   }
 
-  const a = getPlayerInitials(playerId1);
-  const b = getPlayerInitials(playerId2);
+  function getInitials(playerId1?: string | null, playerId2?: string | null) {
+    const getInitialsFromName = (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return '?';
 
-  return `${a} & ${b}`;
-}
+      const parts = trimmed.split(/\s+/);
+
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+
+      return parts[0].slice(0, 2).toUpperCase();
+    };
+
+    const getPlayerInitials = (id?: string | null) => {
+      if (!id) return '?';
+
+      const player = playerSlots.find((p) => p.id === id);
+      return getInitialsFromName(player?.display_name || '');
+    };
+
+    if (isSingles) {
+      return getPlayerInitials(playerId1);
+    }
+
+    const a = getPlayerInitials(playerId1);
+    const b = getPlayerInitials(playerId2);
+
+    return `${a} & ${b}`;
+  }
 
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
     if (isBestOf3) {
@@ -465,16 +550,24 @@ export default function PublicTournamentViewPage({
     return isWinner ? { color: '#FFCB05' } : {};
   }
 
+  function getRoundStatusLabel(round: number) {
+    const status = roundStatusByRound.get(round);
+    if (status === 'complete') return `Round ${round} · Final`;
+    if (status === 'current') return `Round ${round} · Live`;
+    return `Round ${round} · Next`;
+  }
+
+  function renderBroadcastScore(match: Match, team: 'a' | 'b') {
+    if (isBestOf3) {
+      const score = getSeriesScore(match);
+      return team === 'a' ? score.aScore : score.bScore;
+    }
+
+    return team === 'a' ? match.team_a_score ?? '-' : match.team_b_score ?? '-';
+  }
+
   function renderBestOf3Match(match: Match) {
     const { aWins, bWins } = getSeriesWins(match);
-    const teamAName = renderTeam(
-      match.team_a_player_1_id,
-      match.team_a_player_2_id
-    );
-    const teamBName = renderTeam(
-      match.team_b_player_1_id,
-      match.team_b_player_2_id
-    );
     const isCurrentMatch =
       !isCompleted &&
       match.round_number === currentRound &&
@@ -495,7 +588,7 @@ export default function PublicTournamentViewPage({
       >
         <div className="row-between" style={{ marginBottom: 12 }}>
           <strong>Court {match.court_number ?? '-'}</strong>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             {isCurrentMatch ? <span className="tag">Live</span> : null}
             <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
               {aWins}-{bWins}
@@ -506,9 +599,7 @@ export default function PublicTournamentViewPage({
           </div>
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-  {renderStyledMatchLabel(match)}
-</div>
+        <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>
 
         <div className="grid" style={{ gap: 8 }}>
           <div className="list-item" style={{ padding: 10 }}>
@@ -547,96 +638,6 @@ export default function PublicTournamentViewPage({
     );
   }
 
-  async function loadTournamentData() {
-    const [tournamentResult, playersResult, matchesResult] = await Promise.all([
-      supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-      supabase
-        .from('tournament_players')
-        .select('*')
-        .eq('tournament_id', params.id)
-        .order('slot_number', { ascending: true }),
-      supabase
-        .from('matches')
-        .select('*')
-        .eq('tournament_id', params.id)
-        .order('round_number', { ascending: true })
-        .order('court_number', { ascending: true }),
-    ]);
-
-    setTournament(tournamentResult.data || null);
-    setPlayerSlots(playersResult.data || []);
-    setMatches(matchesResult.data || []);
-  }
-
-  useEffect(() => {
-    async function load() {
-      setIsLoading(true);
-      await loadTournamentData();
-      setIsLoading(false);
-    }
-
-    load();
-  }, [params.id, supabase]);
-
-  useEffect(() => {
-    const channel = supabase
-  .channel(`public-tournament-live-${params.id}`)
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'matches',
-      filter: `tournament_id=eq.${params.id}`,
-    },
-    () => {
-      void loadTournamentData();
-    }
-  )
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'tournament_players',
-      filter: `tournament_id=eq.${params.id}`,
-    },
-    () => {
-      void loadTournamentData();
-    }
-  )
-  .on(
-    'postgres_changes',
-    {
-      event: '*',
-      schema: 'public',
-      table: 'tournaments',
-      filter: `id=eq.${params.id}`,
-    },
-    () => {
-      void loadTournamentData();
-    }
-  )
-  .subscribe((status) => {
-  setIsLive(status === 'SUBSCRIBED');
-});
-
-return () => {
-  void supabase.removeChannel(channel);
-};
-  }, [params.id, supabase]);
-
-  useEffect(() => {
-    if (!roundsAvailable.length) return;
-
-    setSelectedRound((prev) => {
-      if (!roundsAvailable.includes(prev)) {
-        return isCompleted ? finalRound : currentRound;
-      }
-      return prev;
-    });
-  }, [roundsAvailable, currentRound, finalRound, isCompleted]);
-
   if (isLoading) {
     return (
       <main className="page-shell">
@@ -671,7 +672,7 @@ return () => {
           </div>
         </div>
 
-         <div className="card">
+        <div className="card">
           <div className="card-title">Back to DinkDraw</div>
           <Link href="/" className="button primary">
             Go Home
@@ -683,8 +684,8 @@ return () => {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
+      <div className="hero" style={{ marginBottom: 12 }}>
+        <div className="hero-inner" style={{ paddingBottom: 18 }}>
           <img
             src="/dinkdraw-logo.png"
             alt="DinkDraw logo"
@@ -701,237 +702,246 @@ return () => {
         </div>
       </div>
 
-           <div className="card" style={{ marginBottom: 14 }}>
-  <div className="row-between" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-  <span
-    className={
-      isCompleted
-        ? 'tag'
-        : isStarted
-        ? 'tag green'
-        : 'tag'
-    }
-  >
-    {isCompleted ? 'Complete' : isStarted ? 'Live' : 'Waiting'}
-  </span>
+      <div className="card" style={{ marginBottom: 14, padding: 14 }}>
+        <div className="row-between" style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <span className={isCompleted ? 'tag' : isStarted ? 'tag green' : 'tag'}>
+              {isCompleted ? 'Complete' : isStarted ? 'Live' : 'Waiting'}
+            </span>
+            <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
+            <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
+            {!isLive && isStarted ? <span className="tag">Connecting</span> : null}
+          </div>
 
-  <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
-  <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
+          {eventMeta ? (
+            <div className="muted" style={{ fontSize: 13, textAlign: 'right' }}>
+              {eventMeta}
+            </div>
+          ) : null}
+        </div>
+      </div>
 
-  {!isLive && isStarted ? (
-  <span className="tag">Connecting</span>
-) : null}
-</div>
+      <div
+        className="card"
+        style={{
+          marginBottom: 14,
+          padding: 18,
+          borderColor: isStarted && !isCompleted ? 'rgba(255,203,5,0.22)' : undefined,
+          boxShadow: isStarted && !isCompleted ? '0 0 0 1px rgba(255,203,5,0.08) inset, var(--shadow)' : undefined,
+        }}
+      >
+        <div className="row-between" style={{ alignItems: 'flex-start', marginBottom: 14, flexWrap: 'wrap' }}>
+          <div>
+            <div
+              className="muted"
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}
+            >
+              Broadcast Center
+            </div>
+            <div className="card-title" style={{ marginBottom: 4 }}>
+              {isCompleted
+                ? 'Final Event Summary'
+                : isStarted
+                ? `Round ${currentRound} Live`
+                : 'Tournament Preview'}
+            </div>
+            <div className="card-subtitle" style={{ marginBottom: 0 }}>
+              {isCompleted
+                ? 'All matches are complete. Final standings are now locked.'
+                : isStarted
+                ? `${completedMatchCount} of ${totalPlayableMatchCount} matches complete`
+                : 'Live match coverage will appear here as soon as play begins.'}
+            </div>
+          </div>
 
-    <div className="muted" style={{ fontSize: 13 }}>
-      {tournament.location
-        ? `${tournament.location}${tournament.event_time ? ` • ${tournament.event_time}` : ''}`
-        : tournament.event_time || tournament.event_date || ''}
-    </div>
-  </div>
-</div>
-
-        <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Rounds</div>
-        <div className="card-subtitle">
-          {isCompleted
-            ? 'Tournament complete. Scores are final.'
-            : isStarted
-            ? `Current live round: ${currentRound}`
-            : 'Round schedule will appear here after the tournament starts.'}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {selectedRound !== currentRound && isStarted && !isCompleted ? (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setSelectedRound(currentRound)}
+              >
+                Jump to Live Round
+              </button>
+            ) : null}
+          </div>
         </div>
 
-        <div className="card" style={{ marginTop: 12 }}>
-          <div className="card-title">Current Round</div>
-
-          {!isStarted ? (
-            <div className="muted">Tournament has not started yet.</div>
-          ) : isCompleted ? (
-            <div className="muted">
-              Tournament is complete. Final results are locked.
+        {!isStarted ? (
+          <div className="list-item" style={{ padding: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+              Waiting for first serve
             </div>
-          ) : currentRoundComplete ? (
-            <div>
+            <div className="muted">
+              Share this public link with players and spectators to follow along once matches begin.
+            </div>
+          </div>
+        ) : isCompleted ? (
+          <div className="grid" style={{ gap: 10 }}>
+            <div className="list-item" style={{ padding: 16 }}>
+              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+                Tournament complete
+              </div>
+              <div className="muted">
+                {completedMatchCount} of {totalPlayableMatchCount} scheduled matches were completed.
+              </div>
+            </div>
+          </div>
+        ) : currentRoundComplete ? (
+          <div className="grid" style={{ gap: 10 }}>
+            <div className="list-item" style={{ padding: 16 }}>
               <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
                 Round {currentRound} is complete
               </div>
               <div className="muted">
-                All matches in the current round have been finished.
+                All live matches for this round have finished. The next matchup will appear automatically.
               </div>
             </div>
-          ) : currentMatch ? (
-            <div>
-    <div
-      style={{
-        textAlign: 'center',
-        marginBottom: 14,
-        padding: '10px 12px 4px',
-      }}
-    >
-      <div
-        className="muted"
-        style={{
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          marginBottom: 8,
-        }}
-      >
-        Round {currentRound}
+          </div>
+        ) : currentMatch ? (
+          <div className="grid" style={{ gap: 12 }}>
+            <div
+              className="list-item"
+              style={{
+                padding: 18,
+                borderColor: 'rgba(255,203,5,.55)',
+                boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+                background: 'linear-gradient(180deg, rgba(255,203,5,0.08), rgba(255,255,255,0.02))',
+              }}
+            >
+              <div className="row-between" style={{ alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <div
+                    className="muted"
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      marginBottom: 6,
+                    }}
+                  >
+                    Live Match
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>
+                    Round {currentRound} • Court {currentMatch.court_number ?? '-'}
+                  </div>
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    {completedMatchCount} of {totalPlayableMatchCount} matches complete
+                  </div>
+                </div>
+
+                <span className="tag green">Live</span>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>{renderStyledMatchLabel(currentMatch)}</div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto 1fr',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  style={{
+                    textAlign: 'center',
+                    ...getWinnerStyle('a', currentMatch),
+                  }}
+                >
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                    {getInitials(currentMatch.team_a_player_1_id, currentMatch.team_a_player_2_id)}
+                  </div>
+                  <div style={{ fontSize: 38, fontWeight: 900 }}>
+                    {renderBroadcastScore(currentMatch, 'a')}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 900,
+                    opacity: 0.7,
+                  }}
+                >
+                  —
+                </div>
+
+                <div
+                  style={{
+                    textAlign: 'center',
+                    ...getWinnerStyle('b', currentMatch),
+                  }}
+                >
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                    {getInitials(currentMatch.team_b_player_1_id, currentMatch.team_b_player_2_id)}
+                  </div>
+                  <div style={{ fontSize: 38, fontWeight: 900 }}>
+                    {renderBroadcastScore(currentMatch, 'b')}
+                  </div>
+                </div>
+              </div>
+
+              {isBestOf3 ? (
+                <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
+                  Series wins: {getSeriesWins(currentMatch).aWins}-{getSeriesWins(currentMatch).bWins}
+                </div>
+              ) : null}
+            </div>
+
+            {upcomingMatch ? (
+              <div className="list-item" style={{ padding: 14 }}>
+                <div
+                  className="muted"
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    marginBottom: 8,
+                  }}
+                >
+                  Up Next
+                </div>
+                <div style={{ marginBottom: 6 }}>{renderStyledMatchLabel(upcomingMatch)}</div>
+                <div className="muted" style={{ fontSize: 13 }}>
+                  Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div className="list-item" style={{ padding: 16 }}>
+            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
+              Waiting for the next match
+            </div>
+            <div className="muted">
+              Live scoring is connected. The next active court will appear here automatically.
+            </div>
+          </div>
+        )}
       </div>
 
-      <div
-        style={{
-          fontSize: 30,
-          fontWeight: 900,
-          lineHeight: 1,
-          marginBottom: 8,
-          color: '#FFCB05',
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        Live Match
-      </div>
-
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 800,
-          marginBottom: 10,
-        }}
-      >
-        Court {currentMatch.court_number ?? '-'}
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <span className="tag green">Live</span>
-      </div>
-    </div>
-
-    <div
-  className="list-item"
-  style={{
-    padding: 16,
-    textAlign: 'center',
-  }}
->
-  <div
-  style={{
-    fontSize: 16,
-    marginBottom: 10,
-    opacity: 0.85,
-  }}
->
-  {renderStyledMatchLabel(currentMatch)}
-</div>
-
-  <div
-    style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr auto 1fr',
-      alignItems: 'center',
-      gap: 12,
-    }}
-  >
-    <div
-      style={{
-        textAlign: 'center',
-        transition: 'all 160ms ease',
-        ...getWinnerStyle('a', currentMatch),
-      }}
-    >
-      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-  {getInitials(currentMatch.team_a_player_1_id, currentMatch.team_a_player_2_id)}
-</div>
-      <div style={{ fontSize: 34, fontWeight: 900 }}>
-        {isBestOf3
-          ? getSeriesScore(currentMatch).aScore
-          : currentMatch.team_a_score ?? '-'}
-      </div>
-    </div>
-
-    <div
-      style={{
-        fontSize: 18,
-        fontWeight: 900,
-        opacity: 0.7,
-      }}
-    >
-      —
-    </div>
-
-    <div
-      style={{
-        textAlign: 'center',
-        transition: 'all 160ms ease',
-        ...getWinnerStyle('b', currentMatch),
-      }}
-    >
-      <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-  {getInitials(currentMatch.team_b_player_1_id, currentMatch.team_b_player_2_id)}
-</div>
-      <div style={{ fontSize: 34, fontWeight: 900 }}>
-        {isBestOf3
-          ? getSeriesScore(currentMatch).bScore
-          : currentMatch.team_b_score ?? '-'}
-      </div>
-    </div>
-  </div>
-</div>
-
-{upcomingMatch ? (
-  <div
-    className="list-item"
-    style={{
-      padding: 14,
-      marginTop: 10,
-      opacity: 0.85,
-    }}
-  >
-    <div
-      style={{
-        fontSize: 12,
-        fontWeight: 800,
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        marginBottom: 6,
-      }}
-    >
-      Up Next
-    </div>
-
-    <div style={{ marginBottom: 6 }}>
-  {renderStyledMatchLabel(upcomingMatch)}
-</div>
-
-    <div className="muted" style={{ fontSize: 13 }}>
-      Round {upcomingMatch.round_number} • Court {upcomingMatch.court_number ?? '-'}
-    </div>
-  </div>
-) : null}              
-
-    {selectedRound !== currentRound ? (
-      <button
-        type="button"
-        className="button secondary"
-        style={{ marginTop: 10 }}
-        onClick={() => setSelectedRound(currentRound)}
-      >
-        Jump to Current Round
-      </button>
-    ) : null}
-  </div>
-) : (
-            <div className="muted">Waiting for the next match.</div>
-          )}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Rounds</div>
+        <div className="card-subtitle">
+          {isCompleted
+            ? 'Tournament complete. Browse any round to review final scores.'
+            : isStarted
+            ? 'Follow every court by round, with the current live round highlighted below.'
+            : 'Round schedule will appear here after the tournament starts.'}
         </div>
 
-        <div className="grid" style={{ marginTop: 14, marginBottom: 14 }}>
+        <div className="grid" style={{ marginBottom: 14 }}>
           {roundsAvailable.map((round) => {
-            const status = roundStatusByRound.get(round);
             const isSelected = selectedRound === round;
 
             return (
@@ -941,11 +951,7 @@ return () => {
                 className={`button ${isSelected ? 'primary' : 'secondary'}`}
                 onClick={() => setSelectedRound(round)}
               >
-                {status === 'complete'
-                  ? `✓ Round ${round}`
-                  : status === 'current'
-                  ? `• Round ${round}`
-                  : `Round ${round}`}
+                {getRoundStatusLabel(round)}
               </button>
             );
           })}
@@ -976,9 +982,9 @@ return () => {
                       : undefined
                   }
                 >
-                  <div className="row-between" style={{ marginBottom: 12 }}>
+                  <div className="row-between" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
                     <strong>Court {match.court_number ?? '-'}</strong>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {isCurrentMatch ? <span className="tag">Live</span> : null}
                       <span className={match.is_complete ? 'tag green' : 'tag'}>
                         {match.is_complete ? 'Complete' : 'In Progress'}
@@ -986,11 +992,9 @@ return () => {
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: 10 }}>
-  {renderStyledMatchLabel(match)}
-</div>
+                  <div style={{ marginBottom: 10 }}>{renderStyledMatchLabel(match)}</div>
 
-                  <div className="grid" style={{ marginBottom: 12 }}>
+                  <div className="grid" style={{ marginBottom: 4 }}>
                     <div className="list-item" style={{ padding: 12 }}>
                       <div
                         style={{
@@ -1071,147 +1075,146 @@ return () => {
             : 'Ranked by wins, then point differential, then points scored.'}
         </div>
 
-       {!standings.length ? (
-  <div className="muted">Standings will appear once matches are scored.</div>
-) : (
-  <div>
-    {standings[0] ? (
-      <div
-        className="list-item"
-        style={{
-          marginBottom: 12,
-          borderColor: 'rgba(255,203,5,.55)',
-          boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-        }}
-      >
-        <div className="row-between" style={{ marginBottom: 8 }}>
-          <div style={{ fontWeight: 900, fontSize: 20 }}>
-            🥇 {standings[0].name}
-          </div>
-          <span className="tag green">Leader</span>
-        </div>
+        {!standings.length ? (
+          <div className="muted">Standings will appear once matches are scored.</div>
+        ) : (
+          <div>
+            {standings[0] ? (
+              <div
+                className="list-item"
+                style={{
+                  marginBottom: 12,
+                  borderColor: 'rgba(255,203,5,.55)',
+                  boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+                }}
+              >
+                <div className="row-between" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+                  <div style={{ fontWeight: 900, fontSize: 20 }}>
+                    🥇 {standings[0].name}
+                  </div>
+                  <span className="tag green">Leader</span>
+                </div>
 
-        <div className="muted" style={{ marginBottom: 10 }}>
-          {standings[0].wins}-{standings[0].losses} record • Diff{' '}
-          {standings[0].pointDiff > 0
-            ? `+${standings[0].pointDiff}`
-            : standings[0].pointDiff}
-        </div>
+                <div className="muted" style={{ marginBottom: 10 }}>
+                  {standings[0].wins}-{standings[0].losses} record • Diff{' '}
+                  {standings[0].pointDiff > 0
+                    ? `+${standings[0].pointDiff}`
+                    : standings[0].pointDiff}
+                </div>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-            gap: 8,
-          }}
-        >
-          <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: 12 }}>Played</div>
-            <div style={{ fontWeight: 800 }}>{standings[0].played}</div>
-          </div>
-          <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: 12 }}>Wins</div>
-            <div style={{ fontWeight: 800 }}>{standings[0].wins}</div>
-          </div>
-          <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: 12 }}>Losses</div>
-            <div style={{ fontWeight: 800 }}>{standings[0].losses}</div>
-          </div>
-          <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-            <div className="muted" style={{ fontSize: 12 }}>Diff</div>
-            <div style={{ fontWeight: 800 }}>
-              {standings[0].pointDiff > 0
-                ? `+${standings[0].pointDiff}`
-                : standings[0].pointDiff}
-            </div>
-          </div>
-        </div>
-      </div>
-    ) : null}
-
-    <div
-      style={{
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 16,
-        overflow: 'hidden',
-        background: 'rgba(255,255,255,0.03)',
-      }}
-    >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '44px 1fr 72px 64px',
-          padding: '10px 8px',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          fontSize: 12,
-          fontWeight: 800,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.65)',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>#</div>
-        <div>Player</div>
-        <div style={{ textAlign: 'center' }}>W-L</div>
-        <div style={{ textAlign: 'center' }}>Diff</div>
-      </div>
-
-      {standings.slice(1).map((row, index) => {
-        const place = index + 2;
-        const medal =
-          place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
-
-        return (
-          <div
-            key={row.playerId}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '44px 1fr 72px 64px',
-              alignItems: 'center',
-              padding: '12px 8px',
-              borderBottom:
-                index === standings.length - 1
-                  ? 'none'
-                  : '1px solid rgba(255,255,255,0.08)',
-              background: place <= 3 ? 'rgba(255,203,5,0.04)' : 'transparent',
-            }}
-          >
-            <div style={{ textAlign: 'center', fontWeight: 900 }}>
-              {place}
-            </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                    gap: 8,
+                  }}
+                >
+                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+                    <div className="muted" style={{ fontSize: 12 }}>Played</div>
+                    <div style={{ fontWeight: 800 }}>{standings[0].played}</div>
+                  </div>
+                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+                    <div className="muted" style={{ fontSize: 12 }}>Wins</div>
+                    <div style={{ fontWeight: 800 }}>{standings[0].wins}</div>
+                  </div>
+                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+                    <div className="muted" style={{ fontSize: 12 }}>Losses</div>
+                    <div style={{ fontWeight: 800 }}>{standings[0].losses}</div>
+                  </div>
+                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+                    <div className="muted" style={{ fontSize: 12 }}>Diff</div>
+                    <div style={{ fontWeight: 800 }}>
+                      {standings[0].pointDiff > 0
+                        ? `+${standings[0].pointDiff}`
+                        : standings[0].pointDiff}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <div
               style={{
-                fontWeight: 800,
-                whiteSpace: 'nowrap',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 16,
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                paddingRight: 8,
+                background: 'rgba(255,255,255,0.03)',
               }}
             >
-              {medal ? `${medal} ` : ''}
-              {row.name}
-            </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '44px 1fr 72px 64px',
+                  padding: '10px 8px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.65)',
+                }}
+              >
+                <div style={{ textAlign: 'center' }}>#</div>
+                <div>Player</div>
+                <div style={{ textAlign: 'center' }}>W-L</div>
+                <div style={{ textAlign: 'center' }}>Diff</div>
+              </div>
 
-            <div style={{ textAlign: 'center', fontWeight: 800 }}>
-              {row.wins}-{row.losses}
-            </div>
+              {standings.slice(1).map((row, index, arr) => {
+                const place = index + 2;
+                const medal = place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 
-            <div
-              style={{
-                textAlign: 'center',
-                fontWeight: 800,
-                color: row.pointDiff > 0 ? '#FFCB05' : undefined,
-              }}
-            >
-              {row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff}
+                return (
+                  <div
+                    key={row.playerId}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '44px 1fr 72px 64px',
+                      alignItems: 'center',
+                      padding: '12px 8px',
+                      borderBottom:
+                        index === arr.length - 1
+                          ? 'none'
+                          : '1px solid rgba(255,255,255,0.08)',
+                      background: place <= 3 ? 'rgba(255,203,5,0.04)' : 'transparent',
+                    }}
+                  >
+                    <div style={{ textAlign: 'center', fontWeight: 900 }}>
+                      {place}
+                    </div>
+
+                    <div
+                      style={{
+                        fontWeight: 800,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        paddingRight: 8,
+                      }}
+                    >
+                      {medal ? `${medal} ` : ''}
+                      {row.name}
+                    </div>
+
+                    <div style={{ textAlign: 'center', fontWeight: 800 }}>
+                      {row.wins}-{row.losses}
+                    </div>
+
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        color: row.pointDiff > 0 ? '#FFCB05' : undefined,
+                      }}
+                    >
+                      {row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        );
-      })}
-    </div>
-  </div>
-)}
+        )}
       </div>
     </main>
   );

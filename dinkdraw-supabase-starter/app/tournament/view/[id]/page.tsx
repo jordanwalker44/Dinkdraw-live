@@ -390,6 +390,26 @@ export default function PublicTournamentViewPage({
     )} vs ${renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}`;
   }
 
+  function getInitials(playerId1?: string | null, playerId2?: string | null) {
+  const getInitial = (id?: string | null) => {
+    if (!id) return '?';
+
+    const player = playerSlots.find((p) => p.id === id);
+    const name = player?.display_name || '';
+
+    return name.trim().charAt(0).toUpperCase() || '?';
+  };
+
+  if (isSingles) {
+    return getInitial(playerId1);
+  }
+
+  const a = getInitial(playerId1);
+  const b = getInitial(playerId2);
+
+  return `${a} & ${b}`;
+}
+
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
     if (isBestOf3) {
       if (!match.is_complete) return {};
@@ -797,8 +817,8 @@ return () => {
       }}
     >
       <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-        Team 1
-      </div>
+  {getInitials(currentMatch.team_a_player_1_id, currentMatch.team_a_player_2_id)}
+</div>
       <div style={{ fontSize: 34, fontWeight: 900 }}>
         {isBestOf3
           ? getSeriesScore(currentMatch).aScore
@@ -824,8 +844,8 @@ return () => {
       }}
     >
       <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-        Team 2
-      </div>
+  {getInitials(currentMatch.team_b_player_1_id, currentMatch.team_b_player_2_id)}
+</div>
       <div style={{ fontSize: 34, fontWeight: 900 }}>
         {isBestOf3
           ? getSeriesScore(currentMatch).bScore

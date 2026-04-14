@@ -2575,6 +2575,7 @@ function renderBestOf3Match(match: Match) {
           ) : null}
         </div>
 ) : null}
+</div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
         <button type="button" className={`button ${activeTab === 'players' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('players')}>Players</button>

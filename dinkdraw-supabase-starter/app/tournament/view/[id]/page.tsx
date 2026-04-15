@@ -518,18 +518,19 @@ function renderStyledMatchLabel(match: Match) {
         {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
       </div>
 
-      <div
-        style={{
-          margin: '6px 0',
-          color: '#FFCB05',
-          fontWeight: 900,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          fontSize: 12,
-        }}
-      >
-        VS
-      </div>
+<div
+  style={{
+    margin: '8px 0',
+    color: '#FFCB05',
+    fontWeight: 700,
+    letterSpacing: '0.14em',
+    textTransform: 'uppercase',
+    fontSize: 11,
+    opacity: 0.7,
+  }}
+>
+  VS
+</div>
 
       <div
         style={{

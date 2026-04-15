@@ -501,31 +501,47 @@ export default function PublicTournamentViewPage({
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
-  function renderStyledMatchLabel(match: Match) {
-    return (
+function renderStyledMatchLabel(match: Match) {
+  return (
+    <div
+      style={{
+        textAlign: 'center',
+        marginBottom: 12,
+      }}
+    >
       <div
         style={{
           fontWeight: 800,
-          textAlign: 'center',
-          lineHeight: 1.35,
+          lineHeight: 1.25,
         }}
       >
-        <span>{renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}</span>
-        <span
-          style={{
-            margin: '0 8px',
-            color: '#FFCB05',
-            fontWeight: 900,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-          }}
-        >
-          vs
-        </span>
-        <span>{renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}</span>
+        {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
       </div>
-    );
-  }
+
+      <div
+        style={{
+          margin: '6px 0',
+          color: '#FFCB05',
+          fontWeight: 900,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          fontSize: 12,
+        }}
+      >
+        VS
+      </div>
+
+      <div
+        style={{
+          fontWeight: 800,
+          lineHeight: 1.25,
+        }}
+      >
+        {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+      </div>
+    </div>
+  );
+}
 
   function renderCourtLabel(match: Match) {
   return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;

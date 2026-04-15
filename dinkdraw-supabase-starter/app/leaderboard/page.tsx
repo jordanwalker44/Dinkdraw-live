@@ -32,6 +32,7 @@ export default function LeaderboardPage() {
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [minMatches, setMinMatches] = useState(5);
   const [sortBy, setSortBy] = useState<SortBy>('elo');
+  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -165,6 +166,10 @@ export default function LeaderboardPage() {
       default:
         return 'ELO';
     }
+  }
+
+  function toggleExpanded(userId: string) {
+    setExpandedUserId((prev) => (prev === userId ? null : userId));
   }
 
   return (
@@ -360,84 +365,169 @@ export default function LeaderboardPage() {
             more matches.
           </div>
         </div>
-      ) : (
-        <div className="grid">
-          {leaderboard.map((player, index) => {
-            const place = index + 1;
-            const medal =
-              place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
-            const highlightStyle =
-              place === 1
-                ? {
-                    borderColor: 'rgba(255,203,5,.6)',
-                    boxShadow: '0 0 0 1px rgba(255,203,5,.35) inset',
-                  }
-                : place <= 3
-                ? { borderColor: 'rgba(255,203,5,.35)' }
-                : {};
+            ) : (
+        <div className="grid" style={{ gap: 10 }}>
+          <div
+            style={{
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 18,
+              overflow: 'hidden',
+              background: 'rgba(255,255,255,0.03)',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '44px minmax(0, 1fr) 78px 78px 64px',
+                gap: 8,
+                padding: '10px 12px',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                fontSize: 12,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.65)',
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>#</div>
+              <div>Player</div>
+              <div style={{ textAlign: 'center' }}>Rating</div>
+              <div style={{ textAlign: 'center' }}>W-L</div>
+              <div style={{ textAlign: 'center' }}>Diff</div>
+            </div>
 
-            return (
-              <div key={player.userId} className="card" style={highlightStyle}>
+            {leaderboard.map((player, index) => {
+              const place = index + 1;
+              const medal =
+                place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : null;
+              const isExpanded = expandedUserId === player.userId;
+
+              const rowBackground =
+                place === 1
+                  ? 'rgba(255,203,5,0.07)'
+                  : place <= 3
+                  ? 'rgba(255,203,5,0.035)'
+                  : 'transparent';
+
+              return (
                 <div
-                  className="row-between"
-                  style={{ marginBottom: 12, alignItems: 'flex-start' }}
+                  key={player.userId}
+                  style={{
+                    borderBottom:
+                      index === leaderboard.length - 1
+                        ? 'none'
+                        : '1px solid rgba(255,255,255,0.08)',
+                    background: rowBackground,
+                  }}
                 >
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 20, lineHeight: 1.15 }}>
-                      {medal ? `${medal} ` : ''}
-                      {place}. {player.name}
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(player.userId)}
+                    style={{
+                      width: '100%',
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      padding: '14px 12px',
+                      display: 'grid',
+                      gridTemplateColumns: '44px minmax(0, 1fr) 78px 78px 64px',
+                      gap: 8,
+                      alignItems: 'center',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <div style={{ textAlign: 'center', fontWeight: 900 }}>
+                      {medal ? medal : place}
                     </div>
-                    <div className="muted" style={{ marginTop: 6 }}>
-                      {player.matches} matches • {player.tournamentsPlayed} tournaments
+
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {player.name}
+                      </div>
+                      <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
+                        {player.matches} matches • {player.tournamentsPlayed} tournaments
+                      </div>
                     </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, fontSize: 24, lineHeight: 1 }}>
+
+                    <div style={{ textAlign: 'center', fontWeight: 900 }}>
                       {player.rating}
                     </div>
-                    <div className="muted" style={{ marginTop: 4 }}>Rating</div>
-                  </div>
-                </div>
 
-                <div className="two-col" style={{ marginBottom: 12 }}>
-                  <MiniStat
-                    label="Record"
-                    value={`${player.wins}-${player.losses}${
-                      player.ties > 0 ? `-${player.ties}` : ''
-                    }`}
-                  />
-                  <MiniStat label="Win Rate" value={`${player.winPct}%`} />
-                  <MiniStat
-                    label="Point Diff"
-                    value={
-                      player.pointDiff >= 0
-                        ? `+${player.pointDiff}`
-                        : player.pointDiff
-                    }
-                  />
-                  <MiniStat
-                    label="Points"
-                    value={`${player.pointsFor}-${player.pointsAgainst}`}
-                  />
-                </div>
+                    <div style={{ textAlign: 'center', fontWeight: 800 }}>
+                      {player.wins}-{player.losses}
+                      {player.ties > 0 ? `-${player.ties}` : ''}
+                    </div>
 
-                <div className="list-item" style={{ padding: 12 }}>
-                  <div className="row-between">
-                    <span className="muted">Standing</span>
-                    <strong>
-                      {place === 1
-                        ? 'Leader'
-                        : place <= 3
-                        ? 'Podium'
-                        : place <= 10
-                        ? 'Top 10'
-                        : `#${place}`}
-                    </strong>
-                  </div>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 900,
+                        color: player.pointDiff > 0 ? '#FFCB05' : undefined,
+                      }}
+                    >
+                      {player.pointDiff > 0 ? `+${player.pointDiff}` : player.pointDiff}
+                    </div>
+                  </button>
+
+                  {isExpanded ? (
+                    <div style={{ padding: '0 12px 14px 12px' }}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gap: 10,
+                          marginTop: 4,
+                        }}
+                      >
+                        <MiniStat
+                          label="Record"
+                          value={`${player.wins}-${player.losses}${
+                            player.ties > 0 ? `-${player.ties}` : ''
+                          }`}
+                        />
+                        <MiniStat label="Win Rate" value={`${player.winPct}%`} />
+                        <MiniStat
+                          label="Point Diff"
+                          value={
+                            player.pointDiff >= 0
+                              ? `+${player.pointDiff}`
+                              : player.pointDiff
+                          }
+                        />
+                        <MiniStat
+                          label="Points"
+                          value={`${player.pointsFor}-${player.pointsAgainst}`}
+                        />
+                      </div>
+
+                      <div className="list-item" style={{ padding: 12, marginTop: 10 }}>
+                        <div className="row-between">
+                          <span className="muted">Standing</span>
+                          <strong>
+                            {place === 1
+                              ? 'Leader'
+                              : place <= 3
+                              ? 'Podium'
+                              : place <= 10
+                              ? 'Top 10'
+                              : `#${place}`}
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </main>

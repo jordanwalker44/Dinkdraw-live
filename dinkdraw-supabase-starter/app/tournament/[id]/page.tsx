@@ -999,26 +999,71 @@ function computeStandings(
       continue;
     }
 
-    let aScore: number;
-    let bScore: number;
-
-    if (isBestOf3) {
-      const series = getSeriesScore(match);
-      aScore = series.aScore;
-      bScore = series.bScore;
-    } else {
-      if (match.team_a_score === null || match.team_b_score === null) continue;
-      aScore = match.team_a_score;
-      bScore = match.team_b_score;
-    }
-
     const aIds = isSingles
       ? [match.team_a_player_1_id]
-      : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
+      : ([match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[]);
 
     const bIds = isSingles
       ? [match.team_b_player_1_id]
-      : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
+      : ([match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[]);
+
+    if (isBestOf3) {
+      const games = [
+        [match.game_1_a, match.game_1_b],
+        [match.game_2_a, match.game_2_b],
+        [match.game_3_a, match.game_3_b],
+      ] as const;
+
+      for (const [gA, gB] of games) {
+        if (gA === null || gB === null) continue;
+
+        for (const id of [...aIds, ...bIds]) {
+          const row = rows.get(id);
+          if (row) row.played += 1;
+        }
+
+        for (const id of aIds) {
+          const row = rows.get(id);
+          if (!row) continue;
+          row.pointsFor += gA;
+          row.pointsAgainst += gB;
+        }
+
+        for (const id of bIds) {
+          const row = rows.get(id);
+          if (!row) continue;
+          row.pointsFor += gB;
+          row.pointsAgainst += gA;
+        }
+
+        if (gA > gB) {
+          aIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.wins += 1;
+          });
+          bIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.losses += 1;
+          });
+        } else if (gB > gA) {
+          bIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.wins += 1;
+          });
+          aIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.losses += 1;
+          });
+        }
+      }
+
+      continue;
+    }
+
+    if (match.team_a_score === null || match.team_b_score === null) continue;
+
+    const aScore = match.team_a_score;
+    const bScore = match.team_b_score;
 
     for (const id of [...aIds, ...bIds]) {
       const row = rows.get(id);
@@ -1039,48 +1084,24 @@ function computeStandings(
       row.pointsAgainst += aScore;
     }
 
-    if (isBestOf3) {
-      const { aWins, bWins } = getSeriesWins(match);
-
-      if (aWins > bWins) {
-        aIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.wins += 1;
-        });
-        bIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.losses += 1;
-        });
-      } else if (bWins > aWins) {
-        bIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.wins += 1;
-        });
-        aIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.losses += 1;
-        });
-      }
-    } else {
-      if (aScore > bScore) {
-        aIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.wins += 1;
-        });
-        bIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.losses += 1;
-        });
-      } else if (bScore > aScore) {
-        bIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.wins += 1;
-        });
-        aIds.forEach((id) => {
-          const r = rows.get(id);
-          if (r) r.losses += 1;
-        });
-      }
+    if (aScore > bScore) {
+      aIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.wins += 1;
+      });
+      bIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.losses += 1;
+      });
+    } else if (bScore > aScore) {
+      bIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.wins += 1;
+      });
+      aIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.losses += 1;
+      });
     }
   }
 

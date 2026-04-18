@@ -83,7 +83,7 @@ useEffect(() => {
     setDeferredPrompt(null);
   }
 
-if (isNativeApp || (!showIosPrompt && !showInstallButton)) return null;
+if (!showIosPrompt && !showInstallButton) return null;
 
 return (
   <div

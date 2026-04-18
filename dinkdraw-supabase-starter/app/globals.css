@@ -294,9 +294,22 @@ textarea.input:focus {
 
 .button.primary,
 .action-button.green {
-  background: var(--accent);
+  background: linear-gradient(180deg, #ffd84d, #ffcb05);
   color: var(--accent-text);
-  box-shadow: 0 10px 24px rgba(255,203,5,0.22);
+
+  box-shadow:
+    0 10px 24px rgba(255,203,5,0.28),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+}
+
+.button.primary:active,
+.action-button.green:active {
+  transform: scale(0.97);
+  box-shadow:
+    0 6px 14px rgba(255,203,5,0.22),
+    0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .button.secondary,
@@ -304,6 +317,12 @@ textarea.input:focus {
   background: var(--panel);
   color: var(--text);
   border: 1px solid var(--line-strong);
+}
+
+.button.secondary:active,
+.action-button.black:active {
+  transform: scale(0.99);
+  border-color: rgba(255,203,5,0.35);
 }
 
 .action-button.blue {

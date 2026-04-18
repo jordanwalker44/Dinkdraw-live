@@ -49,8 +49,8 @@ export default function HomePage() {
   }, [supabase]);
 
   return (
-    <main className="page-shell">
-      <div className="hero">
+    <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+      <div className="hero" style={{ marginTop: 10 }}>
         <div className="hero-inner">
           <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <p className="hero-subtitle">

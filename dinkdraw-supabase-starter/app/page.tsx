@@ -182,17 +182,17 @@ export default function HomePage() {
 </button>
             </Link>
             <Link href="/my-stats">
-              <button className="action-button">
+              <button className="button secondary" style={{ textAlign: 'left' }}>
   <div className="action-title">My Stats</div>
 </button>
             </Link>
             <Link href="/leaderboard">
-              <button className="action-button">
+              <button className="button secondary" style={{ textAlign: 'left' }}>
   <div className="action-title">Leaderboard</div>
 </button>
             </Link>
             <Link href="/account">
-              <button className="action-button">
+              <button className="button secondary" style={{ textAlign: 'left' }}>
   <div className="action-title">Account</div>
 </button>
             </Link>

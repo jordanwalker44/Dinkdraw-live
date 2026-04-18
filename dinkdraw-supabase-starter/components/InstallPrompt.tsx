@@ -76,15 +76,6 @@ export function InstallPrompt() {
     setDeferredPrompt(null);
   }
 
- const isNativeApp =
-  typeof window !== 'undefined' &&
-  !!(window as Window & {
-    Capacitor?: { isNativePlatform?: () => boolean };
-  }).Capacitor?.isNativePlatform?.() &&
-  (window as Window & {
-    Capacitor?: { isNativePlatform?: () => boolean };
-  }).Capacitor!.isNativePlatform!();
-
 const isNativeApp =
   typeof window !== 'undefined' &&
   window.location.search.includes('native_app=1');

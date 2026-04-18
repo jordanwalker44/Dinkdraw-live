@@ -61,14 +61,23 @@ export default function HomePage() {
     minHeight: 260,
   }}
 >
-        <div className="hero-inner" style={{ padding: 0 }}>
+        <div
+  className="hero-inner"
+  style={{
+    padding: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
+  }}
+>
           <img
   src="/dinkdraw-logo.png"
   alt="DinkDraw logo"
   className="hero-logo"
-  style={{ maxHeight: 120, marginBottom: 8 }}
+  style={{ maxHeight: 120 }}
 />
-         <p className="hero-subtitle" style={{ marginTop: 20, marginBottom: 8 }}>
+         <p className="hero-subtitle">
             Create tournaments, track scores, and share live results
 </p>
 

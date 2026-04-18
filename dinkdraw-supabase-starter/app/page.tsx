@@ -72,7 +72,7 @@ export default function HomePage() {
 
           {/* Sign in CTA — only shows when signed out */}
           {!isLoadingUser && !userEmail ? (
-            <div style={{ marginTop: 16 }}>
+            <div style={{ marginTop: 16, display: 'flex', justifycontent: 'center' }}>
              <Link
   href="/account"
   className="button primary"

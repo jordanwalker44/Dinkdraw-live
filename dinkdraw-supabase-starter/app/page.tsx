@@ -188,7 +188,6 @@ export default function HomePage() {
   <div className="card-subtitle">
     You can create or join a tournament in seconds. Create an account to track your stats, rating, and tournament history across every event you play.
   </div>
-</div>
           <Link href="/account">
             <button className="button primary">Sign In or Create Account</button>
           </Link>

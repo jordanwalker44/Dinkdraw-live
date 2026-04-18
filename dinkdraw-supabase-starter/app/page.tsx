@@ -75,10 +75,19 @@ export default function HomePage() {
   src="/dinkdraw-logo.png"
   alt="DinkDraw logo"
   className="hero-logo"
-  style={{ maxHeight: 120 }}
+  style={{ maxHeight: 150 }}
 />
-         <p className="hero-subtitle">
-            Create tournaments, track scores, and share live results
+ <p
+  className="hero-subtitle"
+  style={{
+    fontSize: 18,
+    fontWeight: 600,
+    lineHeight: 1.4,
+    textAlign: 'center',
+    maxWidth: 320,
+  }}
+>
+  Create tournaments, track scores, and share live results
 </p>
 
      {/* Sign in CTA — only shows when signed out */}

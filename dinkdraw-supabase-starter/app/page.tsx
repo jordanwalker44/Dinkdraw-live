@@ -146,7 +146,7 @@ export default function HomePage() {
 
       {/* Main actions */}
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Start a Tournament</div>
+        <div className="card-title" style={{ color: '#FFCB05' }}>Start a Tournament</div>
         <div className="card-subtitle">
           Running an event? Create one and share the join code. Playing? Enter a code to join.
         </div>
@@ -205,7 +205,7 @@ export default function HomePage() {
 
       {/* How it works */}
       <div className="card">
-        <div className="card-title">How it works</div>
+        <div className="card-title" style={{ color: '#FFCB05' }}>How it works</div>
         <div className="grid">
           <div className="list-item">
             <div style={{ fontWeight: 800, marginBottom: 4 }}>1. Create a tournament</div>

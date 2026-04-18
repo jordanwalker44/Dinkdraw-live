@@ -50,8 +50,16 @@ export default function HomePage() {
 
   return (
     <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <div className="hero" style={{ marginTop: 10 }}>
-        <div className="hero-inner">
+      <div
+  className="hero"
+  style={{
+    marginTop: 10,
+    padding: '16px 16px 8px 16px',
+    background: 'transparent',
+    border: 'none',
+  }}
+>
+        <div className="hero-inner" style={{ padding: 0 }}>
           <img
   src="/dinkdraw-logo.png"
   alt="DinkDraw logo"

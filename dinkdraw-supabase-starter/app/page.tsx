@@ -177,16 +177,24 @@ export default function HomePage() {
           <div className="card-subtitle">Everything connected to your account.</div>
           <div className="grid">
             <Link href="/my-tournaments">
-              <button className="button secondary">My Tournaments</button>
+              <button className="action-button">
+  <div className="action-title">My Tournaments</div>
+</button>
             </Link>
             <Link href="/my-stats">
-              <button className="button secondary">My Stats</button>
+              <button className="action-button">
+  <div className="action-title">My Stats</div>
+</button>
             </Link>
             <Link href="/leaderboard">
-              <button className="button secondary">Leaderboard</button>
+              <button className="action-button">
+  <div className="action-title">Leaderboard</div>
+</button>
             </Link>
             <Link href="/account">
-              <button className="button secondary">Account</button>
+              <button className="action-button">
+  <div className="action-title">Account</div>
+</button>
             </Link>
           </div>
         </div>

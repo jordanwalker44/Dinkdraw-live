@@ -52,8 +52,13 @@ export default function HomePage() {
     <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
       <div className="hero" style={{ marginTop: 10 }}>
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <p className="hero-subtitle">
+          <img
+  src="/dinkdraw-logo.png"
+  alt="DinkDraw logo"
+  className="hero-logo"
+  style={{ maxHeight: 120, marginBottom: 8 }}
+/>
+          <p className="hero-subtitle" style={{ marginTop: 4 }}>
             Create tournaments, track scores, and share live results
 </p>
 

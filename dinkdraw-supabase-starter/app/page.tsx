@@ -68,7 +68,7 @@ export default function HomePage() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 12,
+          gap: 6,
         }}
       >
         <img
@@ -77,7 +77,7 @@ export default function HomePage() {
           className="hero-logo"
           style={{
             maxHeight: 240,
-            marginBottom: 8,
+            marginBottom: 4,
           }}
         />
 
@@ -87,7 +87,15 @@ export default function HomePage() {
 
         {/* Greeting — only shows when signed in */}
         {!isLoadingUser && userEmail ? (
-          <div style={{ marginTop: 12, color: '#FFCB05', fontWeight: 800, fontSize: 15 }}>
+          <div
+  style={{
+    marginTop: 8,
+    marginBottom: 6,
+    color: '#FFCB05',
+    fontWeight: 800,
+    fontSize: 15,
+  }}
+>
             Hey, {displayName || userEmail}! 👋
           </div>
         ) : null}

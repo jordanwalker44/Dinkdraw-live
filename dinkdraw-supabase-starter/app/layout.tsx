@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { AuthRefresh } from '../components/AuthRefresh';
-import { InstallPrompt } from '../components/InstallPrompt';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',

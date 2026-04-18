@@ -173,7 +173,7 @@ export default function HomePage() {
       {/* Signed in state */}
       {!isLoadingUser && userEmail ? (
         <div className="card" style={{ marginBottom: 14 }}>
-          <div className="card-title">Your DinkDraw</div>
+          <div className="card-title" style={{ color: '#FFCB05' }}>Your DinkDraw</div>
           <div className="card-subtitle">Everything connected to your account.</div>
           <div className="grid">
             <Link href="/my-tournaments">

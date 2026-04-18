@@ -71,48 +71,19 @@ export default function HomePage() {
     gap: 12,
   }}
 >
-      <div style={{ textAlign: 'center' }}>
-  <div
-    style={{
-      fontSize: 26,
-      fontWeight: 800,
-      marginBottom: 6,
-    }}
-  >
-    DinkDraw
-  </div>
-
-  <img
+      <img
   src="/dinkdraw-logo.png"
   alt="DinkDraw logo"
+  className="hero-logo"
   style={{
-    maxHeight: 90,
-    objectFit: 'cover',
-    objectPosition: 'top',
-    marginBottom: 4,
+    maxHeight: 150,
+    marginBottom: 8,
   }}
 />
 
-  <div
-    style={{
-      fontSize: 13,
-      letterSpacing: 1.5,
-      opacity: 0.85,
-    }}
-  >
-    PICKLEBALL TOURNAMENTS
-  </div>
-</div>
- <p
-  className="hero-subtitle"
-  style={{
-    fontSize: 18,
-    fontWeight: 600,
-    lineHeight: 1.4,
-    textAlign: 'center',
-    maxWidth: 320,
-    marginTop: 12,
-  }}
+<p className="hero-subtitle">
+  Create tournaments, track scores, and share live results
+</p>
 >
   Create tournaments, track scores, and share live results
 </p>

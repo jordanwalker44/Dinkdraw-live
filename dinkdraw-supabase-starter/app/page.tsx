@@ -75,11 +75,13 @@ export default function HomePage() {
       href="/account"
       className="button primary"
       style={{
-        padding: '10px 24px',
-        fontSize: 15,
-        borderRadius: 999,
-        display: 'inline-block',
-      }}
+  width: 'fit-content',
+  padding: '10px 24px',
+  fontSize: 15,
+  borderRadius: 999,
+  display: 'block',
+  margin: '0 auto',
+}}
     >
       Sign In or Create Account
     </Link>

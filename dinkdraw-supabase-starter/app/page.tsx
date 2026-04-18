@@ -74,12 +74,13 @@ export default function HomePage() {
 
           {/* Sign in CTA — only shows when signed out */}
 {!isLoadingUser && !userEmail ? (
-  <div
+ <div
   style={{
     marginTop: 0,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
+    transform: 'translateY(-14px)',
   }}
 >
     <Link

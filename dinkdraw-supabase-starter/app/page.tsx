@@ -71,27 +71,25 @@ export default function HomePage() {
 </p>
 
           {/* Sign in CTA — only shows when signed out */}
-          {!isLoadingUser && !userEmail ? (
-            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
-             <Link
-  href="/account"
-  className="button primary"
-  style={{
-    width: 'auto',
-    padding: '10px 24px',
-    fontSize: 15,
-    borderRadius: 999,
-    margin: '0 auto',
-    display: 'inline-block',
-  }}
->
-  Sign In or Create Account
-</Link>
-              <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-                Track your stats, rating, and tournament history
-              </div>
-            </div>
-          ) : null}
+{!isLoadingUser && !userEmail ? (
+  <div style={{ marginTop: 16, textAlign: 'center' }}>
+    <Link
+      href="/account"
+      className="button primary"
+      style={{
+        padding: '10px 24px',
+        fontSize: 15,
+        borderRadius: 999,
+        display: 'inline-block',
+      }}
+    >
+      Sign In or Create Account
+    </Link>
+    <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+      Track your stats, rating, and tournament history
+    </div>
+  </div>
+) : null}
 
           {/* Greeting — only shows when signed in */}
           {!isLoadingUser && userEmail ? (

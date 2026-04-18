@@ -1,6 +1,5 @@
 'use client';
 
-import { Capacitor } from '@capacitor/core';
 import { useEffect, useMemo, useState } from 'react';
 
 type BeforeInstallPromptEvent = Event & {
@@ -77,7 +76,14 @@ export function InstallPrompt() {
     setDeferredPrompt(null);
   }
 
- const isNativeApp = Capacitor.isNativePlatform();
+ const isNativeApp =
+  typeof window !== 'undefined' &&
+  !!(window as Window & {
+    Capacitor?: { isNativePlatform?: () => boolean };
+  }).Capacitor?.isNativePlatform?.() &&
+  (window as Window & {
+    Capacitor?: { isNativePlatform?: () => boolean };
+  }).Capacitor!.isNativePlatform!();
 
 if (isNativeApp || (!showIosPrompt && !showInstallButton)) return null;
 

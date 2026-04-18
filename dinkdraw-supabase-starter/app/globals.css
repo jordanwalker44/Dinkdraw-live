@@ -238,7 +238,8 @@ img {
 
 .two-col {
   display: grid;
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .row {

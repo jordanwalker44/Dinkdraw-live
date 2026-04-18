@@ -314,14 +314,26 @@ export default function CreateTournamentPage() {
             />
           </div>
 
-          <div>
-            <label className="label">Date</label>
-            <input
-              className="input"
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-            />
+                    <div className="two-col">
+            <div>
+              <label className="label">Date</label>
+              <input
+                className="input"
+                type="date"
+                value={eventDate}
+                onChange={(e) => setEventDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="label">Time</label>
+              <input
+                className="input"
+                type="time"
+                value={eventTime}
+                onChange={(e) => setEventTime(e.target.value)}
+              />
+            </div>
           </div>
 
           <div>

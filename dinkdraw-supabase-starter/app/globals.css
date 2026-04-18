@@ -143,13 +143,27 @@ img {
 }
 
 .top-nav {
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 10px;
+
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-6px);
+  pointer-events: none;
+
+  transition:
+    max-height 0.22s ease,
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 
 .top-nav.open {
-  display: flex;
+  max-height: 300px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 .top-nav-group {

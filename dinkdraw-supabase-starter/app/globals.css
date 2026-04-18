@@ -284,6 +284,12 @@ textarea.input {
   outline: none;
 }
 
+input[type="date"].input,
+input[type="time"].input {
+  min-height: 48px;
+  height: 48px;
+}
+
 .input:focus,
 select.input:focus,
 textarea.input:focus {

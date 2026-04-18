@@ -182,17 +182,7 @@ export default function HomePage() {
       ) : null}
 
       {/* Signed out — new here card */}
-      {!isLoadingUser && !userEmail ? (
-        <div className="card" style={{ marginBottom: 14 }}>
-  <div className="card-title">New here?</div>
-  <div className="card-subtitle">
-    You can create or join a tournament in seconds. Create an account to track your stats, rating, and tournament history across every event you play.
-  </div>
-          <Link href="/account">
-            <button className="button primary">Sign In or Create Account</button>
-          </Link>
-        </div>
-      ) : null}
+{!isLoadingUser && !userEmail ? null : null}
 
       {/* How it works */}
       <div className="card">

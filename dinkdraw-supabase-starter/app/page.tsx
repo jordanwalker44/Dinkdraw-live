@@ -49,56 +49,50 @@ export default function HomePage() {
   }, [supabase]);
 
   return (
-    <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-<div
-  className="hero"
-  style={{
-    marginTop: 10,
-    padding: '12px 16px 4px 16px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    minHeight: 260,
-  }}
->
-        <div
-  className="hero-inner"
-  style={{
-    padding: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 12,
-  }}
->
-      <img
-  src="/dinkdraw-logo.png"
-  alt="DinkDraw logo"
-  className="hero-logo"
-  style={{
-    maxHeight: 150,
-    marginBottom: 8,
-  }}
-/>
+  <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+    <div
+      className="hero"
+      style={{
+        marginTop: 10,
+        padding: '12px 16px 4px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        minHeight: 210,
+      }}
+    >
+      <div
+        className="hero-inner"
+        style={{
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 12,
+        }}
+      >
+        <img
+          src="/dinkdraw-logo.png"
+          alt="DinkDraw logo"
+          className="hero-logo"
+          style={{
+            maxHeight: 150,
+            marginBottom: 8,
+          }}
+        />
 
-<p className="hero-subtitle">
-  Create tournaments, track scores, and share live results
-</p>
->
-  Create tournaments, track scores, and share live results
-</p>
+        <p className="hero-subtitle">
+          Create tournaments, track scores, and share live results
+        </p>
 
-     {/* Sign in CTA — only shows when signed out */}
-{!isLoadingUser && !userEmail ? null : null}
-
-          {/* Greeting — only shows when signed in */}
-          {!isLoadingUser && userEmail ? (
-            <div style={{ marginTop: 12, color: '#FFCB05', fontWeight: 800, fontSize: 15 }}>
-              Hey, {displayName || userEmail}! 👋
-            </div>
-          ) : null}
-        </div>
+        {/* Greeting — only shows when signed in */}
+        {!isLoadingUser && userEmail ? (
+          <div style={{ marginTop: 12, color: '#FFCB05', fontWeight: 800, fontSize: 15 }}>
+            Hey, {displayName || userEmail}! 👋
+          </div>
+        ) : null}
       </div>
+    </div>
 
       <TopNav />
 

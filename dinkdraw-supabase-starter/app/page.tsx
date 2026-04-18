@@ -50,7 +50,6 @@ export default function HomePage() {
 
   return (
     <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-      <div
   <div
   className="hero"
   style={{

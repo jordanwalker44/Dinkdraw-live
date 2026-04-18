@@ -76,53 +76,55 @@ export function InstallPrompt() {
     setDeferredPrompt(null);
   }
 
-  if (!showIosPrompt && !showInstallButton) return null;
+  const isNativeApp =
+  typeof window !== 'undefined' && window.location.protocol === 'capacitor:';
 
-  return (
+if (isNativeApp || (!showIosPrompt && !showInstallButton)) return null;
+
+return (
+  <div
+    style={{
+      position: 'sticky',
+      top: 0,
+      zIndex: 1000,
+      padding: '10px 14px',
+      background: '#0f1722',
+      borderBottom: '1px solid rgba(255,255,255,.08)',
+    }}
+  >
     <div
       style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        padding: '10px 14px',
-        background: '#0f1722',
-        borderBottom: '1px solid rgba(255,255,255,.08)',
+        maxWidth: 960,
+        margin: '0 auto',
+        display: 'flex',
+        gap: 10,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
       }}
     >
-      <div
-        style={{
-          maxWidth: 960,
-          margin: '0 auto',
-          display: 'flex',
-          gap: 10,
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-        }}
-      >
-        <div style={{ fontSize: 14, lineHeight: 1.4 }}>
-          <strong style={{ display: 'block', marginBottom: 2 }}>Install DinkDraw</strong>
-          {showInstallButton ? (
-            <span>Add DinkDraw to your home screen for a faster app-like experience.</span>
-          ) : (
-            <span>
-              On iPhone, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.
-            </span>
-          )}
-        </div>
+      <div style={{ fontSize: 14, lineHeight: 1.4 }}>
+        <strong style={{ display: 'block', marginBottom: 2 }}>Install DinkDraw</strong>
+        {showInstallButton ? (
+          <span>Add DinkDraw to your home screen for a faster app-like experience.</span>
+        ) : (
+          <span>
+            On iPhone, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>.
+          </span>
+        )}
+      </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {showInstallButton ? (
-            <button className="button primary" onClick={handleInstall}>
-              Install
-            </button>
-          ) : null}
-
-          <button className="button secondary" onClick={dismissPrompt}>
-            Not now
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        {showInstallButton ? (
+          <button className="button primary" onClick={handleInstall}>
+            Install
           </button>
-        </div>
+        ) : null}
+
+        <button className="button secondary" onClick={dismissPrompt}>
+          Not now
+        </button>
       </div>
     </div>
-  );
-}
+  </div>
+);

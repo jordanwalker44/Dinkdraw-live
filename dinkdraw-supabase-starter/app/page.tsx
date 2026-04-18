@@ -68,7 +68,7 @@ export default function HomePage() {
   className="hero-logo"
   style={{ maxHeight: 120, marginBottom: 8 }}
 />
-          <p className="hero-subtitle" style={{ marginTop: 4 }}>
+         <p className="hero-subtitle" style={{ marginTop: 20, marginBottom: 28 }}>
             Create tournaments, track scores, and share live results
 </p>
 

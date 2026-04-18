@@ -60,21 +60,20 @@ export default function HomePage() {
           {/* Sign in CTA — only shows when signed out */}
           {!isLoadingUser && !userEmail ? (
             <div style={{ marginTop: 16 }}>
-              <Link href="/account">
-                <button
-                  className="button primary"
-                  style={{
-                    width: 'auto',
-                    padding: '10px 24px',
-                    fontSize: 15,
-                    borderRadius: 999,
-                    margin: '0 auto',
-                    display: 'inline-block',
-                  }}
-                >
-                  Sign In or Create Account
-                </button>
-              </Link>
+             <Link
+  href="/account"
+  className="button primary"
+  style={{
+    width: 'auto',
+    padding: '10px 24px',
+    fontSize: 15,
+    borderRadius: 999,
+    margin: '0 auto',
+    display: 'inline-block',
+  }}
+>
+  Sign In or Create Account
+</Link>
               <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
                 Track your stats, rating, and tournament history
               </div>

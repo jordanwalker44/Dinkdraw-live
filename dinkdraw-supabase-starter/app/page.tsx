@@ -72,7 +72,7 @@ export default function HomePage() {
 {!isLoadingUser && !userEmail ? (
   <div
   style={{
-    marginTop: 16,
+    marginTop: 28,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',

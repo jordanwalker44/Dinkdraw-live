@@ -83,13 +83,15 @@ export default function HomePage() {
   </div>
 
   <img
-    src="/dinkdraw-logo.png"
-    alt="DinkDraw logo"
-    style={{
-      maxHeight: 120,
-      marginBottom: 6,
-    }}
-  />
+  src="/dinkdraw-logo.png"
+  alt="DinkDraw logo"
+  style={{
+    maxHeight: 90,
+    objectFit: 'cover',
+    objectPosition: 'top',
+    marginBottom: 4,
+  }}
+/>
 
   <div
     style={{

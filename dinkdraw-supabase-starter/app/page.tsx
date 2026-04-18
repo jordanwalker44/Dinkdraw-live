@@ -76,7 +76,7 @@ export default function HomePage() {
           alt="DinkDraw logo"
           className="hero-logo"
           style={{
-            maxHeight: 190,
+            maxHeight: 240,
             marginBottom: 8,
           }}
         />

@@ -85,6 +85,10 @@ export function InstallPrompt() {
     Capacitor?: { isNativePlatform?: () => boolean };
   }).Capacitor!.isNativePlatform!();
 
+const isNativeApp =
+  typeof window !== 'undefined' &&
+  window.location.search.includes('native_app=1');
+
 if (isNativeApp || (!showIosPrompt && !showInstallButton)) return null;
 
 return (

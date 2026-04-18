@@ -177,7 +177,7 @@ export default function HomePage() {
           <div className="card-subtitle">Everything connected to your account.</div>
           <div className="grid">
             <Link href="/my-tournaments">
-              <button className="action-button">
+              <button className="button secondary" style={{ textAlign: 'left' }}>
   <div className="action-title">My Tournaments</div>
 </button>
             </Link>

@@ -25,15 +25,22 @@ function isInStandaloneMode() {
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
+const [isNativeApp, setIsNativeApp] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY);
-      if (saved === 'true') {
-        setDismissed(true);
-      }
-    } catch {}
-  }, []);
+  try {
+    const saved = window.localStorage.getItem(INSTALL_PROMPT_DISMISSED_KEY);
+    if (saved === 'true') {
+      setDismissed(true);
+    }
+  } catch {}
+}, []);
+
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    setIsNativeApp(window.location.search.includes('native_app=1'));
+  }
+}, []);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -75,10 +82,6 @@ export function InstallPrompt() {
 
     setDeferredPrompt(null);
   }
-
-const isNativeApp =
-  typeof window !== 'undefined' &&
-  window.location.search.includes('native_app=1');
 
 if (isNativeApp || (!showIosPrompt && !showInstallButton)) return null;
 

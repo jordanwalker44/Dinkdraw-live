@@ -81,47 +81,8 @@ export default function HomePage() {
             Create tournaments, track scores, and share live results
 </p>
 
-      {/* Sign in CTA — only shows when signed out */}
-{!isLoadingUser && !userEmail ? (
-  <div
-    style={{
-      width: '100%',
-      display: 'grid',
-      justifyItems: 'center',
-      rowGap: 8,
-      marginTop: 8,
-    }}
-  >
-    <div
-      style={{
-        width: '100%',
-        minHeight: 76,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Link
-        href="/account"
-        className="button primary"
-        style={{
-          width: 'fit-content',
-          padding: '10px 24px',
-          fontSize: 15,
-          borderRadius: 999,
-          display: 'block',
-          margin: '0 auto',
-        }}
-      >
-        Sign In or Create Account
-      </Link>
-    </div>
-
-    <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-      Track your stats, rating, and tournament history
-    </div>
-  </div>
-) : null}
+     {/* Sign in CTA — only shows when signed out */}
+{!isLoadingUser && !userEmail ? null : null}
 
           {/* Greeting — only shows when signed in */}
           {!isLoadingUser && userEmail ? (

@@ -95,6 +95,28 @@ export default function HomePage() {
 
       <TopNav />
 
+{!isLoadingUser && !userEmail ? (
+  <div className="card" style={{ marginBottom: 14, textAlign: 'center' }}>
+    <div className="card-title">Get more out of DinkDraw</div>
+    <div className="card-subtitle" style={{ marginBottom: 12 }}>
+      Sign in to track your stats, rating, and tournament history.
+    </div>
+    <Link
+      href="/account"
+      className="button primary"
+      style={{
+        width: 'fit-content',
+        display: 'block',
+        margin: '0 auto',
+        padding: '10px 24px',
+        borderRadius: 999,
+      }}
+    >
+      Sign In or Create Account
+    </Link>
+  </div>
+) : null}
+
       {/* Resume last tournament */}
       {lastTournament ? (
         <div className="card" style={{ marginBottom: 14 }}>

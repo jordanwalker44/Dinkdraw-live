@@ -80,7 +80,6 @@ export default function HomePage() {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    transform: 'translateY(-14px)',
   }}
 >
     <Link

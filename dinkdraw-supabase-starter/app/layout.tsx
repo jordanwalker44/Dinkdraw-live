@@ -43,7 +43,6 @@ export default function RootLayout({
       </head>
       <body>
         <AuthRefresh />
-        <InstallPrompt />
         {children}
       </body>
     </html>

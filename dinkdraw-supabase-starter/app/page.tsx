@@ -50,11 +50,15 @@ export default function HomePage() {
 
   return (
     <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-  <div
+<div
   className="hero"
   style={{
     marginTop: 10,
     padding: '12px 16px 4px 16px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    minHeight: 260,
   }}
 >
         <div className="hero-inner" style={{ padding: 0 }}>

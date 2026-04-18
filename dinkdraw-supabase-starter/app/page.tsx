@@ -76,9 +76,11 @@ export default function HomePage() {
           alt="DinkDraw logo"
           className="hero-logo"
           style={{
-            maxHeight: 240,
-            marginBottom: 4,
-          }}
+  width: '100%',
+  maxWidth: 340,
+  height: 'auto',
+  marginBottom: 4,
+}}
         />
 
         <p className="hero-subtitle">

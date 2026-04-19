@@ -285,6 +285,7 @@ const output: ScheduleRow[] = [];
 
   const allPlayers = [a1, a2, b1, b2];
 
+  if (courts > 1) {
   for (const id of allPlayers) {
     const history = courtHistory.get(id) || [];
     const lastTwo = history.slice(-2);
@@ -293,6 +294,7 @@ const output: ScheduleRow[] = [];
       return null;
     }
   }
+}
 
   for (const id of allPlayers) {
     const history = courtHistory.get(id) || [];

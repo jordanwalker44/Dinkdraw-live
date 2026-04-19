@@ -2347,7 +2347,7 @@ function renderBestOf3Match(match: Match) {
           fontWeight: 800,
         }}
       >
-        CURRENT
+        NEXT UP
       </span>
     ) : null}
 

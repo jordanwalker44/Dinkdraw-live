@@ -527,8 +527,8 @@ export default function LeaderboardPage() {
                         />
                       </div>
 
-                      <div className="list-item" style={{ padding: 12, marginTop: 10 }}>
-                        <div className="row-between">
+                                          <div className="list-item" style={{ padding: 12, marginTop: 10 }}>
+                        <div className="row-between" style={{ marginBottom: 8 }}>
                           <span className="muted">Standing</span>
                           <strong>
                             {place === 1
@@ -538,6 +538,13 @@ export default function LeaderboardPage() {
                               : place <= 10
                               ? 'Top 10'
                               : `#${place}`}
+                          </strong>
+                        </div>
+
+                        <div className="row-between">
+                          <span className="muted">Volume</span>
+                          <strong>
+                            {player.matches} matches • {player.tournamentsPlayed} tournaments
                           </strong>
                         </div>
                       </div>

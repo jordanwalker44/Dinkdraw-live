@@ -1118,7 +1118,7 @@ function computeStandings(
     });
 }
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
-  const supabase = (() => getSupabaseBrowserClient(), []);
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);

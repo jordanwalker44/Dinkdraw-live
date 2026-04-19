@@ -2530,6 +2530,7 @@ function renderBestOf3Match(match: Match) {
             </div>
           </div>
         )}
+      </div>
 
       <div style={{ marginBottom: 10 }}>
         <div

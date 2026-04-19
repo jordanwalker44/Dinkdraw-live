@@ -2360,12 +2360,85 @@ function renderBestOf3Match(match: Match) {
   </div>
 </div>
 
-      <div className="row-between" style={{ marginBottom: 12 }}>
-        <div style={{ fontWeight: 800, ...getWinnerStyle('a', match) }}>
-          {teamAName}
+            <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12,
+            padding: 12,
+            ...getWinnerStyle('a', match),
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: 6,
+            }}
+          >
+            Team A
+          </div>
+
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              lineHeight: 1.25,
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {teamAName}
+          </div>
         </div>
-        <div style={{ fontWeight: 800, ...getWinnerStyle('b', match) }}>
-          {teamBName}
+
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: '0.12em',
+            color: 'rgba(255,255,255,0.45)',
+          }}
+        >
+          VS
+        </div>
+
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12,
+            padding: 12,
+            ...getWinnerStyle('b', match),
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: 6,
+            }}
+          >
+            Team B
+          </div>
+
+          <div
+            style={{
+              fontSize: 18,
+              fontWeight: 800,
+              lineHeight: 1.25,
+              whiteSpace: 'pre-line',
+            }}
+          >
+            {teamBName}
+          </div>
         </div>
       </div>
 

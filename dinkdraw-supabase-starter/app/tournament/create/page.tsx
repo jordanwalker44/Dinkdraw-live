@@ -70,7 +70,7 @@ function Stepper({
   type="button"
   className="button secondary"
   onClick={() => onChange(clamp(value + 1, min, max))}
-  disabled={value <= min}
+  disabled={value >= max}
   style={{
     height: 64,
     fontSize: 28,

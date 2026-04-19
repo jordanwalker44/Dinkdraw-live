@@ -455,7 +455,11 @@ export default function CreateTournamentPage() {
   </div>
 </div>
 
-          <div style={{ marginTop: 12 }}>
+          <div className="muted" style={{ marginBottom: 8, textAlign: 'center' }}>
+  Review your setup, then create your tournament
+</div>
+
+<div style={{ marginTop: 16, marginBottom: 8 }}>
   <button
     type="button"
     className="button primary"
@@ -471,7 +475,7 @@ export default function CreateTournamentPage() {
   </button>
 </div>
 
-          {message ? <div className="notice">{message}</div> : null}
+{message ? <div className="notice">{message}</div> : null}
         </div>
       </div>
     </main>

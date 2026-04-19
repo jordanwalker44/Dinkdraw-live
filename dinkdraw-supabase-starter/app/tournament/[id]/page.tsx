@@ -3331,17 +3331,53 @@ function renderBestOf3Match(match: Match) {
                 </div>
               </div>
 
-              {match.is_complete || isCompleted ? (
-                <button className="button secondary" disabled>
-                  {isCompleted ? 'Final Locked' : 'Score Submitted'}
-                </button>
+                            {match.is_complete || isCompleted ? (
+                <div
+                  style={{
+                    marginTop: 2,
+                    padding: '12px 14px',
+                    borderRadius: 12,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.03)',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.6)',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Status
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 800,
+                      color: isCompleted ? 'rgba(255,255,255,0.9)' : '#86efac',
+                    }}
+                  >
+                    {isCompleted ? 'Final Locked' : 'Score Submitted'}
+                  </div>
+                </div>
               ) : (
                 <button
                   className="button primary"
                   onClick={() => submitMatchScore(match.id)}
                   disabled={!isOrganizer}
+                  style={{
+                    width: '100%',
+                    fontWeight: 800,
+                    fontSize: 16,
+                    padding: '14px 16px',
+                  }}
                 >
-                  Submit Score
+                  {isOrganizer ? 'Submit Score' : 'Organizer Submits Score'}
                 </button>
               )}
             </div>

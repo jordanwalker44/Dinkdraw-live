@@ -413,11 +413,7 @@ export default function LeaderboardPage() {
     : 'transparent';
 
               return (
-                <div
-                  key={player.userId}
-                  style={{
-                   style={{
-                  <div
+                              <div
                   key={player.userId}
                   style={{
                     borderBottom:
@@ -434,7 +430,6 @@ export default function LeaderboardPage() {
                         ? '3px solid rgba(255,140,0,0.7)'
                         : '3px solid transparent',
                   }}
-                >
                 >
                                 <button
                     type="button"

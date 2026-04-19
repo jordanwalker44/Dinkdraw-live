@@ -455,14 +455,21 @@ export default function CreateTournamentPage() {
   </div>
 </div>
 
-          <button
-            type="button"
-            className="button primary"
-            onClick={handleCreate}
-            disabled={isCreating}
-          >
-            {isCreating ? 'Creating...' : 'Create Tournament'}
-          </button>
+          <div style={{ marginTop: 12 }}>
+  <button
+    type="button"
+    className="button primary"
+    onClick={handleCreate}
+    disabled={isCreating}
+    style={{
+      height: 56,
+      fontSize: 16,
+      borderRadius: 16,
+    }}
+  >
+    {isCreating ? 'Creating...' : 'Create Tournament'}
+  </button>
+</div>
 
           {message ? <div className="notice">{message}</div> : null}
         </div>

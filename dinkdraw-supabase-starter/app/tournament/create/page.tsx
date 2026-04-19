@@ -314,7 +314,7 @@ export default function CreateTournamentPage() {
             />
           </div>
 
-       <div style={{ maxWidth: 260 }}>
+       <div style={{ maxWidth: 300 }}>
   <label className="label">Date</label>
   <input
     className="input"
@@ -324,7 +324,7 @@ export default function CreateTournamentPage() {
   />
 </div>
 
-<div style={{ maxWidth: 260 }}>
+<div style={{ maxWidth: 300 }}>
   <label className="label">Time</label>
   <input
     className="input"

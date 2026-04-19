@@ -46,9 +46,21 @@ function Stepper({
         >
           −
         </button>
-        <div className="input" style={{ textAlign: 'center', fontSize: 28, fontWeight: 700 }}>
-          {value}
-        </div>
+        <div
+  style={{
+    height: 56,
+    borderRadius: 16,
+    background: '#001428',
+    border: '1px solid rgba(255,255,255,0.08)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 28,
+    fontWeight: 800,
+  }}
+>
+  {value}
+</div>
         <button
           type="button"
           className="button secondary"

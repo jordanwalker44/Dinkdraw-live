@@ -38,14 +38,19 @@ function Stepper({
   }}
 >
         <button
-          type="button"
-          className="button secondary"
-          onClick={() => onChange(clamp(value - 1, min, max))}
-          disabled={value <= min}
-          style={{ height: 56, fontSize: 24 }}
-        >
-          −
-        </button>
+  type="button"
+  className="button secondary"
+  onClick={() => onChange(clamp(value - 1, min, max))}
+  disabled={value <= min}
+  style={{
+    height: 64,
+    fontSize: 28,
+    borderRadius: 18,
+    borderColor: 'rgba(255,203,5,0.28)',
+  }}
+>
+  −
+</button>
         <div
   style={{
     height: 56,
@@ -62,14 +67,19 @@ function Stepper({
   {value}
 </div>
         <button
-          type="button"
-          className="button secondary"
-          onClick={() => onChange(clamp(value + 1, min, max))}
-          disabled={value >= max}
-          style={{ height: 56, fontSize: 24 }}
-        >
-          +
-        </button>
+  type="button"
+  className="button secondary"
+  onClick={() => onChange(clamp(value + 1, min, max))}
+  disabled={value <= min}
+  style={{
+    height: 64,
+    fontSize: 28,
+    borderRadius: 18,
+    borderColor: 'rgba(255,203,5,0.28)',
+  }}
+>
+  +
+</button>
       </div>
     </div>
   );

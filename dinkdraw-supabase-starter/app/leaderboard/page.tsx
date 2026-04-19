@@ -29,7 +29,7 @@ export default function LeaderboardPage() {
   const [profiles, setProfiles] = useState<EloProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
-  const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
+  const [formatFilter, setFormatFilter] = useState<FormatFilter>('doubles');
   const [minMatches, setMinMatches] = useState(5);
   const [sortBy, setSortBy] = useState<SortBy>('elo');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);

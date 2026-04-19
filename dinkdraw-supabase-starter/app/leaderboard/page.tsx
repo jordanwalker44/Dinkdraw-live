@@ -417,20 +417,24 @@ export default function LeaderboardPage() {
                   key={player.userId}
                   style={{
                    style={{
-  borderBottom:
-    index === leaderboard.length - 1
-      ? 'none'
-      : '1px solid rgba(255,255,255,0.08)',
-  background: rowBackground,
-  borderLeft:
-    place === 1
-      ? '3px solid #FFCB05'
-      : place === 2
-      ? '3px solid rgba(255,255,255,0.6)'
-      : place === 3
-      ? '3px solid rgba(255,140,0,0.7)'
-      : '3px solid transparent',
-}}
+                  <div
+                  key={player.userId}
+                  style={{
+                    borderBottom:
+                      index === leaderboard.length - 1
+                        ? 'none'
+                        : '1px solid rgba(255,255,255,0.08)',
+                    background: rowBackground,
+                    borderLeft:
+                      place === 1
+                        ? '3px solid #FFCB05'
+                        : place === 2
+                        ? '3px solid rgba(255,255,255,0.6)'
+                        : place === 3
+                        ? '3px solid rgba(255,140,0,0.7)'
+                        : '3px solid transparent',
+                  }}
+                >
                 >
                                 <button
                     type="button"
@@ -490,7 +494,7 @@ transition: 'background 0.15s ease',
                         textAlign: 'center',
                         fontWeight: 800,
                         fontSize: 14,
-opacity: 0.8
+                        opacity: 0.8,
                       }}
                     >
                       {player.wins}-{player.losses}

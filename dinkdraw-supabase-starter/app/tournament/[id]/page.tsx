@@ -2939,26 +2939,66 @@ function renderBestOf3Match(match: Match) {
       ) : null}
     </div>
 
-    <div className="grid" style={{ marginBottom: 14 }}>
-      {roundsAvailable.map((round) => {
-        const status = roundStatusByRound.get(round);
-        const isSelected = selectedRound === round;
-        return (
-          <button
-            key={round}
-            type="button"
-            className={`button ${isSelected ? 'primary' : 'secondary'}`}
-            onClick={() => setSelectedRound(round)}
-          >
-            {status === 'complete'
-              ? `✓ Round ${round}`
-              : status === 'current'
-              ? `• Round ${round}`
-              : `Round ${round}`}
-          </button>
-        );
-      })}
-    </div>
+    <div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+    gap: 10,
+    marginBottom: 14,
+  }}
+>
+  {roundsAvailable.map((round) => {
+    const status = roundStatusByRound.get(round);
+    const isSelected = selectedRound === round;
+    const isCurrent = status === 'current';
+    const isComplete = status === 'complete';
+
+    return (
+      <button
+        key={round}
+        type="button"
+        onClick={() => setSelectedRound(round)}
+        style={{
+          padding: '12px 10px',
+          borderRadius: 12,
+          border: isSelected
+            ? '1px solid rgba(255, 203, 5, 0.45)'
+            : '1px solid rgba(255,255,255,0.08)',
+          background: isSelected
+            ? 'rgba(255, 203, 5, 0.10)'
+            : isCurrent
+            ? 'rgba(255, 203, 5, 0.05)'
+            : 'rgba(255,255,255,0.03)',
+          color: '#fff',
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 0.6,
+            color: isSelected || isCurrent ? '#FFCB05' : 'rgba(255,255,255,0.65)',
+            marginBottom: 4,
+          }}
+        >
+          {isComplete ? 'COMPLETE' : isCurrent ? 'LIVE' : 'ROUND'}
+        </div>
+
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 800,
+            lineHeight: 1.1,
+          }}
+        >
+          Round {round}
+        </div>
+      </button>
+    );
+  })}
+</div>
 
     {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
       <div className="muted">No matches in this round yet.</div>

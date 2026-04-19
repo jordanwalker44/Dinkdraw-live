@@ -120,7 +120,7 @@ export function buildEloTimeline(allStats: EloStatRow[]): EloTimeline {
     const ratingB = teamB.reduce((s, id) => s + getRating(id), 0) / teamB.length;
 
     const resultA: 'win' | 'loss' | 'tie' =
-      rep.wins > 0 ? 'win' : rep.losses > 0 ? 'loss' : 'tie';
+      rep.wins > rep.losses ? 'win' : rep.losses > rep.wins ? 'loss' : 'tie';
     const resultB: 'win' | 'loss' | 'tie' =
       resultA === 'win' ? 'loss' : resultA === 'loss' ? 'win' : 'tie';
 
@@ -212,7 +212,7 @@ export function buildLeaderboardRows(
     const ratingB = teamB.reduce((s, id) => s + getRating(id), 0) / teamB.length;
 
     const resultA: 'win' | 'loss' | 'tie' =
-      rep.wins > 0 ? 'win' : rep.losses > 0 ? 'loss' : 'tie';
+      rep.wins > rep.losses ? 'win' : rep.losses > rep.wins ? 'loss' : 'tie';
     const resultB: 'win' | 'loss' | 'tie' =
       resultA === 'win' ? 'loss' : resultA === 'loss' ? 'win' : 'tie';
 

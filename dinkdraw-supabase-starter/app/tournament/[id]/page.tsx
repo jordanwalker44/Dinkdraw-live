@@ -3225,11 +3225,41 @@ function renderBestOf3Match(match: Match) {
   </div>
 </div>
 
-              <div className="grid" style={{ marginBottom: 12 }}>
-                <div className="list-item" style={{ padding: 12 }}>
-                  <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('a', match) }}>
+                            <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+                <div
+                  className="list-item"
+                  style={{
+                    padding: 12,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.6)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    Team A
+                  </div>
+
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      fontSize: 18,
+                      lineHeight: 1.25,
+                      marginBottom: 10,
+                      ...getWinnerStyle('a', match),
+                    }}
+                  >
                     {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
                   </div>
+
                   <input
                     className="input"
                     style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
@@ -3242,10 +3272,52 @@ function renderBestOf3Match(match: Match) {
                   />
                 </div>
 
-                <div className="list-item" style={{ padding: 12 }}>
-                  <div style={{ fontWeight: 800, marginBottom: 8, ...getWinnerStyle('b', match) }}>
+                <div
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    letterSpacing: '0.12em',
+                    color: 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  VS
+                </div>
+
+                <div
+                  className="list-item"
+                  style={{
+                    padding: 12,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.03)',
+                    borderRadius: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.6)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    Team B
+                  </div>
+
+                  <div
+                    style={{
+                      fontWeight: 800,
+                      fontSize: 18,
+                      lineHeight: 1.25,
+                      marginBottom: 10,
+                      ...getWinnerStyle('b', match),
+                    }}
+                  >
                     {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
                   </div>
+
                   <input
                     className="input"
                     style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}

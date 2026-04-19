@@ -3578,6 +3578,102 @@ function renderBestOf3Match(match: Match) {
         : 'Ranked by wins, then point differential, then points scored.'}
     </div>
 
+        {isCompleted && tournamentWinner ? (
+      <div
+        style={{
+          marginTop: 14,
+          marginBottom: 14,
+          padding: 16,
+          borderRadius: 18,
+          background: 'linear-gradient(135deg, rgba(255,203,5,0.16), rgba(255,203,5,0.06))',
+          border: '1px solid rgba(255,203,5,0.28)',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: '#FFCB05',
+            marginBottom: 6,
+          }}
+        >
+          Champion
+        </div>
+
+        <div
+          style={{
+            fontSize: 24,
+            fontWeight: 900,
+            color: '#fff',
+            marginBottom: 6,
+          }}
+        >
+          🏆 {tournamentWinner.name}
+        </div>
+
+        <div
+          className="muted"
+          style={{
+            fontSize: 14,
+            marginBottom: 10,
+          }}
+        >
+          Finished 1st with {tournamentWinner.wins} wins and a {tournamentWinner.pointDiff >= 0 ? '+' : ''}{tournamentWinner.pointDiff} point differential.
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: 8,
+          }}
+        >
+          <div
+            className="list-item"
+            style={{
+              padding: 10,
+              textAlign: 'center',
+              background: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Wins</div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>{tournamentWinner.wins}</div>
+          </div>
+
+          <div
+            className="list-item"
+            style={{
+              padding: 10,
+              textAlign: 'center',
+              background: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Record</div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>
+              {tournamentWinner.wins}-{tournamentWinner.losses}
+            </div>
+          </div>
+
+          <div
+            className="list-item"
+            style={{
+              padding: 10,
+              textAlign: 'center',
+              background: 'rgba(255,255,255,0.04)',
+            }}
+          >
+            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Diff</div>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>
+              {tournamentWinner.pointDiff >= 0 ? '+' : ''}
+              {tournamentWinner.pointDiff}
+            </div>
+          </div>
+        </div>
+      </div>
+    ) : null}
+
     <div
       style={{
         display: 'grid',

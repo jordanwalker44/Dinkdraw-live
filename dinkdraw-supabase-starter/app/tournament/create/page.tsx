@@ -29,7 +29,14 @@ function Stepper({
   return (
     <div>
       <label className="label">{label}</label>
-      <div style={{ display: 'grid', gridTemplateColumns: '56px 1fr 56px', gap: 12 }}>
+      <div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '64px 1fr 64px',
+    gap: 10,
+    alignItems: 'center',
+  }}
+>
         <button
           type="button"
           className="button secondary"

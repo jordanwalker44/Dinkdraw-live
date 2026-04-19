@@ -2576,21 +2576,87 @@ function renderBestOf3Match(match: Match) {
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />
         </div>
-        {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
-          <button className="button primary" onClick={() => submitGame(match.id, 2)}>
-            Submit Game 2
+                {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
+          <button
+            className="button primary"
+            onClick={() => submitGame(match.id, 2)}
+            style={{
+              width: '100%',
+              fontWeight: 800,
+              fontSize: 16,
+              padding: '14px 16px',
+            }}
+          >
+            {isOrganizer ? 'Submit Game 2' : 'Organizer Submits Game 2'}
           </button>
         ) : game2Done ? (
-          <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-            {match.game_2_a}-{match.game_2_b} —{' '}
-            {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.03)',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: 4,
+              }}
+            >
+              Game 2 Result
+            </div>
+
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 800,
+                color: 'rgba(255,255,255,0.92)',
+              }}
+            >
+              {match.game_2_a}-{match.game_2_b} —{' '}
+              {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
+            </div>
           </div>
         ) : (
-          <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-            Waiting for Game 1
+          <div
+            style={{
+              padding: '12px 14px',
+              borderRadius: 12,
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.03)',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: 4,
+              }}
+            >
+              Game 2 Status
+            </div>
+
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 800,
+                color: 'rgba(255,255,255,0.92)',
+              }}
+            >
+              Waiting for Game 1
+            </div>
           </div>
         )}
-      </div>
 
       {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
         <div style={{ marginBottom: 10 }}>

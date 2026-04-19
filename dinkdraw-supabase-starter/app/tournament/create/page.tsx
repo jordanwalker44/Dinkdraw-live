@@ -430,12 +430,30 @@ export default function CreateTournamentPage() {
             onChange={setGamesTo}
           />
 
-          <div className="list-item">
-            <div style={{ fontWeight: 700 }}>Quick summary</div>
-            <div className="muted">
-              {format === 'singles' ? 'Singles' : 'Doubles'} • {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} • {playerCount} players • {courts} courts • {rounds} rounds
-            </div>
-          </div>
+          <div
+  className="list-item"
+  style={{
+    border: '1px solid rgba(255,203,5,0.25)',
+    background: 'rgba(255,203,5,0.06)',
+  }}
+>
+  <div
+    style={{
+      fontWeight: 800,
+      marginBottom: 6,
+      color: '#FFCB05',
+      fontSize: 15,
+    }}
+  >
+    Tournament Summary
+  </div>
+
+  <div style={{ fontSize: 15, lineHeight: 1.5 }}>
+    {format === 'singles' ? 'Singles' : 'Doubles'} •{' '}
+    {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} •{' '}
+    {playerCount} players • {courts} courts • {rounds} rounds
+  </div>
+</div>
 
           <button
             type="button"

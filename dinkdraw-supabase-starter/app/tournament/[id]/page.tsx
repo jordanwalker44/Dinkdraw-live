@@ -2910,6 +2910,7 @@ function renderBestOf3Match(match: Match) {
       ) : null}
     </div>
 
+    <div className="grid" style={{ marginBottom: 14 }}>
       {roundsAvailable.map((round) => {
         const status = roundStatusByRound.get(round);
         const isSelected = selectedRound === round;

@@ -2563,35 +2563,6 @@ function renderBestOf3Match(match: Match) {
   </div>
 )}
 
-      {isStarted && nextUpMatch && (
-  <div
-    className="card"
-    style={{
-      border: '1px solid rgba(255,203,5,0.4)',
-      background: 'rgba(255,203,5,0.08)',
-      marginBottom: 12,
-    }}
-  >
-    <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 6 }}>
-      Now Playing
-    </div>
-
-    <div style={{ fontSize: 16, fontWeight: 700 }}>
-      {getCourtLabel(tournament, nextUpMatch.court_number)}
-    </div>
-
-    <div className="muted" style={{ marginTop: 4 }}>
-      {playersById[nextUpMatch.team_a_player_1_id!]?.display_name} 
-      {nextUpMatch.team_a_player_2_id ? ` & ${playersById[nextUpMatch.team_a_player_2_id!]?.display_name}` : ''}
-
-      {'  vs  '}
-
-      {playersById[nextUpMatch.team_b_player_1_id!]?.display_name} 
-      {nextUpMatch.team_b_player_2_id ? ` & ${playersById[nextUpMatch.team_b_player_2_id!]?.display_name}` : ''}
-    </div>
-  </div>
-)}
-
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
 
       <div className="card" style={{ marginBottom: 14 }}>

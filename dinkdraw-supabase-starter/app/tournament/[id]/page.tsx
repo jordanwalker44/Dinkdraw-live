@@ -2895,7 +2895,36 @@ function renderBestOf3Match(match: Match) {
 
      {activeTab === 'rounds' && (
   <div className="card">
-    <div className="card-title">Rounds</div>
+
+  {/* 🔥 CURRENT ROUND HEADER */}
+  {isStarted && !isCompleted && (
+    <div style={{
+      marginBottom: 12,
+      padding: 12,
+      borderRadius: 10,
+      background: 'rgba(255, 203, 5, 0.08)',
+      border: '1px solid rgba(255, 203, 5, 0.25)'
+    }}>
+      <div style={{
+        fontSize: 12,
+        fontWeight: 700,
+        color: '#FFCB05',
+        letterSpacing: 1
+      }}>
+        CURRENT ROUND
+      </div>
+
+      <div style={{
+        fontSize: 22,
+        fontWeight: 800,
+        marginTop: 2
+      }}>
+        Round {currentRound}
+      </div>
+    </div>
+  )}
+
+  <div className="card-title">All Rounds</div>
     <div className="card-subtitle">
       {isCompleted
         ? 'Tournament complete. Scores are locked.'

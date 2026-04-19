@@ -1118,7 +1118,7 @@ function computeStandings(
     });
 }
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
-  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const supabase = (() => getSupabaseBrowserClient(), []);
   const router = useRouter();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -1155,7 +1155,21 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   const claimedSlot = useMemo(() => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null, [playerSlots, userId]);
   const playersById = useMemo(() => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])), [playerSlots]);
+  const yourMatch = useMemo(() => {
+  if (!claimedSlot) return null;
 
+  return matches.find((m) => {
+    if (m.is_bye || m.is_complete) return false;
+
+    return (
+      m.team_a_player_1_id === claimedSlot.id ||
+      m.team_a_player_2_id === claimedSlot.id ||
+      m.team_b_player_1_id === claimedSlot.id ||
+      m.team_b_player_2_id === claimedSlot.id
+    );
+  }) || null;
+}, [matches, claimedSlot]);
+  
   const roundsAvailable = useMemo(() => {
     const roundSet = new Set<number>();
     matches.forEach((m) => roundSet.add(m.round_number));
@@ -2515,6 +2529,39 @@ function renderBestOf3Match(match: Match) {
       </div>
 
       <TopNav />
+
+      {isStarted && yourMatch && (
+  <div
+    className="card"
+    style={{
+      border: '1px solid rgba(255,203,5,0.4)',
+      background: 'rgba(255,203,5,0.08)',
+      marginBottom: 12,
+    }}
+  >
+    <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 6 }}>
+      Your Match
+    </div>
+
+    <div style={{ fontSize: 16, fontWeight: 700 }}>
+      {getCourtLabel(tournament, yourMatch.court_number)}
+    </div>
+
+    <div className="muted" style={{ marginTop: 4 }}>
+      {playersById[yourMatch.team_a_player_1_id!]?.display_name}
+      {yourMatch.team_a_player_2_id
+        ? ` & ${playersById[yourMatch.team_a_player_2_id!]?.display_name}`
+        : ''}
+
+      {'  vs  '}
+
+      {playersById[yourMatch.team_b_player_1_id!]?.display_name}
+      {yourMatch.team_b_player_2_id
+        ? ` & ${playersById[yourMatch.team_b_player_2_id!]?.display_name}`
+        : ''}
+    </div>
+  </div>
+)}
 
       {isStarted && nextUpMatch && (
   <div

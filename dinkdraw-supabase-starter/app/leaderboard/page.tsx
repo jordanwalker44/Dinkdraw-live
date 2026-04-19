@@ -404,22 +404,33 @@ export default function LeaderboardPage() {
               const isExpanded = expandedUserId === player.userId;
 
               const rowBackground =
-                place === 1
-                  ? 'rgba(255,203,5,0.07)'
-                  : place <= 3
-                  ? 'rgba(255,203,5,0.035)'
-                  : 'transparent';
+  place === 1
+    ? 'linear-gradient(90deg, rgba(255,203,5,0.18), rgba(255,203,5,0.05))'
+    : place === 2
+    ? 'linear-gradient(90deg, rgba(255,255,255,0.12), rgba(255,255,255,0.03))'
+    : place === 3
+    ? 'linear-gradient(90deg, rgba(255,140,0,0.18), rgba(255,140,0,0.05))'
+    : 'transparent';
 
               return (
                 <div
                   key={player.userId}
                   style={{
-                    borderBottom:
-                      index === leaderboard.length - 1
-                        ? 'none'
-                        : '1px solid rgba(255,255,255,0.08)',
-                    background: rowBackground,
-                  }}
+                   style={{
+  borderBottom:
+    index === leaderboard.length - 1
+      ? 'none'
+      : '1px solid rgba(255,255,255,0.08)',
+  background: rowBackground,
+  borderLeft:
+    place === 1
+      ? '3px solid #FFCB05'
+      : place === 2
+      ? '3px solid rgba(255,255,255,0.6)'
+      : place === 3
+      ? '3px solid rgba(255,140,0,0.7)'
+      : '3px solid transparent',
+}}
                 >
                                 <button
                     type="button"
@@ -436,6 +447,7 @@ export default function LeaderboardPage() {
                       gap: 8,
                       alignItems: 'center',
                       textAlign: 'left',
+transition: 'background 0.15s ease',
                     }}
                   >
                     <div
@@ -467,7 +479,7 @@ export default function LeaderboardPage() {
                       style={{
                         textAlign: 'center',
                         fontWeight: 900,
-                        fontSize: 18,
+                        fontSize: 20,
                       }}
                     >
                       {player.rating}
@@ -477,7 +489,8 @@ export default function LeaderboardPage() {
                       style={{
                         textAlign: 'center',
                         fontWeight: 800,
-                        fontSize: 15,
+                        fontSize: 14,
+opacity: 0.8
                       }}
                     >
                       {player.wins}-{player.losses}
@@ -488,7 +501,7 @@ export default function LeaderboardPage() {
                       style={{
                         textAlign: 'center',
                         fontWeight: 900,
-                        fontSize: 16,
+                        fontSize: 18,
                         color: player.pointDiff > 0 ? '#FFCB05' : 'rgba(255,255,255,0.92)',
                       }}
                     >

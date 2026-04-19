@@ -686,14 +686,16 @@ function buildMixedDoublesSchedule(
 
     const allPlayers = [a1, a2, b1, b2];
 
-    for (const id of allPlayers) {
-      const history = courtHistory.get(id) || [];
-      const lastTwo = history.slice(-2);
+    if (courts > 1) {
+  for (const id of allPlayers) {
+    const history = courtHistory.get(id) || [];
+    const lastTwo = history.slice(-2);
 
-      if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
-        return null;
-      }
+    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+      return null;
     }
+  }
+}
 
     for (const id of allPlayers) {
       const history = courtHistory.get(id) || [];

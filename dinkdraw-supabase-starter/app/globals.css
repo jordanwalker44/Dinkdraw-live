@@ -284,11 +284,6 @@ textarea.input {
   outline: none;
 }
 
-input[type="date"].input,
-input[type="time"].input {
-  padding-right: 10px;
-}
-
 .input:focus,
 select.input:focus,
 textarea.input:focus {

@@ -2659,7 +2659,7 @@ function renderBestOf3Match(match: Match) {
         )}
       </div>
 
-      {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
+            {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
         <div style={{ marginBottom: 10 }}>
           <div
             className="muted"
@@ -2688,7 +2688,7 @@ function renderBestOf3Match(match: Match) {
               value={draft.game_3_a}
               disabled={match.game_3_a !== null || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
-              placeholder={isOrganizer ? "0" : "Organizer only"}
+              placeholder={isOrganizer ? '0' : 'Organizer only'}
             />
             <input
               className="input"
@@ -2697,22 +2697,81 @@ function renderBestOf3Match(match: Match) {
               value={draft.game_3_b}
               disabled={match.game_3_b !== null || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
-              placeholder={isOrganizer ? "0" : "Organizer only"}
+              placeholder={isOrganizer ? '0' : 'Organizer only'}
             />
           </div>
           {match.game_3_a === null && !seriesComplete && !isCompleted ? (
-            <button className="button primary" onClick={() => submitGame(match.id, 3)}>
-              Submit Game 3
+            <button
+              className="button primary"
+              onClick={() => submitGame(match.id, 3)}
+              style={{
+                width: '100%',
+                fontWeight: 800,
+                fontSize: 16,
+                padding: '14px 16px',
+              }}
+            >
+              {isOrganizer ? 'Submit Game 3' : 'Organizer Submits Game 3'}
             </button>
           ) : match.game_3_a !== null ? (
-            <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-              {match.game_3_a}-{match.game_3_b} —{' '}
-              {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.03)',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: 4,
+                }}
+              >
+                Game 3 Result
+              </div>
+
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              >
+                {match.game_3_a}-{match.game_3_b} —{' '}
+                {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
+              </div>
             </div>
           ) : null}
         </div>
       ) : game1Done && game2Done && !seriesComplete ? (
-        <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
+        <div
+          className="list-item"
+          style={{
+            padding: 12,
+            textAlign: 'center',
+            border: '1px solid rgba(255,203,5,0.25)',
+            background: 'rgba(255,203,5,0.08)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: '#FFCB05',
+              marginBottom: 4,
+            }}
+          >
+            Series Result
+          </div>
+
           <div style={{ fontWeight: 800, color: '#FFCB05' }}>
             {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
           </div>

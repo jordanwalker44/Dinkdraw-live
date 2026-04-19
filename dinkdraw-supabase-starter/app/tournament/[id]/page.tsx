@@ -3088,13 +3088,69 @@ function renderBestOf3Match(match: Match) {
                   : undefined
               }
             >
-              <div className="row-between" style={{ marginBottom: 12 }}>
-                <strong>Court {match.court_number ?? '-'}</strong>
-                {isNextUp ? <span className="tag">Current Match</span> : null}
-                <span className={match.is_complete ? 'tag green' : 'tag'}>
-                  {match.is_complete ? 'Complete' : 'Live'}
-                </span>
-              </div>
+              <div
+  className="row-between"
+  style={{
+    marginBottom: 12,
+    alignItems: 'flex-start',
+    gap: 10,
+  }}
+>
+  <div>
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 800,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color: 'rgba(255,255,255,0.6)',
+        marginBottom: 4,
+      }}
+    >
+      Court
+    </div>
+
+    <div
+      style={{
+        fontSize: 20,
+        fontWeight: 900,
+        lineHeight: 1.1,
+      }}
+    >
+      {getCourtLabel(tournament, match.court_number) || '-'}
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+    }}
+  >
+    {isNextUp ? (
+      <span
+        className="tag"
+        style={{
+          background: 'rgba(255,203,5,0.14)',
+          border: '1px solid rgba(255,203,5,0.35)',
+          color: '#FFCB05',
+          fontWeight: 800,
+        }}
+      >
+        CURRENT
+      </span>
+    ) : null}
+
+    <span
+      className={match.is_complete ? 'tag green' : 'tag'}
+      style={!match.is_complete ? { fontWeight: 800 } : undefined}
+    >
+      {match.is_complete ? 'COMPLETE' : 'LIVE'}
+    </span>
+  </div>
+</div>
 
               <div className="grid" style={{ marginBottom: 12 }}>
                 <div className="list-item" style={{ padding: 12 }}>

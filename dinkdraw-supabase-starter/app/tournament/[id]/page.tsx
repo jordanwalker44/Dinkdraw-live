@@ -2657,6 +2657,7 @@ function renderBestOf3Match(match: Match) {
             </div>
           </div>
         )}
+      </div>
 
       {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
         <div style={{ marginBottom: 10 }}>

@@ -3738,13 +3738,7 @@ function renderBestOf3Match(match: Match) {
 
         {standings.map((row, index) => {
           const place = index + 1;
-          const initials = row.name
-            .split(' ')
-            .map((part) => part[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase();
-
+          
           const medal =
             place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 
@@ -3788,27 +3782,11 @@ function renderBestOf3Match(match: Match) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 10,
+                  gap: 6,
                   padding: '10px 8px',
                   minWidth: 0,
                 }}
               >
-                <div
-                  style={{
-                    width: 38,
-                    height: 38,
-                    borderRadius: 999,
-                    background: 'rgba(255,255,255,0.10)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 800,
-                    fontSize: 14,
-                    flexShrink: 0,
-                  }}
-                >
-                  {initials}
-                </div>
 
                 <div style={{ minWidth: 0 }}>
                   <div

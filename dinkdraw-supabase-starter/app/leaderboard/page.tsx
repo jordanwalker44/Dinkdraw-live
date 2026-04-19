@@ -375,14 +375,15 @@ export default function LeaderboardPage() {
               background: 'rgba(255,255,255,0.03)',
             }}
           >
+           
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '44px minmax(0, 1fr) 78px 78px 64px',
+                gridTemplateColumns: '40px minmax(0, 1fr) 70px 66px 58px',
                 gap: 8,
                 padding: '10px 12px',
                 borderBottom: '1px solid rgba(255,255,255,0.08)',
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -391,7 +392,7 @@ export default function LeaderboardPage() {
             >
               <div style={{ textAlign: 'center' }}>#</div>
               <div>Player</div>
-              <div style={{ textAlign: 'center' }}>Rating</div>
+              <div style={{ textAlign: 'center' }}>ELO</div>
               <div style={{ textAlign: 'center' }}>W-L</div>
               <div style={{ textAlign: 'center' }}>Diff</div>
             </div>
@@ -420,7 +421,7 @@ export default function LeaderboardPage() {
                     background: rowBackground,
                   }}
                 >
-                  <button
+                                <button
                     type="button"
                     onClick={() => toggleExpanded(player.userId)}
                     style={{
@@ -429,15 +430,22 @@ export default function LeaderboardPage() {
                       background: 'transparent',
                       color: 'inherit',
                       cursor: 'pointer',
-                      padding: '14px 12px',
+                      padding: '12px 12px',
                       display: 'grid',
-                      gridTemplateColumns: '44px minmax(0, 1fr) 78px 78px 64px',
+                      gridTemplateColumns: '40px minmax(0, 1fr) 70px 66px 58px',
                       gap: 8,
                       alignItems: 'center',
                       textAlign: 'left',
                     }}
                   >
-                    <div style={{ textAlign: 'center', fontWeight: 900 }}>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 900,
+                        fontSize: 18,
+                        color: place <= 3 ? '#FFCB05' : 'rgba(255,255,255,0.92)',
+                      }}
+                    >
                       {medal ? medal : place}
                     </div>
 
@@ -445,6 +453,7 @@ export default function LeaderboardPage() {
                       <div
                         style={{
                           fontWeight: 800,
+                          fontSize: 16,
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -452,16 +461,25 @@ export default function LeaderboardPage() {
                       >
                         {player.name}
                       </div>
-                      <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>
-                        {player.matches} matches • {player.tournamentsPlayed} tournaments
-                      </div>
                     </div>
 
-                    <div style={{ textAlign: 'center', fontWeight: 900 }}>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 900,
+                        fontSize: 18,
+                      }}
+                    >
                       {player.rating}
                     </div>
 
-                    <div style={{ textAlign: 'center', fontWeight: 800 }}>
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        fontSize: 15,
+                      }}
+                    >
                       {player.wins}-{player.losses}
                       {player.ties > 0 ? `-${player.ties}` : ''}
                     </div>
@@ -470,7 +488,8 @@ export default function LeaderboardPage() {
                       style={{
                         textAlign: 'center',
                         fontWeight: 900,
-                        color: player.pointDiff > 0 ? '#FFCB05' : undefined,
+                        fontSize: 16,
+                        color: player.pointDiff > 0 ? '#FFCB05' : 'rgba(255,255,255,0.92)',
                       }}
                     >
                       {player.pointDiff > 0 ? `+${player.pointDiff}` : player.pointDiff}

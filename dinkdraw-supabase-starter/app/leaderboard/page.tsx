@@ -150,7 +150,7 @@ export default function LeaderboardPage() {
   function sortLabel(s: SortBy) {
     switch (s) {
       case 'elo':
-        return 'ELO';
+        return 'Rating';
       case 'wins':
         return 'Wins';
       case 'winPct':
@@ -164,7 +164,7 @@ export default function LeaderboardPage() {
       case 'name':
         return 'Name';
       default:
-        return 'ELO';
+        return 'Raturn';
     }
   }
 

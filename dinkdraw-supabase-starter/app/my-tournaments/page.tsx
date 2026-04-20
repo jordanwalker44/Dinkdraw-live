@@ -60,74 +60,69 @@ export default function MyTournamentsPage() {
 
   useEffect(() => {
     async function load() {
-      setIsLoading(true);
-      setMessage('');
+  setIsLoading(true);
+  setMessage('');
 
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError) {
-        setMessage(authError.message);
-        setIsLoading(false);
-        return;
-      }
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
 
-      const user = authData.user;
-      if (!user) {
-        setMessage('Sign in to view your tournaments.');
-        setIsLoading(false);
-        return;
-      }
+  if (!user) {
+    setMessage('Sign in to view your tournaments.');
+    setIsLoading(false);
+    return;
+  }
 
-      const { data: organizedData, error: organizedError } = await supabase
-        .from('tournaments')
-        .select('*')
-        .eq('organizer_user_id', user.id)
-        .order('created_at', { ascending: false });
+  const { data: organizedData, error: organizedError } = await supabase
+    .from('tournaments')
+    .select('*')
+    .eq('organizer_user_id', user.id)
+    .order('created_at', { ascending: false });
 
-      if (organizedError) {
-        setMessage(organizedError.message);
-        setIsLoading(false);
-        return;
-      }
+  if (organizedError) {
+    setMessage(organizedError.message);
+    setIsLoading(false);
+    return;
+  }
 
-      const { data: joinedSlots, error: joinedError } = await supabase
-        .from('tournament_players')
-        .select('tournament_id, claimed_by_user_id')
-        .eq('claimed_by_user_id', user.id);
+  const { data: joinedSlots, error: joinedError } = await supabase
+    .from('tournament_players')
+    .select('tournament_id, claimed_by_user_id')
+    .eq('claimed_by_user_id', user.id);
 
-      if (joinedError) {
-        setMessage(joinedError.message);
-        setIsLoading(false);
-        return;
-      }
+  if (joinedError) {
+    setMessage(joinedError.message);
+    setIsLoading(false);
+    return;
+  }
 
-      const joinedIds = Array.from(
-        new Set((joinedSlots || []).map((row: PlayerSlot) => row.tournament_id))
-      );
+  const joinedIds = Array.from(
+    new Set((joinedSlots || []).map((row: PlayerSlot) => row.tournament_id))
+  );
 
-      let joinedTournaments: Tournament[] = [];
+  let joinedTournaments: Tournament[] = [];
 
-      if (joinedIds.length > 0) {
-        const { data: joinedData, error: joinedTournamentError } = await supabase
-          .from('tournaments')
-          .select('*')
-          .in('id', joinedIds)
-          .order('created_at', { ascending: false });
+  if (joinedIds.length > 0) {
+    const { data: joinedData, error: joinedTournamentError } = await supabase
+      .from('tournaments')
+      .select('*')
+      .in('id', joinedIds)
+      .order('created_at', { ascending: false });
 
-        if (joinedTournamentError) {
-          setMessage(joinedTournamentError.message);
-          setIsLoading(false);
-          return;
-        }
-
-        joinedTournaments = (joinedData || []).filter(
-          (t: Tournament) => t.organizer_user_id !== user.id
-        );
-      }
-
-      setOrganized(organizedData || []);
-      setJoined(joinedTournaments);
+    if (joinedTournamentError) {
+      setMessage(joinedTournamentError.message);
       setIsLoading(false);
+      return;
     }
+
+    joinedTournaments = (joinedData || []).filter(
+      (t: Tournament) => t.organizer_user_id !== user.id
+    );
+  }
+
+  setOrganized(organizedData || []);
+  setJoined(joinedTournaments);
+  setIsLoading(false);
+}
 
     load();
   }, [supabase]);

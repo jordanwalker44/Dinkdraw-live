@@ -49,7 +49,7 @@ export default function HomePage() {
   }, [supabase]);
 
   return (
-  <main className="page-shell" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+  <main className="page-shell">
     <div
       className="hero"
       style={{

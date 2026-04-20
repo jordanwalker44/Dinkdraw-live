@@ -168,8 +168,8 @@ export default function AccountPage() {
   async function handleSaveDisplayName() {
     setMessage('');
 
-    const { data } = await supabase.auth.getUser();
-    const user = data.user;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
 
     if (!user) { setMessage('Sign in first.'); return; }
 

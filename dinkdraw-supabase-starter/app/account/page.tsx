@@ -23,8 +23,8 @@ export default function AccountPage() {
 
   useEffect(() => {
     async function loadUser() {
-      const { data } = await supabase.auth.getUser();
-      const user = data.user;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
 
       setUserEmail(user?.email ?? '');
       setEmail(user?.email ?? '');

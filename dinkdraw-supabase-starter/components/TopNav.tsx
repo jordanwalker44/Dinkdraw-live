@@ -128,7 +128,7 @@ export function TopNav() {
 
   return (
     <div className="top-nav-shell">
-      <div className="top-nav-mobile-bar">
+      <div className="top-nav-mobile-bar desktop-visible">
         <div className="top-nav-brand">DinkDraw</div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -216,13 +216,15 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
   const ids = activePlayers.map((p) => p.id);
   const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
- const partnerCounts = new Map<string, number>();
-const matchupCounts = new Map<string, number>();
-const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
-const recentMatchHistory = new Map<string, string[]>(ids.map((id) => [id, []]));
-const output: ScheduleRow[] = [];
+  const partnerCounts = new Map<string, number>();
+  const matchupCounts = new Map<string, number>();
+  const sameMatchCounts = new Map<string, number>();
+  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
+  const recentMatchHistory = new Map<string, string[]>(ids.map((id) => [id, []]));
+  let previousRoundGroups = new Set<string>();
+  const output: ScheduleRow[] = [];
 
   function getPartnerCount(a: string, b: string) {
     return partnerCounts.get(pairKey(a, b)) || 0;
@@ -230,6 +232,14 @@ const output: ScheduleRow[] = [];
 
   function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
     return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
+  }
+
+   function getSameMatchCount(a: string, b: string) {
+    return sameMatchCounts.get(pairKey(a, b)) || 0;
+  }
+
+  function sameGroupKey(players: string[]) {
+    return [...players].sort().join('|');
   }
 
   function chooseParticipantsForRound() {
@@ -256,75 +266,95 @@ const output: ScheduleRow[] = [];
     ];
   }
 
-  function scoreMatch(
-  teamA: [string, string],
-  teamB: [string, string],
-  allowRepeatPartners: boolean,
-  courtNumber: number
-) {
-  const [a1, a2] = teamA;
-  const [b1, b2] = teamB;
+   function scoreMatch(
+    teamA: [string, string],
+    teamB: [string, string],
+    allowRepeatPartners: boolean,
+    courtNumber: number
+  ) {
+    const [a1, a2] = teamA;
+    const [b1, b2] = teamB;
 
-  const partnerRepeatA = getPartnerCount(a1, a2);
-  const partnerRepeatB = getPartnerCount(b1, b2);
+    const partnerRepeatA = getPartnerCount(a1, a2);
+    const partnerRepeatB = getPartnerCount(b1, b2);
 
-  if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
-    return null;
-  }
-
-  let penalty = 0;
-
-  penalty += partnerRepeatA * 100000;
-  penalty += partnerRepeatB * 100000;
-  penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
-
-  penalty += (playedCounts.get(a1) || 0) * 10;
-  penalty += (playedCounts.get(a2) || 0) * 10;
-  penalty += (playedCounts.get(b1) || 0) * 10;
-  penalty += (playedCounts.get(b2) || 0) * 10;
-
-  const allPlayers = [a1, a2, b1, b2];
-
-  if (courts > 1) {
-  for (const id of allPlayers) {
-    const history = courtHistory.get(id) || [];
-    const lastTwo = history.slice(-2);
-
-    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+    if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
       return null;
     }
-  }
-}
 
-  for (const id of allPlayers) {
-    const history = courtHistory.get(id) || [];
-    const lastCourt = history[history.length - 1];
+    let penalty = 0;
 
-    if (lastCourt === courtNumber) penalty += 300;
-  }
+    penalty += partnerRepeatA * 100000;
+    penalty += partnerRepeatB * 100000;
+    penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
 
-  const recentPairs: Array<[string, string]> = [
-    [a1, a2],
-    [a1, b1],
-    [a1, b2],
-    [a2, b1],
-    [a2, b2],
-    [b1, b2],
-  ];
+    penalty += (playedCounts.get(a1) || 0) * 10;
+    penalty += (playedCounts.get(a2) || 0) * 10;
+    penalty += (playedCounts.get(b1) || 0) * 10;
+    penalty += (playedCounts.get(b2) || 0) * 10;
 
-  for (const [p1, p2] of recentPairs) {
-    const history1 = recentMatchHistory.get(p1) || [];
-    const history2 = recentMatchHistory.get(p2) || [];
+    const allPlayers = [a1, a2, b1, b2];
 
-    if (history1.includes(p2) || history2.includes(p1)) {
-      penalty += 800;
+    // Hard reject: do not allow the exact same 4-player group
+    // in back-to-back rounds, even if partners rotate.
+    if (previousRoundGroups.has(sameGroupKey(allPlayers))) {
+      return null;
     }
+
+    if (courts > 1) {
+      for (const id of allPlayers) {
+        const history = courtHistory.get(id) || [];
+        const lastTwo = history.slice(-2);
+
+        if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+          return null;
+        }
+      }
+    }
+
+    for (const id of allPlayers) {
+      const history = courtHistory.get(id) || [];
+      const lastCourt = history[history.length - 1];
+
+      if (lastCourt === courtNumber) penalty += 300;
+    }
+
+    const sameMatchPairs: Array<[string, string]> = [
+      [a1, a2],
+      [a1, b1],
+      [a1, b2],
+      [a2, b1],
+      [a2, b2],
+      [b1, b2],
+    ];
+
+    // Strong global fairness rule:
+    // if any two players have already shared 3 matches,
+    // do not allow them in the same 4-player group again.
+    for (const [p1, p2] of sameMatchPairs) {
+      const sharedCount = getSameMatchCount(p1, p2);
+
+      if (sharedCount >= 3) {
+        return null;
+      }
+
+      penalty += sharedCount * 2500;
+    }
+
+    // Keep your existing recent-history penalty too.
+    for (const [p1, p2] of sameMatchPairs) {
+      const history1 = recentMatchHistory.get(p1) || [];
+      const history2 = recentMatchHistory.get(p2) || [];
+
+      if (history1.includes(p2) || history2.includes(p1)) {
+        penalty += 800;
+      }
+    }
+
+    penalty += Math.random();
+
+    return penalty;
   }
-
-  penalty += Math.random();
-
-  return penalty;
-}
 
   function buildRoundMatches(
     participants: string[],
@@ -444,6 +474,8 @@ const sameMatchPairs: Array<[string, string]> = [
 ];
 
 sameMatchPairs.forEach(([p1, p2]) => {
+  sameMatchCounts.set(pairKey(p1, p2), getSameMatchCount(p1, p2) + 1);
+
   const p1History = recentMatchHistory.get(p1) || [];
   const p2History = recentMatchHistory.get(p2) || [];
 
@@ -454,7 +486,7 @@ sameMatchPairs.forEach(([p1, p2]) => {
   recentMatchHistory.set(p2, p2History.slice(-4));
 });
 
-output.push({
+      output.push({
         round_number: round,
         court_number: index + 1,
         court_label: null,
@@ -468,6 +500,17 @@ output.push({
         is_complete: false,
       });
     });
+
+    previousRoundGroups = new Set(
+      matches.map((match) =>
+        sameGroupKey([
+          match.teamA[0],
+          match.teamA[1],
+          match.teamB[0],
+          match.teamB[1],
+        ])
+      )
+    );
   }
 
   return output;

@@ -423,8 +423,8 @@ textarea.input:focus {
 }
 
   .top-nav-mobile-bar {
-    display: none;
-  }
+  display: flex;
+}
 
   .top-nav {
     display: flex !important;

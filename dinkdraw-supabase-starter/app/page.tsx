@@ -137,15 +137,15 @@ export default function HomePage() {
 
   <div className="grid">
     {lastTournament ? (
-      <Link href={`/tournament/${lastTournament.id}`}>
-        <button className="action-button green">
-          <div className="action-title">Resume Tournament</div>
-          <div className="action-subtitle">
-            {lastTournament.title || 'Open your most recent tournament'}
-          </div>
-        </button>
-      </Link>
-    ) : null}
+  <Link href={`/tournament/${lastTournament.id}`}>
+    <button className="action-button white">
+      <div className="action-title">Resume Tournament</div>
+      <div className="action-subtitle">
+        {lastTournament.title || 'Open your most recent tournament'}
+      </div>
+    </button>
+  </Link>
+) : null}
 
     <Link href="/tournament/create">
       <button className="action-button green">

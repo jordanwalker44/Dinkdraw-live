@@ -555,3 +555,13 @@ textarea.input:focus {
     display: none;
   }
 }
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 720px) {
+  .desktop-only {
+    display: flex;
+  }
+}

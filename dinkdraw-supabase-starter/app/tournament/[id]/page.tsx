@@ -286,13 +286,13 @@ const output: ScheduleRow[] = [];
   const allPlayers = [a1, a2, b1, b2];
 
   for (const id of allPlayers) {
-    const history = courtHistory.get(id) || [];
-    const lastTwo = history.slice(-2);
+  const history = courtHistory.get(id) || [];
+  const lastTwo = history.slice(-2);
 
-    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
-      return null;
-    }
+  if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+    penalty += 1200;
   }
+}
 
   for (const id of allPlayers) {
     const history = courtHistory.get(id) || [];
@@ -1599,6 +1599,19 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
       const playersPerCourt = isSingles ? 2 : 4;
       const availableCourts = Math.max(1, Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt)));
       const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format, tournament.doubles_mode);
+      const generatedRounds = new Set(
+  scheduleRows
+    .filter((row) => !row.is_bye)
+    .map((row) => row.round_number)
+);
+
+if (generatedRounds.size < tournament.rounds) {
+  setMessage(
+    `Could only generate ${generatedRounds.size} of ${tournament.rounds} requested rounds. Please try again.`
+  );
+  setIsStarting(false);
+  return;
+}
       if (!scheduleRows.length) { setMessage('Could not generate a schedule.'); setIsStarting(false); return; }
 
       const { error: deleteError } = await supabase.from('matches').delete().eq('tournament_id', tournament.id);

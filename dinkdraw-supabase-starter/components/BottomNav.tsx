@@ -117,7 +117,7 @@ export function BottomNav() {
       case 'Create':
         return <PlusIcon />;
       case 'Leaderboard':
-        return <TrophyIcon />;
+  return <span style={{ fontSize: 20 }}>🏆</span>;
       case 'Account':
         return <UserIcon />;
       default:

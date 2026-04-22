@@ -30,56 +30,58 @@ function Stepper({
     <div>
       <label className="label">{label}</label>
       <div
-  style={{
-    display: 'grid',
-    gridTemplateColumns: '64px 1fr 64px',
-    gap: 10,
-    alignItems: 'center',
-  }}
->
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '64px 1fr 64px',
+          gap: 10,
+          alignItems: 'center',
+        }}
+      >
         <button
-  type="button"
-  className="button secondary"
-  onClick={() => onChange(clamp(value - 1, min, max))}
-  disabled={value <= min}
-  style={{
-    height: 64,
-    fontSize: 28,
-    borderRadius: 18,
-    borderColor: 'rgba(255,203,5,0.28)',
-  }}
->
-  −
-</button>
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value - 1, min, max))}
+          disabled={value <= min}
+          style={{
+            height: 64,
+            fontSize: 28,
+            borderRadius: 18,
+            borderColor: 'rgba(255,203,5,0.28)',
+          }}
+        >
+          −
+        </button>
+
         <div
-  style={{
-    height: 56,
-    borderRadius: 16,
-    background: '#001428',
-    border: '1px solid rgba(255,255,255,0.08)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 28,
-    fontWeight: 800,
-  }}
->
-  {value}
-</div>
+          style={{
+            height: 56,
+            borderRadius: 16,
+            background: '#001428',
+            border: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 28,
+            fontWeight: 800,
+          }}
+        >
+          {value}
+        </div>
+
         <button
-  type="button"
-  className="button secondary"
-  onClick={() => onChange(clamp(value + 1, min, max))}
-  disabled={value >= max}
-  style={{
-    height: 64,
-    fontSize: 28,
-    borderRadius: 18,
-    borderColor: 'rgba(255,203,5,0.28)',
-  }}
->
-  +
-</button>
+          type="button"
+          className="button secondary"
+          onClick={() => onChange(clamp(value + 1, min, max))}
+          disabled={value >= max}
+          style={{
+            height: 64,
+            fontSize: 28,
+            borderRadius: 18,
+            borderColor: 'rgba(255,203,5,0.28)',
+          }}
+        >
+          +
+        </button>
       </div>
     </div>
   );
@@ -92,18 +94,20 @@ export default function CreateTournamentPage() {
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const [matchFormat, setMatchFormat] = useState<'single' | 'best_of_3'>('single');
   const [doublesMode, setDoublesMode] = useState<'rotating' | 'fixed' | 'mixed'>('rotating');
+
   const [title, setTitle] = useState('Saturday Round Robin');
   const [organizerName, setOrganizerName] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
-  
+
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
   const [courtLabels, setCourtLabels] = useState<string[]>([]);
   const [rounds, setRounds] = useState(4);
   const [gamesTo, setGamesTo] = useState(11);
 
+  const [showSharing, setShowSharing] = useState(false);
   const [message, setMessage] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -111,6 +115,10 @@ export default function CreateTournamentPage() {
   const playersPerCourt = format === 'singles' ? 2 : 4;
   const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / playersPerCourt));
   const isValidSetup = playerCount >= minPlayers;
+
+  const summaryText = `${format === 'singles' ? 'Singles' : 'Doubles'} • ${
+    matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'
+  } • ${playerCount} players • ${courts} courts • ${rounds} rounds`;
 
   useEffect(() => {
     async function loadUser() {
@@ -135,7 +143,8 @@ export default function CreateTournamentPage() {
       setCourts(maxCourtsAllowed);
     }
   }, [playerCount, format, courts, maxCourtsAllowed]);
-    useEffect(() => {
+
+  useEffect(() => {
     setCourtLabels((prev) =>
       Array.from({ length: courts }, (_, i) => prev[i] ?? `Court ${i + 1}`)
     );
@@ -147,7 +156,7 @@ export default function CreateTournamentPage() {
     } else if (format === 'doubles' && playerCount < 4) {
       setPlayerCount(4);
     }
-  }, [format]);
+  }, [format, playerCount]);
 
   async function handleCreate() {
     setMessage('');
@@ -185,7 +194,7 @@ export default function CreateTournamentPage() {
 
       const joinCode = makeJoinCode();
 
-          const { data: tournament, error } = await supabase
+      const { data: tournament, error } = await supabase
         .from('tournaments')
         .insert({
           title: title.trim(),
@@ -203,7 +212,9 @@ export default function CreateTournamentPage() {
           format,
           match_format: matchFormat,
           doubles_mode: doublesMode,
-          court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
+          court_labels: courtLabels.map(
+            (label, index) => label.trim() || `Court ${index + 1}`
+          ),
         })
         .select()
         .single();
@@ -232,27 +243,56 @@ export default function CreateTournamentPage() {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <h1 className="hero-title">Create Tournament</h1>
-          <p className="hero-subtitle">
-            Set up your event in seconds, then share the join code at the courts.
-          </p>
+      <div
+        className="card"
+        style={{
+          marginBottom: 14,
+          padding: 12,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 28,
+            fontWeight: 900,
+            lineHeight: 1.05,
+            letterSpacing: '-0.03em',
+            marginBottom: 6,
+          }}
+        >
+          Create Tournament
+        </div>
+
+        <div
+          className="muted"
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+          }}
+        >
+          Set up your event fast, then enter names right away.
         </div>
       </div>
 
       <TopNav />
 
-      <div className="card">
-        <div className="grid">
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title" style={{ color: '#FFCB05' }}>
+          Quick Setup
+        </div>
+        <div className="card-subtitle">
+          Choose the type of tournament and the core settings first.
+        </div>
 
+        <div className="grid">
           <div>
-            <div className="card-title" style={{ color: '#FFCB05', marginBottom: 6 }}>
-  Game Setup
-</div>
             <label className="label">Player Format</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 8,
+              }}
+            >
               <button
                 type="button"
                 className={`button ${format === 'doubles' ? 'primary' : 'secondary'}`}
@@ -272,7 +312,13 @@ export default function CreateTournamentPage() {
 
           <div>
             <label className="label">Match Format</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: 8,
+              }}
+            >
               <button
                 type="button"
                 className={`button ${matchFormat === 'single' ? 'primary' : 'secondary'}`}
@@ -290,7 +336,7 @@ export default function CreateTournamentPage() {
             </div>
           </div>
 
-                    {format === 'doubles' ? (
+          {format === 'doubles' ? (
             <div>
               <label className="label">Doubles Mode</label>
               <div
@@ -325,6 +371,69 @@ export default function CreateTournamentPage() {
             </div>
           ) : null}
 
+          <Stepper
+            label={`Players (min ${minPlayers})`}
+            value={playerCount}
+            min={minPlayers}
+            max={40}
+            onChange={setPlayerCount}
+          />
+
+          <Stepper
+            label={`Courts (max ${maxCourtsAllowed})`}
+            value={courts}
+            min={1}
+            max={maxCourtsAllowed}
+            onChange={setCourts}
+          />
+
+          <Stepper
+            label="Rounds"
+            value={rounds}
+            min={1}
+            max={30}
+            onChange={setRounds}
+          />
+
+          <Stepper
+            label="Games to"
+            value={gamesTo}
+            min={1}
+            max={21}
+            onChange={setGamesTo}
+          />
+        </div>
+      </div>
+
+      <div
+        className="card"
+        style={{
+          marginBottom: 14,
+          border: '1px solid rgba(255,203,5,0.25)',
+          background: 'rgba(255,203,5,0.06)',
+        }}
+      >
+        <div
+          style={{
+            fontWeight: 800,
+            marginBottom: 6,
+            color: '#FFCB05',
+            fontSize: 15,
+          }}
+        >
+          Tournament Summary
+        </div>
+
+        <div style={{ fontSize: 15, lineHeight: 1.5 }}>{summaryText}</div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Event Details</div>
+        <div className="card-subtitle">
+          Keep this simple. You can update details later if needed.
+        </div>
+
+        <div className="grid">
           <div>
             <label className="label">Event name</label>
             <input
@@ -343,25 +452,25 @@ export default function CreateTournamentPage() {
             />
           </div>
 
-       <div style={{ maxWidth: 310 }}>
-  <label className="label">Date</label>
-  <input
-    className="input"
-    type="date"
-    value={eventDate}
-    onChange={(e) => setEventDate(e.target.value)}
-  />
-</div>
+          <div style={{ maxWidth: 310 }}>
+            <label className="label">Date</label>
+            <input
+              className="input"
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+          </div>
 
-<div style={{ maxWidth: 310 }}>
-  <label className="label">Time</label>
-  <input
-    className="input"
-    type="time"
-    value={eventTime}
-    onChange={(e) => setEventTime(e.target.value)}
-  />
-</div>
+          <div style={{ maxWidth: 310 }}>
+            <label className="label">Time</label>
+            <input
+              className="input"
+              type="time"
+              value={eventTime}
+              onChange={(e) => setEventTime(e.target.value)}
+            />
+          </div>
 
           <div>
             <label className="label">Location</label>
@@ -372,111 +481,153 @@ export default function CreateTournamentPage() {
               placeholder="Courts, gym, park..."
             />
           </div>
+        </div>
+      </div>
 
-          <Stepper
-            label={`Players (min ${minPlayers})`}
-            value={playerCount}
-            min={minPlayers}
-            max={40}
-            onChange={setPlayerCount}
-          />
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Players</div>
+        <div className="card-subtitle">
+          After you create the tournament, you’ll enter names and players can claim spots.
+        </div>
 
-          <Stepper
-            label={`Courts (max ${maxCourtsAllowed})`}
-            value={courts}
-            min={1}
-            max={maxCourtsAllowed}
-            onChange={setCourts}
-          />
-                    <div>
-  <label className="label">Court Names (optional)</label>
-  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-    Customize court numbers or names (e.g. Court 4, Championship Court)
-  </div>
-  <div className="grid" style={{ gap: 10 }}>
-              {courtLabels.map((label, index) => (
-                <div key={index}>
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-                    Court {index + 1}
-                  </div>
-                  <input
-                    className="input"
-                    value={label}
-                    onChange={(e) => {
-                      const next = [...courtLabels];
-                      next[index] = e.target.value;
-                      setCourtLabels(next);
-                    }}
-                    placeholder={`Court ${index + 1}`}
-                  />
-                </div>
-              ))}
+        <div
+          className="list-item"
+          style={{
+            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.03)',
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>
+            What happens next
+          </div>
+          <div className="muted" style={{ lineHeight: 1.5 }}>
+            DinkDraw will create <strong>{playerCount}</strong> player spots for this
+            tournament. You’ll go straight to the tournament page after creating it, where
+            you can type names, let players claim spots, and start the schedule when ready.
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 14 }}>
+        <button
+          type="button"
+          onClick={() => setShowSharing((prev) => !prev)}
+          style={{
+            width: '100%',
+            background: 'transparent',
+            border: 'none',
+            color: '#fff',
+            padding: 0,
+            cursor: 'pointer',
+            textAlign: 'left',
+          }}
+        >
+          <div
+            className="row-between"
+            style={{
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <div>
+              <div className="card-title" style={{ marginBottom: 4 }}>
+                Sharing & Links (Optional)
+              </div>
+              <div className="card-subtitle" style={{ marginBottom: 0 }}>
+                Court names and join-sharing details live here.
+              </div>
+            </div>
+
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: '#FFCB05',
+                lineHeight: 1,
+              }}
+            >
+              {showSharing ? '−' : '+'}
             </div>
           </div>
+        </button>
 
-          <Stepper
-            label="Rounds"
-            value={rounds}
-            min={1}
-            max={30}
-            onChange={setRounds}
-          />
+        {showSharing ? (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ marginBottom: 14 }}>
+              <label className="label">Court Names (optional)</label>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+                Customize court names now if you want. Otherwise DinkDraw will use Court 1,
+                Court 2, and so on.
+              </div>
 
-          <Stepper
-            label="Games to"
-            value={gamesTo}
-            min={1}
-            max={21}
-            onChange={setGamesTo}
-          />
+              <div className="grid" style={{ gap: 10 }}>
+                {courtLabels.map((label, index) => (
+                  <div key={index}>
+                    <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
+                      Court {index + 1}
+                    </div>
+                    <input
+                      className="input"
+                      value={label}
+                      onChange={(e) => {
+                        const next = [...courtLabels];
+                        next[index] = e.target.value;
+                        setCourtLabels(next);
+                      }}
+                      placeholder={`Court ${index + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
 
-          <div
-  className="list-item"
-  style={{
-    border: '1px solid rgba(255,203,5,0.25)',
-    background: 'rgba(255,203,5,0.06)',
-  }}
->
-  <div
-    style={{
-      fontWeight: 800,
-      marginBottom: 6,
-      color: '#FFCB05',
-      fontSize: 15,
-    }}
-  >
-    Tournament Summary
-  </div>
+            <div
+              className="list-item"
+              style={{
+                border: '1px solid rgba(255,203,5,0.25)',
+                background: 'rgba(255,203,5,0.06)',
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 800,
+                  marginBottom: 6,
+                  color: '#FFCB05',
+                }}
+              >
+                Sharing note
+              </div>
+              <div className="muted" style={{ lineHeight: 1.5 }}>
+                After the tournament is created, DinkDraw will generate the join code and
+                organizer sharing tools automatically on the tournament page.
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
 
-  <div style={{ fontSize: 15, lineHeight: 1.5 }}>
-    {format === 'singles' ? 'Singles' : 'Doubles'} •{' '}
-    {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} •{' '}
-    {playerCount} players • {courts} courts • {rounds} rounds
-  </div>
-</div>
-
-          <div className="muted" style={{ marginBottom: 8, textAlign: 'center' }}>
-  Review your setup, then create your tournament
-</div>
-
-<div style={{ marginTop: 16, marginBottom: 8 }}>
-  <button
-    type="button"
-    className="button primary"
-    onClick={handleCreate}
-    disabled={isCreating}
-    style={{
-      height: 56,
-      fontSize: 16,
-      borderRadius: 16,
-    }}
-  >
-    {isCreating ? 'Creating...' : 'Create Tournament'}
-  </button>
-</div>
-
-{message ? <div className="notice">{message}</div> : null}
+      <div className="card">
+        <div className="muted" style={{ marginBottom: 8, textAlign: 'center' }}>
+          Review your setup, then create your tournament
         </div>
+
+        <div style={{ marginTop: 8, marginBottom: 8 }}>
+          <button
+            type="button"
+            className="button primary"
+            onClick={handleCreate}
+            disabled={isCreating}
+            style={{
+              height: 56,
+              fontSize: 16,
+              borderRadius: 16,
+            }}
+          >
+            {isCreating ? 'Creating...' : 'Create Tournament'}
+          </button>
+        </div>
+
+        {message ? <div className="notice">{message}</div> : null}
       </div>
     </main>
   );

@@ -70,7 +70,7 @@ img {
   width: 100%;
   max-width: var(--max);
   margin: 0 auto;
-  padding: 16px 14px calc(40px + env(safe-area-inset-bottom));
+  padding: 16px 14px calc(96px + env(safe-area-inset-bottom));
 }
 
 .hero {
@@ -468,3 +468,82 @@ textarea.input:focus {
   color: #94a3b8 !important;
 }
 
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 8px;
+
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(0, 30, 60, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+
+  min-height: 58px;
+  padding: 8px 6px;
+  border-radius: 16px;
+
+  color: #94a3b8;
+  text-decoration: none;
+  transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.bottom-nav-item:active {
+  transform: scale(0.97);
+}
+
+.bottom-nav-item.active {
+  background: rgba(255, 203, 5, 0.12);
+  color: #FFCB05;
+}
+
+.bottom-nav-item.center {
+  transform: translateY(-8px);
+  background: linear-gradient(180deg, #ffd84d, #ffcb05);
+  color: #00274C;
+  box-shadow:
+    0 10px 24px rgba(255, 203, 5, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.bottom-nav-item.center:active {
+  transform: translateY(-8px) scale(0.97);
+}
+
+.bottom-nav-icon {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.bottom-nav-label {
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 800;
+  text-align: center;
+}
+
+/* Make sure page content clears the fixed bottom nav */
+@media (min-width: 720px) {
+  .bottom-nav {
+    display: none;
+  }
+}

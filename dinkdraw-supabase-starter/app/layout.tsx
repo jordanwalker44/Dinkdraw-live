@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { AuthRefresh } from '../components/AuthRefresh';
+import { BottomNav } from '../components/BottomNav';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',
@@ -43,6 +44,7 @@ export default function RootLayout({
       <body>
         <AuthRefresh />
         {children}
+        <BottomNav />
       </body>
     </html>
   );

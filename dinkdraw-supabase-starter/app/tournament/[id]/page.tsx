@@ -2834,32 +2834,54 @@ function renderBestOf3Match(match: Match) {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <h1 className="hero-title">{tournament?.title || 'Tournament'}</h1>
+        <div
+        className="card"
+        style={{
+          marginBottom: 14,
+          padding: 16,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 32,
+            fontWeight: 900,
+            lineHeight: 1.05,
+            letterSpacing: '-0.03em',
+            marginBottom: 10,
+          }}
+        >
+          {tournament?.title || 'Tournament'}
+        </div>
 
-                    {tournamentModeBadges.length ? (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                marginTop: 10,
-                justifyContent: 'center',
-              }}
-            >
-              {tournamentModeBadges.map((badge) => (
-                <span key={badge} className="tag">
-                  {badge}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          
-          <p className="hero-subtitle">
-            {isCompleted ? 'Finished tournament' : isStarted ? `Live now • Round ${currentRound}` : 'Set up players, then start when ready'}
-          </p>
+        {tournamentModeBadges.length ? (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginBottom: 10,
+            }}
+          >
+            {tournamentModeBadges.map((badge) => (
+              <span key={badge} className="tag">
+                {badge}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <div
+          className="muted"
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+          }}
+        >
+          {isCompleted
+            ? 'Finished tournament'
+            : isStarted
+            ? `Live now • Round ${currentRound}`
+            : 'Set up players, then start when ready'}
         </div>
       </div>
 

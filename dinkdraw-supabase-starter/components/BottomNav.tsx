@@ -6,10 +6,79 @@ import { usePathname } from 'next/navigation';
 type NavItem = {
   label: string;
   href: string;
-  icon: string;
-  match: (pathname: string) => boolean;
   center?: boolean;
+  match: (pathname: string) => boolean;
 };
+
+function HomeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
+      <path
+        d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H5a1 1 0 0 1-1-1v-9.5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
+      <rect x="4" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
+      <path
+        d="M12 5v14M5 12h14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function TrophyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
+      <path
+        d="M8 4h8v2a4 4 0 0 0 4 4h0a5 5 0 0 1-5 5h-1v2.2a3 3 0 0 0 1.8 2.7L17 20.5V21H7v-.5l1.2-.6A3 3 0 0 0 10 17.2V15H9a5 5 0 0 1-5-5h0a4 4 0 0 0 4-4V4Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
+      <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path
+        d="M5 19a7 7 0 0 1 14 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 export function BottomNav() {
   const pathname = usePathname();
@@ -18,37 +87,47 @@ export function BottomNav() {
     {
       label: 'Home',
       href: '/',
-      icon: '⌂',
       match: (p) => p === '/',
     },
     {
       label: 'Tournaments',
       href: '/my-tournaments',
-      icon: '◫',
-      match: (p) =>
-        p === '/my-tournaments' ||
-        p.startsWith('/tournament/'),
+      match: (p) => p === '/my-tournaments' || p.startsWith('/tournament/'),
     },
     {
       label: 'Create',
       href: '/tournament/create',
-      icon: '+',
       center: true,
       match: (p) => p === '/tournament/create',
     },
     {
       label: 'Leaderboard',
       href: '/leaderboard',
-      icon: '🏆',
       match: (p) => p === '/leaderboard',
     },
     {
       label: 'Account',
       href: '/account',
-      icon: '◯',
       match: (p) => p === '/account' || p === '/my-stats',
     },
   ];
+
+  function renderIcon(label: string) {
+    switch (label) {
+      case 'Home':
+        return <HomeIcon />;
+      case 'Tournaments':
+        return <GridIcon />;
+      case 'Create':
+        return <PlusIcon />;
+      case 'Leaderboard':
+        return <TrophyIcon />;
+      case 'Account':
+        return <UserIcon />;
+      default:
+        return null;
+    }
+  }
 
   return (
     <nav className="bottom-nav" aria-label="Bottom navigation">
@@ -61,7 +140,7 @@ export function BottomNav() {
             href={item.href}
             className={`bottom-nav-item ${active ? 'active' : ''} ${item.center ? 'center' : ''}`}
           >
-            <span className="bottom-nav-icon">{item.icon}</span>
+            <span className="bottom-nav-icon">{renderIcon(item.label)}</span>
             <span className="bottom-nav-label">{item.label}</span>
           </Link>
         );

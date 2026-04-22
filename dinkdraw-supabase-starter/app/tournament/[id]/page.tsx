@@ -488,6 +488,8 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
   return [];
 }
+
+    function buildFixedPartnersSchedule(
   players: PlayerSlot[],
   rounds: number,
   courts: number

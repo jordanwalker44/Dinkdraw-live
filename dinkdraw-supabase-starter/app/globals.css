@@ -565,3 +565,18 @@ textarea.input:focus {
     display: flex;
   }
 }
+
+.action-button.white {
+  background: #ffffff;
+  color: #0b253f;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: none;
+}
+
+.action-button.white .action-title {
+  color: #0b253f;
+}
+
+.action-button.white .action-subtitle {
+  color: rgba(11, 37, 63, 0.7);
+}

@@ -146,7 +146,7 @@ export default function HomePage() {
 
       {/* Main actions */}
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title" style={{ color: '#FFCB05' }}>Start a Tournament</div>
+        <div className="card-title" style={{ color: '#FFCB05' }}>Play Pickleball</div>
         <div className="card-subtitle">
           Running an event? Create one and share the join code. Playing? Enter a code to join.
         </div>
@@ -169,36 +169,6 @@ export default function HomePage() {
           </Link>
         </div>
       </div>
-
-      {/* Signed in state */}
-      {!isLoadingUser && userEmail ? (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <div className="card-title" style={{ color: '#FFCB05' }}>Your DinkDraw</div>
-          <div className="card-subtitle">Everything connected to your account.</div>
-          <div className="grid">
-            <Link href="/my-tournaments">
-              <button className="button secondary" style={{ textAlign: 'left' }}>
-  <div className="action-title">My Tournaments</div>
-</button>
-            </Link>
-            <Link href="/my-stats">
-              <button className="button secondary" style={{ textAlign: 'left' }}>
-  <div className="action-title">My Stats</div>
-</button>
-            </Link>
-            <Link href="/leaderboard">
-              <button className="button secondary" style={{ textAlign: 'left' }}>
-  <div className="action-title">Leaderboard</div>
-</button>
-            </Link>
-            <Link href="/account">
-              <button className="button secondary" style={{ textAlign: 'left' }}>
-  <div className="action-title">Account</div>
-</button>
-            </Link>
-          </div>
-        </div>
-      ) : null}
 
       {/* Signed out — new here card */}
 {!isLoadingUser && !userEmail ? null : null}

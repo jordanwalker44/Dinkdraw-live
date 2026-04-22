@@ -213,12 +213,11 @@ output.push({ round_number: round, court_number: index + 1, court_label: null, t
 function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: number): ScheduleRow[] {
   const MAX_ATTEMPTS = 40;
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-
+  for (let scheduleAttempt = 0; scheduleAttempt < MAX_ATTEMPTS; scheduleAttempt++) {
     const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
     if (activePlayers.length < 4) return [];
 
-    const ids = shuffle(activePlayers.map((p) => p.id)); // 🔥 shuffle each attempt
+    const ids = shuffle(activePlayers.map((p) => p.id));
     const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
 
     const partnerCounts = new Map<string, number>();
@@ -227,8 +226,15 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
     const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
     const recentMatchHistory = new Map<string, string[]>(ids.map((id) => [id, []]));
-
     const output: ScheduleRow[] = [];
+
+    function getPartnerCount(a: string, b: string) {
+      return partnerCounts.get(pairKey(a, b)) || 0;
+    }
+
+    function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
+      return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
+    }
 
     function chooseParticipantsForRound() {
       const sorted = [...ids].sort((a, b) => {
@@ -244,12 +250,135 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
       return sorted.slice(0, maxParticipantsPerRound);
     }
 
-    // 👉 KEEP your existing helper functions:
-    // - getPartnerCount
-    // - getMatchupCount
-    // - scoreMatch
-    // - buildRoundMatches
-    // (DO NOT change those)
+    function getAllPairings(group: string[]): Array<{ teamA: [string, string]; teamB: [string, string] }> {
+      if (group.length !== 4) return [];
+      const [a, b, c, d] = group;
+      return [
+        { teamA: [a, b], teamB: [c, d] },
+        { teamA: [a, c], teamB: [b, d] },
+        { teamA: [a, d], teamB: [b, c] },
+      ];
+    }
+
+    function scoreMatch(
+      teamA: [string, string],
+      teamB: [string, string],
+      allowRepeatPartners: boolean,
+      courtNumber: number
+    ) {
+      const [a1, a2] = teamA;
+      const [b1, b2] = teamB;
+
+      const partnerRepeatA = getPartnerCount(a1, a2);
+      const partnerRepeatB = getPartnerCount(b1, b2);
+
+      if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
+        return null;
+      }
+
+      let penalty = 0;
+
+      penalty += partnerRepeatA * 100000;
+      penalty += partnerRepeatB * 100000;
+      penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
+
+      penalty += (playedCounts.get(a1) || 0) * 10;
+      penalty += (playedCounts.get(a2) || 0) * 10;
+      penalty += (playedCounts.get(b1) || 0) * 10;
+      penalty += (playedCounts.get(b2) || 0) * 10;
+
+      const allPlayers = [a1, a2, b1, b2];
+
+      for (const id of allPlayers) {
+        const history = courtHistory.get(id) || [];
+        const lastTwo = history.slice(-2);
+
+        if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+          penalty += 1200;
+        }
+      }
+
+      for (const id of allPlayers) {
+        const history = courtHistory.get(id) || [];
+        const lastCourt = history[history.length - 1];
+
+        if (lastCourt === courtNumber) penalty += 300;
+      }
+
+      const recentPairs: Array<[string, string]> = [
+        [a1, a2],
+        [a1, b1],
+        [a1, b2],
+        [a2, b1],
+        [a2, b2],
+        [b1, b2],
+      ];
+
+      for (const [p1, p2] of recentPairs) {
+        const history1 = recentMatchHistory.get(p1) || [];
+        const history2 = recentMatchHistory.get(p2) || [];
+
+        if (history1.includes(p2) || history2.includes(p1)) {
+          penalty += 800;
+        }
+      }
+
+      penalty += Math.random();
+      return penalty;
+    }
+
+    function buildRoundMatches(
+      participants: string[],
+      allowRepeatPartners: boolean
+    ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
+      if (participants.length % 4 !== 0) return null;
+
+      let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+      let bestPenalty = Infinity;
+
+      function backtrack(
+        remaining: string[],
+        current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
+        currentPenalty: number
+      ) {
+        if (remaining.length === 0) {
+          if (currentPenalty < bestPenalty) {
+            bestPenalty = currentPenalty;
+            bestMatches = [...current];
+          }
+          return;
+        }
+
+        if (currentPenalty >= bestPenalty) return;
+
+        const first = remaining[0];
+
+        for (let i = 1; i < remaining.length; i++) {
+          for (let j = i + 1; j < remaining.length; j++) {
+            for (let k = j + 1; k < remaining.length; k++) {
+              const group = [first, remaining[i], remaining[j], remaining[k]];
+              const pairings = getAllPairings(group);
+
+              for (const pairing of pairings) {
+                const courtNumber = current.length + 1;
+                const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners, courtNumber);
+                if (score === null) continue;
+
+                const used = new Set(group);
+                const nextRemaining = remaining.filter((id) => !used.has(id));
+
+                current.push(pairing);
+                backtrack(nextRemaining, current, currentPenalty + score);
+                current.pop();
+              }
+            }
+          }
+        }
+      }
+
+      backtrack(shuffle([...participants]), [], 0);
+      return bestMatches;
+    }
 
     let success = true;
 
@@ -257,10 +386,9 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
       const participants = chooseParticipantsForRound();
       const benched = ids.filter((id) => !participants.includes(id));
 
-      let matches = null;
+      let matches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
 
-      // Try to find a valid round
-      for (let attempt = 0; attempt < 25; attempt++) {
+      for (let roundAttempt = 0; roundAttempt < 25; roundAttempt++) {
         matches = buildRoundMatches(shuffle(participants), false);
         if (matches) break;
       }
@@ -269,13 +397,11 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
         matches = buildRoundMatches(participants, true);
       }
 
-      // ❌ If this round fails → abort ENTIRE schedule attempt
       if (!matches || !matches.length) {
         success = false;
         break;
       }
 
-      // ✅ Apply matches
       benched.forEach((id) => {
         byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
         output.push({
@@ -297,19 +423,40 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
         const [a1, a2] = match.teamA;
         const [b1, b2] = match.teamB;
 
-        partnerCounts.set(pairKey(a1, a2), (partnerCounts.get(pairKey(a1, a2)) || 0) + 1);
-        partnerCounts.set(pairKey(b1, b2), (partnerCounts.get(pairKey(b1, b2)) || 0) + 1);
+        partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
+        partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
 
         matchupCounts.set(
           matchupKey(a1, a2, b1, b2),
-          (matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0) + 1
+          getMatchupCount(a1, a2, b1, b2) + 1
         );
 
         [a1, a2, b1, b2].forEach((id) => {
           playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
+
           const courtEntries = courtHistory.get(id) || [];
           courtEntries.push(index + 1);
           courtHistory.set(id, courtEntries);
+        });
+
+        const sameMatchPairs: Array<[string, string]> = [
+          [a1, a2],
+          [a1, b1],
+          [a1, b2],
+          [a2, b1],
+          [a2, b2],
+          [b1, b2],
+        ];
+
+        sameMatchPairs.forEach(([p1, p2]) => {
+          const p1History = recentMatchHistory.get(p1) || [];
+          const p2History = recentMatchHistory.get(p2) || [];
+
+          p1History.push(p2);
+          p2History.push(p1);
+
+          recentMatchHistory.set(p1, p1History.slice(-4));
+          recentMatchHistory.set(p2, p2History.slice(-4));
         });
 
         output.push({
@@ -328,18 +475,19 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
       });
     }
 
-    // ✅ If we completed all rounds → RETURN
-    if (success && output.length >= rounds) {
-      return output;
-    }
+    if (success) {
+      const generatedRounds = new Set(
+        output.filter((row) => !row.is_bye).map((row) => row.round_number)
+      );
 
-    // ❌ otherwise retry entire schedule
+      if (generatedRounds.size >= rounds) {
+        return output;
+      }
+    }
   }
 
-  // fallback (should rarely hit)
   return [];
 }
-function buildFixedPartnersSchedule(
   players: PlayerSlot[],
   rounds: number,
   courts: number

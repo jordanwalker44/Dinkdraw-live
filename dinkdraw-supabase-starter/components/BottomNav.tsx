@@ -52,14 +52,10 @@ function PlusIcon() {
 
 function TrophyIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
+    <svg viewBox="0 0 24 24" className="bottom-nav-svg">
       <path
-        d="M8 4h8v2a4 4 0 0 0 4 4h0a5 5 0 0 1-5 5h-1v2.2a3 3 0 0 0 1.8 2.7L17 20.5V21H7v-.5l1.2-.6A3 3 0 0 0 10 17.2V15H9a5 5 0 0 1-5-5h0a4 4 0 0 0 4-4V4Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        d="M8 4h8v2a4 4 0 0 0 4 4 6 6 0 0 1-6 6h-1v2h3v2H8v-2h3v-2h-1a6 6 0 0 1-6-6 4 4 0 0 0 4-4V4Z"
+        fill="currentColor"
       />
     </svg>
   );

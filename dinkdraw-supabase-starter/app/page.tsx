@@ -51,16 +51,16 @@ export default function HomePage() {
   return (
   <main className="page-shell">
     <div
-      className="hero"
-      style={{
-        marginTop: 10,
-        padding: '12px 16px 4px 16px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        minHeight: 210,
-      }}
-    >
+  className="hero"
+  style={{
+    marginTop: 6,
+    padding: '6px 10px 0 10px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    minHeight: 150,
+  }}
+>
       <div
         className="hero-inner"
         style={{
@@ -75,11 +75,11 @@ export default function HomePage() {
           src="/dinkdraw-logo.png"
           alt="DinkDraw logo"
           className="hero-logo"
-          style={{
+    style={{
   width: '100%',
-  maxWidth: 340,
+  maxWidth: 280,
   height: 'auto',
-  marginBottom: 4,
+  marginBottom: 2,
 }}
         />
 
@@ -91,12 +91,12 @@ export default function HomePage() {
         {!isLoadingUser && userEmail ? (
           <div
   style={{
-    marginTop: 8,
-    marginBottom: 6,
-    color: '#FFCB05',
-    fontWeight: 800,
-    fontSize: 15,
-  }}
+  marginTop: 4,
+  marginBottom: 2,
+  color: '#FFCB05',
+  fontWeight: 800,
+  fontSize: 15,
+}}
 >
             Hey, {displayName || userEmail}! 👋
           </div>
@@ -128,47 +128,44 @@ export default function HomePage() {
   </div>
 ) : null}
 
-      {/* Resume last tournament */}
-      {lastTournament ? (
-        <div className="card" style={{ marginBottom: 14 }}>
-          <div className="card-title">Resume</div>
-          <div className="card-subtitle">Pick up where you left off.</div>
-          <Link href={`/tournament/${lastTournament.id}`}>
-            <button className="action-button green">
-              <div className="action-title">Resume Last Tournament</div>
-              <div className="action-subtitle">
-                {lastTournament.title || 'Open your most recent tournament'}
-              </div>
-            </button>
-          </Link>
-        </div>
-      ) : null}
+      {/* Start here */}
+<div className="card" style={{ marginBottom: 14 }}>
+  <div className="card-title" style={{ color: '#FFCB05' }}>Start Here</div>
+  <div className="card-subtitle">
+    Create a tournament, join one with a code, or jump back into your latest event.
+  </div>
 
-      {/* Main actions */}
-      <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title" style={{ color: '#FFCB05' }}>Play Pickleball</div>
-        <div className="card-subtitle">
-          Running an event? Create one and share the join code. Playing? Enter a code to join.
+  <div className="grid">
+    {lastTournament ? (
+      <Link href={`/tournament/${lastTournament.id}`}>
+        <button className="action-button green">
+          <div className="action-title">Resume Tournament</div>
+          <div className="action-subtitle">
+            {lastTournament.title || 'Open your most recent tournament'}
+          </div>
+        </button>
+      </Link>
+    ) : null}
+
+    <Link href="/tournament/create">
+      <button className="action-button green">
+        <div className="action-title">Create Tournament</div>
+        <div className="action-subtitle">
+          Set up players, courts, rounds, and share the join code.
         </div>
-        <div className="grid">
-          <Link href="/tournament/create">
-            <button className="action-button green">
-              <div className="action-title">Create Tournament</div>
-              <div className="action-subtitle">
-                Set up players, courts, rounds, and share the join code.
-              </div>
-            </button>
-          </Link>
-          <Link href="/tournament/join">
-            <button className="action-button black">
-              <div className="action-title">Join Tournament</div>
-              <div className="action-subtitle">
-                Enter a 6-letter code from the organizer to claim your spot.
-              </div>
-            </button>
-          </Link>
+      </button>
+    </Link>
+
+    <Link href="/tournament/join">
+      <button className="action-button black">
+        <div className="action-title">Join Tournament</div>
+        <div className="action-subtitle">
+          Enter a 6-letter code from the organizer to claim your spot.
         </div>
-      </div>
+      </button>
+    </Link>
+  </div>
+</div>
 
       {/* Signed out — new here card */}
 {!isLoadingUser && !userEmail ? null : null}

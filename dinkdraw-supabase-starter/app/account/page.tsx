@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
@@ -244,6 +245,17 @@ export default function AccountPage() {
 
       {userEmail ? (
         <>
+          <div className="card" style={{ marginBottom: 14 }}>
+      <div className="card-title">Quick Actions</div>
+      <div className="grid">
+        <Link href="/my-stats" className="action-button blue">
+          <div className="action-title">My Stats</div>
+          <div className="action-subtitle">
+            View your wins, losses, and performance
+          </div>
+        </Link>
+      </div>
+    </div>
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Status</div>
             <div

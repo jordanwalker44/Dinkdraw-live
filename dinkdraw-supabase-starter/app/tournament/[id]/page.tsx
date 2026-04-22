@@ -2838,16 +2838,16 @@ function renderBestOf3Match(match: Match) {
         className="card"
         style={{
           marginBottom: 14,
-          padding: 16,
+          padding: 12,
         }}
       >
         <div
           style={{
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: 900,
             lineHeight: 1.05,
             letterSpacing: '-0.03em',
-            marginBottom: 10,
+            marginBottom: 6,
           }}
         >
           {tournament?.title || 'Tournament'}
@@ -2859,7 +2859,7 @@ function renderBestOf3Match(match: Match) {
               display: 'flex',
               flexWrap: 'wrap',
               gap: 8,
-              marginBottom: 10,
+              marginBottom: 6,
             }}
           >
             {tournamentModeBadges.map((badge) => (
@@ -2878,7 +2878,7 @@ function renderBestOf3Match(match: Match) {
           }}
         >
           {isCompleted
-            ? 'Finished tournament'
+            ? 'Tournament complete'
             : isStarted
             ? `Live now • Round ${currentRound}`
             : 'Set up players, then start when ready'}

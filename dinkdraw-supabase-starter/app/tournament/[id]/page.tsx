@@ -211,309 +211,321 @@ output.push({ round_number: round, court_number: index + 1, court_label: null, t
 }
 
 function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: number): ScheduleRow[] {
-  const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
-  if (activePlayers.length < 4) return [];
+  const MAX_ATTEMPTS = 40;
 
-  const ids = activePlayers.map((p) => p.id);
-  const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
-  const partnerCounts = new Map<string, number>();
-  const matchupCounts = new Map<string, number>();
-  const sameMatchCounts = new Map<string, number>();
-  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
-  const recentMatchHistory = new Map<string, string[]>(ids.map((id) => [id, []]));
-  let previousRoundGroups = new Set<string>();
-  const output: ScheduleRow[] = [];
+  for (let scheduleAttempt = 0; scheduleAttempt < MAX_ATTEMPTS; scheduleAttempt++) {
+    const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
+    if (activePlayers.length < 4) return [];
 
-  function getPartnerCount(a: string, b: string) {
-    return partnerCounts.get(pairKey(a, b)) || 0;
-  }
+    const ids = shuffle(activePlayers.map((p) => p.id));
+    const maxParticipantsPerRound = Math.min(courts * 4, ids.length);
 
-  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
-    return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
-  }
+    const partnerCounts = new Map<string, number>();
+    const matchupCounts = new Map<string, number>();
+    const sameMatchCounts = new Map<string, number>();
+    const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+    const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+    const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
+    const recentMatchHistory = new Map<string, string[]>(ids.map((id) => [id, []]));
+    let previousRoundGroups = new Set<string>();
+    const output: ScheduleRow[] = [];
 
-   function getSameMatchCount(a: string, b: string) {
-    return sameMatchCounts.get(pairKey(a, b)) || 0;
-  }
-
-  function sameGroupKey(players: string[]) {
-    return [...players].sort().join('|');
-  }
-
-  function chooseParticipantsForRound() {
-    const sorted = [...ids].sort((a, b) => {
-      const byeDiff = (byeCounts.get(b) || 0) - (byeCounts.get(a) || 0);
-      if (byeDiff !== 0) return byeDiff;
-
-      const playDiff = (playedCounts.get(a) || 0) - (playedCounts.get(b) || 0);
-      if (playDiff !== 0) return playDiff;
-
-      return Math.random() - 0.5;
-    });
-
-    return sorted.slice(0, maxParticipantsPerRound);
-  }
-
-  function getAllPairings(group: string[]): Array<{ teamA: [string, string]; teamB: [string, string] }> {
-    if (group.length !== 4) return [];
-    const [a, b, c, d] = group;
-    return [
-      { teamA: [a, b], teamB: [c, d] },
-      { teamA: [a, c], teamB: [b, d] },
-      { teamA: [a, d], teamB: [b, c] },
-    ];
-  }
-
-   function scoreMatch(
-    teamA: [string, string],
-    teamB: [string, string],
-    allowRepeatPartners: boolean,
-    courtNumber: number
-  ) {
-    const [a1, a2] = teamA;
-    const [b1, b2] = teamB;
-
-    const partnerRepeatA = getPartnerCount(a1, a2);
-    const partnerRepeatB = getPartnerCount(b1, b2);
-
-    if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
-      return null;
+    function getPartnerCount(a: string, b: string) {
+      return partnerCounts.get(pairKey(a, b)) || 0;
     }
 
-    let penalty = 0;
-
-    penalty += partnerRepeatA * 100000;
-    penalty += partnerRepeatB * 100000;
-    penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
-
-    penalty += (playedCounts.get(a1) || 0) * 10;
-    penalty += (playedCounts.get(a2) || 0) * 10;
-    penalty += (playedCounts.get(b1) || 0) * 10;
-    penalty += (playedCounts.get(b2) || 0) * 10;
-
-    const allPlayers = [a1, a2, b1, b2];
-
-    // Hard reject: do not allow the exact same 4-player group
-    // in back-to-back rounds, even if partners rotate.
-    if (previousRoundGroups.has(sameGroupKey(allPlayers))) {
-      return null;
+    function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
+      return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
     }
 
-    if (courts > 1) {
-      for (const id of allPlayers) {
-        const history = courtHistory.get(id) || [];
-        const lastTwo = history.slice(-2);
-
-        if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
-          return null;
-        }
-      }
+    function getSameMatchCount(a: string, b: string) {
+      return sameMatchCounts.get(pairKey(a, b)) || 0;
     }
 
-    for (const id of allPlayers) {
-      const history = courtHistory.get(id) || [];
-      const lastCourt = history[history.length - 1];
-
-      if (lastCourt === courtNumber) penalty += 300;
+    function sameGroupKey(players: string[]) {
+      return [...players].sort().join('|');
     }
 
-    const sameMatchPairs: Array<[string, string]> = [
-      [a1, a2],
-      [a1, b1],
-      [a1, b2],
-      [a2, b1],
-      [a2, b2],
-      [b1, b2],
-    ];
+    function chooseParticipantsForRound() {
+      const sorted = [...ids].sort((a, b) => {
+        const byeDiff = (byeCounts.get(b) || 0) - (byeCounts.get(a) || 0);
+        if (byeDiff !== 0) return byeDiff;
 
-    // Strong global fairness rule:
-    // if any two players have already shared 3 matches,
-    // do not allow them in the same 4-player group again.
-    for (const [p1, p2] of sameMatchPairs) {
-      const sharedCount = getSameMatchCount(p1, p2);
+        const playDiff = (playedCounts.get(a) || 0) - (playedCounts.get(b) || 0);
+        if (playDiff !== 0) return playDiff;
 
-      if (sharedCount >= 3) {
+        return Math.random() - 0.5;
+      });
+
+      return sorted.slice(0, maxParticipantsPerRound);
+    }
+
+    function getAllPairings(group: string[]): Array<{ teamA: [string, string]; teamB: [string, string] }> {
+      if (group.length !== 4) return [];
+      const [a, b, c, d] = group;
+      return [
+        { teamA: [a, b], teamB: [c, d] },
+        { teamA: [a, c], teamB: [b, d] },
+        { teamA: [a, d], teamB: [b, c] },
+      ];
+    }
+
+    function scoreMatch(
+      teamA: [string, string],
+      teamB: [string, string],
+      allowRepeatPartners: boolean,
+      courtNumber: number
+    ) {
+      const [a1, a2] = teamA;
+      const [b1, b2] = teamB;
+
+      const partnerRepeatA = getPartnerCount(a1, a2);
+      const partnerRepeatB = getPartnerCount(b1, b2);
+
+      if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
         return null;
       }
 
-      penalty += sharedCount * 2500;
-    }
+      let penalty = 0;
 
-    // Keep your existing recent-history penalty too.
-    for (const [p1, p2] of sameMatchPairs) {
-      const history1 = recentMatchHistory.get(p1) || [];
-      const history2 = recentMatchHistory.get(p2) || [];
+      penalty += partnerRepeatA * 100000;
+      penalty += partnerRepeatB * 100000;
+      penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
 
-      if (history1.includes(p2) || history2.includes(p1)) {
-        penalty += 800;
+      penalty += (playedCounts.get(a1) || 0) * 10;
+      penalty += (playedCounts.get(a2) || 0) * 10;
+      penalty += (playedCounts.get(b1) || 0) * 10;
+      penalty += (playedCounts.get(b2) || 0) * 10;
+
+      const allPlayers = [a1, a2, b1, b2];
+
+      if (previousRoundGroups.has(sameGroupKey(allPlayers))) {
+        penalty += 4000;
       }
-    }
 
-    penalty += Math.random();
+      if (courts > 1) {
+        for (const id of allPlayers) {
+          const history = courtHistory.get(id) || [];
+          const lastTwo = history.slice(-2);
 
-    return penalty;
-  }
-
-  function buildRoundMatches(
-    participants: string[],
-    allowRepeatPartners: boolean
-  ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
-    if (participants.length % 4 !== 0) return null;
-
-    let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
-    let bestPenalty = Infinity;
-
-    function backtrack(
-      remaining: string[],
-      current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
-      currentPenalty: number
-    ) {
-      if (remaining.length === 0) {
-        if (currentPenalty < bestPenalty) {
-          bestPenalty = currentPenalty;
-          bestMatches = [...current];
+          if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
+            penalty += 1200;
+          }
         }
-        return;
       }
 
-      if (currentPenalty >= bestPenalty) return;
+      for (const id of allPlayers) {
+        const history = courtHistory.get(id) || [];
+        const lastCourt = history[history.length - 1];
 
-      const first = remaining[0];
+        if (lastCourt === courtNumber) penalty += 300;
+      }
 
-      for (let i = 1; i < remaining.length; i++) {
-        for (let j = i + 1; j < remaining.length; j++) {
-          for (let k = j + 1; k < remaining.length; k++) {
-            const group = [first, remaining[i], remaining[j], remaining[k]];
-            const pairings = getAllPairings(group);
+      const sameMatchPairs: Array<[string, string]> = [
+        [a1, a2],
+        [a1, b1],
+        [a1, b2],
+        [a2, b1],
+        [a2, b2],
+        [b1, b2],
+      ];
 
-            for (const pairing of pairings) {
-              const courtNumber = current.length + 1;
-const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners, courtNumber);
-              if (score === null) continue;
+      for (const [p1, p2] of sameMatchPairs) {
+        const sharedCount = getSameMatchCount(p1, p2);
 
-              const used = new Set(group);
-              const nextRemaining = remaining.filter((id) => !used.has(id));
+        if (sharedCount >= 4) {
+          return null;
+        }
 
-              current.push(pairing);
-              backtrack(nextRemaining, current, currentPenalty + score);
-              current.pop();
+        penalty += sharedCount * 1200;
+      }
+
+      for (const [p1, p2] of sameMatchPairs) {
+        const history1 = recentMatchHistory.get(p1) || [];
+        const history2 = recentMatchHistory.get(p2) || [];
+
+        if (history1.includes(p2) || history2.includes(p1)) {
+          penalty += 800;
+        }
+      }
+
+      penalty += Math.random();
+      return penalty;
+    }
+
+    function buildRoundMatches(
+      participants: string[],
+      allowRepeatPartners: boolean
+    ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
+      if (participants.length % 4 !== 0) return null;
+
+      let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+      let bestPenalty = Infinity;
+
+      function backtrack(
+        remaining: string[],
+        current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
+        currentPenalty: number
+      ) {
+        if (remaining.length === 0) {
+          if (currentPenalty < bestPenalty) {
+            bestPenalty = currentPenalty;
+            bestMatches = [...current];
+          }
+          return;
+        }
+
+        if (currentPenalty >= bestPenalty) return;
+
+        const first = remaining[0];
+
+        for (let i = 1; i < remaining.length; i++) {
+          for (let j = i + 1; j < remaining.length; j++) {
+            for (let k = j + 1; k < remaining.length; k++) {
+              const group = [first, remaining[i], remaining[j], remaining[k]];
+              const pairings = getAllPairings(group);
+
+              for (const pairing of pairings) {
+                const courtNumber = current.length + 1;
+                const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners, courtNumber);
+                if (score === null) continue;
+
+                const used = new Set(group);
+                const nextRemaining = remaining.filter((id) => !used.has(id));
+
+                current.push(pairing);
+                backtrack(nextRemaining, current, currentPenalty + score);
+                current.pop();
+              }
             }
           }
         }
       }
+
+      backtrack(shuffle([...participants]), [], 0);
+      return bestMatches;
     }
 
-    backtrack(shuffle([...participants]), [], 0);
-    return bestMatches;
+    let success = true;
+
+    for (let round = 1; round <= rounds; round++) {
+      const participants = chooseParticipantsForRound();
+      const benched = ids.filter((id) => !participants.includes(id));
+
+      let matches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+
+      for (let roundAttempt = 0; roundAttempt < 25; roundAttempt++) {
+        matches = buildRoundMatches(shuffle(participants), false);
+        if (matches) break;
+      }
+
+      if (!matches) {
+        matches = buildRoundMatches(participants, true);
+      }
+
+      if (!matches || !matches.length) {
+        success = false;
+        break;
+      }
+
+      benched.forEach((id) => {
+        byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
+        output.push({
+          round_number: round,
+          court_number: null,
+          court_label: null,
+          team_a_player_1_id: id,
+          team_a_player_2_id: null,
+          team_b_player_1_id: null,
+          team_b_player_2_id: null,
+          team_a_score: null,
+          team_b_score: null,
+          is_bye: true,
+          is_complete: false,
+        });
+      });
+
+      matches.forEach((match, index) => {
+        const [a1, a2] = match.teamA;
+        const [b1, b2] = match.teamB;
+
+        partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
+        partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
+
+        matchupCounts.set(
+          matchupKey(a1, a2, b1, b2),
+          getMatchupCount(a1, a2, b1, b2) + 1
+        );
+
+        [a1, a2, b1, b2].forEach((id) => {
+          playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
+
+          const courtEntries = courtHistory.get(id) || [];
+          courtEntries.push(index + 1);
+          courtHistory.set(id, courtEntries);
+        });
+
+        const sameMatchPairs: Array<[string, string]> = [
+          [a1, a2],
+          [a1, b1],
+          [a1, b2],
+          [a2, b1],
+          [a2, b2],
+          [b1, b2],
+        ];
+
+        sameMatchPairs.forEach(([p1, p2]) => {
+          sameMatchCounts.set(pairKey(p1, p2), getSameMatchCount(p1, p2) + 1);
+
+          const p1History = recentMatchHistory.get(p1) || [];
+          const p2History = recentMatchHistory.get(p2) || [];
+
+          p1History.push(p2);
+          p2History.push(p1);
+
+          recentMatchHistory.set(p1, p1History.slice(-4));
+          recentMatchHistory.set(p2, p2History.slice(-4));
+        });
+
+        output.push({
+          round_number: round,
+          court_number: index + 1,
+          court_label: null,
+          team_a_player_1_id: a1,
+          team_a_player_2_id: a2,
+          team_b_player_1_id: b1,
+          team_b_player_2_id: b2,
+          team_a_score: null,
+          team_b_score: null,
+          is_bye: false,
+          is_complete: false,
+        });
+      });
+
+      previousRoundGroups = new Set(
+        matches.map((match) =>
+          sameGroupKey([
+            match.teamA[0],
+            match.teamA[1],
+            match.teamB[0],
+            match.teamB[1],
+          ])
+        )
+      );
+    }
+
+    if (success) {
+      const generatedRounds = new Set(
+        output.filter((row) => !row.is_bye).map((row) => row.round_number)
+      );
+
+      if (generatedRounds.size >= rounds) {
+        return output;
+      }
+    }
   }
 
-  for (let round = 1; round <= rounds; round++) {
-    const participants = chooseParticipantsForRound();
-    const benched = ids.filter((id) => !participants.includes(id));
-
-   let matches = null;
-
-// Try HARD to find no-repeat solution
-for (let attempt = 0; attempt < 25; attempt++) {
-  matches = buildRoundMatches(shuffle(participants), false);
-  if (matches) break;
-}
-
-// Only fallback if truly impossible
-if (!matches) {
-  matches = buildRoundMatches(participants, true);
-}
-
-    if (!matches || !matches.length) break;
-
-    benched.forEach((id) => {
-      byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({
-        round_number: round,
-        court_number: null,
-        court_label: null,
-        team_a_player_1_id: id,
-        team_a_player_2_id: null,
-        team_b_player_1_id: null,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: true,
-        is_complete: false,
-      });
-    });
-
-    matches.forEach((match, index) => {
-      const [a1, a2] = match.teamA;
-      const [b1, b2] = match.teamB;
-
-      partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
-      partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
- matchupCounts.set(
-  matchupKey(a1, a2, b1, b2),
-  getMatchupCount(a1, a2, b1, b2) + 1
-);
-
-[a1, a2, b1, b2].forEach((id) => {
-  playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
-
-  const courtEntries = courtHistory.get(id) || [];
-  courtEntries.push(index + 1);
-  courtHistory.set(id, courtEntries);
-});
-
-const sameMatchPairs: Array<[string, string]> = [
-  [a1, a2],
-  [a1, b1],
-  [a1, b2],
-  [a2, b1],
-  [a2, b2],
-  [b1, b2],
-];
-
-sameMatchPairs.forEach(([p1, p2]) => {
-  sameMatchCounts.set(pairKey(p1, p2), getSameMatchCount(p1, p2) + 1);
-
-  const p1History = recentMatchHistory.get(p1) || [];
-  const p2History = recentMatchHistory.get(p2) || [];
-
-  p1History.push(p2);
-  p2History.push(p1);
-
-  recentMatchHistory.set(p1, p1History.slice(-4));
-  recentMatchHistory.set(p2, p2History.slice(-4));
-});
-
-      output.push({
-        round_number: round,
-        court_number: index + 1,
-        court_label: null,
-        team_a_player_1_id: a1,
-        team_a_player_2_id: a2,
-        team_b_player_1_id: b1,
-        team_b_player_2_id: b2,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: false,
-        is_complete: false,
-      });
-    });
-
-    previousRoundGroups = new Set(
-      matches.map((match) =>
-        sameGroupKey([
-          match.teamA[0],
-          match.teamA[1],
-          match.teamB[0],
-          match.teamB[1],
-        ])
-      )
-    );
-  }
-
-  return output;
+  return [];
 }
 
 function buildFixedPartnersSchedule(

@@ -792,7 +792,7 @@ export default function PublicTournamentViewPage({
             const isCurrent = status === 'current';
 
             return (
-              <button
+              <button className="round-card"
                 key={round}
                 type="button"
                 onClick={() => setSelectedRound(round)}

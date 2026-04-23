@@ -942,11 +942,14 @@ export default function PublicTournamentViewPage({
                         )}
                       </div>
                       <div
-                        style={{
-                          textAlign: 'center',
-                          fontSize: 24,
-                          fontWeight: 800,
-                        }}
+                       style={{
+  textAlign: 'center',
+  fontSize: 30,
+  fontWeight: 900,
+  lineHeight: 1,
+  letterSpacing: '-0.03em',
+  color: '#ffffff',
+}}
                       >
                         {match.team_a_score ?? '-'}
                       </div>
@@ -967,10 +970,13 @@ export default function PublicTournamentViewPage({
                       </div>
                       <div
                         style={{
-                          textAlign: 'center',
-                          fontSize: 24,
-                          fontWeight: 800,
-                        }}
+  textAlign: 'center',
+  fontSize: 30,
+  fontWeight: 900,
+  lineHeight: 1,
+  letterSpacing: '-0.03em',
+  color: '#ffffff',
+}}
                       >
                         {match.team_b_score ?? '-'}
                       </div>

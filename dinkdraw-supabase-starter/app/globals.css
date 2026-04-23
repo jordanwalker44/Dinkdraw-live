@@ -479,7 +479,7 @@ textarea.input:focus {
   grid-template-columns: repeat(5, 1fr);
   align-items: end;
   gap: 10px;
-  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 6px);
   background: rgba(6, 17, 30, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -492,13 +492,13 @@ box-shadow:
 }
 
 .bottom-nav-item {
-  min-height: 72px;
+  min-height: 64px;
   border-radius: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   text-decoration: none;
   color: rgba(255, 255, 255, 0.78);
   transition: transform 140ms ease, background 140ms ease, color 140ms ease, box-shadow 180ms ease;
@@ -523,8 +523,8 @@ box-shadow:
 }
 
 .bottom-nav-icon {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;

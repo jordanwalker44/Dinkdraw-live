@@ -50,7 +50,6 @@ export default function HomePage() {
 
   return (
   <main className="page-shell">
-    <div
  <div
   style={{
     display: 'flex',

@@ -488,7 +488,7 @@ export default function PublicTournamentViewPage({
       <div
         style={{
           textAlign: 'center',
-          marginBottom: 12,
+          marginBottom: 10,
         }}
       >
         <div
@@ -500,19 +500,18 @@ export default function PublicTournamentViewPage({
           {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
         </div>
 
-        <div
-          style={{
-            margin: '8px 0',
-            color: '#FFCB05',
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            fontSize: 11,
-            opacity: 0.7,
-          }}
-        >
-          VS
-        </div>
+       <div
+  style={{
+    margin: '6px 0',
+    color: 'rgba(255,255,255,0.4)',
+    fontWeight: 800,
+    letterSpacing: '0.2em',
+    textTransform: 'uppercase',
+    fontSize: 10,
+  }}
+>
+  VS
+</div>
 
         <div
           style={{

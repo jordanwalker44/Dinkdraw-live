@@ -393,7 +393,6 @@ export default function TournamentResultsPage({
       <main className="page-shell">
         <div className="hero">
           <div className="hero-inner">
-            <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
             <h1 className="hero-title">Tournament Results</h1>
             <p className="hero-subtitle">Loading results...</p>
           </div>
@@ -406,7 +405,6 @@ export default function TournamentResultsPage({
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">{tournament?.title || 'Tournament Results'}</h1>
 
           {tournamentModeBadges.length ? (

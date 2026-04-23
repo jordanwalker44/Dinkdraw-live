@@ -786,7 +786,7 @@ export default function PublicTournamentViewPage({
             marginBottom: 18,
           }}
         >
-          {roundsAvailable.map((round) => {
+                    {roundsAvailable.map((round) => {
             const isSelected = selectedRound === round;
             const status = roundStatusByRound.get(round);
             const isCurrent = status === 'current';
@@ -797,43 +797,45 @@ export default function PublicTournamentViewPage({
                 type="button"
                 onClick={() => setSelectedRound(round)}
                 style={{
-  padding: '16px',
-  borderRadius: 16,
-  border: isSelected
-    ? '1px solid rgba(255, 203, 5, 0.72)'
-    : '1px solid rgba(255,255,255,0.08)',
-  background: isSelected
-    ? 'linear-gradient(180deg, rgba(255, 203, 5, 0.14), rgba(255, 203, 5, 0.06))'
-    : 'rgba(255,255,255,0.03)',
-  boxShadow: isSelected
-    ? '0 0 0 1px rgba(255,203,5,0.12) inset, 0 8px 20px rgba(0,0,0,0.18)'
-    : '0 6px 16px rgba(0,0,0,0.10)',
-  textAlign: 'left',
-  cursor: 'pointer',
-  transition: 'transform 140ms ease, box-shadow 180ms ease, border-color 140ms ease, background 140ms ease',
-}}}
+                  padding: '16px',
+                  borderRadius: 16,
+                  border: isSelected
+                    ? '1px solid rgba(255, 203, 5, 0.72)'
+                    : '1px solid rgba(255,255,255,0.08)',
+                  background: isSelected
+                    ? 'linear-gradient(180deg, rgba(255, 203, 5, 0.14), rgba(255, 203, 5, 0.06))'
+                    : 'rgba(255,255,255,0.03)',
+                  boxShadow: isSelected
+                    ? '0 0 0 1px rgba(255,203,5,0.12) inset, 0 8px 20px rgba(0,0,0,0.18)'
+                    : '0 6px 16px rgba(0,0,0,0.10)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  transition:
+                    'transform 140ms ease, box-shadow 180ms ease, border-color 140ms ease, background 140ms ease',
+                  transform: isSelected ? 'translateY(-1px)' : 'none',
+                }}
               >
                 <div
                   style={{
-  fontSize: 11,
-  fontWeight: 800,
-  letterSpacing: '0.12em',
-  color: isCurrent ? '#FFCB05' : 'rgba(255,255,255,0.48)',
-  marginBottom: 6,
-  textTransform: 'uppercase',
-}}
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: '0.12em',
+                    color: isCurrent ? '#FFCB05' : 'rgba(255,255,255,0.48)',
+                    marginBottom: 6,
+                    textTransform: 'uppercase',
+                  }}
                 >
                   {getRoundChipLabel(round)}
                 </div>
 
                 <div
                   style={{
-  fontSize: 21,
-  fontWeight: 900,
-  color: '#fff',
-  letterSpacing: '-0.02em',
-  lineHeight: 1.05,
-}}
+                    fontSize: 21,
+                    fontWeight: 900,
+                    color: '#fff',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.05,
+                  }}
                 >
                   Round {round}
                 </div>

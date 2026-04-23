@@ -982,29 +982,30 @@ export default function PublicTournamentViewPage({
                     </div>
 
                     <div
-                      className="list-item"
-                      style={{
-                        padding: 12,
-                        background:
-                          match.team_a_score !== null &&
-                          match.team_b_score !== null &&
-                          match.team_b_score > match.team_a_score
-                            ? 'rgba(255,203,5,0.08)'
-                            : undefined,
-                        borderColor:
-                          match.team_a_score !== null &&
-                          match.team_b_score !== null &&
-                          match.team_b_score > match.team_a_score
-                            ? 'rgba(255,203,5,0.35)'
-                            : undefined,
-                        boxShadow:
-                          match.team_a_score !== null &&
-                          match.team_b_score !== null &&
-                          match.team_b_score > match.team_a_score
-                            ? '0 0 0 1px rgba(255,203,5,0.14) inset'
-                            : undefined,
-                      }}
-                    >
+  className="list-item"
+  style={{
+    padding: 12,
+    borderRadius: 16,
+    background:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_b_score > match.team_a_score
+        ? 'rgba(255,203,5,0.08)'
+        : undefined,
+    borderColor:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_b_score > match.team_a_score
+        ? 'rgba(255,203,5,0.35)'
+        : undefined,
+    boxShadow:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_b_score > match.team_a_score
+        ? '0 0 0 1px rgba(255,203,5,0.14) inset, 0 6px 18px rgba(0,0,0,0.16)'
+        : '0 6px 18px rgba(0,0,0,0.12)',
+  }}
+>
                       <div
                         style={{
                         fontWeight: 900,

@@ -954,10 +954,12 @@ export default function PublicTournamentViewPage({
                     >
                       <div
                         style={{
-                          fontWeight: 800,
-                          marginBottom: 8,
-                          ...getWinnerStyle('a', match),
-                        }}
+                        fontWeight: 900,
+                        marginBottom: 8,
+                        fontSize: 15,
+                        letterSpacing: '-0.01em',
+                        ...getWinnerStyle('a', match),
+                      }}
                       >
                         {renderTeam(
                           match.team_a_player_1_id,
@@ -1004,10 +1006,12 @@ export default function PublicTournamentViewPage({
                     >
                       <div
                         style={{
-                          fontWeight: 800,
-                          marginBottom: 8,
-                          ...getWinnerStyle('b', match),
-                        }}
+                        fontWeight: 900,
+                        marginBottom: 8,
+                        fontSize: 15,
+                        letterSpacing: '-0.01em',
+                        ...getWinnerStyle('b', match),
+                      }}
                       >
                         {renderTeam(
                           match.team_b_player_1_id,

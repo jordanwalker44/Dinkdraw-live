@@ -575,7 +575,6 @@ export default function PublicTournamentViewPage({
         }
       >
         <div
-         <div
   className="row-between"
   style={{
     marginBottom: 14,
@@ -584,7 +583,6 @@ export default function PublicTournamentViewPage({
     paddingBottom: 10,
     borderBottom: '1px solid rgba(255,255,255,0.08)',
   }}
->
         >
           <div>
             <div

@@ -971,6 +971,8 @@ export default function PublicTournamentViewPage({
                     </div>
                   </div>
                 </div>
+                );
+              })}
 
             {byesForSelectedRound.length ? (
 

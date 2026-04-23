@@ -614,3 +614,18 @@ box-shadow:
     box-shadow: 0 10px 24px rgba(0,0,0,0.22);
   }
 }
+
+.soft-enter {
+  animation: softEnter 220ms ease both;
+}
+
+@keyframes softEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

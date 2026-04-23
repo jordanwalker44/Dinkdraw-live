@@ -732,11 +732,6 @@ export default function PublicTournamentViewPage({
     <main className="page-shell">
       <div className="hero" style={{ marginBottom: 12 }}>
         <div className="hero-inner" style={{ paddingBottom: 18 }}>
-          <img
-            src="/dinkdraw-logo.png"
-            alt="DinkDraw logo"
-            className="hero-logo"
-          />
           <h1 className="hero-title">{tournament.title || 'Tournament'}</h1>
           <p className="hero-subtitle">
             {isCompleted

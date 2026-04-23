@@ -1176,6 +1176,31 @@ function computeStandings(
       return a.name.localeCompare(b.name);
     });
 }
+
+function getTournamentModeBadges(tournament: Tournament | null) {
+  if (!tournament) return [];
+
+  const badges = [];
+
+  badges.push(tournament.format === 'singles' ? 'Singles' : 'Doubles');
+
+  if (tournament.format === 'doubles') {
+    if (tournament.doubles_mode === 'fixed') {
+      badges.push('Fixed Partners');
+    } else if (tournament.doubles_mode === 'mixed') {
+      badges.push('Mixed Rotate');
+    } else {
+      badges.push('Rotating Partners');
+    }
+  }
+
+  badges.push(
+    tournament.match_format === 'best_of_3' ? 'Best of 3' : 'Single Game'
+  );
+
+  return badges;
+}
+
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
@@ -1198,8 +1223,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [copied, setCopied] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [standingsView, setStandingsView] = useState<'leaderboard' | 'day'>('leaderboard');
+  const [showSharingTools, setShowSharingTools] = useState(false);
 
-   const isSingles = tournament?.format === 'singles';
+  const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
@@ -1212,23 +1238,33 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const minPlayersRequired = isSingles ? 3 : 4;
   const tournamentModeBadges = getTournamentModeBadges(tournament);
 
-  const claimedSlot = useMemo(() => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null, [playerSlots, userId]);
-  const playersById = useMemo(() => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])), [playerSlots]);
-  const yourMatch = useMemo(() => {
-  if (!claimedSlot) return null;
+  const claimedSlot = useMemo(
+    () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
+    [playerSlots, userId]
+  );
 
-  return matches.find((m) => {
-    if (m.is_bye || m.is_complete) return false;
+  const playersById = useMemo(
+    () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
+    [playerSlots]
+  );
+
+  const yourMatch = useMemo(() => {
+    if (!claimedSlot) return null;
 
     return (
-      m.team_a_player_1_id === claimedSlot.id ||
-      m.team_a_player_2_id === claimedSlot.id ||
-      m.team_b_player_1_id === claimedSlot.id ||
-      m.team_b_player_2_id === claimedSlot.id
+      matches.find((m) => {
+        if (m.is_bye || m.is_complete) return false;
+
+        return (
+          m.team_a_player_1_id === claimedSlot.id ||
+          m.team_a_player_2_id === claimedSlot.id ||
+          m.team_b_player_1_id === claimedSlot.id ||
+          m.team_b_player_2_id === claimedSlot.id
+        );
+      }) || null
     );
-  }) || null;
-}, [matches, claimedSlot]);
-  
+  }, [matches, claimedSlot]);
+
   const roundsAvailable = useMemo(() => {
     const roundSet = new Set<number>();
     matches.forEach((m) => roundSet.add(m.round_number));
@@ -1248,16 +1284,30 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return roundsAvailable[roundsAvailable.length - 1] || 1;
   }, [matches, roundsAvailable]);
 
-  const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
-  const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
-  const totalPlayableMatchCount = useMemo(() => matches.filter((m) => !m.is_bye).length, [matches]);
+  const finalRound = useMemo(
+    () => roundsAvailable[roundsAvailable.length - 1] || 1,
+    [roundsAvailable]
+  );
+
+  const completedMatchCount = useMemo(
+    () => matches.filter((m) => !m.is_bye && m.is_complete).length,
+    [matches]
+  );
+
+  const totalPlayableMatchCount = useMemo(
+    () => matches.filter((m) => !m.is_bye).length,
+    [matches]
+  );
 
   const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
     for (const round of roundsAvailable) {
       const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
       if (!roundMatches.length) {
-        statusMap.set(round, round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming');
+        statusMap.set(
+          round,
+          round === currentRound ? 'current' : round < currentRound ? 'complete' : 'upcoming'
+        );
         continue;
       }
       if (roundMatches.every((m) => m.is_complete)) statusMap.set(round, 'complete');
@@ -1268,132 +1318,117 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return statusMap;
   }, [matches, roundsAvailable, currentRound]);
 
-  const matchesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && !m.is_bye), [matches, selectedRound]);
-  const byesForSelectedRound = useMemo(() => matches.filter((m) => m.round_number === selectedRound && m.is_bye), [matches, selectedRound]);
-const currentRoundMatches = useMemo(
-  () => matches.filter((m) => m.round_number === currentRound && !m.is_bye),
-  [matches, currentRound]
-);
+  const matchesForSelectedRound = useMemo(
+    () => matches.filter((m) => m.round_number === selectedRound && !m.is_bye),
+    [matches, selectedRound]
+  );
 
-const nextUpMatch = useMemo(
-  () => currentRoundMatches.find((m) => !m.is_complete) || null,
-  [currentRoundMatches]
-);
+  const byesForSelectedRound = useMemo(
+    () => matches.filter((m) => m.round_number === selectedRound && m.is_bye),
+    [matches, selectedRound]
+  );
 
-const upcomingMatch = useMemo(
-  () =>
-    nextUpMatch
-      ? matches.find(
-          (m) =>
-            !m.is_complete &&
-            !m.is_bye &&
-            m.id !== nextUpMatch.id &&
-            (
-              m.round_number > nextUpMatch.round_number ||
-              (
-                m.round_number === nextUpMatch.round_number &&
-                (m.court_number ?? 0) > (nextUpMatch.court_number ?? 0)
-              )
-            )
-        ) || null
-      : null,
-  [matches, nextUpMatch]
-);
+  const currentRoundMatches = useMemo(
+    () => matches.filter((m) => m.round_number === currentRound && !m.is_bye),
+    [matches, currentRound]
+  );
 
-const currentRoundComplete = useMemo(
-  () =>
-    currentRoundMatches.length > 0 &&
-    currentRoundMatches.every((m) => m.is_complete),
-  [currentRoundMatches]
-);
+  const nextUpMatch = useMemo(
+    () => currentRoundMatches.find((m) => !m.is_complete) || null,
+    [currentRoundMatches]
+  );
+
   useEffect(() => {
-  setStandings(computeStandings(playerSlots, matches, isSingles, isBestOf3));
-}, [playerSlots, matches, isSingles, isBestOf3]);
+    setStandings(computeStandings(playerSlots, matches, isSingles, isBestOf3));
+  }, [playerSlots, matches, isSingles, isBestOf3]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
+
   useEffect(() => {
-  if (!isOrganizer && isStarted) {
-    setActiveTab('rounds');
-  }
-}, [isOrganizer, isStarted]);
+    if (!isOrganizer && isStarted) {
+      setActiveTab('rounds');
+    }
+  }, [isOrganizer, isStarted]);
+
   const tournamentWinner = standings[0] || null;
 
   const canStartTournament = useMemo(() => {
     if (!tournament) return false;
     if (tournament.status === 'started' || tournament.status === 'completed') return false;
-    const namedCount = playerSlots.filter((slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== '').length;
+    const namedCount = playerSlots.filter(
+      (slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== ''
+    ).length;
     return namedCount >= minPlayersRequired;
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
-  const [tournamentResult, playersResult] = await Promise.all([
-    supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-    supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('slot_number', { ascending: true }),
-  ]);
+    const [tournamentResult, playersResult] = await Promise.all([
+      supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
+      supabase
+        .from('tournament_players')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('slot_number', { ascending: true }),
+    ]);
 
-  const tournamentData = tournamentResult.data;
-  const playersData = playersResult.data;
+    const tournamentData = tournamentResult.data;
+    const playersData = playersResult.data;
 
-  setTournament(tournamentData || null);
-  setPlayerSlots(playersData || []);
+    setTournament(tournamentData || null);
+    setPlayerSlots(playersData || []);
 
-  if (tournamentData) {
-    try {
-      window.localStorage.setItem(
-        LAST_TOURNAMENT_KEY,
-        JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
-      );
-    } catch {}
-  }
+    if (tournamentData) {
+      try {
+        window.localStorage.setItem(
+          LAST_TOURNAMENT_KEY,
+          JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
+        );
+      } catch {}
+    }
 
-  if ((playersData || []).length > 0) {
-    setNewNames((prev) => {
-      const next = { ...prev };
-      for (const slot of playersData || []) {
-        if (typeof next[slot.id] !== 'string') {
-          next[slot.id] = slot.display_name || '';
+    if ((playersData || []).length > 0) {
+      setNewNames((prev) => {
+        const next = { ...prev };
+        for (const slot of playersData || []) {
+          if (typeof next[slot.id] !== 'string') {
+            next[slot.id] = slot.display_name || '';
+          }
         }
-      }
-      return next;
-    });
+        return next;
+      });
+    }
+
+    if (currentUserId) setUserId(currentUserId);
+
+    setTimeout(async () => {
+      const { data: matchesData } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('round_number', { ascending: true })
+        .order('court_number', { ascending: true });
+
+      const safeMatches = matchesData || [];
+      setMatches(safeMatches);
+
+      setScoreDrafts(() => {
+        const next: Record<string, ScoreDraft> = {};
+        for (const match of safeMatches) {
+          next[match.id] = {
+            team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+            team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+            game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
+            game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
+            game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
+            game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
+            game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
+            game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
+          };
+        }
+        return next;
+      });
+    }, 0);
   }
-
-  if (currentUserId) setUserId(currentUserId);
-
-  // 👇 load matches AFTER UI renders
-  setTimeout(async () => {
-    const { data: matchesData } = await supabase
-      .from('matches')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('round_number', { ascending: true })
-      .order('court_number', { ascending: true });
-
-    const safeMatches = matchesData || [];
-    setMatches(safeMatches);
-
-  setScoreDrafts(() => {
-  const next: Record<string, ScoreDraft> = {};
-  for (const match of safeMatches) {
-    next[match.id] = {
-      team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-      team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-      game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
-      game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
-      game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
-      game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
-      game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
-      game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
-    };
-  }
-  return next;
-});
-  }, 0);
-}
 
   useEffect(() => {
     async function load() {
@@ -1406,78 +1441,78 @@ const currentRoundComplete = useMemo(
     load();
   }, [params.id, supabase]);
 
-useEffect(() => {
-  const channel = supabase
-    .channel(`organizer-tournament-live-${params.id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'matches',
-        filter: `tournament_id=eq.${params.id}`,
-      },
-      async () => {
-  const { data } = await supabase
-    .from('matches')
-    .select('*')
-    .eq('tournament_id', params.id)
-    .order('round_number', { ascending: true })
-    .order('court_number', { ascending: true });
+  useEffect(() => {
+    const channel = supabase
+      .channel(`organizer-tournament-live-${params.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'matches',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        async () => {
+          const { data } = await supabase
+            .from('matches')
+            .select('*')
+            .eq('tournament_id', params.id)
+            .order('round_number', { ascending: true })
+            .order('court_number', { ascending: true });
 
-  const safeMatches = data || [];
-  setMatches(safeMatches);
+          const safeMatches = data || [];
+          setMatches(safeMatches);
 
-  setScoreDrafts(() => {
-    const next: Record<string, ScoreDraft> = {};
-    for (const match of safeMatches) {
-      next[match.id] = {
-        team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-        team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-        game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
-        game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
-        game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
-        game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
-        game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
-        game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
-      };
-    }
-    return next;
-  });
-}
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'tournament_players',
-        filter: `tournament_id=eq.${params.id}`,
-      },
-      async () => {
-        await loadTournamentData();
-      }
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'tournaments',
-        filter: `id=eq.${params.id}`,
-      },
-      async () => {
-        await loadTournamentData();
-      }
-    )
-    .subscribe((status) => {
-      setIsLive(status === 'SUBSCRIBED');
-    });
+          setScoreDrafts(() => {
+            const next: Record<string, ScoreDraft> = {};
+            for (const match of safeMatches) {
+              next[match.id] = {
+                team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+                team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+                game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
+                game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
+                game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
+                game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
+                game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
+                game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
+              };
+            }
+            return next;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tournament_players',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        async () => {
+          await loadTournamentData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tournaments',
+          filter: `id=eq.${params.id}`,
+        },
+        async () => {
+          await loadTournamentData();
+        }
+      )
+      .subscribe((status) => {
+        setIsLive(status === 'SUBSCRIBED');
+      });
 
-  return () => {
-    void supabase.removeChannel(channel);
-  };
-}, [params.id, supabase]);
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [params.id, supabase]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;
@@ -1488,24 +1523,29 @@ useEffect(() => {
   }, [roundsAvailable, currentRound, finalRound, isCompleted]);
 
   useEffect(() => {
-    if (isCompleted) { setSelectedRound(finalRound); setActiveTab('standings'); return; }
+    if (isCompleted) {
+      setSelectedRound(finalRound);
+      setActiveTab('standings');
+      return;
+    }
     if (isStarted && matches.length > 0) setSelectedRound(currentRound);
   }, [isStarted, isCompleted, matches.length, currentRound, finalRound]);
+
   useEffect(() => {
-  if (!isStarted || isCompleted || !nextUpMatch) return;
+    if (!isStarted || isCompleted || !nextUpMatch) return;
 
-  const timeout = window.setTimeout(() => {
-    const el = document.getElementById(getMatchElementId(nextUpMatch.id));
-    if (!el) return;
+    const timeout = window.setTimeout(() => {
+      const el = document.getElementById(getMatchElementId(nextUpMatch.id));
+      if (!el) return;
 
-    el.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
-  }, 150);
+      el.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 150);
 
-  return () => window.clearTimeout(timeout);
-}, [nextUpMatch?.id, isStarted, isCompleted]);
+    return () => window.clearTimeout(timeout);
+  }, [nextUpMatch?.id, isStarted, isCompleted]);
 
   async function copyJoinCode() {
     try {
@@ -1514,7 +1554,9 @@ useEffect(() => {
       setCopied(true);
       setMessage('Join code copied.');
       setTimeout(() => setCopied(false), 1500);
-    } catch { setMessage('Could not copy join code.'); }
+    } catch {
+      setMessage('Could not copy join code.');
+    }
   }
 
   async function shareJoinLink() {
@@ -1532,7 +1574,9 @@ useEffect(() => {
       }
       await navigator.clipboard.writeText(url);
       setMessage('Join link copied.');
-    } catch { setMessage('Could not share join link.'); }
+    } catch {
+      setMessage('Could not share join link.');
+    }
   }
 
   async function copyPublicLink() {
@@ -1549,15 +1593,37 @@ useEffect(() => {
     setMessage('');
     const { data: authData } = await supabase.auth.getUser();
     const user = authData.user;
-    if (!user) { setMessage('Sign in first.'); return; }
-    if (claimedSlot) { setMessage('You already claimed a spot in this tournament.'); return; }
-    if (isLocked) { setMessage('Tournament already started. Player spots are locked.'); return; }
+    if (!user) {
+      setMessage('Sign in first.');
+      return;
+    }
+    if (claimedSlot) {
+      setMessage('You already claimed a spot in this tournament.');
+      return;
+    }
+    if (isLocked) {
+      setMessage('Tournament already started. Player spots are locked.');
+      return;
+    }
 
-    const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
     const claimedName = profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
 
-    const { error } = await supabase.from('tournament_players').update({ claimed_by_user_id: user.id, display_name: claimedName }).eq('id', slotId).is('claimed_by_user_id', null);
-    if (error) { setMessage(error.message); return; }
+    const { error } = await supabase
+      .from('tournament_players')
+      .update({ claimed_by_user_id: user.id, display_name: claimedName })
+      .eq('id', slotId)
+      .is('claimed_by_user_id', null);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
 
     setNewNames((prev) => ({ ...prev, [slotId]: claimedName }));
     await loadTournamentData(user.id);
@@ -1565,18 +1631,30 @@ useEffect(() => {
   }
 
   async function saveAllPlayerNames() {
-    if (isLocked) { setMessage('Player names are locked.'); return; }
+    if (isLocked) {
+      setMessage('Player names are locked.');
+      return;
+    }
     setMessage('');
     setIsSavingNames(true);
     try {
       for (const slot of playerSlots) {
         const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
-        const { error } = await supabase.from('tournament_players').update({ display_name: nextName }).eq('id', slot.id);
-        if (error) { setMessage(`Save failed: ${error.message}`); setIsSavingNames(false); return; }
+        const { error } = await supabase
+          .from('tournament_players')
+          .update({ display_name: nextName })
+          .eq('id', slot.id);
+        if (error) {
+          setMessage(`Save failed: ${error.message}`);
+          setIsSavingNames(false);
+          return;
+        }
       }
       await loadTournamentData(userId);
       setMessage('Player names saved.');
-    } catch (err) { setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.'); }
+    } catch (err) {
+      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
+    }
     setIsSavingNames(false);
   }
 
@@ -1603,52 +1681,78 @@ useEffect(() => {
     await loadTournamentData(userId);
     setMessage('Player gender saved.');
   }
-  
+
   async function generateScheduleAndStart() {
-  if (!tournament) return;
+    if (!tournament) return;
 
-  if (isScheduleLocked) {
-    setMessage('Schedule is locked once the tournament has started.');
-    return;
-  }
+    if (isScheduleLocked) {
+      setMessage('Schedule is locked once the tournament has started.');
+      return;
+    }
 
-  setMessage('');
-  setIsStarting(true);
+    setMessage('');
+    setIsStarting(true);
     try {
       for (const slot of playerSlots) {
         const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
-        const { error } = await supabase.from('tournament_players').update({ display_name: nextName }).eq('id', slot.id);
-        if (error) { setMessage(`Save failed: ${error.message}`); setIsStarting(false); return; }
+        const { error } = await supabase
+          .from('tournament_players')
+          .update({ display_name: nextName })
+          .eq('id', slot.id);
+        if (error) {
+          setMessage(`Save failed: ${error.message}`);
+          setIsStarting(false);
+          return;
+        }
       }
 
-      const { data: freshPlayers, error: freshPlayersError } = await supabase.from('tournament_players').select('*').eq('tournament_id', tournament.id).order('slot_number', { ascending: true });
+      const { data: freshPlayers, error: freshPlayersError } = await supabase
+        .from('tournament_players')
+        .select('*')
+        .eq('tournament_id', tournament.id)
+        .order('slot_number', { ascending: true });
+
       const { data: existingMatches, error: existingMatchesError } = await supabase
-  .from('matches')
-  .select('id')
-  .eq('tournament_id', tournament.id)
-  .limit(1);
+        .from('matches')
+        .select('id')
+        .eq('tournament_id', tournament.id)
+        .limit(1);
 
-if (existingMatchesError) {
-  setMessage(`Could not verify schedule lock: ${existingMatchesError.message}`);
-  setIsStarting(false);
-  return;
-}
+      if (existingMatchesError) {
+        setMessage(`Could not verify schedule lock: ${existingMatchesError.message}`);
+        setIsStarting(false);
+        return;
+      }
 
-if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
-  setMessage('Schedule is locked once the tournament has started.');
-  setIsStarting(false);
-  return;
-}
-      if (freshPlayersError) { setMessage(`Could not load players: ${freshPlayersError.message}`); setIsStarting(false); return; }
+      if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
+        setMessage('Schedule is locked once the tournament has started.');
+        setIsStarting(false);
+        return;
+      }
 
-      const namedPlayers = (freshPlayers || []).filter((slot) => (slot.display_name || '').trim() !== '');
-      if (namedPlayers.length < minPlayersRequired) { setMessage(`Please save at least ${minPlayersRequired} player names before starting.`); setIsStarting(false); return; }
+      if (freshPlayersError) {
+        setMessage(`Could not load players: ${freshPlayersError.message}`);
+        setIsStarting(false);
+        return;
+      }
+
+      const namedPlayers = (freshPlayers || []).filter(
+        (slot) => (slot.display_name || '').trim() !== ''
+      );
+
+      if (namedPlayers.length < minPlayersRequired) {
+        setMessage(`Please save at least ${minPlayersRequired} player names before starting.`);
+        setIsStarting(false);
+        return;
+      }
 
       if (tournament.format === 'doubles' && tournament.doubles_mode === 'mixed') {
         const playersMissingGender = namedPlayers.filter((slot) => !slot.gender);
 
-      if (playersMissingGender.length > 0) {
-          setMessage('Every player in a mixed doubles tournament must be marked male or female before starting.');
+        if (playersMissingGender.length > 0) {
+          setMessage(
+            'Every player in a mixed doubles tournament must be marked male or female before starting.'
+          );
           setIsStarting(false);
           return;
         }
@@ -1670,32 +1774,68 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
       }
 
       const playersPerCourt = isSingles ? 2 : 4;
-      const availableCourts = Math.max(1, Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt)));
-      const scheduleRows = buildSchedule(namedPlayers, tournament.rounds, availableCourts, tournament.format, tournament.doubles_mode);
-      if (!scheduleRows.length) { setMessage('Could not generate a schedule.'); setIsStarting(false); return; }
+      const availableCourts = Math.max(
+        1,
+        Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
+      );
 
-      const { error: deleteError } = await supabase.from('matches').delete().eq('tournament_id', tournament.id);
-      if (deleteError) { setMessage(`Delete old matches failed: ${deleteError.message}`); setIsStarting(false); return; }
+      const scheduleRows = buildSchedule(
+        namedPlayers,
+        tournament.rounds,
+        availableCourts,
+        tournament.format,
+        tournament.doubles_mode
+      );
 
-      const { error: insertError } = await supabase
-  .from('matches')
-  .insert(
-    scheduleRows.map((row) => ({
-      tournament_id: tournament.id,
-      ...row,
-      court_label: getCourtLabel(tournament, row.court_number),
-    }))
-  );
-      if (insertError) { setMessage(`Generate failed: ${insertError.message}`); setIsStarting(false); return; }
+      if (!scheduleRows.length) {
+        setMessage('Could not generate a schedule.');
+        setIsStarting(false);
+        return;
+      }
 
-      const { error: startError } = await supabase.from('tournaments').update({ status: 'started', started_at: new Date().toISOString() }).eq('id', tournament.id);
-      if (startError) { setMessage(`Start failed: ${startError.message}`); setIsStarting(false); return; }
+      const { error: deleteError } = await supabase
+        .from('matches')
+        .delete()
+        .eq('tournament_id', tournament.id);
+
+      if (deleteError) {
+        setMessage(`Delete old matches failed: ${deleteError.message}`);
+        setIsStarting(false);
+        return;
+      }
+
+      const { error: insertError } = await supabase.from('matches').insert(
+        scheduleRows.map((row) => ({
+          tournament_id: tournament.id,
+          ...row,
+          court_label: getCourtLabel(tournament, row.court_number),
+        }))
+      );
+
+      if (insertError) {
+        setMessage(`Generate failed: ${insertError.message}`);
+        setIsStarting(false);
+        return;
+      }
+
+      const { error: startError } = await supabase
+        .from('tournaments')
+        .update({ status: 'started', started_at: new Date().toISOString() })
+        .eq('id', tournament.id);
+
+      if (startError) {
+        setMessage(`Start failed: ${startError.message}`);
+        setIsStarting(false);
+        return;
+      }
 
       await loadTournamentData(userId);
       setActiveTab('rounds');
       setSelectedRound(1);
       setMessage('Tournament started.');
-    } catch (err) { setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.'); }
+    } catch (err) {
+      setMessage(err instanceof Error ? `Start failed: ${err.message}` : 'Start failed.');
+    }
     setIsStarting(false);
   }
 
@@ -1703,50 +1843,92 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
     if (!tournament) return;
     const { data: authData } = await supabase.auth.getUser();
     const user = authData.user;
-    if (!user) { setMessage('Sign in first.'); return; }
+    if (!user) {
+      setMessage('Sign in first.');
+      return;
+    }
 
     setIsRematching(true);
     setMessage('');
     try {
-      const { data: profile } = await supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle();
-      const organizerName = profile?.display_name?.trim() || user.email?.split('@')[0] || tournament.organizer_name || 'Organizer';
-      const rematchTitle = tournament.title.toLowerCase().includes('rematch') ? tournament.title : `${tournament.title} Rematch`;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const organizerName =
+        profile?.display_name?.trim() ||
+        user.email?.split('@')[0] ||
+        tournament.organizer_name ||
+        'Organizer';
+
+      const rematchTitle = tournament.title.toLowerCase().includes('rematch')
+        ? tournament.title
+        : `${tournament.title} Rematch`;
 
       const { data: newTournament, error: tournamentError } = await supabase
         .from('tournaments')
-.insert({
-  title: rematchTitle,
-  organizer_user_id: user.id,
-  organizer_name: organizerName,
-  join_code: makeJoinCode(),
-  event_date: tournament.event_date,
-  event_time: tournament.event_time,
-  location: tournament.location,
-  player_count: tournament.player_count,
-  courts: tournament.courts,
-  rounds: tournament.rounds,
-  games_to: tournament.games_to,
-  status: 'draft',
-  started_at: null,
-  format: tournament.format,
-  match_format: tournament.match_format,
-  doubles_mode: tournament.doubles_mode,
-  court_labels: tournament.court_labels,
-})        .select().single();
+        .insert({
+          title: rematchTitle,
+          organizer_user_id: user.id,
+          organizer_name: organizerName,
+          join_code: makeJoinCode(),
+          event_date: tournament.event_date,
+          event_time: tournament.event_time,
+          location: tournament.location,
+          player_count: tournament.player_count,
+          courts: tournament.courts,
+          rounds: tournament.rounds,
+          games_to: tournament.games_to,
+          status: 'draft',
+          started_at: null,
+          format: tournament.format,
+          match_format: tournament.match_format,
+          doubles_mode: tournament.doubles_mode,
+          court_labels: tournament.court_labels,
+        })
+        .select()
+        .single();
 
-      if (tournamentError || !newTournament) { setMessage(tournamentError?.message || 'Could not create rematch tournament.'); setIsRematching(false); return; }
+      if (tournamentError || !newTournament) {
+        setMessage(tournamentError?.message || 'Could not create rematch tournament.');
+        setIsRematching(false);
+        return;
+      }
 
       const playerRows = Array.from({ length: tournament.player_count }, (_, index) => {
         const oldSlot = playerSlots[index];
-        return { tournament_id: newTournament.id, slot_number: index + 1, display_name: oldSlot?.display_name?.trim() || '', claimed_by_user_id: null };
+        return {
+          tournament_id: newTournament.id,
+          slot_number: index + 1,
+          display_name: oldSlot?.display_name?.trim() || '',
+          claimed_by_user_id: null,
+        };
       });
 
-      const { error: playersError } = await supabase.from('tournament_players').insert(playerRows);
-      if (playersError) { setMessage(playersError.message); setIsRematching(false); return; }
+      const { error: playersError } = await supabase
+        .from('tournament_players')
+        .insert(playerRows);
 
-      try { window.localStorage.setItem(LAST_TOURNAMENT_KEY, JSON.stringify({ id: newTournament.id, title: newTournament.title })); } catch {}
+      if (playersError) {
+        setMessage(playersError.message);
+        setIsRematching(false);
+        return;
+      }
+
+      try {
+        window.localStorage.setItem(
+          LAST_TOURNAMENT_KEY,
+          JSON.stringify({ id: newTournament.id, title: newTournament.title })
+        );
+      } catch {}
+
       window.location.href = `/tournament/${newTournament.id}`;
-    } catch (err) { setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.'); setIsRematching(false); }
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not create rematch tournament.');
+      setIsRematching(false);
+    }
   }
 
   function setDraftScore(matchId: string, field: keyof ScoreDraft, value: string) {
@@ -1775,147 +1957,157 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
     const draft = scoreDrafts[matchId];
     if (!draft) return;
     const rawValue = draft[field];
-    const numeric = rawValue.trim() === '' || Number.isNaN(Number(rawValue)) ? null : Math.max(0, Number(rawValue));
+    const numeric =
+      rawValue.trim() === '' || Number.isNaN(Number(rawValue))
+        ? null
+        : Math.max(0, Number(rawValue));
+
     const { error } = await supabase.from('matches').update({ [field]: numeric }).eq('id', matchId);
-    if (error) { setMessage(`Score save failed: ${error.message}`); return; }
+    if (error) {
+      setMessage(`Score save failed: ${error.message}`);
+      return;
+    }
     setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, [field]: numeric } : m)));
   }
 
   async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
-  if (!tournament) return true;
+    if (!tournament) return true;
 
-  const { data: freshPlayers } = await supabase
-    .from('tournament_players')
-    .select('*')
-    .eq('tournament_id', tournament.id);
+    const { data: freshPlayers } = await supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', tournament.id);
 
-  if (!freshPlayers) return true;
+    if (!freshPlayers) return true;
 
-  const freshPlayersById = Object.fromEntries(freshPlayers.map((p) => [p.id, p]));
+    const freshPlayersById = Object.fromEntries(freshPlayers.map((p) => [p.id, p]));
 
-  const a1 = match.team_a_player_1_id ? freshPlayersById[match.team_a_player_1_id] : null;
-  const a2 = match.team_a_player_2_id ? freshPlayersById[match.team_a_player_2_id] : null;
-  const b1 = match.team_b_player_1_id ? freshPlayersById[match.team_b_player_1_id] : null;
-  const b2 = match.team_b_player_2_id ? freshPlayersById[match.team_b_player_2_id] : null;
+    const a1 = match.team_a_player_1_id ? freshPlayersById[match.team_a_player_1_id] : null;
+    const a2 = match.team_a_player_2_id ? freshPlayersById[match.team_a_player_2_id] : null;
+    const b1 = match.team_b_player_1_id ? freshPlayersById[match.team_b_player_1_id] : null;
+    const b2 = match.team_b_player_2_id ? freshPlayersById[match.team_b_player_2_id] : null;
 
-  const teamAUsers = isSingles
-    ? [a1]
-        .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-        .map((s) => s.claimed_by_user_id as string)
-    : [a1, a2]
-        .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-        .map((s) => s.claimed_by_user_id as string);
+    const teamAUsers = isSingles
+      ? [a1]
+          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
+          .map((s) => s.claimed_by_user_id as string)
+      : [a1, a2]
+          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
+          .map((s) => s.claimed_by_user_id as string);
 
-  const teamBUsers = isSingles
-    ? [b1]
-        .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-        .map((s) => s.claimed_by_user_id as string)
-    : [b1, b2]
-        .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-        .map((s) => s.claimed_by_user_id as string);
+    const teamBUsers = isSingles
+      ? [b1]
+          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
+          .map((s) => s.claimed_by_user_id as string)
+      : [b1, b2]
+          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
+          .map((s) => s.claimed_by_user_id as string);
 
-  const playedAt = new Date().toISOString();
-  const matchFormat = tournament.format || 'doubles';
+    const playedAt = new Date().toISOString();
+    const matchFormat = tournament.format || 'doubles';
 
-  function buildRow(
-    currentUserId: string,
-    partnerUserId: string | null,
-    opponentUserIds: string[],
-    wins: number,
-    losses: number,
-    pointsFor: number,
-    pointsAgainst: number
-  ) {
-    const isTie = wins === losses;
-    return {
-      user_id: currentUserId,
-      tournament_id: tournament!.id,
-      match_id: match.id,
-      round_number: match.round_number,
-      played_at: playedAt,
-      partner_user_id: partnerUserId,
-      opponent_1_user_id: opponentUserIds[0] || null,
-      opponent_2_user_id: opponentUserIds[1] || null,
-      result: isTie ? 'tie' : wins > losses ? 'win' : 'loss',
-      wins,
-      losses,
-      ties: isTie ? 1 : 0,
-      points_for: pointsFor,
-      points_against: pointsAgainst,
-      point_diff: pointsFor - pointsAgainst,
-      format: matchFormat,
-    };
-  }
-
-  let aWins = 0;
-  let bWins = 0;
-  let aPoints = 0;
-  let bPoints = 0;
-
-  if (isBestOf3) {
-    const games = [
-      [match.game_1_a, match.game_1_b],
-      [match.game_2_a, match.game_2_b],
-      [match.game_3_a, match.game_3_b],
-    ] as const;
-
-    for (const [gA, gB] of games) {
-      if (gA === null || gB === null) continue;
-
-      aPoints += gA;
-      bPoints += gB;
-
-      if (gA > gB) aWins += 1;
-      else if (gB > gA) bWins += 1;
+    function buildRow(
+      currentUserId: string,
+      partnerUserId: string | null,
+      opponentUserIds: string[],
+      wins: number,
+      losses: number,
+      pointsFor: number,
+      pointsAgainst: number
+    ) {
+      const isTie = wins === losses;
+      return {
+        user_id: currentUserId,
+        tournament_id: tournament!.id,
+        match_id: match.id,
+        round_number: match.round_number,
+        played_at: playedAt,
+        partner_user_id: partnerUserId,
+        opponent_1_user_id: opponentUserIds[0] || null,
+        opponent_2_user_id: opponentUserIds[1] || null,
+        result: isTie ? 'tie' : wins > losses ? 'win' : 'loss',
+        wins,
+        losses,
+        ties: isTie ? 1 : 0,
+        points_for: pointsFor,
+        points_against: pointsAgainst,
+        point_diff: pointsFor - pointsAgainst,
+        format: matchFormat,
+      };
     }
-  } else {
-    aPoints = aScore;
-    bPoints = bScore;
 
-    if (aScore > bScore) aWins = 1;
-    else if (bScore > aScore) bWins = 1;
+    let aWins = 0;
+    let bWins = 0;
+    let aPoints = 0;
+    let bPoints = 0;
+
+    if (isBestOf3) {
+      const games = [
+        [match.game_1_a, match.game_1_b],
+        [match.game_2_a, match.game_2_b],
+        [match.game_3_a, match.game_3_b],
+      ] as const;
+
+      for (const [gA, gB] of games) {
+        if (gA === null || gB === null) continue;
+
+        aPoints += gA;
+        bPoints += gB;
+
+        if (gA > gB) aWins += 1;
+        else if (gB > gA) bWins += 1;
+      }
+    } else {
+      aPoints = aScore;
+      bPoints = bScore;
+
+      if (aScore > bScore) aWins = 1;
+      else if (bScore > aScore) bWins = 1;
+    }
+
+    const rows = [
+      ...teamAUsers.map((currentUserId) =>
+        buildRow(
+          currentUserId,
+          isSingles ? null : teamAUsers.find((id) => id !== currentUserId) || null,
+          teamBUsers,
+          aWins,
+          bWins,
+          aPoints,
+          bPoints
+        )
+      ),
+      ...teamBUsers.map((currentUserId) =>
+        buildRow(
+          currentUserId,
+          isSingles ? null : teamBUsers.find((id) => id !== currentUserId) || null,
+          teamAUsers,
+          bWins,
+          aWins,
+          bPoints,
+          aPoints
+        )
+      ),
+    ];
+
+    if (!rows.length) return true;
+
+    const { error } = await supabase
+      .from('player_match_stats')
+      .upsert(rows, { onConflict: 'match_id,user_id' });
+
+    if (error) {
+      setMessage(`Score submitted, but stats update failed: ${error.message}`);
+      return false;
+    }
+
+    return true;
   }
 
-  const rows = [
-    ...teamAUsers.map((currentUserId) =>
-      buildRow(
-        currentUserId,
-        isSingles ? null : teamAUsers.find((id) => id !== currentUserId) || null,
-        teamBUsers,
-        aWins,
-        bWins,
-        aPoints,
-        bPoints
-      )
-    ),
-    ...teamBUsers.map((currentUserId) =>
-      buildRow(
-        currentUserId,
-        isSingles ? null : teamBUsers.find((id) => id !== currentUserId) || null,
-        teamAUsers,
-        bWins,
-        aWins,
-        bPoints,
-        aPoints
-      )
-    ),
-  ];
-
-  if (!rows.length) return true;
-
-  const { error } = await supabase
-    .from('player_match_stats')
-    .upsert(rows, { onConflict: 'match_id,user_id' });
-
-  if (error) {
-    setMessage(`Score submitted, but stats update failed: ${error.message}`);
-    return false;
-  }
-
-  return true;
-}
   function getNextIncompleteRound(updatedMatches: Match[]) {
-    const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort((a, b) => a - b);
+    const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort(
+      (a, b) => a - b
+    );
     for (const round of roundNumbers) {
       const roundMatches = updatedMatches.filter((m) => m.round_number === round && !m.is_bye);
       if (!roundMatches.length) continue;
@@ -1926,34 +2118,60 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
 
   async function markTournamentCompleted() {
     if (!tournament || isCompleted) return true;
-    const { error } = await supabase.from('tournaments').update({ status: 'completed' }).eq('id', tournament.id);
-    if (error) { setMessage(`Tournament completion failed: ${error.message}`); return false; }
+    const { error } = await supabase
+      .from('tournaments')
+      .update({ status: 'completed' })
+      .eq('id', tournament.id);
+    if (error) {
+      setMessage(`Tournament completion failed: ${error.message}`);
+      return false;
+    }
     setTournament((prev) => (prev ? { ...prev, status: 'completed' } : prev));
     return true;
   }
 
   async function endTournamentEarly() {
     if (!tournament || !isOrganizer || !isStarted || isCompleted) return;
-    const confirmed = window.confirm('End this tournament now? Any unfinished rounds will be locked and the current standings will become final.');
+    const confirmed = window.confirm(
+      'End this tournament now? Any unfinished rounds will be locked and the current standings will become final.'
+    );
     if (!confirmed) return;
     setIsEndingEarly(true);
     setMessage('');
     const completed = await markTournamentCompleted();
-    if (completed) { setActiveTab('standings'); setSelectedRound(currentRound); setMessage('Tournament ended early. Final results are now locked.'); }
+    if (completed) {
+      setActiveTab('standings');
+      setSelectedRound(currentRound);
+      setMessage('Tournament ended early. Final results are now locked.');
+    }
     setIsEndingEarly(false);
   }
 
   async function deleteTournament() {
     if (!tournament || !isOrganizer || isStarted || isCompleted) return;
-    const confirmed = window.confirm('Are you sure you want to delete this tournament? This cannot be undone.');
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this tournament? This cannot be undone.'
+    );
     if (!confirmed) return;
     setMessage('');
 
-    const { error: playersError } = await supabase.from('tournament_players').delete().eq('tournament_id', tournament.id);
-    if (playersError) { setMessage(`Delete failed: ${playersError.message}`); return; }
+    const { error: playersError } = await supabase
+      .from('tournament_players')
+      .delete()
+      .eq('tournament_id', tournament.id);
+    if (playersError) {
+      setMessage(`Delete failed: ${playersError.message}`);
+      return;
+    }
 
-    const { error: tournamentError } = await supabase.from('tournaments').delete().eq('id', tournament.id);
-    if (tournamentError) { setMessage(`Delete failed: ${tournamentError.message}`); return; }
+    const { error: tournamentError } = await supabase
+      .from('tournaments')
+      .delete()
+      .eq('id', tournament.id);
+    if (tournamentError) {
+      setMessage(`Delete failed: ${tournamentError.message}`);
+      return;
+    }
 
     try {
       const saved = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
@@ -1967,603 +2185,317 @@ if ((existingMatches || []).length > 0 || tournament.status !== 'draft') {
   }
 
   async function submitGame(matchId: string, game: 1 | 2 | 3) {
-  if (isCompleted) {
-    setMessage('Final results are locked.');
-    return;
-  }
+    if (isCompleted) {
+      setMessage('Final results are locked.');
+      return;
+    }
 
-  const draft = scoreDrafts[matchId];
-  if (!draft) return;
+    const draft = scoreDrafts[matchId];
+    if (!draft) return;
 
-  const aKey = `game_${game}_a` as keyof ScoreDraft;
-  const bKey = `game_${game}_b` as keyof ScoreDraft;
-  const aVal = draft[aKey].trim();
-  const bVal = draft[bKey].trim();
+    const aKey = `game_${game}_a` as keyof ScoreDraft;
+    const bKey = `game_${game}_b` as keyof ScoreDraft;
+    const aVal = draft[aKey].trim();
+    const bVal = draft[bKey].trim();
 
-  if (aVal === '' || bVal === '') {
-    setMessage(`Enter both scores for Game ${game}.`);
-    return;
-  }
+    if (aVal === '' || bVal === '') {
+      setMessage(`Enter both scores for Game ${game}.`);
+      return;
+    }
 
-  const aNum = Math.max(0, Number(aVal));
-  const bNum = Math.max(0, Number(bVal));
+    const aNum = Math.max(0, Number(aVal));
+    const bNum = Math.max(0, Number(bVal));
 
-  if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
-    setMessage('Scores must be valid numbers.');
-    return;
-  }
+    if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+      setMessage('Scores must be valid numbers.');
+      return;
+    }
 
-  if (aNum === bNum) {
-    setMessage('Game cannot end in a tie — one team must win.');
-    return;
-  }
+    if (aNum === bNum) {
+      setMessage('Game cannot end in a tie — one team must win.');
+      return;
+    }
 
-  const previousMatches = matches;
+    const previousMatches = matches;
 
-  const currentMatch = matches.find((m) => m.id === matchId);
-  if (!currentMatch) return;
+    const currentMatch = matches.find((m) => m.id === matchId);
+    if (!currentMatch) return;
 
-  const optimisticMatch: Match = {
-    ...currentMatch,
-    [`game_${game}_a`]: aNum,
-    [`game_${game}_b`]: bNum,
-  };
-
-  const seriesNowComplete = isSeriesComplete(optimisticMatch);
-
-  let finalOptimisticMatch: Match = optimisticMatch;
-
-  if (seriesNowComplete) {
-    const { aScore, bScore } = getSeriesScore(optimisticMatch);
-    finalOptimisticMatch = {
-      ...optimisticMatch,
-      team_a_score: aScore,
-      team_b_score: bScore,
-      is_complete: true,
+    const optimisticMatch: Match = {
+      ...currentMatch,
+      [`game_${game}_a`]: aNum,
+      [`game_${game}_b`]: bNum,
     };
+
+    const seriesNowComplete = isSeriesComplete(optimisticMatch);
+
+    let finalOptimisticMatch: Match = optimisticMatch;
+
+    if (seriesNowComplete) {
+      const { aScore, bScore } = getSeriesScore(optimisticMatch);
+      finalOptimisticMatch = {
+        ...optimisticMatch,
+        team_a_score: aScore,
+        team_b_score: bScore,
+        is_complete: true,
+      };
+    }
+
+    const optimisticMatches = matches.map((m) =>
+      m.id === matchId ? finalOptimisticMatch : m
+    );
+
+    setMessage(`Submitting Game ${game}...`);
+
+    const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
+    const submittedRoundMatches = optimisticMatches.filter(
+      (m) => m.round_number === submittedRound && !m.is_bye
+    );
+    const submittedRoundComplete =
+      submittedRoundMatches.length > 0 &&
+      submittedRoundMatches.every((m) => m.is_complete);
+
+    const nextRound = getNextIncompleteRound(optimisticMatches);
+
+    if (seriesNowComplete) {
+      if (!nextRound) {
+        setSelectedRound(finalRound);
+        setActiveTab('standings');
+        setMessage('Series complete. Tournament finished!');
+      } else if (submittedRoundComplete && nextRound !== submittedRound) {
+        setSelectedRound(nextRound);
+        setMessage(
+          `Series complete. Round ${submittedRound} done. Advancing to Round ${nextRound}.`
+        );
+      } else {
+        const { aWins, bWins } = getSeriesWins(finalOptimisticMatch);
+        setMessage(
+          `Game ${game} submitted. Series complete — ${aWins > bWins ? 'Team A' : 'Team B'} wins!`
+        );
+      }
+    } else {
+      setMessage(`Game ${game} submitted.`);
+    }
+
+    const updateData: Record<string, number | boolean> = {
+      [`game_${game}_a`]: aNum,
+      [`game_${game}_b`]: bNum,
+    };
+
+    if (seriesNowComplete) {
+      const { aScore, bScore } = getSeriesScore(optimisticMatch);
+      updateData.team_a_score = aScore;
+      updateData.team_b_score = bScore;
+      updateData.is_complete = true;
+    }
+
+    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
+
+    if (error) {
+      setMatches(previousMatches);
+      setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
+      setMessage(`Submit failed: ${error.message}`);
+      return;
+    }
+
+    await loadTournamentData(userId);
+
+    if (seriesNowComplete) {
+      const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
+      await upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore);
+
+      if (!nextRound) {
+        const completed = await markTournamentCompleted();
+        if (!completed) return;
+        setSelectedRound(finalRound);
+        setActiveTab('standings');
+        setMessage('Series complete. Tournament finished!');
+        return;
+      }
+    }
   }
 
-  const optimisticMatches = matches.map((m) =>
-    m.id === matchId ? finalOptimisticMatch : m
-  );
+  async function submitMatchScore(matchId: string) {
+    if (isCompleted) {
+      setMessage('Final results are locked.');
+      return;
+    }
 
-  setMessage(`Submitting Game ${game}...`);
+    const draft = scoreDrafts[matchId];
+    if (!draft) {
+      setMessage('Enter both scores first.');
+      return;
+    }
 
-  const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
-  const submittedRoundMatches = optimisticMatches.filter(
-    (m) => m.round_number === submittedRound && !m.is_bye
-  );
-  const submittedRoundComplete =
-    submittedRoundMatches.length > 0 &&
-    submittedRoundMatches.every((m) => m.is_complete);
+    const a = draft.team_a_score.trim();
+    const b = draft.team_b_score.trim();
 
-  const nextRound = getNextIncompleteRound(optimisticMatches);
+    if (a === '' || b === '') {
+      setMessage('Enter both scores before submitting.');
+      return;
+    }
 
-  if (seriesNowComplete) {
+    const aNum = Math.max(0, Number(a));
+    const bNum = Math.max(0, Number(b));
+
+    if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+      setMessage('Scores must be valid numbers.');
+      return;
+    }
+
+    const previousMatches = matches;
+
+    const optimisticMatches = matches.map((m) =>
+      m.id === matchId
+        ? {
+            ...m,
+            team_a_score: aNum,
+            team_b_score: bNum,
+            is_complete: true,
+          }
+        : m
+    );
+
+    setMessage('Submitting score...');
+
+    const completedMatch = optimisticMatches.find((m) => m.id === matchId);
+    if (!completedMatch) return;
+
+    const submittedRound = completedMatch.round_number ?? selectedRound;
+    const submittedRoundMatches = optimisticMatches.filter(
+      (m) => m.round_number === submittedRound && !m.is_bye
+    );
+    const submittedRoundComplete =
+      submittedRoundMatches.length > 0 &&
+      submittedRoundMatches.every((m) => m.is_complete);
+
+    const nextRound = getNextIncompleteRound(optimisticMatches);
+
     if (!nextRound) {
       setSelectedRound(finalRound);
       setActiveTab('standings');
-      setMessage('Series complete. Tournament finished!');
     } else if (submittedRoundComplete && nextRound !== submittedRound) {
       setSelectedRound(nextRound);
-      setMessage(
-        `Series complete. Round ${submittedRound} done. Advancing to Round ${nextRound}.`
-      );
-    } else {
-      const { aWins, bWins } = getSeriesWins(finalOptimisticMatch);
-      setMessage(
-        `Game ${game} submitted. Series complete — ${aWins > bWins ? 'Team A' : 'Team B'} wins!`
-      );
     }
-  } else {
-    setMessage(`Game ${game} submitted.`);
-  }
 
-  const updateData: Record<string, number | boolean> = {
-    [`game_${game}_a`]: aNum,
-    [`game_${game}_b`]: bNum,
-  };
+    const { error } = await supabase
+      .from('matches')
+      .update({
+        team_a_score: aNum,
+        team_b_score: bNum,
+        is_complete: true,
+      })
+      .eq('id', matchId);
 
-  if (seriesNowComplete) {
-    const { aScore, bScore } = getSeriesScore(optimisticMatch);
-    updateData.team_a_score = aScore;
-    updateData.team_b_score = bScore;
-    updateData.is_complete = true;
-  }
+    if (error) {
+      setMatches(previousMatches);
+      setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
+      setMessage(`Submit failed: ${error.message}`);
+      return;
+    }
 
-  const { error } = await supabase
-    .from('matches')
-    .update(updateData)
-    .eq('id', matchId);
-
-  if (error) {
-  setMatches(previousMatches);
-  setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
-  setMessage(`Submit failed: ${error.message}`);
-  return;
-}
-
-await loadTournamentData(userId);
-
-  if (seriesNowComplete) {
-    const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
-    await upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore);
+    const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
 
     if (!nextRound) {
       const completed = await markTournamentCompleted();
       if (!completed) return;
+
       setSelectedRound(finalRound);
       setActiveTab('standings');
-      setMessage('Series complete. Tournament finished!');
+
+      setMessage(
+        statsSaved
+          ? 'Score submitted. Tournament complete.'
+          : 'Score submitted. Tournament complete, but stats update failed.'
+      );
       return;
     }
-  }
-}
 
-  async function submitMatchScore(matchId: string) {
-  if (isCompleted) {
-    setMessage('Final results are locked.');
-    return;
-  }
-
-  const draft = scoreDrafts[matchId];
-  if (!draft) {
-    setMessage('Enter both scores first.');
-    return;
-  }
-
-  const a = draft.team_a_score.trim();
-  const b = draft.team_b_score.trim();
-
-  if (a === '' || b === '') {
-    setMessage('Enter both scores before submitting.');
-    return;
-  }
-
-  const aNum = Math.max(0, Number(a));
-  const bNum = Math.max(0, Number(b));
-
-  if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
-    setMessage('Scores must be valid numbers.');
-    return;
-  }
-
-  // ✅ SAVE CURRENT STATE (for rollback if needed)
-  const previousMatches = matches;
-
-  // ✅ UPDATE UI IMMEDIATELY (optimistic update)
-  const optimisticMatches = matches.map((m) =>
-    m.id === matchId
-      ? {
-          ...m,
-          team_a_score: aNum,
-          team_b_score: bNum,
-          is_complete: true,
-        }
-      : m
-  );
-
-setMessage('Submitting score...');
-
-  const completedMatch = optimisticMatches.find((m) => m.id === matchId);
-  if (!completedMatch) return;
-
-  const submittedRound = completedMatch.round_number ?? selectedRound;
-  const submittedRoundMatches = optimisticMatches.filter(
-    (m) => m.round_number === submittedRound && !m.is_bye
-  );
-  const submittedRoundComplete =
-    submittedRoundMatches.length > 0 &&
-    submittedRoundMatches.every((m) => m.is_complete);
-
-  const nextRound = getNextIncompleteRound(optimisticMatches);
-
-  if (!nextRound) {
-    setSelectedRound(finalRound);
-    setActiveTab('standings');
-  } else if (submittedRoundComplete && nextRound !== submittedRound) {
-    setSelectedRound(nextRound);
-  }
-
-  // ✅ SAVE TO DATABASE AFTER UI UPDATE
-  const { error } = await supabase
-    .from('matches')
-    .update({
-      team_a_score: aNum,
-      team_b_score: bNum,
-      is_complete: true,
-    })
-    .eq('id', matchId);
-
-  // ❌ IF FAILED → ROLLBACK UI
-  if (error) {
-  setMatches(previousMatches);
-  setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
-  setMessage(`Submit failed: ${error.message}`);
-  return;
-}
-
-  const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
-
-  if (!nextRound) {
-    const completed = await markTournamentCompleted();
-    if (!completed) return;
-
-    setSelectedRound(finalRound);
-    setActiveTab('standings');
-
-    setMessage(
-      statsSaved
-        ? 'Score submitted. Tournament complete.'
-        : 'Score submitted. Tournament complete, but stats update failed.'
-    );
-    return;
-  }
-
-  if (submittedRoundComplete && nextRound !== submittedRound) {
-    setMessage(
-      statsSaved
-        ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
-        : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`
-    );
-    return;
-  }
-
-  setMessage(
-    statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
- );
-}
-
-function renderPlayerName(id: string | null) {
-  if (!id) return '-';
-  return playersById[id]?.display_name || 'Player';
-}
-
-function renderTeam(a: string | null, b: string | null) {
-  if (isSingles) return renderPlayerName(a);
-  return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
-}
-
-function renderMatchLabel(match: Match) {
-  return `${renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)} vs ${renderTeam(
-    match.team_b_player_1_id,
-    match.team_b_player_2_id
-  )}`;
-}
-
-function getInitials(playerId1?: string | null, playerId2?: string | null) {
-  const getInitial = (id?: string | null) => {
-    if (!id) return '?';
-
-    const player = playerSlots.find((p) => p.id === id);
-    const name = player?.display_name || '';
-
-    return name.trim().charAt(0).toUpperCase() || '?';
-  };
-
-  const a = getInitial(playerId1);
-  const b = getInitial(playerId2);
-
-  return `${a} & ${b}`;
-}  
-
-function getMatchElementId(matchId: string) {
-  return `live-match-${matchId}`;
-}
-
-function getTournamentModeBadges(tournament: Tournament | null) {
-  if (!tournament) return [];
-
-  const badges = [];
-
-  badges.push(tournament.format === 'singles' ? 'Singles' : 'Doubles');
-
-  if (tournament.format === 'doubles') {
-    if (tournament.doubles_mode === 'fixed') {
-      badges.push('Fixed Partners');
-    } else if (tournament.doubles_mode === 'mixed') {
-      badges.push('Mixed Rotate');
-    } else {
-      badges.push('Rotating Partners');
+    if (submittedRoundComplete && nextRound !== submittedRound) {
+      setMessage(
+        statsSaved
+          ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
+          : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`
+      );
+      return;
     }
+
+    setMessage(
+      statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
+    );
   }
 
-  badges.push(
-    tournament.match_format === 'best_of_3' ? 'Best of 3' : 'Single Game'
-  );
+  function renderPlayerName(id: string | null) {
+    if (!id) return '-';
+    return playersById[id]?.display_name || 'Player';
+  }
 
-  return badges;
-}  
+  function renderTeam(a: string | null, b: string | null) {
+    if (isSingles) return renderPlayerName(a);
+    return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
+  }
 
-function getWinnerStyle(team: 'a' | 'b', match: Match) {
-  if (isBestOf3) {
-    if (!match.is_complete) return {};
-    const { aWins, bWins } = getSeriesWins(match);
-    const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
+  function getMatchElementId(matchId: string) {
+    return `live-match-${matchId}`;
+  }
+
+  function getWinnerStyle(team: 'a' | 'b', match: Match) {
+    if (isBestOf3) {
+      if (!match.is_complete) return {};
+      const { aWins, bWins } = getSeriesWins(match);
+      const isWinner = (team === 'a' && aWins > bWins) || (team === 'b' && bWins > aWins);
+      return isWinner ? { color: '#FFCB05' } : {};
+    }
+
+    if (match.team_a_score === null || match.team_b_score === null) return {};
+
+    const aWins = match.team_a_score > match.team_b_score;
+    const bWins = match.team_b_score > match.team_a_score;
+    const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
+
     return isWinner ? { color: '#FFCB05' } : {};
   }
 
-  if (match.team_a_score === null || match.team_b_score === null) return {};
+  function renderBestOf3Match(match: Match) {
+    const draft = scoreDrafts[match.id] || {
+      team_a_score: '',
+      team_b_score: '',
+      game_1_a: '',
+      game_1_b: '',
+      game_2_a: '',
+      game_2_b: '',
+      game_3_a: '',
+      game_3_b: '',
+    };
 
-  const aWins = match.team_a_score > match.team_b_score;
-  const bWins = match.team_b_score > match.team_a_score;
-  const isWinner = (team === 'a' && aWins) || (team === 'b' && bWins);
+    const { aWins, bWins } = getSeriesWins(match);
+    const game1Done = match.game_1_a !== null && match.game_1_b !== null;
+    const game2Done = match.game_2_a !== null && match.game_2_b !== null;
+    const showGame3 = game1Done && game2Done && needsGame3(match);
+    const seriesComplete = match.is_complete;
+    const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+    const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+    const isNextUp =
+      !isCompleted &&
+      match.round_number === currentRound &&
+      nextUpMatch?.id === match.id;
 
-  return isWinner ? { color: '#FFCB05' } : {};
-}
-
-function getLiveBannerWinnerStyle(side: 'a' | 'b', match: Match) {
-  if (isBestOf3) {
-    const { aScore, bScore } = getSeriesScore(match);
-    if (aScore === bScore) return {};
-
-    const isWinner =
-      (side === 'a' && aScore > bScore) || (side === 'b' && bScore > aScore);
-
-    return isWinner
-      ? { color: '#FFCB05', transform: 'scale(1.04)' }
-      : { opacity: 0.78 };
-  }
-
-  if (match.team_a_score === null || match.team_b_score === null) return {};
-  if (match.team_a_score === match.team_b_score) return {};
-
-  const isWinner =
-    (side === 'a' && match.team_a_score > match.team_b_score) ||
-    (side === 'b' && match.team_b_score > match.team_a_score);
-
-  return isWinner
-    ? { color: '#FFCB05', transform: 'scale(1.04)' }
-    : { opacity: 0.78 };
-}
-
-function renderBestOf3Match(match: Match) {
-  const draft = scoreDrafts[match.id] || {
-    team_a_score: '',
-    team_b_score: '',
-    game_1_a: '',
-    game_1_b: '',
-    game_2_a: '',
-    game_2_b: '',
-    game_3_a: '',
-    game_3_b: '',
-  };
-
-  const { aWins, bWins } = getSeriesWins(match);
-  const game1Done = match.game_1_a !== null && match.game_1_b !== null;
-  const game2Done = match.game_2_a !== null && match.game_2_b !== null;
-  const showGame3 = game1Done && game2Done && needsGame3(match);
-  const seriesComplete = match.is_complete;
-  const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
-  const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
-  const isNextUp =
-    !isCompleted &&
-    match.round_number === currentRound &&
-    nextUpMatch?.id === match.id;
-
-  return (
-    <div
-      id={getMatchElementId(match.id)}
-      key={match.id}
-      className="list-item"
-      style={
-        isNextUp
-          ? {
-              borderColor: 'rgba(255,203,5,.55)',
-              boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-            }
-          : undefined
-      }
-    >
+    return (
       <div
-  className="row-between"
-  style={{
-    marginBottom: 12,
-    alignItems: 'flex-start',
-    gap: 10,
-  }}
->
-  <div>
-    <div
-      style={{
-        fontSize: 11,
-        fontWeight: 800,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.6)',
-        marginBottom: 4,
-      }}
-    >
-      Court
-    </div>
-
-    <div
-      style={{
-        fontSize: 20,
-        fontWeight: 900,
-        lineHeight: 1.1,
-      }}
-    >
-      {getCourtLabel(tournament, match.court_number) || '-'}
-    </div>
-  </div>
-
-  <div
-    style={{
-      display: 'flex',
-      gap: 8,
-      flexWrap: 'wrap',
-      justifyContent: 'flex-end',
-    }}
-  >
-    {isNextUp ? (
-      <span
-        className="tag"
-        style={{
-          background: 'rgba(255,203,5,0.14)',
-          border: '1px solid rgba(255,203,5,0.35)',
-          color: '#FFCB05',
-          fontWeight: 800,
-        }}
+        id={getMatchElementId(match.id)}
+        key={match.id}
+        className="list-item"
+        style={
+          isNextUp
+            ? {
+                borderColor: 'rgba(255,203,5,.55)',
+                boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+              }
+            : undefined
+        }
       >
-        NEXT UP
-      </span>
-    ) : null}
-
-    <span
-      className={match.is_complete ? 'tag green' : 'tag'}
-      style={!match.is_complete ? { fontWeight: 800 } : undefined}
-    >
-      {match.is_complete ? 'COMPLETE' : 'LIVE'}
-    </span>
-  </div>
-</div>
-
-            <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12,
-            padding: 12,
-            ...getWinnerStyle('a', match),
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.6)',
-              marginBottom: 6,
-            }}
-          >
-            Team A
-          </div>
-
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              lineHeight: 1.25,
-              whiteSpace: 'pre-line',
-            }}
-          >
-            {teamAName}
-          </div>
-        </div>
-
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: '0.12em',
-            color: 'rgba(255,255,255,0.45)',
-          }}
-        >
-          VS
-        </div>
-
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 12,
-            padding: 12,
-            ...getWinnerStyle('b', match),
-          }}
-        >
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.6)',
-              marginBottom: 6,
-            }}
-          >
-            Team B
-          </div>
-
-          <div
-            style={{
-              fontSize: 18,
-              fontWeight: 800,
-              lineHeight: 1.25,
-              whiteSpace: 'pre-line',
-            }}
-          >
-            {teamBName}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 10 }}>
-        <div
-          className="muted"
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            marginBottom: 6,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
-          Game 1
-        </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <input
-            className="input"
-            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-            type="number"
-            value={draft.game_1_a}
-            disabled={game1Done || seriesComplete || isCompleted}
-            onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
-            placeholder={isOrganizer ? "0" : "Organizer only"}
-          />
-          <input
-            className="input"
-            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-            type="number"
-            value={draft.game_1_b}
-            disabled={game1Done || seriesComplete || isCompleted}
-            onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
-            placeholder={isOrganizer ? "0" : "Organizer only"}
-          />
-        </div>
-                {!game1Done && !seriesComplete && !isCompleted ? (
-          <button
-            className="button primary"
-            onClick={() => submitGame(match.id, 1)}
-            style={{
-              width: '100%',
-              fontWeight: 800,
-              fontSize: 16,
-              padding: '14px 16px',
-            }}
-          >
-            {isOrganizer ? 'Submit Game 1' : 'Organizer Submits Game 1'}
-          </button>
-        ) : (
-          <div
-            style={{
-              padding: '12px 14px',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-              textAlign: 'center',
-            }}
-          >
+        <div className="row-between" style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}>
+          <div>
             <div
               style={{
                 fontSize: 11,
@@ -2574,84 +2506,98 @@ function renderBestOf3Match(match: Match) {
                 marginBottom: 4,
               }}
             >
-              Game 1 Result
+              Court
             </div>
 
             <div
               style={{
-                fontSize: 15,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.92)',
+                fontSize: 20,
+                fontWeight: 900,
+                lineHeight: 1.1,
               }}
             >
-              {match.game_1_a}-{match.game_1_b} —{' '}
-              {match.game_1_a! > match.game_1_b! ? teamAName : teamBName} wins
+              {getCourtLabel(tournament, match.court_number) || '-'}
             </div>
           </div>
-        )}
-      </div>
 
-      <div style={{ marginBottom: 10 }}>
-        <div
-          className="muted"
-          style={{
-            fontSize: 12,
-            fontWeight: 800,
-            marginBottom: 6,
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-          }}
-        >
-          Game 2
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {isNextUp ? (
+              <span
+                className="tag"
+                style={{
+                  background: 'rgba(255,203,5,0.14)',
+                  border: '1px solid rgba(255,203,5,0.35)',
+                  color: '#FFCB05',
+                  fontWeight: 800,
+                }}
+              >
+                NEXT UP
+              </span>
+            ) : null}
+
+            <span
+              className={match.is_complete ? 'tag green' : 'tag'}
+              style={!match.is_complete ? { fontWeight: 800 } : undefined}
+            >
+              {match.is_complete ? 'COMPLETE' : 'LIVE'}
+            </span>
+          </div>
         </div>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <input
-            className="input"
-            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-            type="number"
-            value={draft.game_2_a}
-            disabled={!game1Done || game2Done || seriesComplete || isCompleted}
-            onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
-            placeholder={isOrganizer ? "0" : "Organizer only"}
-          />
-          <input
-            className="input"
-            style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-            type="number"
-            value={draft.game_2_b}
-            disabled={!game1Done || game2Done || seriesComplete || isCompleted}
-            onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
-            placeholder={isOrganizer ? "0" : "Organizer only"}
-          />
-        </div>
-                {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
-          <button
-            className="button primary"
-            onClick={() => submitGame(match.id, 2)}
+
+        <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+          <div
             style={{
-              width: '100%',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12,
+              padding: 12,
+              ...getWinnerStyle('a', match),
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: 6,
+              }}
+            >
+              Team A
+            </div>
+
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                lineHeight: 1.25,
+                whiteSpace: 'pre-line',
+              }}
+            >
+              {teamAName}
+            </div>
+          </div>
+
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: 12,
               fontWeight: 800,
-              fontSize: 16,
-              padding: '14px 16px',
+              letterSpacing: '0.12em',
+              color: 'rgba(255,255,255,0.45)',
             }}
           >
-            {isOrganizer ? 'Submit Game 2' : 'Organizer Submits Game 2'}
-          </button>
-        ) : game2Done ? (
+            VS
+          </div>
+
           <div
             style={{
-              padding: '12px 14px',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.08)',
               background: 'rgba(255,255,255,0.03)',
-              textAlign: 'center',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 12,
+              padding: 12,
+              ...getWinnerStyle('b', match),
             }}
           >
             <div
@@ -2661,60 +2607,25 @@ function renderBestOf3Match(match: Match) {
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 color: 'rgba(255,255,255,0.6)',
-                marginBottom: 4,
+                marginBottom: 6,
               }}
             >
-              Game 2 Result
+              Team B
             </div>
 
             <div
               style={{
-                fontSize: 15,
+                fontSize: 18,
                 fontWeight: 800,
-                color: 'rgba(255,255,255,0.92)',
+                lineHeight: 1.25,
+                whiteSpace: 'pre-line',
               }}
             >
-              {match.game_2_a}-{match.game_2_b} —{' '}
-              {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
+              {teamBName}
             </div>
           </div>
-        ) : (
-          <div
-            style={{
-              padding: '12px 14px',
-              borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.6)',
-                marginBottom: 4,
-              }}
-            >
-              Game 2 Status
-            </div>
+        </div>
 
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 800,
-                color: 'rgba(255,255,255,0.92)',
-              }}
-            >
-              Waiting for Game 1
-            </div>
-          </div>
-        )}
-      </div>
-
-            {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
         <div style={{ marginBottom: 10 }}>
           <div
             className="muted"
@@ -2726,7 +2637,7 @@ function renderBestOf3Match(match: Match) {
               letterSpacing: '0.08em',
             }}
           >
-            Game 3
+            Game 1
           </div>
           <div
             style={{
@@ -2740,25 +2651,25 @@ function renderBestOf3Match(match: Match) {
               className="input"
               style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
               type="number"
-              value={draft.game_3_a}
-              disabled={match.game_3_a !== null || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
+              value={draft.game_1_a}
+              disabled={game1Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
               placeholder={isOrganizer ? '0' : 'Organizer only'}
             />
             <input
               className="input"
               style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
               type="number"
-              value={draft.game_3_b}
-              disabled={match.game_3_b !== null || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
+              value={draft.game_1_b}
+              disabled={game1Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
               placeholder={isOrganizer ? '0' : 'Organizer only'}
             />
           </div>
-          {match.game_3_a === null && !seriesComplete && !isCompleted ? (
+          {!game1Done && !seriesComplete && !isCompleted ? (
             <button
               className="button primary"
-              onClick={() => submitGame(match.id, 3)}
+              onClick={() => submitGame(match.id, 1)}
               style={{
                 width: '100%',
                 fontWeight: 800,
@@ -2766,9 +2677,9 @@ function renderBestOf3Match(match: Match) {
                 padding: '14px 16px',
               }}
             >
-              {isOrganizer ? 'Submit Game 3' : 'Organizer Submits Game 3'}
+              {isOrganizer ? 'Submit Game 1' : 'Organizer Submits Game 1'}
             </button>
-          ) : match.game_3_a !== null ? (
+          ) : (
             <div
               style={{
                 padding: '12px 14px',
@@ -2788,7 +2699,7 @@ function renderBestOf3Match(match: Match) {
                   marginBottom: 4,
                 }}
               >
-                Game 3 Result
+                Game 1 Result
               </div>
 
               <div
@@ -2798,61 +2709,266 @@ function renderBestOf3Match(match: Match) {
                   color: 'rgba(255,255,255,0.92)',
                 }}
               >
-                {match.game_3_a}-{match.game_3_b} —{' '}
-                {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
+                {match.game_1_a}-{match.game_1_b} — {match.game_1_a! > match.game_1_b! ? teamAName : teamBName} wins
               </div>
             </div>
-          ) : null}
+          )}
         </div>
-      ) : game1Done && game2Done && !seriesComplete ? (
-        <div
-          className="list-item"
-          style={{
-            padding: 12,
-            textAlign: 'center',
-            border: '1px solid rgba(255,203,5,0.25)',
-            background: 'rgba(255,203,5,0.08)',
-          }}
-        >
+
+        <div style={{ marginBottom: 10 }}>
           <div
+            className="muted"
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 800,
-              letterSpacing: '0.08em',
+              marginBottom: 6,
               textTransform: 'uppercase',
-              color: '#FFCB05',
-              marginBottom: 4,
+              letterSpacing: '0.08em',
             }}
           >
-            Series Result
+            Game 2
           </div>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_2_a}
+              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
+              placeholder={isOrganizer ? '0' : 'Organizer only'}
+            />
+            <input
+              className="input"
+              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+              type="number"
+              value={draft.game_2_b}
+              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+              onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
+              placeholder={isOrganizer ? '0' : 'Organizer only'}
+            />
+          </div>
+          {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
+            <button
+              className="button primary"
+              onClick={() => submitGame(match.id, 2)}
+              style={{
+                width: '100%',
+                fontWeight: 800,
+                fontSize: 16,
+                padding: '14px 16px',
+              }}
+            >
+              {isOrganizer ? 'Submit Game 2' : 'Organizer Submits Game 2'}
+            </button>
+          ) : game2Done ? (
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.03)',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: 4,
+                }}
+              >
+                Game 2 Result
+              </div>
 
-          <div style={{ fontWeight: 800, color: '#FFCB05' }}>
-            {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
-          </div>
-        </div>
-      ) : null}
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              >
+                {match.game_2_a}-{match.game_2_b} — {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.03)',
+                textAlign: 'center',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: 4,
+                }}
+              >
+                Game 2 Status
+              </div>
 
-      {seriesComplete ? (
-        <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
-          <div style={{ fontWeight: 800, color: '#FFCB05' }}>
-            {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
-          </div>
+              <div
+                style={{
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: 'rgba(255,255,255,0.92)',
+                }}
+              >
+                Waiting for Game 1
+              </div>
+            </div>
+          )}
         </div>
-      ) : null}
-    </div>
-  );
-}
+
+        {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
+          <div style={{ marginBottom: 10 }}>
+            <div
+              className="muted"
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                marginBottom: 6,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}
+            >
+              Game 3
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 8,
+                marginBottom: 8,
+              }}
+            >
+              <input
+                className="input"
+                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+                type="number"
+                value={draft.game_3_a}
+                disabled={match.game_3_a !== null || seriesComplete || isCompleted}
+                onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
+                placeholder={isOrganizer ? '0' : 'Organizer only'}
+              />
+              <input
+                className="input"
+                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
+                type="number"
+                value={draft.game_3_b}
+                disabled={match.game_3_b !== null || seriesComplete || isCompleted}
+                onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
+                placeholder={isOrganizer ? '0' : 'Organizer only'}
+              />
+            </div>
+            {match.game_3_a === null && !seriesComplete && !isCompleted ? (
+              <button
+                className="button primary"
+                onClick={() => submitGame(match.id, 3)}
+                style={{
+                  width: '100%',
+                  fontWeight: 800,
+                  fontSize: 16,
+                  padding: '14px 16px',
+                }}
+              >
+                {isOrganizer ? 'Submit Game 3' : 'Organizer Submits Game 3'}
+              </button>
+            ) : match.game_3_a !== null ? (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(255,255,255,0.03)',
+                  textAlign: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.6)',
+                    marginBottom: 4,
+                  }}
+                >
+                  Game 3 Result
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: 'rgba(255,255,255,0.92)',
+                  }}
+                >
+                  {match.game_3_a}-{match.game_3_b} — {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : game1Done && game2Done && !seriesComplete ? (
+          <div
+            className="list-item"
+            style={{
+              padding: 12,
+              textAlign: 'center',
+              border: '1px solid rgba(255,203,5,0.25)',
+              background: 'rgba(255,203,5,0.08)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: '#FFCB05',
+                marginBottom: 4,
+              }}
+            >
+              Series Result
+            </div>
+
+            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
+              {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
+            </div>
+          </div>
+        ) : null}
+
+        {seriesComplete ? (
+          <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
+            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
+              {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
+            </div>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <main className="page-shell">
-        <div
-        className="card"
-        style={{
-          marginBottom: 14,
-          padding: 12,
-        }}
-      >
+      <div className="card" style={{ marginBottom: 14, padding: 12 }}>
         <div
           style={{
             fontSize: 28,
@@ -2900,1018 +3016,1035 @@ function renderBestOf3Match(match: Match) {
       <TopNav />
 
       {isStarted && yourMatch && (
-  <div
-    className="card"
-    style={{
-      border: '1px solid rgba(255,203,5,0.4)',
-      background: 'rgba(255,203,5,0.08)',
-      marginBottom: 12,
-    }}
-  >
-    <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 6 }}>
-      Your Match
-    </div>
+        <div
+          className="card"
+          style={{
+            border: '1px solid rgba(255,203,5,0.4)',
+            background: 'rgba(255,203,5,0.08)',
+            marginBottom: 12,
+          }}
+        >
+          <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 6 }}>Your Match</div>
 
-    <div style={{ fontSize: 16, fontWeight: 700 }}>
-      {getCourtLabel(tournament, yourMatch.court_number)}
-    </div>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>
+            {getCourtLabel(tournament, yourMatch.court_number)}
+          </div>
 
-    <div className="muted" style={{ marginTop: 4 }}>
-      {playersById[yourMatch.team_a_player_1_id!]?.display_name}
-      {yourMatch.team_a_player_2_id
-        ? ` & ${playersById[yourMatch.team_a_player_2_id!]?.display_name}`
-        : ''}
-
-      {'  vs  '}
-
-      {playersById[yourMatch.team_b_player_1_id!]?.display_name}
-      {yourMatch.team_b_player_2_id
-        ? ` & ${playersById[yourMatch.team_b_player_2_id!]?.display_name}`
-        : ''}
-    </div>
-  </div>
-)}
+          <div className="muted" style={{ marginTop: 4 }}>
+            {playersById[yourMatch.team_a_player_1_id!]?.display_name}
+            {yourMatch.team_a_player_2_id
+              ? ` & ${playersById[yourMatch.team_a_player_2_id!]?.display_name}`
+              : ''}{' '}
+            vs {playersById[yourMatch.team_b_player_1_id!]?.display_name}
+            {yourMatch.team_b_player_2_id
+              ? ` & ${playersById[yourMatch.team_b_player_2_id!]?.display_name}`
+              : ''}
+          </div>
+        </div>
+      )}
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
 
-      <div className="card" style={{ marginBottom: 14 }}>
-                 {isCompleted ? (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
+        <button
+          type="button"
+          className={`button ${activeTab === 'players' ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab('players')}
+        >
+          Players
+        </button>
+        <button
+          type="button"
+          className={`button ${activeTab === 'rounds' ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab('rounds')}
+        >
+          Rounds
+        </button>
+        <button
+          type="button"
+          className={`button ${activeTab === 'standings' ? 'primary' : 'secondary'}`}
+          onClick={() => setActiveTab('standings')}
+        >
+          Standings
+        </button>
+      </div>
+
+      {activeTab === 'players' && (
+        <>
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Players</div>
+            <div className="card-subtitle">
+              {isCompleted
+                ? 'Tournament is complete. Player list is locked.'
+                : isStarted
+                ? 'Tournament has started. Player list is locked.'
+                : isSingles
+                ? 'Singles tournament — each player competes individually.'
+                : 'Players can claim a spot, or the organizer can type names manually.'}
+            </div>
+
+            {isLoading ? (
+              <div className="muted">Loading player spots...</div>
+            ) : (
+              <div className="grid">
+                {playerSlots.map((slot) => {
+                  const isMine = slot.claimed_by_user_id === userId;
+                  const isClaimedBySomeone = !!slot.claimed_by_user_id;
+                  const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
+                  const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
+
+                  return (
+                    <div
+                      key={slot.id}
+                      className="list-item"
+                      style={{
+                        borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
+                        boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
+                      }}
+                    >
+                      <div className="row-between" style={{ marginBottom: 10 }}>
+                        <div>
+                          <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
+                          <div className="muted">{slot.display_name || 'Open spot'}</div>
+                        </div>
+
+                        {isMine ? (
+                          <span className="tag green">Yours</span>
+                        ) : isClaimedBySomeone ? (
+                          <span className="tag green">Claimed</span>
+                        ) : isLocked ? (
+                          <span className="tag">Locked</span>
+                        ) : (
+                          <span className="tag">Open</span>
+                        )}
+                      </div>
+
+                      <div className="grid">
+                        <input
+                          className="input"
+                          value={newNames[slot.id] ?? ''}
+                          onChange={(e) =>
+                            setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
+                          }
+                          placeholder={`Name for Player ${slot.slot_number}`}
+                          disabled={!canEditName}
+                        />
+
+                        {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
+                          <div
+                            style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                              gap: 8,
+                            }}
+                          >
+                            <button
+                              type="button"
+                              className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
+                              onClick={() => updatePlayerGender(slot.id, 'male')}
+                              disabled={isLocked}
+                            >
+                              Male
+                            </button>
+                            <button
+                              type="button"
+                              className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
+                              onClick={() => updatePlayerGender(slot.id, 'female')}
+                              disabled={isLocked}
+                            >
+                              Female
+                            </button>
+                            <button
+                              type="button"
+                              className="button secondary"
+                              onClick={() => updatePlayerGender(slot.id, '')}
+                              disabled={isLocked}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        ) : null}
+
+                        {!isLocked && canClaim ? (
+                          <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                            Claim Spot
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <>
+                  {!isLocked ? (
+                    <button
+                      className="button secondary"
+                      onClick={saveAllPlayerNames}
+                      disabled={isSavingNames}
+                    >
+                      {isSavingNames ? 'Saving...' : 'Save Player Names'}
+                    </button>
+                  ) : null}
+
+                  {isOrganizer ? (
+                    <>
+                      <button
+                        className="button primary"
+                        onClick={generateScheduleAndStart}
+                        disabled={isStarting || !canStartTournament || isScheduleLocked}
+                      >
+                        {isScheduleLocked
+                          ? 'Schedule Locked'
+                          : isStarting
+                          ? 'Starting...'
+                          : 'Start Tournament'}
+                      </button>
+
+                      {isScheduleLocked ? (
+                        <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+                          Schedule is locked after the tournament starts.
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                </>
+              </div>
+            )}
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Tournament Info</div>
+            <div className="grid" style={{ marginBottom: 14 }}>
+              <div className="list-item">
+                <div className="label">Join Code</div>
+                <div className="row-between">
+                  <strong style={{ letterSpacing: '0.08em' }}>{tournament?.join_code || '...'}</strong>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <span className={isLive ? 'tag green' : 'tag'}>
+                      {isLive ? 'Live' : 'Connecting'}
+                    </span>
+                    <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
+                    <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="list-item">
+                <div className="row-between">
+                  <span className="muted">Organizer</span>
+                  <strong>{tournament?.organizer_name || '-'}</strong>
+                </div>
+                <div className="row-between" style={{ marginTop: 8 }}>
+                  <span className="muted">Status</span>
+                  <strong>{isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}</strong>
+                </div>
+                <div className="row-between" style={{ marginTop: 8 }}>
+                  <span className="muted">Progress</span>
+                  <strong>
+                    {completedMatchCount}/{totalPlayableMatchCount} matches
+                  </strong>
+                </div>
+              </div>
+
+              <div className="list-item">
+                <div className="row-between">
+                  <span className="muted">Date</span>
+                  <strong>{tournament?.event_date || '-'}</strong>
+                </div>
+                <div className="row-between" style={{ marginTop: 8 }}>
+                  <span className="muted">Time</span>
+                  <strong>{tournament?.event_time || '-'}</strong>
+                </div>
+                <div className="row-between" style={{ marginTop: 8 }}>
+                  <span className="muted">Location</span>
+                  <strong style={{ textAlign: 'right' }}>{tournament?.location || '-'}</strong>
+                </div>
+              </div>
+            </div>
+
+            {isOrganizer ? (
+              <div className="grid">
+                <button type="button" className="button secondary" onClick={copyJoinCode}>
+                  {copied ? 'Join Code Copied' : 'Copy Join Code'}
+                </button>
+                <button type="button" className="button primary" onClick={shareJoinLink}>
+                  Share Join Link
+                </button>
+                {isStarted && !isCompleted ? (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={endTournamentEarly}
+                    disabled={isEndingEarly}
+                  >
+                    {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
+                  </button>
+                ) : null}
+                {isCompleted ? (
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={rematchTournament}
+                    disabled={isRematching}
+                  >
+                    {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
+                  </button>
+                ) : null}
+                {isCompleted ? (
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={() => router.push(`/tournament/${params.id}/results`)}
+                    style={{ fontWeight: 800, fontSize: 16 }}
+                  >
+                    🏆 View Results
+                  </button>
+                ) : null}
+                {!isStarted && !isCompleted ? (
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={deleteTournament}
+                    style={{ borderColor: 'rgba(248,113,113,.4)', color: '#f87171' }}
+                  >
+                    Delete Tournament
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          {isOrganizer && publicViewUrl ? (
+            <div className="card" style={{ marginBottom: 14 }}>
+              <button
+                type="button"
+                onClick={() => setShowSharingTools((prev) => !prev)}
+                style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#fff',
+                  padding: 0,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+              >
+                <div className="row-between" style={{ alignItems: 'center', gap: 12 }}>
+                  <div>
+                    <div className="card-title" style={{ marginBottom: 4 }}>
+                      Sharing & Public View
+                    </div>
+                    <div className="card-subtitle" style={{ marginBottom: 0 }}>
+                      QR code, public link, and spectator sharing tools
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 800,
+                      color: '#FFCB05',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {showSharingTools ? '−' : '+'}
+                  </div>
+                </div>
+              </button>
+
+              {showSharingTools ? (
+                <div style={{ marginTop: 14, textAlign: 'center' }}>
+                  <div className="card-subtitle" style={{ marginBottom: 16 }}>
+                    Players and spectators can scan this to open the live public tournament page.
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      padding: 12,
+                      background: '#ffffff',
+                      borderRadius: 16,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <QRCodeSVG
+                      value={publicViewUrl}
+                      size={220}
+                      bgColor="#ffffff"
+                      fgColor="#111111"
+                      includeMargin={true}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: 'rgba(255,255,255,.72)',
+                      wordBreak: 'break-all',
+                      marginBottom: 12,
+                    }}
+                  >
+                    {publicViewUrl}
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      gap: 8,
+                    }}
+                  >
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={copyPublicLink}
+                    >
+                      Copy Public Link
+                    </button>
+
+                    <a
+                      href={publicViewUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="button primary"
+                      style={{
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      Open Public View
+                    </a>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      )}
+
+      {activeTab === 'rounds' && (
+        <div className="card">
+          {isStarted && !isCompleted ? (
             <div
               style={{
-                marginBottom: 18,
-                padding: 18,
-                borderRadius: 18,
-                background: 'linear-gradient(135deg, #0f1722, #0b1220)',
-                border: '1px solid rgba(255,255,255,.12)',
-                textAlign: 'center',
+                marginBottom: 12,
+                padding: 12,
+                borderRadius: 10,
+                background: 'rgba(255, 203, 5, 0.08)',
+                border: '1px solid rgba(255, 203, 5, 0.25)',
               }}
             >
               <div
                 style={{
                   fontSize: 12,
-                  opacity: 0.72,
-                  marginBottom: 6,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
+                  fontWeight: 700,
+                  color: '#FFCB05',
+                  letterSpacing: 1,
                 }}
               >
-                🏆 Tournament Complete
+                CURRENT ROUND
+              </div>
+
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  marginTop: 2,
+                }}
+              >
+                Round {currentRound}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="card-title">All Rounds</div>
+          <div className="card-subtitle">
+            {isCompleted
+              ? 'Tournament complete. Scores are locked.'
+              : isStarted
+              ? `Current live round: ${currentRound}`
+              : 'Round schedule appears here after the tournament starts.'}
+
+            {!isCompleted && isStarted ? (
+              <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
+                Organizer enters official scores
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: 12,
+              marginTop: 12,
+              marginBottom: 18,
+            }}
+          >
+            {roundsAvailable.map((round) => {
+              const status = roundStatusByRound.get(round);
+              const isSelected = selectedRound === round;
+              const isCurrent = status === 'current';
+
+              return (
+                <button
+                  key={round}
+                  type="button"
+                  onClick={() => setSelectedRound(round)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: 14,
+                    border: isSelected
+                      ? '1px solid rgba(255, 203, 5, 0.6)'
+                      : '1px solid rgba(255,255,255,0.08)',
+                    background: isSelected
+                      ? 'rgba(255, 203, 5, 0.08)'
+                      : 'rgba(255,255,255,0.03)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: 1,
+                      color: isCurrent ? '#FFCB05' : 'rgba(255,255,255,0.5)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    {isCurrent ? 'LIVE' : 'ROUND'}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 20,
+                      fontWeight: 800,
+                      color: '#fff',
+                    }}
+                  >
+                    Round {round}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
+            <div className="muted">No matches in this round yet.</div>
+          ) : (
+            <div className="grid">
+              {matchesForSelectedRound.map((match) => {
+                const isNextUp =
+                  !isCompleted &&
+                  match.round_number === currentRound &&
+                  nextUpMatch?.id === match.id;
+
+                if (isBestOf3) return renderBestOf3Match(match);
+
+                const draft = scoreDrafts[match.id] || {
+                  team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+                  team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+                  game_1_a: '',
+                  game_1_b: '',
+                  game_2_a: '',
+                  game_2_b: '',
+                  game_3_a: '',
+                  game_3_b: '',
+                };
+
+                return (
+                  <div
+                    id={getMatchElementId(match.id)}
+                    key={match.id}
+                    className="list-item"
+                    style={
+                      isNextUp
+                        ? {
+                            borderColor: 'rgba(255,203,5,.55)',
+                            boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="row-between" style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}>
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: 4,
+                          }}
+                        >
+                          Court
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: 20,
+                            fontWeight: 900,
+                            lineHeight: 1.1,
+                          }}
+                        >
+                          {getCourtLabel(tournament, match.court_number) || '-'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {isNextUp ? (
+                          <span
+                            className="tag"
+                            style={{
+                              background: 'rgba(255,203,5,0.14)',
+                              border: '1px solid rgba(255,203,5,0.35)',
+                              color: '#FFCB05',
+                              fontWeight: 800,
+                            }}
+                          >
+                            CURRENT
+                          </span>
+                        ) : null}
+
+                        <span
+                          className={match.is_complete ? 'tag green' : 'tag'}
+                          style={!match.is_complete ? { fontWeight: 800 } : undefined}
+                        >
+                          {match.is_complete ? 'COMPLETE' : 'LIVE'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+                      <div
+                        className="list-item"
+                        style={{
+                          padding: 12,
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          background: 'rgba(255,255,255,0.03)',
+                          borderRadius: 12,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: 6,
+                          }}
+                        >
+                          Team A
+                        </div>
+
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            fontSize: 18,
+                            lineHeight: 1.25,
+                            marginBottom: 10,
+                            ...getWinnerStyle('a', match),
+                          }}
+                        >
+                          {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                        </div>
+
+                        <input
+                          className="input"
+                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
+                          type="number"
+                          value={draft.team_a_score}
+                          disabled={!isOrganizer || match.is_complete || isCompleted}
+                          onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
+                          onBlur={() => saveScoreField(match.id, 'team_a_score')}
+                          placeholder={isOrganizer ? '0' : 'Organizer only'}
+                        />
+                      </div>
+
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          fontSize: 12,
+                          fontWeight: 800,
+                          letterSpacing: '0.12em',
+                          color: 'rgba(255,255,255,0.45)',
+                        }}
+                      >
+                        VS
+                      </div>
+
+                      <div
+                        className="list-item"
+                        style={{
+                          padding: 12,
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          background: 'rgba(255,255,255,0.03)',
+                          borderRadius: 12,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: 6,
+                          }}
+                        >
+                          Team B
+                        </div>
+
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            fontSize: 18,
+                            lineHeight: 1.25,
+                            marginBottom: 10,
+                            ...getWinnerStyle('b', match),
+                          }}
+                        >
+                          {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+                        </div>
+
+                        <input
+                          className="input"
+                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
+                          type="number"
+                          value={draft.team_b_score}
+                          disabled={!isOrganizer || match.is_complete || isCompleted}
+                          onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
+                          onBlur={() => saveScoreField(match.id, 'team_b_score')}
+                          placeholder={isOrganizer ? '0' : 'Organizer only'}
+                        />
+                      </div>
+                    </div>
+
+                    {match.is_complete || isCompleted ? (
+                      <div
+                        style={{
+                          marginTop: 2,
+                          padding: '12px 14px',
+                          borderRadius: 12,
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          background: 'rgba(255,255,255,0.03)',
+                          textAlign: 'center',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            color: 'rgba(255,255,255,0.6)',
+                            marginBottom: 4,
+                          }}
+                        >
+                          Status
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 800,
+                            color: isCompleted ? 'rgba(255,255,255,0.9)' : '#86efac',
+                          }}
+                        >
+                          {isCompleted ? 'Final Locked' : 'Score Submitted'}
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="button primary"
+                        onClick={() => submitMatchScore(match.id)}
+                        disabled={!isOrganizer}
+                        style={{
+                          width: '100%',
+                          fontWeight: 800,
+                          fontSize: 16,
+                          padding: '14px 16px',
+                        }}
+                      >
+                        {isOrganizer ? 'Submit Score' : 'Organizer Submits Score'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {byesForSelectedRound.length ? (
+                <div className="list-item">
+                  <div style={{ fontWeight: 800, marginBottom: 8 }}>Byes This Round</div>
+                  <div className="grid">
+                    {byesForSelectedRound.map((bye) => (
+                      <div key={bye.id} className="list-item" style={{ padding: 10 }}>
+                        {renderPlayerName(bye.team_a_player_1_id)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'standings' && (
+        <div className="card">
+          <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
+          <div className="card-subtitle">
+            {isCompleted
+              ? 'Tournament complete. Final results are locked.'
+              : 'Ranked by wins, then point differential, then points scored.'}
+          </div>
+
+          {isCompleted && tournamentWinner ? (
+            <div
+              style={{
+                marginTop: 14,
+                marginBottom: 14,
+                padding: 16,
+                borderRadius: 18,
+                background: 'linear-gradient(135deg, rgba(255,203,5,0.16), rgba(255,203,5,0.06))',
+                border: '1px solid rgba(255,203,5,0.28)',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: '#FFCB05',
+                  marginBottom: 6,
+                }}
+              >
+                Champion
               </div>
 
               <div
                 style={{
                   fontSize: 24,
                   fontWeight: 900,
-                  color: '#FFCB05',
+                  color: '#fff',
                   marginBottom: 6,
                 }}
               >
-                {tournamentWinner?.name || 'Winner'}
+                🏆 {tournamentWinner.name}
               </div>
 
-                           <div className="muted" style={{ marginBottom: 12 }}>
-                Final standings are locked and ready to share.
+              <div className="muted" style={{ fontSize: 14, marginBottom: 10 }}>
+                Finished 1st with {tournamentWinner.wins} wins and a{' '}
+                {tournamentWinner.pointDiff >= 0 ? '+' : ''}
+                {tournamentWinner.pointDiff} point differential.
               </div>
 
-              <button
-                type="button"
-                className="button primary"
-                onClick={() => router.push(`/tournament/${params.id}/results`)}
+              <div
                 style={{
-                  fontWeight: 800,
-                  fontSize: 16,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                  gap: 8,
                 }}
               >
-                🏆 View Results
-              </button>
+                <div className="list-item" style={{ padding: 10, textAlign: 'center', background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Wins</div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>{tournamentWinner.wins}</div>
+                </div>
+
+                <div className="list-item" style={{ padding: 10, textAlign: 'center', background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Record</div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>
+                    {tournamentWinner.wins}-{tournamentWinner.losses}
+                  </div>
+                </div>
+
+                <div className="list-item" style={{ padding: 10, textAlign: 'center', background: 'rgba(255,255,255,0.04)' }}>
+                  <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Diff</div>
+                  <div style={{ fontSize: 18, fontWeight: 800 }}>
+                    {tournamentWinner.pointDiff >= 0 ? '+' : ''}
+                    {tournamentWinner.pointDiff}
+                  </div>
+                </div>
+              </div>
             </div>
           ) : null}
 
-          <div className="card-title">Tournament</div>
-        <div className="grid" style={{ marginBottom: 14 }}>
-          <div className="list-item">
-            <div className="label">Join Code</div>
-            <div className="row-between">
-              <strong style={{ letterSpacing: '0.08em' }}>{tournament?.join_code || '...'}</strong>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span className={isLive ? 'tag green' : 'tag'}>{isLive ? 'Live' : 'Connecting'}</span>
-                <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
-                <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
-              </div>
-            </div>
-            {isOrganizer ? (
-    <button
-      className="button secondary"
-      style={{ marginTop: 10 }}
-      onClick={copyPublicLink}
-    >
-      Copy Public Link
-    </button>
-  ) : null}
-          </div>
-
-          <div className="list-item">
-            <div className="row-between"><span className="muted">Organizer</span><strong>{tournament?.organizer_name || '-'}</strong></div>
-            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Status</span><strong>{isCompleted ? 'Completed' : isStarted ? 'Started' : 'Setup'}</strong></div>
-            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Progress</span><strong>{completedMatchCount}/{totalPlayableMatchCount} matches</strong></div>
-          </div>
-
-          <div className="list-item">
-            <div className="row-between"><span className="muted">Date</span><strong>{tournament?.event_date || '-'}</strong></div>
-            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Time</span><strong>{tournament?.event_time || '-'}</strong></div>
-            <div className="row-between" style={{ marginTop: 8 }}><span className="muted">Location</span><strong style={{ textAlign: 'right' }}>{tournament?.location || '-'}</strong></div>
-          </div>
-        </div>
-
-                {isOrganizer && publicViewUrl ? (
           <div
-            className="card"
             style={{
-              marginBottom: 14,
-              textAlign: 'center',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 10,
+              marginTop: 12,
+              marginBottom: 12,
             }}
           >
-            <div className="card-title">Public Tournament QR Code</div>
-            <div className="card-subtitle" style={{ marginBottom: 16 }}>
-              Players and spectators can scan this to open the live public tournament page.
-            </div>
+            <button
+              type="button"
+              className={`button ${standingsView === 'leaderboard' ? 'primary' : 'secondary'}`}
+              onClick={() => setStandingsView('leaderboard')}
+            >
+              Leaderboard
+            </button>
+            <button
+              type="button"
+              className={`button ${standingsView === 'day' ? 'primary' : 'secondary'}`}
+              onClick={() => setStandingsView('day')}
+            >
+              Day Summary
+            </button>
+          </div>
 
+          {!standings.length ? (
+            <div className="muted">No players yet.</div>
+          ) : (
             <div
               style={{
-                display: 'inline-flex',
-                padding: 12,
-                background: '#ffffff',
+                marginTop: 4,
+                border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 16,
-                marginBottom: 12,
+                overflow: 'hidden',
+                background: 'rgba(255,255,255,0.03)',
               }}
             >
-              <QRCodeSVG
-                value={publicViewUrl}
-                size={220}
-                bgColor="#ffffff"
-                fgColor="#111111"
-                includeMargin={true}
-              />
-            </div>
-
-            <div
-              style={{
-                fontSize: 12,
-                color: 'rgba(255,255,255,.72)',
-                wordBreak: 'break-all',
-                marginBottom: 12,
-              }}
-            >
-              {publicViewUrl}
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                gap: 8,
-              }}
-            >
-              <button
-                type="button"
-                className="button secondary"
-                onClick={copyPublicLink}
-              >
-                Copy Public Link
-              </button>
-
-              <a
-                href={publicViewUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="button primary"
+              <div
                 style={{
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  display: 'grid',
+                  gridTemplateColumns:
+                    standingsView === 'leaderboard'
+                      ? '56px 1fr 62px 62px'
+                      : '56px 1fr 84px 62px',
+                  gap: 0,
+                  padding: '10px 8px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.65)',
                 }}
               >
-                Open Public View
-              </a>
-            </div>
-          </div>
-        ) : null}
-        
-        {isOrganizer ? (
-        <div className="grid">
-          <button type="button" className="button secondary" onClick={copyJoinCode}>
-            {copied ? 'Join Code Copied' : 'Copy Join Code'}
-          </button>
-          <button type="button" className="button primary" onClick={shareJoinLink}>
-            Share Join Link
-          </button>
-          {isStarted && !isCompleted ? (
-            <button type="button" className="button secondary" onClick={endTournamentEarly} disabled={isEndingEarly}>
-              {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
-            </button>
-          ) : null}
-          {isCompleted ? (
-            <button type="button" className="button primary" onClick={rematchTournament} disabled={isRematching}>
-              {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
-            </button>
-          ) : null}
-          {isCompleted ? (
-  <button
-    type="button"
-    className="button primary"
-    onClick={() => router.push(`/tournament/${params.id}/results`)}
-    style={{
-      fontWeight: 800,
-      fontSize: 16,
-    }}
-  >
-    🏆 View Results
-  </button>
-) : null}
-          {!isStarted && !isCompleted ? (
-            <button type="button" className="button secondary" onClick={deleteTournament} style={{ borderColor: 'rgba(248,113,113,.4)', color: '#f87171' }}>
-              Delete Tournament
-            </button>
-          ) : null}
-        </div>
-) : null}
-</div>
+                <div style={{ textAlign: 'center' }}>Place</div>
+                <div>Player</div>
+                <div style={{ textAlign: 'center' }}>
+                  {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
+                </div>
+              </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
-        <button type="button" className={`button ${activeTab === 'players' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('players')}>Players</button>
-        <button type="button" className={`button ${activeTab === 'rounds' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('rounds')}>Rounds</button>
-        <button type="button" className={`button ${activeTab === 'standings' ? 'primary' : 'secondary'}`} onClick={() => setActiveTab('standings')}>Standings</button>
-      </div>
+              {standings.map((row, index) => {
+                const place = index + 1;
+                const medal =
+                  place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 
-      {activeTab === 'players' && (
-        <div className="card">
-          <div className="card-title">Players</div>
-          <div className="card-subtitle">
-            {isCompleted ? 'Tournament is complete. Player list is locked.' : isStarted ? 'Tournament has started. Player list is locked.' : isSingles ? 'Singles tournament — each player competes individually.' : 'Players can claim a spot, or the organizer can type names manually.'}
-          </div>
-          {isLoading ? (
-            <div className="muted">Loading player spots...</div>
-          ) : (
-            <div className="grid">
-              {playerSlots.map((slot) => {
-                const isMine = slot.claimed_by_user_id === userId;
-                const isClaimedBySomeone = !!slot.claimed_by_user_id;
-                const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
-                const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
+                const rowBackground =
+                  place === 1
+                    ? 'rgba(255,203,5,0.08)'
+                    : place <= 3
+                    ? 'rgba(255,255,255,0.02)'
+                    : 'transparent';
 
                 return (
-                  <div key={slot.id} className="list-item" style={{ borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined, boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined }}>
-                    <div className="row-between" style={{ marginBottom: 10 }}>
-                      <div>
-                        <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
-                        <div className="muted">{slot.display_name || 'Open spot'}</div>
-                      </div>
-                      {isMine ? <span className="tag green">Yours</span> : isClaimedBySomeone ? <span className="tag green">Claimed</span> : isLocked ? <span className="tag">Locked</span> : <span className="tag">Open</span>}
+                  <div
+                    key={row.playerId}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        standingsView === 'leaderboard'
+                          ? '56px 1fr 62px 62px'
+                          : '56px 1fr 84px 62px',
+                      gap: 0,
+                      alignItems: 'center',
+                      minHeight: 74,
+                      borderBottom:
+                        index === standings.length - 1
+                          ? 'none'
+                          : '1px solid rgba(255,255,255,0.08)',
+                      background: rowBackground,
+                    }}
+                  >
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 900,
+                        fontSize: 20,
+                        padding: '10px 4px',
+                        color: place <= 3 ? '#FFCB05' : undefined,
+                      }}
+                    >
+                      {place}
                     </div>
-                                        <div className="grid">
-                      <input
-                        className="input"
-                        value={newNames[slot.id] ?? ''}
-                        onChange={(e) =>
-                          setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
-                        }
-                        placeholder={`Name for Player ${slot.slot_number}`}
-                        disabled={!canEditName}
-                      />
 
-                      {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '10px 8px',
+                        minWidth: 0,
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
                         <div
                           style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                            gap: 8,
+                            fontWeight: 800,
+                            fontSize: 18,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                           }}
                         >
-                          <button
-                            type="button"
-                            className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
-                            onClick={() => updatePlayerGender(slot.id, 'male')}
-                            disabled={isLocked}
-                          >
-                            Male
-                          </button>
-                          <button
-                            type="button"
-                            className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
-                            onClick={() => updatePlayerGender(slot.id, 'female')}
-                            disabled={isLocked}
-                          >
-                            Female
-                          </button>
-                          <button
-                            type="button"
-                            className="button secondary"
-                            onClick={() => updatePlayerGender(slot.id, '')}
-                            disabled={isLocked}
-                          >
-                            Clear
-                          </button>
+                          {medal ? `${medal} ` : ''}
+                          {row.name}
                         </div>
-                      ) : null}
+                      </div>
+                    </div>
 
-                      {!isLocked && canClaim ? (
-                        <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                          Claim Spot
-                        </button>
-                      ) : null}
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        fontSize: standingsView === 'leaderboard' ? 22 : 16,
+                        padding: '10px 4px',
+                        color:
+                          standingsView === 'leaderboard' && row.pointDiff > 0
+                            ? '#FFCB05'
+                            : undefined,
+                      }}
+                    >
+                      {standingsView === 'leaderboard'
+                        ? row.pointDiff > 0
+                          ? `+${row.pointDiff}`
+                          : row.pointDiff
+                        : `${row.wins}-${row.losses}`}
+                    </div>
+
+                    <div
+                      style={{
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        fontSize: 18,
+                        padding: '10px 4px',
+                      }}
+                    >
+                      {standingsView === 'leaderboard'
+                        ? `${row.wins}-${row.losses}`
+                        : row.pointsFor}
                     </div>
                   </div>
                 );
               })}
-              <>
-  {!isLocked ? (
-    <button
-      className="button secondary"
-      onClick={saveAllPlayerNames}
-      disabled={isSavingNames}
-    >
-      {isSavingNames ? 'Saving...' : 'Save Player Names'}
-    </button>
-  ) : null}
-
-  {isOrganizer ? (
-    <>
-      <button
-        className="button primary"
-        onClick={generateScheduleAndStart}
-        disabled={isStarting || !canStartTournament || isScheduleLocked}
-      >
-        {isScheduleLocked
-          ? 'Schedule Locked'
-          : isStarting
-          ? 'Starting...'
-          : 'Start Tournament'}
-      </button>
-
-      {isScheduleLocked ? (
-        <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
-          Schedule is locked after the tournament starts.
-        </div>
-      ) : null}
-    </>
-  ) : null}
-</>
             </div>
           )}
         </div>
       )}
-
-     {activeTab === 'rounds' && (
-  <div className="card">
-
-  {/* 🔥 CURRENT ROUND HEADER */}
-  {isStarted && !isCompleted && (
-    <div style={{
-      marginBottom: 12,
-      padding: 12,
-      borderRadius: 10,
-      background: 'rgba(255, 203, 5, 0.08)',
-      border: '1px solid rgba(255, 203, 5, 0.25)'
-    }}>
-      <div style={{
-        fontSize: 12,
-        fontWeight: 700,
-        color: '#FFCB05',
-        letterSpacing: 1
-      }}>
-        CURRENT ROUND
-      </div>
-
-      <div style={{
-        fontSize: 22,
-        fontWeight: 800,
-        marginTop: 2
-      }}>
-        Round {currentRound}
-      </div>
-    </div>
-  )}
-
-  <div className="card-title">All Rounds</div>
-    <div className="card-subtitle">
-      {isCompleted
-        ? 'Tournament complete. Scores are locked.'
-        : isStarted
-        ? `Current live round: ${currentRound}`
-        : 'Round schedule appears here after the tournament starts.'}
-
-      {!isCompleted && isStarted ? (
-        <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
-          Organizer enters official scores
-        </div>
-      ) : null}
-    </div>
-
-       <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: 12,
-        marginTop: 12,
-        marginBottom: 18,
-      }}
-    >
-      {roundsAvailable.map((round) => {
-        const status = roundStatusByRound.get(round);
-        const isSelected = selectedRound === round;
-        const isCurrent = status === 'current';
-
-        return (
-          <button
-            key={round}
-            type="button"
-            onClick={() => setSelectedRound(round)}
-            style={{
-              padding: '16px',
-              borderRadius: 14,
-              border: isSelected
-                ? '1px solid rgba(255, 203, 5, 0.6)'
-                : '1px solid rgba(255,255,255,0.08)',
-              background: isSelected
-                ? 'rgba(255, 203, 5, 0.08)'
-                : 'rgba(255,255,255,0.03)',
-              textAlign: 'left',
-              cursor: 'pointer',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: 1,
-                color: isCurrent ? '#FFCB05' : 'rgba(255,255,255,0.5)',
-                marginBottom: 6,
-              }}
-            >
-              {isCurrent ? 'LIVE' : 'ROUND'}
-            </div>
-
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: '#fff',
-              }}
-            >
-              Round {round}
-            </div>
-          </button>
-        );
-      })}
-    </div>
-
-    {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
-      <div className="muted">No matches in this round yet.</div>
-    ) : (
-      <div className="grid">
-        {matchesForSelectedRound.map((match) => {
-          const isNextUp =
-            !isCompleted &&
-            match.round_number === currentRound &&
-            nextUpMatch?.id === match.id;
-
-          if (isBestOf3) return renderBestOf3Match(match);
-
-          const draft = scoreDrafts[match.id] || {
-            team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-            team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-            game_1_a: '',
-            game_1_b: '',
-            game_2_a: '',
-            game_2_b: '',
-            game_3_a: '',
-            game_3_b: '',
-          };
-
-          return (
-            <div
-              id={getMatchElementId(match.id)}
-              key={match.id}
-              className="list-item"
-              style={
-                isNextUp
-                  ? {
-                      borderColor: 'rgba(255,203,5,.55)',
-                      boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-                    }
-                  : undefined
-              }
-            >
-              <div
-  className="row-between"
-  style={{
-    marginBottom: 12,
-    alignItems: 'flex-start',
-    gap: 10,
-  }}
->
-  <div>
-    <div
-      style={{
-        fontSize: 11,
-        fontWeight: 800,
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
-        color: 'rgba(255,255,255,0.6)',
-        marginBottom: 4,
-      }}
-    >
-      Court
-    </div>
-
-    <div
-      style={{
-        fontSize: 20,
-        fontWeight: 900,
-        lineHeight: 1.1,
-      }}
-    >
-      {getCourtLabel(tournament, match.court_number) || '-'}
-    </div>
-  </div>
-
-  <div
-    style={{
-      display: 'flex',
-      gap: 8,
-      flexWrap: 'wrap',
-      justifyContent: 'flex-end',
-    }}
-  >
-    {isNextUp ? (
-      <span
-        className="tag"
-        style={{
-          background: 'rgba(255,203,5,0.14)',
-          border: '1px solid rgba(255,203,5,0.35)',
-          color: '#FFCB05',
-          fontWeight: 800,
-        }}
-      >
-        CURRENT
-      </span>
-    ) : null}
-
-    <span
-      className={match.is_complete ? 'tag green' : 'tag'}
-      style={!match.is_complete ? { fontWeight: 800 } : undefined}
-    >
-      {match.is_complete ? 'COMPLETE' : 'LIVE'}
-    </span>
-  </div>
-</div>
-
-                            <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
-                <div
-                  className="list-item"
-                  style={{
-                    padding: 12,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'rgba(255,255,255,0.6)',
-                      marginBottom: 6,
-                    }}
-                  >
-                    Team A
-                  </div>
-
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      fontSize: 18,
-                      lineHeight: 1.25,
-                      marginBottom: 10,
-                      ...getWinnerStyle('a', match),
-                    }}
-                  >
-                    {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
-                  </div>
-
-                  <input
-                    className="input"
-                    style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                    type="number"
-                    value={draft.team_a_score}
-                    disabled={!isOrganizer || match.is_complete || isCompleted}
-                    onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
-                    onBlur={() => saveScoreField(match.id, 'team_a_score')}
-                    placeholder={isOrganizer ? '0' : 'Organizer only'}
-                  />
-                </div>
-
-                <div
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: '0.12em',
-                    color: 'rgba(255,255,255,0.45)',
-                  }}
-                >
-                  VS
-                </div>
-
-                <div
-                  className="list-item"
-                  style={{
-                    padding: 12,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'rgba(255,255,255,0.6)',
-                      marginBottom: 6,
-                    }}
-                  >
-                    Team B
-                  </div>
-
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      fontSize: 18,
-                      lineHeight: 1.25,
-                      marginBottom: 10,
-                      ...getWinnerStyle('b', match),
-                    }}
-                  >
-                    {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
-                  </div>
-
-                  <input
-                    className="input"
-                    style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                    type="number"
-                    value={draft.team_b_score}
-                    disabled={!isOrganizer || match.is_complete || isCompleted}
-                    onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
-                    onBlur={() => saveScoreField(match.id, 'team_b_score')}
-                    placeholder={isOrganizer ? '0' : 'Organizer only'}
-                  />
-                </div>
-              </div>
-
-                            {match.is_complete || isCompleted ? (
-                <div
-                  style={{
-                    marginTop: 2,
-                    padding: '12px 14px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    background: 'rgba(255,255,255,0.03)',
-                    textAlign: 'center',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 800,
-                      letterSpacing: '0.08em',
-                      textTransform: 'uppercase',
-                      color: 'rgba(255,255,255,0.6)',
-                      marginBottom: 4,
-                    }}
-                  >
-                    Status
-                  </div>
-
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 800,
-                      color: isCompleted ? 'rgba(255,255,255,0.9)' : '#86efac',
-                    }}
-                  >
-                    {isCompleted ? 'Final Locked' : 'Score Submitted'}
-                  </div>
-                </div>
-              ) : (
-                <button
-                  className="button primary"
-                  onClick={() => submitMatchScore(match.id)}
-                  disabled={!isOrganizer}
-                  style={{
-                    width: '100%',
-                    fontWeight: 800,
-                    fontSize: 16,
-                    padding: '14px 16px',
-                  }}
-                >
-                  {isOrganizer ? 'Submit Score' : 'Organizer Submits Score'}
-                </button>
-              )}
-            </div>
-          );
-        })}
-
-        {byesForSelectedRound.length ? (
-          <div className="list-item">
-            <div style={{ fontWeight: 800, marginBottom: 8 }}>Byes This Round</div>
-            <div className="grid">
-              {byesForSelectedRound.map((bye) => (
-                <div key={bye.id} className="list-item" style={{ padding: 10 }}>
-                  {renderPlayerName(bye.team_a_player_1_id)}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    )}
-  </div>
-)}
-
-      {activeTab === 'standings' && (
-  <div className="card">
-    <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
-    <div className="card-subtitle">
-      {isCompleted
-        ? 'Tournament complete. Final results are locked.'
-        : 'Ranked by wins, then point differential, then points scored.'}
-    </div>
-
-        {isCompleted && tournamentWinner ? (
-      <div
-        style={{
-          marginTop: 14,
-          marginBottom: 14,
-          padding: 16,
-          borderRadius: 18,
-          background: 'linear-gradient(135deg, rgba(255,203,5,0.16), rgba(255,203,5,0.06))',
-          border: '1px solid rgba(255,203,5,0.28)',
-        }}
-      >
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: '#FFCB05',
-            marginBottom: 6,
-          }}
-        >
-          Champion
-        </div>
-
-        <div
-          style={{
-            fontSize: 24,
-            fontWeight: 900,
-            color: '#fff',
-            marginBottom: 6,
-          }}
-        >
-          🏆 {tournamentWinner.name}
-        </div>
-
-        <div
-          className="muted"
-          style={{
-            fontSize: 14,
-            marginBottom: 10,
-          }}
-        >
-          Finished 1st with {tournamentWinner.wins} wins and a {tournamentWinner.pointDiff >= 0 ? '+' : ''}{tournamentWinner.pointDiff} point differential.
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: 8,
-          }}
-        >
-          <div
-            className="list-item"
-            style={{
-              padding: 10,
-              textAlign: 'center',
-              background: 'rgba(255,255,255,0.04)',
-            }}
-          >
-            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Wins</div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>{tournamentWinner.wins}</div>
-          </div>
-
-          <div
-            className="list-item"
-            style={{
-              padding: 10,
-              textAlign: 'center',
-              background: 'rgba(255,255,255,0.04)',
-            }}
-          >
-            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Record</div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>
-              {tournamentWinner.wins}-{tournamentWinner.losses}
-            </div>
-          </div>
-
-          <div
-            className="list-item"
-            style={{
-              padding: 10,
-              textAlign: 'center',
-              background: 'rgba(255,255,255,0.04)',
-            }}
-          >
-            <div className="muted" style={{ fontSize: 11, marginBottom: 4 }}>Diff</div>
-            <div style={{ fontSize: 18, fontWeight: 800 }}>
-              {tournamentWinner.pointDiff >= 0 ? '+' : ''}
-              {tournamentWinner.pointDiff}
-            </div>
-          </div>
-        </div>
-      </div>
-    ) : null}
-
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 10,
-        marginTop: 12,
-        marginBottom: 12,
-      }}
-    >
-      <button
-        type="button"
-        className={`button ${standingsView === 'leaderboard' ? 'primary' : 'secondary'}`}
-        onClick={() => setStandingsView('leaderboard')}
-      >
-        Leaderboard
-      </button>
-      <button
-        type="button"
-        className={`button ${standingsView === 'day' ? 'primary' : 'secondary'}`}
-        onClick={() => setStandingsView('day')}
-      >
-        Day Summary
-      </button>
-    </div>
-
-    {!standings.length ? (
-      <div className="muted">No players yet.</div>
-    ) : (
-      <div
-        style={{
-          marginTop: 4,
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 16,
-          overflow: 'hidden',
-          background: 'rgba(255,255,255,0.03)',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns:
-              standingsView === 'leaderboard' ? '56px 1fr 62px 62px' : '56px 1fr 84px 62px',
-            gap: 0,
-            padding: '10px 8px',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            fontSize: 12,
-            fontWeight: 800,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.65)',
-          }}
-        >
-          <div style={{ textAlign: 'center' }}>Place</div>
-          <div>Player</div>
-          <div style={{ textAlign: 'center' }}>
-            {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
-          </div>
-        </div>
-
-        {standings.map((row, index) => {
-          const place = index + 1;
-          
-          const medal =
-            place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
-
-          const rowBackground =
-            place === 1
-              ? 'rgba(255,203,5,0.08)'
-              : place <= 3
-              ? 'rgba(255,255,255,0.02)'
-              : 'transparent';
-
-          return (
-            <div
-              key={row.playerId}
-              style={{
-                display: 'grid',
-                gridTemplateColumns:
-                  standingsView === 'leaderboard' ? '56px 1fr 62px 62px' : '56px 1fr 84px 62px',
-                gap: 0,
-                alignItems: 'center',
-                minHeight: 74,
-                borderBottom:
-                  index === standings.length - 1
-                    ? 'none'
-                    : '1px solid rgba(255,255,255,0.08)',
-                background: rowBackground,
-              }}
-            >
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontWeight: 900,
-                  fontSize: 20,
-                  padding: '10px 4px',
-                  color: place <= 3 ? '#FFCB05' : undefined,
-                }}
-              >
-                {place}
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '10px 8px',
-                  minWidth: 0,
-                }}
-              >
-
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontWeight: 800,
-                      fontSize: 18,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {medal ? `${medal} ` : ''}
-                    {row.name}
-                  </div>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontWeight: 800,
-                  fontSize: standingsView === 'leaderboard' ? 22 : 16,
-                  padding: '10px 4px',
-                  color:
-                    standingsView === 'leaderboard' && row.pointDiff > 0 ? '#FFCB05' : undefined,
-                }}
-              >
-                {standingsView === 'leaderboard'
-                  ? row.pointDiff > 0
-                    ? `+${row.pointDiff}`
-                    : row.pointDiff
-                  : `${row.wins}-${row.losses}`}
-              </div>
-
-              <div
-                style={{
-                  textAlign: 'center',
-                  fontWeight: 800,
-                  fontSize: 18,
-                  padding: '10px 4px',
-                }}
-              >
-                {standingsView === 'leaderboard' ? `${row.wins}-${row.losses}` : row.pointsFor}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    )}
-  </div>
-)}
     </main>
-    );
+  );
 }

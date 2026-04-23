@@ -734,7 +734,7 @@ export default function PublicTournamentViewPage({
         </div>
       </div>
 
-       <div className="card" style={{ marginBottom: 14 }}>
+       <div className="card soft-enter" style={{ marginBottom: 14 }}>
         {isStarted && !isCompleted ? (
           <div
             style={{
@@ -1068,7 +1068,7 @@ export default function PublicTournamentViewPage({
         )}
       </div>
 
-      <div className="card">
+      <div className="card soft-enter">
         <div className="card-title">
           {isCompleted ? '🏆 Final Results' : 'Standings'}
         </div>

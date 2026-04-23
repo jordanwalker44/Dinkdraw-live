@@ -212,33 +212,6 @@ export default function AccountPage() {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
-          <div style={{
-            width: 70,
-            height: 70,
-            borderRadius: '50%',
-            background: userEmail ? 'rgba(255,203,5,.15)' : 'rgba(255,255,255,.08)',
-            border: userEmail ? '1px solid rgba(255,203,5,.4)' : '1px solid rgba(255,255,255,.15)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: 24,
-            color: userEmail ? '#FFCB05' : '#94a3b8',
-            margin: '0 auto 12px',
-          }}>
-            {userEmail ? (initials || 'DD') : '?'}
-          </div>
-          <h1 className="hero-title">Account</h1>
-          <p className="hero-subtitle">
-            {userEmail
-              ? `Signed in as ${userEmail}`
-              : 'Sign in to save tournaments, track stats, and show up on the leaderboard.'}
-          </p>
-        </div>
-      </div>
-
       <TopNav />
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}

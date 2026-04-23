@@ -89,7 +89,6 @@ export default function ResetPasswordPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <p className="hero-subtitle">Reset your password.</p>
         </div>
       </div>

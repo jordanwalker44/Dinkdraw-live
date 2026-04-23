@@ -689,11 +689,6 @@ export default function PublicTournamentViewPage({
       <main className="page-shell">
         <div className="hero">
           <div className="hero-inner">
-            <img
-              src="/dinkdraw-logo.png"
-              alt="DinkDraw logo"
-              className="hero-logo"
-            />
             <h1 className="hero-title">Loading tournament...</h1>
           </div>
         </div>
@@ -706,11 +701,6 @@ export default function PublicTournamentViewPage({
       <main className="page-shell">
         <div className="hero">
           <div className="hero-inner">
-            <img
-              src="/dinkdraw-logo.png"
-              alt="DinkDraw logo"
-              className="hero-logo"
-            />
             <h1 className="hero-title">Tournament Not Found</h1>
             <p className="hero-subtitle">
               This public tournament link may be invalid.

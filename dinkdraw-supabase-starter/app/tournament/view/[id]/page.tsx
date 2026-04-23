@@ -847,8 +847,11 @@ export default function PublicTournamentViewPage({
         {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
           <div className="muted">No matches in this round yet.</div>
         ) : (
-          <div className="grid">
-                              {matchesForSelectedRound.map((match) => {
+          <div
+              key={selectedRound}
+              className="grid soft-enter"
+    >
+              {matchesForSelectedRound.map((match) => {
               const isCurrentMatch =
                 !isCompleted &&
                 match.round_number === currentRound &&

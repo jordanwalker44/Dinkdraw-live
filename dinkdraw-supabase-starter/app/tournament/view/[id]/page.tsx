@@ -575,8 +575,16 @@ export default function PublicTournamentViewPage({
         }
       >
         <div
-          className="row-between"
-          style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
+         <div
+  className="row-between"
+  style={{
+    marginBottom: 14,
+    alignItems: 'center',
+    gap: 12,
+    paddingBottom: 10,
+    borderBottom: '1px solid rgba(255,255,255,0.08)',
+  }}
+>
         >
           <div>
             <div

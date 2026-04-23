@@ -52,10 +52,51 @@ function PlusIcon() {
 
 function TrophyIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="bottom-nav-svg">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
       <path
-        d="M8 4h8v2a4 4 0 0 0 4 4 6 6 0 0 1-6 6h-1v2h3v2H8v-2h3v-2h-1a6 6 0 0 1-6-6 4 4 0 0 0 4-4V4Z"
-        fill="currentColor"
+        d="M8 4h8v3a4 4 0 0 1-4 4 4 4 0 0 1-4-4V4Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 6h2a2 2 0 0 1 2 2c0 2.5-2 4-5 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 6H6a2 2 0 0 0-2 2c0 2.5 2 4 5 4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 11v4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 21h6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 15h4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
       />
     </svg>
   );
@@ -117,7 +158,7 @@ export function BottomNav() {
       case 'Create':
         return <PlusIcon />;
       case 'Leaderboard':
-  return <span style={{ fontSize: 20 }}>🏆</span>;
+  return <TrophyIcon />;
       case 'Account':
         return <UserIcon />;
       default:

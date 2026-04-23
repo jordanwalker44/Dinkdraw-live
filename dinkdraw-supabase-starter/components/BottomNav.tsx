@@ -14,7 +14,7 @@ function HomeIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
       <path
-        d="M4 10.5L12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V14a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v6.5a.5.5 0 0 1-.5.5H5a1 1 0 0 1-1-1v-9.5Z"
+        d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.25a.75.75 0 0 1-.75-.75V14a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v6.25a.75.75 0 0 1-.75.75H5a1 1 0 0 1-1-1v-9.5Z"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"
@@ -28,10 +28,10 @@ function HomeIcon() {
 function GridIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
-      <rect x="4" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
-      <rect x="13" y="4" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
-      <rect x="4" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
-      <rect x="13" y="13" width="7" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="4" y="4" width="7" height="7" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="4" width="7" height="7" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="4" y="13" width="7" height="7" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="13" y="13" width="7" height="7" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }
@@ -105,9 +105,9 @@ function TrophyIcon() {
 function UserIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="bottom-nav-svg">
-      <circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="12" cy="8" r="3.75" fill="none" stroke="currentColor" strokeWidth="2" />
       <path
-        d="M5 19a7 7 0 0 1 14 0"
+        d="M4.75 19a7.25 7.25 0 0 1 14.5 0"
         fill="none"
         stroke="currentColor"
         strokeWidth="2"

@@ -12,7 +12,6 @@ export function AppHeader() {
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         background: 'rgba(7, 12, 20, 0.82)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}
     >
       <div

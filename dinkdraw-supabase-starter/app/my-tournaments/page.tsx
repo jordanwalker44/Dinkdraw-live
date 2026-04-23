@@ -131,7 +131,6 @@ export default function MyTournamentsPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">My Tournaments</h1>
           <p className="hero-subtitle">
             Pick up where you left off without needing the join code again.

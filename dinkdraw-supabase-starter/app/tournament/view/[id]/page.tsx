@@ -927,8 +927,23 @@ export default function PublicTournamentViewPage({
 
                   <div style={{ marginBottom: 10 }}>{renderStyledMatchLabel(match)}</div>
 
-                  <div className="grid" style={{ marginBottom: 4 }}>
-                    <div className="list-item" style={{ padding: 12 }}>
+                  <div
+  className="grid"
+  style={{
+    marginBottom: 4,
+    gap: 10,
+  }}
+>
+                    <div
+  className="list-item"
+  style={{
+    padding: 14,
+    borderRadius: 16,
+    background: 'rgba(255,255,255,0.035)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
+  }}
+>
                       <div
                         style={{
                           fontWeight: 800,
@@ -952,7 +967,10 @@ export default function PublicTournamentViewPage({
                       </div>
                     </div>
 
-                    <div className="list-item" style={{ padding: 12 }}>
+                    {renderTeam(
+  match.team_b_player_1_id,
+  match.team_b_player_2_id
+)}
                       <div
                         style={{
                           fontWeight: 800,
@@ -966,12 +984,14 @@ export default function PublicTournamentViewPage({
                         )}
                       </div>
                       <div
-                        style={{
-                          textAlign: 'center',
-                          fontSize: 24,
-                          fontWeight: 800,
-                        }}
-                      >
+  style={{
+    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: 900,
+    lineHeight: 1,
+    letterSpacing: '-0.03em',
+  }}
+>
                         {match.team_b_score ?? '-'}
                       </div>
                     </div>

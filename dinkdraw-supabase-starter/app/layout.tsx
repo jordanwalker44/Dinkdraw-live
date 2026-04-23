@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { LayoutShell } from '../components/LayoutShell';
+import { AuthRefresh } from '../components/AuthRefresh';
+import { AppChrome } from '../components/AppChrome';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',
@@ -41,7 +42,8 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body>
-        <LayoutShell>{children}</LayoutShell>
+        <AuthRefresh />
+        <AppChrome>{children}</AppChrome>
       </body>
     </html>
   );

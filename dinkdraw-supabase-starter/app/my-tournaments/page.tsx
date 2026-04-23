@@ -129,14 +129,120 @@ export default function MyTournamentsPage() {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
-          <h1 className="hero-title">My Tournaments</h1>
-          <p className="hero-subtitle">
-            Pick up where you left off without needing the join code again.
-          </p>
-        </div>
+      <div
+  className="card soft-enter"
+  style={{
+    marginBottom: 14,
+    padding: 18,
+    background:
+      'linear-gradient(180deg, rgba(255,203,5,0.12), rgba(255,255,255,0.025))',
+    border: '1px solid rgba(255,203,5,0.18)',
+    boxShadow:
+      '0 1px 0 rgba(255,255,255,0.05) inset, 0 14px 34px rgba(0,0,0,0.24)',
+  }}
+>
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 14,
+    }}
+  >
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: '#FFCB05',
+          marginBottom: 8,
+        }}
+      >
+        Dashboard
       </div>
+
+      <h1
+        style={{
+          margin: 0,
+          fontSize: 28,
+          lineHeight: 1.05,
+          fontWeight: 950,
+          letterSpacing: '-0.04em',
+        }}
+      >
+        My Tournaments
+      </h1>
+
+      <p
+        className="muted"
+        style={{
+          margin: '8px 0 0',
+          fontSize: 14,
+          lineHeight: 1.45,
+        }}
+      >
+        Pick up where you left off, manage events, and jump back into your latest tournaments.
+      </p>
+    </div>
+
+    <div
+      aria-hidden="true"
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 18,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(255,203,5,0.12)',
+        border: '1px solid rgba(255,203,5,0.22)',
+        boxShadow: '0 10px 24px rgba(255,203,5,0.10)',
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ fontSize: 24 }}>🏟️</span>
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      gap: 10,
+      marginTop: 16,
+    }}
+  >
+    <div
+      className="list-item"
+      style={{
+        padding: 12,
+        borderRadius: 16,
+        background: 'rgba(255,255,255,0.035)',
+      }}
+    >
+      <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
+        Organized
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 900 }}>{organized.length}</div>
+    </div>
+
+    <div
+      className="list-item"
+      style={{
+        padding: 12,
+        borderRadius: 16,
+        background: 'rgba(255,255,255,0.035)',
+      }}
+    >
+      <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
+        Joined
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 900 }}>{joined.length}</div>
+    </div>
+  </div>
+</div>
 
       <TopNav />
 

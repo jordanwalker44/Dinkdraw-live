@@ -512,12 +512,11 @@ textarea.input:focus {
   border-radius: 20px;
   background: linear-gradient(180deg, #ffda3a, #ffcb05);
   color: #0b1b2f;
-  box-shadow: 0 10px 24px rgba(255, 203, 5, 0.28);
-  transform: translateY(-10px);
+  box-shadow: 0 10px 24px rgba(255, 203, 5, 0.22);
 }
 
 .bottom-nav-item.center:active {
-  transform: translateY(-8px);
+  transform: translateY(1px);
 }
 
 .bottom-nav-icon {

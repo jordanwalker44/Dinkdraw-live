@@ -483,7 +483,10 @@ textarea.input:focus {
   background: rgba(6, 17, 30, 0.92);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+box-shadow:
+  0 -2px 6px rgba(0, 0, 0, 0.25),
+  0 -10px 30px rgba(0, 0, 0, 0.28);
   box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.28);
   z-index: 60;
 }
@@ -497,7 +500,7 @@ textarea.input:focus {
   justify-content: center;
   gap: 6px;
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(255, 255, 255, 0.78);
   transition: transform 140ms ease, background 140ms ease, color 140ms ease, box-shadow 180ms ease;
 }
 
@@ -538,6 +541,7 @@ textarea.input:focus {
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.01em;
+  opacity: 0.95;
 }
 
 .bottom-nav-item:active {

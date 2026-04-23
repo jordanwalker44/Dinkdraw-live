@@ -555,140 +555,134 @@ export default function PublicTournamentViewPage({
   }
 
   function renderBestOf3Match(match: Match) {
-    const { aWins, bWins } = getSeriesWins(match);
-    const isCurrentMatch =
-      !isCompleted &&
-      match.round_number === currentRound &&
-      liveMatchIds.has(match.id);
+  const { aWins, bWins } = getSeriesWins(match);
+  const isCurrentMatch =
+    !isCompleted &&
+    match.round_number === currentRound &&
+    liveMatchIds.has(match.id);
 
-    return (
+  return (
+    <div
+      key={match.id}
+      className="list-item"
+      style={
+        isCurrentMatch
+          ? {
+              borderColor: 'rgba(255,203,5,.55)',
+              boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+            }
+          : undefined
+      }
+    >
       <div
-        key={match.id}
-        className="list-item"
-        style={
-          isCurrentMatch
-            ? {
-                borderColor: 'rgba(255,203,5,.55)',
-                boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-              }
-            : undefined
-        }
+        className="row-between"
+        style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
       >
-        <div
-  className="row-between"
-  style={{
-    marginBottom: 14,
-    alignItems: 'center',
-    gap: 12,
-    paddingBottom: 10,
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
-  }}
-        >
-          <div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.6)',
-                marginBottom: 4,
-              }}
-            >
-              Court
-            </div>
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 900,
-                lineHeight: 1.1,
-              }}
-            >
-              {renderCourtLabel(match)}
-            </div>
-          </div>
-
+        <div>
           <div
             style={{
-              display: 'flex',
-              gap: 8,
-              flexWrap: 'wrap',
-              justifyContent: 'flex-end',
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: 4,
             }}
           >
-            {isCurrentMatch ? (
-              <span
-                className="tag"
-                style={{
-                  background: 'rgba(255,203,5,0.14)',
-                  border: '1px solid rgba(255,203,5,0.35)',
-                  color: '#FFCB05',
-                  fontWeight: 800,
-                }}
-              >
-                LIVE
-              </span>
-            ) : null}
-
-            <span
-              className={match.is_complete ? 'tag green' : 'tag'}
-              style={!match.is_complete ? { fontWeight: 800 } : undefined}
-            >
-              {match.is_complete ? 'COMPLETE' : 'IN PROGRESS'}
-            </span>
+            Court
           </div>
-        </div>
-
-        <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>
-
-        <div className="grid" style={{ gap: 8 }}>
-          <div className="list-item" style={{ padding: 10 }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Game 1
-            </div>
-            <div className="row-between">
-              <strong>{match.game_1_a ?? '-'}</strong>
-              <strong>{match.game_1_b ?? '-'}</strong>
-            </div>
+          <div
+            style={{
+              fontSize: 20,
+              fontWeight: 900,
+              lineHeight: 1.1,
+            }}
+          >
+            {renderCourtLabel(match)}
           </div>
-
-          <div className="list-item" style={{ padding: 10 }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Game 2
-            </div>
-            <div className="row-between">
-              <strong>{match.game_2_a ?? '-'}</strong>
-              <strong>{match.game_2_b ?? '-'}</strong>
-            </div>
-          </div>
-
-          {match.game_3_a !== null || match.game_3_b !== null ? (
-            <div className="list-item" style={{ padding: 10 }}>
-              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                Game 3
-              </div>
-              <div className="row-between">
-                <strong>{match.game_3_a ?? '-'}</strong>
-                <strong>{match.game_3_b ?? '-'}</strong>
-              </div>
-            </div>
-          ) : null}
         </div>
 
         <div
           style={{
-            marginTop: 10,
-            textAlign: 'center',
-            fontSize: 13,
-            fontWeight: 800,
-            color: '#FFCB05',
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
           }}
         >
-          Series wins: {aWins}-{bWins}
+          {isCurrentMatch ? (
+            <span
+              className="tag"
+              style={{
+                background: 'rgba(255,203,5,0.14)',
+                border: '1px solid rgba(255,203,5,0.35)',
+                color: '#FFCB05',
+                fontWeight: 800,
+              }}
+            >
+              LIVE
+            </span>
+          ) : null}
+
+          <span
+            className={match.is_complete ? 'tag green' : 'tag'}
+            style={!match.is_complete ? { fontWeight: 800 } : undefined}
+          >
+            {match.is_complete ? 'COMPLETE' : 'IN PROGRESS'}
+          </span>
         </div>
       </div>
-    );
-  }
+
+      <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>
+
+      <div className="grid" style={{ gap: 8 }}>
+        <div className="list-item" style={{ padding: 10 }}>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+            Game 1
+          </div>
+          <div className="row-between">
+            <strong>{match.game_1_a ?? '-'}</strong>
+            <strong>{match.game_1_b ?? '-'}</strong>
+          </div>
+        </div>
+
+        <div className="list-item" style={{ padding: 10 }}>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+            Game 2
+          </div>
+          <div className="row-between">
+            <strong>{match.game_2_a ?? '-'}</strong>
+            <strong>{match.game_2_b ?? '-'}</strong>
+          </div>
+        </div>
+
+        {match.game_3_a !== null || match.game_3_b !== null ? (
+          <div className="list-item" style={{ padding: 10 }}>
+            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
+              Game 3
+            </div>
+            <div className="row-between">
+              <strong>{match.game_3_a ?? '-'}</strong>
+              <strong>{match.game_3_b ?? '-'}</strong>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div
+        style={{
+          marginTop: 10,
+          textAlign: 'center',
+          fontSize: 13,
+          fontWeight: 800,
+          color: '#FFCB05',
+        }}
+      >
+        Series wins: {aWins}-{bWins}
+      </div>
+    </div>
+  );
+}
 
   if (isLoading) {
     return (

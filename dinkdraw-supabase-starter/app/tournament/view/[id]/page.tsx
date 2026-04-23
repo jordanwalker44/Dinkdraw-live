@@ -904,7 +904,7 @@ export default function PublicTournamentViewPage({
                     >
                       {isCurrentMatch ? (
                         <span
-                          className="tag"
+                          className="tag live-pill"
                           style={{
                             background: 'rgba(255,203,5,0.14)',
                             border: '1px solid rgba(255,203,5,0.35)',

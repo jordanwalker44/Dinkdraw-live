@@ -48,65 +48,6 @@ export default function HomePage() {
     loadUser();
   }, [supabase]);
 
-  return (
-  <main className="page-shell">
- <div
-  style={{
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: '14px 16px 6px 16px',
-  }}
->
-  {/* Arc Logo */}
-  <img
-    src="/dinkdraw-mark.png"
-    alt="DinkDraw"
-    style={{
-      width: 40,
-      height: 40,
-      objectFit: 'contain',
-    }}
-  />
-
-  {/* Name + Tagline */}
-  <div>
-    <div
-      style={{
-        fontSize: 20,
-        fontWeight: 900,
-        letterSpacing: 0.5,
-      }}
-    >
-      DinkDraw
-    </div>
-
-    <div
-      style={{
-        fontSize: 12,
-        opacity: 0.7,
-        marginTop: 2,
-      }}
-    >
-      Pickleball Tournaments
-    </div>
-  </div>
-</div>
-
-{/* Greeting */}
-{!isLoadingUser && userEmail ? (
-  <div
-    style={{
-      padding: '0 16px 8px 16px',
-      color: '#FFCB05',
-      fontWeight: 800,
-      fontSize: 14,
-    }}
-  >
-    Hey, {displayName || userEmail}! 👋
-  </div>
-) : null}
-
       <TopNav />
 
 {!isLoadingUser && !userEmail ? (

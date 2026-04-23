@@ -921,56 +921,58 @@ export default function PublicTournamentViewPage({
 
                   <div style={{ marginBottom: 10 }}>{renderStyledMatchLabel(match)}</div>
 
-             <div className="grid" style={{ marginBottom: 4 }}>
-  <div className="list-item" style={{ padding: 12 }}>
-    <div
-      style={{
-        fontWeight: 800,
-        marginBottom: 8,
-        ...getWinnerStyle('a', match),
-      }}
-    >
-      {renderTeam(
-        match.team_a_player_1_id,
-        match.team_a_player_2_id
-      )}
-    </div>
-    <div
-      style={{
-        textAlign: 'center',
-        fontSize: 24,
-        fontWeight: 800,
-      }}
-    >
-      {match.team_a_score ?? '-'}
-    </div>
-  </div>
+                              <div className="grid" style={{ marginBottom: 4 }}>
+                    <div className="list-item" style={{ padding: 12 }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          marginBottom: 8,
+                          ...getWinnerStyle('a', match),
+                        }}
+                      >
+                        {renderTeam(
+                          match.team_a_player_1_id,
+                          match.team_a_player_2_id
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          fontSize: 24,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {match.team_a_score ?? '-'}
+                      </div>
+                    </div>
 
-  <div className="list-item" style={{ padding: 12 }}>
-    <div
-      style={{
-        fontWeight: 800,
-        marginBottom: 8,
-        ...getWinnerStyle('b', match),
-      }}
-    >
-      {renderTeam(
-        match.team_b_player_1_id,
-        match.team_b_player_2_id
-      )}
-    </div>
-    <div
-      style={{
-        textAlign: 'center',
-        fontSize: 24,
-        fontWeight: 800,
-      }}
-    >
-      {match.team_b_score ?? '-'}
-    </div>
-  </div>
-</div>
+                    <div className="list-item" style={{ padding: 12 }}>
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          marginBottom: 8,
+                          ...getWinnerStyle('b', match),
+                        }}
+                      >
+                        {renderTeam(
+                          match.team_b_player_1_id,
+                          match.team_b_player_2_id
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          fontSize: 24,
+                          fontWeight: 800,
+                        }}
+                      >
+                        {match.team_b_score ?? '-'}
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+            {byesForSelectedRound.length ? (
 
             {byesForSelectedRound.length ? (
               <div className="list-item">

@@ -51,58 +51,62 @@ export default function HomePage() {
   return (
   <main className="page-shell">
     <div
-  className="hero"
+ <div
   style={{
-    marginTop: 6,
-    padding: '6px 10px 0 10px',
     display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    minHeight: 150,
+    alignItems: 'center',
+    gap: 12,
+    padding: '14px 16px 6px 16px',
   }}
 >
-      <div
-        className="hero-inner"
-        style={{
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 6,
-        }}
-      >
-        <img
-          src="/dinkdraw-logo.png"
-          alt="DinkDraw logo"
-          className="hero-logo"
+  {/* Arc Logo */}
+  <img
+    src="/dinkdraw-mark.png"
+    alt="DinkDraw"
     style={{
-  width: '100%',
-  maxWidth: 280,
-  height: 'auto',
-  marginBottom: 2,
-}}
-        />
+      width: 40,
+      height: 40,
+      objectFit: 'contain',
+    }}
+  />
 
-        <p className="hero-subtitle">
-          Create tournaments, track scores, and share live results
-        </p>
-
-        {/* Greeting — only shows when signed in */}
-        {!isLoadingUser && userEmail ? (
-          <div
-  style={{
-  marginTop: 4,
-  marginBottom: 2,
-  color: '#FFCB05',
-  fontWeight: 800,
-  fontSize: 15,
-}}
->
-            Hey, {displayName || userEmail}! 👋
-          </div>
-        ) : null}
-      </div>
+  {/* Name + Tagline */}
+  <div>
+    <div
+      style={{
+        fontSize: 20,
+        fontWeight: 900,
+        letterSpacing: 0.5,
+      }}
+    >
+      DinkDraw
     </div>
+
+    <div
+      style={{
+        fontSize: 12,
+        opacity: 0.7,
+        marginTop: 2,
+      }}
+    >
+      Pickleball Tournaments
+    </div>
+  </div>
+</div>
+
+{/* Greeting */}
+{!isLoadingUser && userEmail ? (
+  <div
+    style={{
+      padding: '0 16px 8px 16px',
+      color: '#FFCB05',
+      fontWeight: 800,
+      fontSize: 14,
+    }}
+  >
+    Hey, {displayName || userEmail}! 👋
+  </div>
+) : null}
 
       <TopNav />
 

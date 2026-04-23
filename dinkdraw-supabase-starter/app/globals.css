@@ -598,3 +598,19 @@ box-shadow:
     box-shadow: 0 0 0 0 rgba(255, 203, 5, 0);
   }
 }
+
+/* Round selector press/hover */
+.round-card {
+  transition: transform 140ms ease, box-shadow 180ms ease;
+}
+
+.round-card:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+@media (hover: hover) {
+  .round-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+  }
+}

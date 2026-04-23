@@ -733,29 +733,7 @@ export default function PublicTournamentViewPage({
         </div>
       </div>
 
-      <div className="card" style={{ marginBottom: 14, padding: 14 }}>
-        <div
-          className="row-between"
-          style={{ alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}
-        >
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <span className={isCompleted ? 'tag' : isStarted ? 'tag green' : 'tag'}>
-              {isCompleted ? 'Complete' : isStarted ? 'Live' : 'Waiting'}
-            </span>
-            <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
-            <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
-            {!isLive && isStarted ? <span className="tag">Connecting</span> : null}
-          </div>
-
-          {eventMeta ? (
-            <div className="muted" style={{ fontSize: 13, textAlign: 'right' }}>
-              {eventMeta}
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="card" style={{ marginBottom: 14 }}>
+       <div className="card" style={{ marginBottom: 14 }}>
         {isStarted && !isCompleted ? (
           <div
             style={{

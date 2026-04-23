@@ -928,56 +928,58 @@ export default function PublicTournamentViewPage({
                   <div style={{ marginBottom: 10 }}>{renderStyledMatchLabel(match)}</div>
 
                   <div className="grid" style={{ marginBottom: 4 }}>
-                    <div className="list-item" style={{ padding: 12 }}>
-                      <div
-                        style={{
-                          fontWeight: 800,
-                          marginBottom: 8,
-                          ...getWinnerStyle('a', match),
-                        }}
-                      >
-                        {renderTeam(
-                          match.team_a_player_1_id,
-                          match.team_a_player_2_id
-                        )}
-                      </div>
-                      <div
-                       style={{
-  textAlign: 'center',
-  fontSize: 30,
-  fontWeight: 900,
-  lineHeight: 1,
-  letterSpacing: '-0.03em',
-  color: '#ffffff',
-}}
-                      >
+                    <div
+  className="list-item"
+  style={{
+    padding: 12,
+    background:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_a_score > match.team_b_score
+        ? 'rgba(255,203,5,0.08)'
+        : undefined,
+    borderColor:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_a_score > match.team_b_score
+        ? 'rgba(255,203,5,0.35)'
+        : undefined,
+    boxShadow:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_a_score > match.team_b_score
+        ? '0 0 0 1px rgba(255,203,5,0.14) inset'
+        : undefined,
+  }}
+>
                         {match.team_a_score ?? '-'}
                       </div>
                     </div>
 
-                    <div className="list-item" style={{ padding: 12 }}>
-                      <div
-                        style={{
-                          fontWeight: 800,
-                          marginBottom: 8,
-                          ...getWinnerStyle('b', match),
-                        }}
-                      >
-                        {renderTeam(
-                          match.team_b_player_1_id,
-                          match.team_b_player_2_id
-                        )}
-                      </div>
-                      <div
-                        style={{
-  textAlign: 'center',
-  fontSize: 30,
-  fontWeight: 900,
-  lineHeight: 1,
-  letterSpacing: '-0.03em',
-  color: '#ffffff',
-}}
-                      >
+                    <div
+  className="list-item"
+  style={{
+    padding: 12,
+    background:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_b_score > match.team_a_score
+        ? 'rgba(255,203,5,0.08)'
+        : undefined,
+    borderColor:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_b_score > match.team_a_score
+        ? 'rgba(255,203,5,0.35)'
+        : undefined,
+    boxShadow:
+      match.team_a_score !== null &&
+      match.team_b_score !== null &&
+      match.team_b_score > match.team_a_score
+        ? '0 0 0 1px rgba(255,203,5,0.14) inset'
+        : undefined,
+  }}
+>
                         {match.team_b_score ?? '-'}
                       </div>
                     </div>

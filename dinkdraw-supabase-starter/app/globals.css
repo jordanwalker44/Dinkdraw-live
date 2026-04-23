@@ -517,7 +517,7 @@ textarea.input:focus {
 }
 
 .bottom-nav-item.center:active {
-  transform: translateY(-16px);
+  transform: translateY(-8px);
 }
 
 .bottom-nav-icon {

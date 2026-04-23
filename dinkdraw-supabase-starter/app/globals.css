@@ -629,3 +629,21 @@ box-shadow:
     transform: translateY(0);
   }
 }
+
+.app-header-elevated {
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06),
+    0 8px 24px rgba(0,0,0,0.20);
+  animation: headerEnter 240ms ease both;
+}
+
+@keyframes headerEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 export function AppHeader() {
   return (
@@ -33,12 +32,9 @@ export function AppHeader() {
             color: 'inherit',
           }}
         >
-          <motion.img
+          <img
             src="/dinkdraw-header-logo.png"
             alt="DinkDraw"
-            initial={{ opacity: 0, y: -6, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.28, ease: 'easeOut' }}
             style={{
               width: 44,
               height: 44,
@@ -47,10 +43,7 @@ export function AppHeader() {
             }}
           />
 
-          <motion.div
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.32, ease: 'easeOut', delay: 0.04 }}
+          <div
             style={{
               minWidth: 0,
             }}
@@ -77,7 +70,7 @@ export function AppHeader() {
             >
               Pickleball tournaments made easy
             </div>
-          </motion.div>
+          </div>
         </Link>
       </div>
 

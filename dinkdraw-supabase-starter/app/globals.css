@@ -616,7 +616,7 @@ box-shadow:
 }
 
 .soft-enter {
-  animation: softEnter 220ms ease both;
+  animation: softEnter 260ms ease both;
 }
 
 @keyframes softEnter {

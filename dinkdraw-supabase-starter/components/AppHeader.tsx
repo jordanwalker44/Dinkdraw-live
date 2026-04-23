@@ -49,16 +49,16 @@ export function AppHeader() {
             }}
           >
             <div
-              style={{
-                fontSize: 22,
-                fontWeight: 900,
-                letterSpacing: '-0.03em',
-                lineHeight: 1,
-                color: '#ffffff',
-              }}
-            >
-              DinkDraw
-            </div>
+  style={{
+    fontSize: 22,
+    fontWeight: 900,
+    letterSpacing: '-0.03em',
+    lineHeight: 1,
+  }}
+>
+  <span style={{ color: '#ffffff' }}>Dink</span>
+  <span style={{ color: '#FFCB05' }}>Draw</span>
+</div>
 
             <div
               style={{

@@ -5,15 +5,16 @@ import Link from 'next/link';
 export function AppHeader() {
   return (
     <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        background: 'rgba(7, 12, 20, 0.82)',
-      }}
-    >
+  className="app-header-elevated"
+  style={{
+    position: 'sticky',
+    top: 0,
+    zIndex: 50,
+    backdropFilter: 'blur(14px)',
+    WebkitBackdropFilter: 'blur(14px)',
+    background: 'rgba(7, 12, 20, 0.84)',
+  }}
+>
       <div
         style={{
           maxWidth: 720,

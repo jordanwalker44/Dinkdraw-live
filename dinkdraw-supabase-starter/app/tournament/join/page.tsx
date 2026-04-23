@@ -169,7 +169,6 @@ export default function JoinTournamentPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">Join Tournament</h1>
           <p className="hero-subtitle">
             Enter a join code from any phone and jump right into the event.

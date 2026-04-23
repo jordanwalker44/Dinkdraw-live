@@ -3071,6 +3071,22 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
       {activeTab === 'players' && (
         <>
+{isOrganizer && (
+  <div className="card" style={{ marginBottom: 14 }}>
+    <div className="card-title">Invite Players</div>
+
+    <div className="grid">
+      <button type="button" className="button secondary" onClick={copyJoinCode}>
+        {copied ? 'Join Code Copied' : 'Copy Join Code'}
+      </button>
+
+      <button type="button" className="button primary" onClick={shareJoinLink}>
+        Share Join Link
+      </button>
+    </div>
+  </div>
+)}
+
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Players</div>
             <div className="card-subtitle">
@@ -3264,12 +3280,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
             {isOrganizer ? (
               <div className="grid">
-                <button type="button" className="button secondary" onClick={copyJoinCode}>
-                  {copied ? 'Join Code Copied' : 'Copy Join Code'}
-                </button>
-                <button type="button" className="button primary" onClick={shareJoinLink}>
-                  Share Join Link
-                </button>
                 {isStarted && !isCompleted ? (
                   <button
                     type="button"

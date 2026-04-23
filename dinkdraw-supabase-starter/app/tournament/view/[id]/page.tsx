@@ -955,7 +955,7 @@ export default function PublicTournamentViewPage({
                       <div
                         style={{
                         fontWeight: 900,
-                        marginBottom: 8,
+                        marginBottom: 6,
                         fontSize: 15,
                         letterSpacing: '-0.01em',
                         ...getWinnerStyle('a', match),
@@ -969,7 +969,7 @@ export default function PublicTournamentViewPage({
                       <div
                         style={{
                           textAlign: 'center',
-                          fontSize: 30,
+                          fontSize: 32,
                           fontWeight: 900,
                           lineHeight: 1,
                           letterSpacing: '-0.03em',
@@ -1007,7 +1007,7 @@ export default function PublicTournamentViewPage({
                       <div
                         style={{
                         fontWeight: 900,
-                        marginBottom: 8,
+                        marginBottom: 6,
                         fontSize: 15,
                         letterSpacing: '-0.01em',
                         ...getWinnerStyle('b', match),
@@ -1021,7 +1021,7 @@ export default function PublicTournamentViewPage({
                       <div
                         style={{
                           textAlign: 'center',
-                          fontSize: 30,
+                          fontSize: 32,
                           fontWeight: 900,
                           lineHeight: 1,
                           letterSpacing: '-0.03em',

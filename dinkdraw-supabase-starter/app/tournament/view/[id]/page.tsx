@@ -838,7 +838,7 @@ export default function PublicTournamentViewPage({
           <div className="muted">No matches in this round yet.</div>
         ) : (
           <div className="grid">
-            {matchesForSelectedRound.map((match) => {
+                       {matchesForSelectedRound.map((match) => {
               const isCurrentMatch =
                 !isCompleted &&
                 match.round_number === currentRound &&
@@ -861,7 +861,13 @@ export default function PublicTournamentViewPage({
                 >
                   <div
                     className="row-between"
-                    style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
+                    style={{
+                      marginBottom: 14,
+                      alignItems: 'center',
+                      gap: 12,
+                      paddingBottom: 10,
+                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                    }}
                   >
                     <div>
                       <div
@@ -921,7 +927,7 @@ export default function PublicTournamentViewPage({
 
                   <div style={{ marginBottom: 10 }}>{renderStyledMatchLabel(match)}</div>
 
-                              <div className="grid" style={{ marginBottom: 4 }}>
+                  <div className="grid" style={{ marginBottom: 4 }}>
                     <div className="list-item" style={{ padding: 12 }}>
                       <div
                         style={{
@@ -971,10 +977,8 @@ export default function PublicTournamentViewPage({
                     </div>
                   </div>
                 </div>
-                );
-              })}
-
-            {byesForSelectedRound.length ? (
+              );
+            })}
 
             {byesForSelectedRound.length ? (
               <div className="list-item">

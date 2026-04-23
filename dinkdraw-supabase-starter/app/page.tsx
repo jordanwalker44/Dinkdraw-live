@@ -48,6 +48,9 @@ export default function HomePage() {
     loadUser();
   }, [supabase]);
 
+    return (
+    <main className="page-shell">
+
       <TopNav />
 
 {!isLoadingUser && !userEmail ? (

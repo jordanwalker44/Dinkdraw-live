@@ -565,13 +565,15 @@ export default function PublicTournamentViewPage({
       key={match.id}
       className="list-item"
       style={
-        isCurrentMatch
-          ? {
-              borderColor: 'rgba(255,203,5,.55)',
-              boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-            }
-          : undefined
+  isCurrentMatch
+    ? {
+        borderColor: 'rgba(255,203,5,.7)',
+        boxShadow:
+          '0 0 0 1px rgba(255,203,5,.35) inset, 0 0 20px rgba(255,203,5,0.15)',
+        background: 'rgba(255,203,5,0.03)',
       }
+    : undefined
+}
     >
       <div
         className="row-between"
@@ -850,13 +852,15 @@ export default function PublicTournamentViewPage({
                   key={match.id}
                   className="list-item"
                   style={
-                    isCurrentMatch
-                      ? {
-                          borderColor: 'rgba(255,203,5,.55)',
-                          boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-                        }
-                      : undefined
-                  }
+  isCurrentMatch
+    ? {
+        borderColor: 'rgba(255,203,5,.7)',
+        boxShadow:
+          '0 0 0 1px rgba(255,203,5,.35) inset, 0 0 20px rgba(255,203,5,0.15)',
+        background: 'rgba(255,203,5,0.03)',
+      }
+    : undefined
+}
                 >
                   <div
                     className="row-between"

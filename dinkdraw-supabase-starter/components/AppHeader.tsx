@@ -57,7 +57,7 @@ export function AppHeader() {
   }}
 >
   <span style={{ color: '#ffffff' }}>Dink</span>
-  <span style={{ color: '#FFCB05' }}>Draw</span>
+  <span className="logo-draw">Draw</span>
 </div>
 
             <div

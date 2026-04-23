@@ -355,58 +355,19 @@ export default function PublicTournamentViewPage({
     [matches, selectedRound]
   );
 
-  const currentRoundMatches = useMemo(
+  const liveMatchIds = useMemo(
     () =>
-      matches
-        .filter((m) => m.round_number === currentRound && !m.is_bye)
-        .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999)),
+      new Set(
+        matches
+          .filter(
+            (m) =>
+              !m.is_bye &&
+              !m.is_complete &&
+              m.round_number === currentRound
+          )
+          .map((m) => m.id)
+      ),
     [matches, currentRound]
-  );
-
-  const liveMatches = useMemo(
-    () => currentRoundMatches.filter((m) => !m.is_complete),
-    [currentRoundMatches]
-  );
-
-  const featuredLiveMatch = useMemo(
-    () => liveMatches[0] || null,
-    [liveMatches]
-  );
-
-  const otherLiveMatches = useMemo(
-    () => liveMatches.slice(1),
-    [liveMatches]
-  );
-
-  const upcomingMatches = useMemo(
-    () =>
-      matches
-        .filter(
-          (m) =>
-            !m.is_complete &&
-            !m.is_bye &&
-            !liveMatches.some((live) => live.id === m.id) &&
-            m.round_number >= currentRound
-        )
-        .sort((a, b) => {
-          if (a.round_number !== b.round_number) {
-            return a.round_number - b.round_number;
-          }
-          return (a.court_number ?? 999) - (b.court_number ?? 999);
-        }),
-    [matches, liveMatches, currentRound]
-  );
-
-  const nextUpMatch = useMemo(
-    () => upcomingMatches[0] || null,
-    [upcomingMatches]
-  );
-
-  const currentRoundComplete = useMemo(
-    () =>
-      currentRoundMatches.length > 0 &&
-      currentRoundMatches.every((m) => m.is_complete),
-    [currentRoundMatches]
   );
 
   const standings = useMemo(
@@ -522,81 +483,51 @@ export default function PublicTournamentViewPage({
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
-function renderStyledMatchLabel(match: Match) {
-  return (
-    <div
-      style={{
-        textAlign: 'center',
-        marginBottom: 12,
-      }}
-    >
+  function renderStyledMatchLabel(match: Match) {
+    return (
       <div
         style={{
-          fontWeight: 800,
-          lineHeight: 1.25,
+          textAlign: 'center',
+          marginBottom: 12,
         }}
       >
-        {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
-      </div>
+        <div
+          style={{
+            fontWeight: 800,
+            lineHeight: 1.25,
+          }}
+        >
+          {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+        </div>
 
-<div
-  style={{
-    margin: '8px 0',
-    color: '#FFCB05',
-    fontWeight: 700,
-    letterSpacing: '0.14em',
-    textTransform: 'uppercase',
-    fontSize: 11,
-    opacity: 0.7,
-  }}
->
-  VS
-</div>
+        <div
+          style={{
+            margin: '8px 0',
+            color: '#FFCB05',
+            fontWeight: 700,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            fontSize: 11,
+            opacity: 0.7,
+          }}
+        >
+          VS
+        </div>
 
-      <div
-        style={{
-          fontWeight: 800,
-          lineHeight: 1.25,
-        }}
-      >
-        {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+        <div
+          style={{
+            fontWeight: 800,
+            lineHeight: 1.25,
+          }}
+        >
+          {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   function renderCourtLabel(match: Match) {
-  return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
-}
-
-  function getInitials(playerId1?: string | null, playerId2?: string | null) {
-    const getInitialsFromName = (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) return '?';
-
-      const parts = trimmed.split(/\s+/);
-
-      if (parts.length >= 2) {
-        return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
-      }
-
-      return parts[0].slice(0, 2).toUpperCase();
-    };
-
-    const getPlayerInitials = (id?: string | null) => {
-      if (!id) return '?';
-      const player = playerSlots.find((p) => p.id === id);
-      return getInitialsFromName(player?.display_name || '');
-    };
-
-    if (isSingles) {
-      return getPlayerInitials(playerId1);
-    }
-
-    const a = getPlayerInitials(playerId1);
-    const b = getPlayerInitials(playerId2);
-
-    return `${a} & ${b}`;
+    return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
   }
 
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
@@ -616,20 +547,11 @@ function renderStyledMatchLabel(match: Match) {
     return isWinner ? { color: '#FFCB05' } : {};
   }
 
-  function getRoundStatusLabel(round: number) {
+  function getRoundChipLabel(round: number) {
     const status = roundStatusByRound.get(round);
-    if (status === 'complete') return `Round ${round} · Final`;
-    if (status === 'current') return `Round ${round} · Live`;
-    return `Round ${round} · Next`;
-  }
-
-  function renderBroadcastScore(match: Match, team: 'a' | 'b') {
-    if (isBestOf3) {
-      const score = getSeriesScore(match);
-      return team === 'a' ? score.aScore : score.bScore;
-    }
-
-    return team === 'a' ? match.team_a_score ?? '-' : match.team_b_score ?? '-';
+    if (status === 'current') return 'LIVE';
+    if (status === 'complete') return 'FINAL';
+    return 'ROUND';
   }
 
   function renderBestOf3Match(match: Match) {
@@ -637,7 +559,7 @@ function renderStyledMatchLabel(match: Match) {
     const isCurrentMatch =
       !isCompleted &&
       match.round_number === currentRound &&
-      liveMatches.some((live) => live.id === match.id);
+      liveMatchIds.has(match.id);
 
     return (
       <div
@@ -652,23 +574,61 @@ function renderStyledMatchLabel(match: Match) {
             : undefined
         }
       >
-        <div className="row-between" style={{ marginBottom: 12 }}>
-          <strong>{renderCourtLabel(match)}</strong>
+        <div
+          className="row-between"
+          style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: 4,
+              }}
+            >
+              Court
+            </div>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 900,
+                lineHeight: 1.1,
+              }}
+            >
+              {renderCourtLabel(match)}
+            </div>
+          </div>
+
           <div
             style={{
               display: 'flex',
               gap: 8,
-              alignItems: 'center',
               flexWrap: 'wrap',
               justifyContent: 'flex-end',
             }}
           >
-            {isCurrentMatch ? <span className="tag">Live</span> : null}
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
-              {aWins}-{bWins}
-            </span>
-            <span className={match.is_complete ? 'tag green' : 'tag'}>
-              {match.is_complete ? 'Complete' : 'In Progress'}
+            {isCurrentMatch ? (
+              <span
+                className="tag"
+                style={{
+                  background: 'rgba(255,203,5,0.14)',
+                  border: '1px solid rgba(255,203,5,0.35)',
+                  color: '#FFCB05',
+                  fontWeight: 800,
+                }}
+              >
+                LIVE
+              </span>
+            ) : null}
+
+            <span
+              className={match.is_complete ? 'tag green' : 'tag'}
+              style={!match.is_complete ? { fontWeight: 800 } : undefined}
+            >
+              {match.is_complete ? 'COMPLETE' : 'IN PROGRESS'}
             </span>
           </div>
         </div>
@@ -708,77 +668,18 @@ function renderStyledMatchLabel(match: Match) {
             </div>
           ) : null}
         </div>
-      </div>
-    );
-  }
-
-  function renderCompactLiveMatch(match: Match) {
-    return (
-      <div
-        key={match.id}
-        className="list-item"
-        style={{
-          padding: 14,
-          borderColor: 'rgba(255,203,5,.28)',
-        }}
-      >
-        <div
-          className="row-between"
-          style={{ marginBottom: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}
-        >
-          <div>
-            <div style={{ fontWeight: 800, marginBottom: 4 }}>
-              {renderCourtLabel(match)}
-            </div>
-            <div className="muted" style={{ fontSize: 12 }}>
-              Round {match.round_number}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <span className="tag green">Live</span>
-            </div>
-        </div>
-
-        <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>
 
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
-            alignItems: 'center',
-            gap: 10,
+            marginTop: 10,
+            textAlign: 'center',
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#FFCB05',
           }}
         >
-          <div style={{ textAlign: 'center', ...getWinnerStyle('a', match) }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-              {getInitials(match.team_a_player_1_id, match.team_a_player_2_id)}
-            </div>
-            <div style={{ fontSize: 26, fontWeight: 900 }}>
-              {renderBroadcastScore(match, 'a')}
-            </div>
-          </div>
-
-          <div style={{ fontSize: 16, fontWeight: 900, opacity: 0.7 }}>—</div>
-
-          <div style={{ textAlign: 'center', ...getWinnerStyle('b', match) }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-              {getInitials(match.team_b_player_1_id, match.team_b_player_2_id)}
-            </div>
-            <div style={{ fontSize: 26, fontWeight: 900 }}>
-              {renderBroadcastScore(match, 'b')}
-            </div>
-          </div>
+          Series wins: {aWins}-{bWins}
         </div>
-
-        {isBestOf3 ? (
-          <div
-            className="muted"
-            style={{ fontSize: 12, textAlign: 'center', marginTop: 8 }}
-          >
-            Series wins: {getSeriesWins(match).aWins}-{getSeriesWins(match).bWins}
-          </div>
-        ) : null}
       </div>
     );
   }
@@ -869,278 +770,102 @@ function renderStyledMatchLabel(match: Match) {
         </div>
       </div>
 
-      <div
-        className="card"
-        style={{
-          marginBottom: 14,
-          padding: 18,
-          borderColor: isStarted && !isCompleted ? 'rgba(255,203,5,0.22)' : undefined,
-          boxShadow: isStarted && !isCompleted
-            ? '0 0 0 1px rgba(255,203,5,0.08) inset, var(--shadow)'
-            : undefined,
-        }}
-      >
-        <div
-          style={{
-            marginBottom: 18,
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ width: '100%' }}>
+      <div className="card" style={{ marginBottom: 14 }}>
+        {isStarted && !isCompleted ? (
+          <div
+            style={{
+              marginBottom: 12,
+              padding: 12,
+              borderRadius: 10,
+              background: 'rgba(255, 203, 5, 0.08)',
+              border: '1px solid rgba(255, 203, 5, 0.25)',
+            }}
+          >
             <div
-              className="muted"
               style={{
                 fontSize: 12,
+                fontWeight: 700,
+                color: '#FFCB05',
+                letterSpacing: 1,
+              }}
+            >
+              CURRENT ROUND
+            </div>
+
+            <div
+              style={{
+                fontSize: 22,
                 fontWeight: 800,
-                letterSpacing: '0.14em',
-                textTransform: 'uppercase',
-                marginBottom: 8,
+                marginTop: 2,
               }}
             >
-              Broadcast Center
-            </div>
-            <div className="card-title" style={{ marginBottom: 4 }}>
-              {isCompleted
-                ? 'Final Event Summary'
-                : isStarted
-                ? `Round ${currentRound} Live`
-                : 'Tournament Preview'}
-            </div>
-            <div className="card-subtitle" style={{ marginBottom: 0 }}>
-              {isCompleted
-                ? 'All matches are complete. Final standings are now locked.'
-                : isStarted
-                ? liveMatches.length > 0
-                  ? `${liveMatches.length} match${liveMatches.length === 1 ? '' : 'es'} in progress`
-                  : `${completedMatchCount} of ${totalPlayableMatchCount} matches complete`
-                : 'Live match coverage will appear here as soon as play begins.'}
-            </div>
-
-            <div
-              style={{
-                height: 1,
-                background:
-                  'linear-gradient(90deg, transparent, rgba(255,203,5,0.5), transparent)',
-                margin: '12px 0 0 0',
-              }}
-            />
-          </div>
-        </div>
-
-        {!isStarted ? (
-          <div className="list-item" style={{ padding: 16 }}>
-            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-              Waiting for first serve
-            </div>
-            <div className="muted">
-              Share this public link with players and spectators to follow along once matches begin.
+              Round {currentRound}
             </div>
           </div>
-        ) : isCompleted ? (
-          <div className="grid" style={{ gap: 10 }}>
-            <div className="list-item" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-                Tournament complete
-              </div>
-              <div className="muted">
-                {completedMatchCount} of {totalPlayableMatchCount} scheduled matches were completed.
-              </div>
-            </div>
-          </div>
-        ) : currentRoundComplete ? (
-          <div className="grid" style={{ gap: 10 }}>
-            <div className="list-item" style={{ padding: 16 }}>
-              <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-                Round {currentRound} is complete
-              </div>
-              <div className="muted">
-                All live matches for this round have finished. The next matchup will appear automatically.
-              </div>
-            </div>
-          </div>
-        ) : featuredLiveMatch ? (
-          <div className="grid" style={{ gap: 12 }}>
-            <div
-              className="list-item"
-              style={{
-                padding: 18,
-                borderColor: 'rgba(255,203,5,.55)',
-                boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-                background:
-                  'linear-gradient(180deg, rgba(255,203,5,0.08), rgba(255,255,255,0.02))',
-              }}
-            >
-              <div
-                className="row-between"
-                style={{ alignItems: 'flex-start', marginBottom: 12, flexWrap: 'wrap' }}
-              >
-                <div>
-                  <div
-                    className="muted"
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 800,
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      marginBottom: 6,
-                    }}
-                  >
-                    Featured Match
-                  </div>
-                  <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>
-                    Round {currentRound} • {renderCourtLabel(featuredLiveMatch)}
-                  </div>
-                  <div className="muted" style={{ fontSize: 13 }}>
-                    {liveMatches.length} live court{liveMatches.length === 1 ? '' : 's'} right now
-                  </div>
-                </div>
+        ) : null}
 
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <span className="tag green">Live</span>
-                  </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                {renderStyledMatchLabel(featuredLiveMatch)}
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto 1fr',
-                  alignItems: 'center',
-                  gap: 12,
-                  marginBottom: 10,
-                }}
-              >
-                <div
-                  style={{
-                    textAlign: 'center',
-                    ...getWinnerStyle('a', featuredLiveMatch),
-                  }}
-                >
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                    {getInitials(
-                      featuredLiveMatch.team_a_player_1_id,
-                      featuredLiveMatch.team_a_player_2_id
-                    )}
-                  </div>
-                  <div style={{ fontSize: 38, fontWeight: 900 }}>
-                    {renderBroadcastScore(featuredLiveMatch, 'a')}
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 900,
-                    opacity: 0.7,
-                  }}
-                >
-                  —
-                </div>
-
-                <div
-                  style={{
-                    textAlign: 'center',
-                    ...getWinnerStyle('b', featuredLiveMatch),
-                  }}
-                >
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                    {getInitials(
-                      featuredLiveMatch.team_b_player_1_id,
-                      featuredLiveMatch.team_b_player_2_id
-                    )}
-                  </div>
-                  <div style={{ fontSize: 38, fontWeight: 900 }}>
-                    {renderBroadcastScore(featuredLiveMatch, 'b')}
-                  </div>
-                </div>
-              </div>
-
-              {isBestOf3 ? (
-                <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
-                  Series wins: {getSeriesWins(featuredLiveMatch).aWins}-{getSeriesWins(featuredLiveMatch).bWins}
-                </div>
-              ) : null}
-            </div>
-
-            {otherLiveMatches.length ? (
-              <div className="list-item" style={{ padding: 14 }}>
-                <div
-                  className="muted"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    marginBottom: 10,
-                  }}
-                >
-                  Other Live Courts
-                </div>
-
-                <div className="grid" style={{ gap: 10 }}>
-                  {otherLiveMatches.map((match) => renderCompactLiveMatch(match))}
-                </div>
-              </div>
-            ) : null}
-
-            {nextUpMatch ? (
-              <div className="list-item" style={{ padding: 14 }}>
-                <div
-                  className="muted"
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    marginBottom: 8,
-                  }}
-                >
-                  Up Next
-                </div>
-                <div style={{ marginBottom: 6 }}>{renderStyledMatchLabel(nextUpMatch)}</div>
-                <div className="muted" style={{ fontSize: 13 }}>
-                  Round {nextUpMatch.round_number} • {renderCourtLabel(nextUpMatch)}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="list-item" style={{ padding: 16 }}>
-            <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-              Waiting for the next match
-            </div>
-            <div className="muted">
-              Live scoring is connected. The next active court will appear here automatically.
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Rounds</div>
         <div className="card-subtitle">
           {isCompleted
             ? 'Tournament complete. Browse any round to review final scores.'
             : isStarted
-            ? 'Follow every court by round, with the current live round highlighted below.'
+            ? 'Live matches and scores appear directly inside each round.'
             : 'Round schedule will appear here after the tournament starts.'}
         </div>
 
-        <div className="grid" style={{ marginBottom: 14 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 12,
+            marginTop: 12,
+            marginBottom: 18,
+          }}
+        >
           {roundsAvailable.map((round) => {
             const isSelected = selectedRound === round;
+            const status = roundStatusByRound.get(round);
+            const isCurrent = status === 'current';
 
             return (
               <button
                 key={round}
                 type="button"
-                className={`button ${isSelected ? 'primary' : 'secondary'}`}
                 onClick={() => setSelectedRound(round)}
+                style={{
+                  padding: '16px',
+                  borderRadius: 14,
+                  border: isSelected
+                    ? '1px solid rgba(255, 203, 5, 0.6)'
+                    : '1px solid rgba(255,255,255,0.08)',
+                  background: isSelected
+                    ? 'rgba(255, 203, 5, 0.08)'
+                    : 'rgba(255,255,255,0.03)',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                }}
               >
-                {getRoundStatusLabel(round)}
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    color: isCurrent ? '#FFCB05' : 'rgba(255,255,255,0.5)',
+                    marginBottom: 6,
+                  }}
+                >
+                  {getRoundChipLabel(round)}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: '#fff',
+                  }}
+                >
+                  Round {round}
+                </div>
               </button>
             );
           })}
@@ -1154,7 +879,7 @@ function renderStyledMatchLabel(match: Match) {
               const isCurrentMatch =
                 !isCompleted &&
                 match.round_number === currentRound &&
-                liveMatches.some((live) => live.id === match.id);
+                liveMatchIds.has(match.id);
 
               if (isBestOf3) return renderBestOf3Match(match);
 
@@ -1173,20 +898,60 @@ function renderStyledMatchLabel(match: Match) {
                 >
                   <div
                     className="row-between"
-                    style={{ marginBottom: 12, flexWrap: 'wrap' }}
+                    style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
                   >
-                    <strong>{renderCourtLabel(match)}</strong>
+                    <div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          letterSpacing: '0.08em',
+                          textTransform: 'uppercase',
+                          color: 'rgba(255,255,255,0.6)',
+                          marginBottom: 4,
+                        }}
+                      >
+                        Court
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 20,
+                          fontWeight: 900,
+                          lineHeight: 1.1,
+                        }}
+                      >
+                        {renderCourtLabel(match)}
+                      </div>
+                    </div>
+
                     <div
                       style={{
                         display: 'flex',
                         gap: 8,
-                        alignItems: 'center',
                         flexWrap: 'wrap',
+                        justifyContent: 'flex-end',
                       }}
                     >
-                      {isCurrentMatch ? <span className="tag">Live</span> : null}
-                      <span className={match.is_complete ? 'tag green' : 'tag'}>
-                        {match.is_complete ? 'Complete' : 'In Progress'}
+                      {isCurrentMatch ? (
+                        <span
+                          className="tag"
+                          style={{
+                            background: 'rgba(255,203,5,0.14)',
+                            border: '1px solid rgba(255,203,5,0.35)',
+                            color: '#FFCB05',
+                            fontWeight: 800,
+                          }}
+                        >
+                          LIVE
+                        </span>
+                      ) : null}
+
+                      <span
+                        className={match.is_complete ? 'tag green' : 'tag'}
+                        style={!match.is_complete ? { fontWeight: 800 } : undefined}
+                      >
+                        {match.is_complete ? 'COMPLETE' : 'IN PROGRESS'}
                       </span>
                     </div>
                   </div>

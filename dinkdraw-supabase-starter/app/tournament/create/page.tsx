@@ -232,16 +232,6 @@ export default function CreateTournamentPage() {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
-          <h1 className="hero-title">Create Tournament</h1>
-          <p className="hero-subtitle">
-            Set up your event in seconds, then share the join code at the courts.
-          </p>
-        </div>
-      </div>
-
       <TopNav />
 
       <div className="card">

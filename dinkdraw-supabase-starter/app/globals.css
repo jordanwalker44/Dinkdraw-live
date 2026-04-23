@@ -647,3 +647,25 @@ box-shadow:
     transform: translateY(0);
   }
 }
+
+.logo-draw {
+  color: #FFCB05;
+  display: inline-block;
+  animation: drawReveal 400ms ease-out both;
+}
+
+@keyframes drawReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(4px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-1px);
+    filter: blur(0);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}

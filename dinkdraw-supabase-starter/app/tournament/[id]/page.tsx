@@ -2968,51 +2968,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   return (
     <main className="page-shell">
-      <div className="card" style={{ marginBottom: 14, padding: 12 }}>
-        <div
-          style={{
-            fontSize: 28,
-            fontWeight: 900,
-            lineHeight: 1.05,
-            letterSpacing: '-0.03em',
-            marginBottom: 6,
-          }}
-        >
-          {tournament?.title || 'Tournament'}
-        </div>
-
-        {tournamentModeBadges.length ? (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              marginBottom: 6,
-            }}
-          >
-            {tournamentModeBadges.map((badge) => (
-              <span key={badge} className="tag">
-                {badge}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        <div
-          className="muted"
-          style={{
-            fontSize: 16,
-            fontWeight: 600,
-          }}
-        >
-          {isCompleted
-            ? 'Tournament complete'
-            : isStarted
-            ? `Live now • Round ${currentRound}`
-            : 'Set up players, then start when ready'}
-        </div>
-      </div>
-
       <TopNav />
 
       {isStarted && yourMatch && (

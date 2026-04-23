@@ -18,7 +18,7 @@ export function AppHeader() {
         style={{
           maxWidth: 720,
           margin: '0 auto',
-          padding: '12px 16px 4px 16px',
+          padding: '10px 16px 8px 16px',
         }}
       >
         <Link

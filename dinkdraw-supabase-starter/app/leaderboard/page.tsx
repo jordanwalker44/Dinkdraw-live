@@ -176,7 +176,6 @@ export default function LeaderboardPage() {
     <main className="page-shell">
       <div className="hero">
         <div className="hero-inner">
-          <img src="/dinkdraw-logo.png" alt="DinkDraw logo" className="hero-logo" />
           <h1 className="hero-title">Leaderboard</h1>
           <p className="hero-subtitle">
             Live player rankings. Win matches, climb the board.

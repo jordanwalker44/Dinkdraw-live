@@ -365,15 +365,65 @@ export default function MyStatsPage() {
 
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
-          <div style={{ width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,203,5,.12)', border: '1px solid rgba(255,203,5,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 24, margin: '0 auto 12px' }}>
-            {initials}
-          </div>
-          <h1 className="hero-title">{displayName || 'My Stats'}</h1>
-          <p className="hero-subtitle">{filterLabel(timeFilter)}</p>
-        </div>
+      <div
+  className="card soft-enter"
+  style={{
+    marginBottom: 14,
+    padding: 18,
+    background:
+      'linear-gradient(180deg, rgba(255,203,5,0.12), rgba(255,255,255,0.025))',
+    border: '1px solid rgba(255,203,5,0.18)',
+    boxShadow:
+      '0 1px 0 rgba(255,255,255,0.05) inset, 0 14px 34px rgba(0,0,0,0.24)',
+  }}
+>
+  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14 }}>
+    <div>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: '#FFCB05',
+          marginBottom: 8,
+        }}
+      >
+        Profile
       </div>
+
+      <h1
+        style={{
+          margin: 0,
+          fontSize: 28,
+          fontWeight: 950,
+          letterSpacing: '-0.04em',
+        }}
+      >
+        My Stats
+      </h1>
+
+      <p className="muted" style={{ marginTop: 8 }}>
+        Track your wins, performance, and progress over time.
+      </p>
+    </div>
+
+    <div
+      style={{
+        width: 46,
+        height: 46,
+        borderRadius: 18,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(255,203,5,0.12)',
+        border: '1px solid rgba(255,203,5,0.22)',
+      }}
+    >
+      📊
+    </div>
+  </div>
+</div>
 
       <TopNav />
 

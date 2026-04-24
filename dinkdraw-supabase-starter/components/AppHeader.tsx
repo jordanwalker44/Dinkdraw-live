@@ -8,7 +8,7 @@ export function AppHeader() {
   className="app-header-elevated"
   style={{
     position: 'fixed',
-top: 'env(safe-area-inset-top, 0px)',
+top: 0,
 left: 0,
 right: 0,
     zIndex: 50,

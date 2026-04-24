@@ -69,7 +69,7 @@ img {
   width: 100%;
   max-width: var(--max);
   margin: 0 auto;
-  padding: 132px 14px calc(96px + env(safe-area-inset-bottom));
+  padding: 150px 14px calc(96px + env(safe-area-inset-bottom));
 }
 
 .hero {

@@ -9,6 +9,12 @@ function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+type FavoriteLocation = {
+  id: string;
+  name: string;
+  location: string;
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -97,6 +103,10 @@ export default function CreateTournamentPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
+  const [favoriteLocations, setFavoriteLocations] = useState<FavoriteLocation[]>([]);
+  const [selectedFavoriteLocationId, setSelectedFavoriteLocationId] = useState('');
+  const [saveLocationForLater, setSaveLocationForLater] = useState(false);
+  const [favoriteLocationName, setFavoriteLocationName] = useState('');
   const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
   
   const [playerCount, setPlayerCount] = useState(8);
@@ -126,6 +136,12 @@ export default function CreateTournamentPage() {
         .maybeSingle();
 
       setOrganizerName(profile?.display_name || user.email?.split('@')[0] || '');
+      const { data: savedLocations } = await supabase
+  .from('favorite_locations')
+  .select('id, name, location')
+  .order('name', { ascending: true });
+
+setFavoriteLocations(savedLocations || []);
     }
 
     loadUser();

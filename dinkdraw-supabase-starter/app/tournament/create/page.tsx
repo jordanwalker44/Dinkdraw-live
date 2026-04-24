@@ -411,6 +411,46 @@ setFavoriteLocations(savedLocations || []);
   />
 </div>
 
+   <div
+  className="list-item"
+  style={{
+    padding: 14,
+    borderRadius: 16,
+    border: '1px solid rgba(255,203,5,0.18)',
+    background: 'rgba(255,203,5,0.05)',
+  }}
+>
+  <label className="label">Saved Location</label>
+
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+    <input
+      type="checkbox"
+      checked={saveLocationForLater}
+      onChange={(e) => setSaveLocationForLater(e.target.checked)}
+      style={{ marginTop: 4 }}
+    />
+
+    <div style={{ flex: 1 }}>
+      <div style={{ fontWeight: 800 }}>
+        Save this location for next time
+      </div>
+      <div className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>
+        Use this court, gym, or park again when creating future tournaments.
+      </div>
+
+      {saveLocationForLater ? (
+        <input
+          className="input"
+          value={favoriteLocationName}
+          onChange={(e) => setFavoriteLocationName(e.target.value)}
+          placeholder="Location nickname, like Legacy Courts"
+          style={{ marginTop: 10 }}
+        />
+      ) : null}
+    </div>
+  </div>
+</div>       
+
           <div
   className="list-item"
   style={{

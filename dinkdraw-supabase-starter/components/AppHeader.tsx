@@ -35,7 +35,7 @@ right: 0,
           }}
         >
           <img
-            src="/dinkdraw-header-logo.png"
+            src="/dinkdraw-logo-transparent.png"
             alt="DinkDraw"
             style={{
               width: 48,

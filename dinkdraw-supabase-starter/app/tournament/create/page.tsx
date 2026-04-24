@@ -372,14 +372,44 @@ setFavoriteLocations(savedLocations || []);
 </div>
 
           <div>
-            <label className="label">Location</label>
-            <input
-              className="input"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Courts, gym, park..."
-            />
-          </div>
+  <label className="label">Location</label>
+
+  {favoriteLocations.length ? (
+    <div style={{ marginBottom: 10 }}>
+      <select
+        className="input"
+        value={selectedFavoriteLocationId}
+        onChange={(e) => {
+          const selectedId = e.target.value;
+          setSelectedFavoriteLocationId(selectedId);
+
+          const selected = favoriteLocations.find((item) => item.id === selectedId);
+          if (selected) {
+            setLocation(selected.location);
+            setFavoriteLocationName(selected.name);
+          }
+        }}
+      >
+        <option value="">Choose a saved location...</option>
+        {favoriteLocations.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  ) : null}
+
+  <input
+    className="input"
+    value={location}
+    onChange={(e) => {
+      setLocation(e.target.value);
+      setSelectedFavoriteLocationId('');
+    }}
+    placeholder="Courts, gym, park..."
+  />
+</div>
 
           <div
   className="list-item"

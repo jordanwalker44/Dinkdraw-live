@@ -8,7 +8,7 @@ export function AppHeader() {
   className="app-header-elevated"
   style={{
     position: 'sticky',
-    top: 'env(safe-area-inset-top, 0px)',
+    top: 0,
     zIndex: 50,
     backdropFilter: 'blur(14px)',
     WebkitBackdropFilter: 'blur(14px)',

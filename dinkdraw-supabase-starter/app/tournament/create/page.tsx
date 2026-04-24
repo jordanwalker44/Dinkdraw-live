@@ -97,6 +97,7 @@ export default function CreateTournamentPage() {
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [location, setLocation] = useState('');
+  const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
   
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
@@ -204,6 +205,7 @@ export default function CreateTournamentPage() {
           match_format: matchFormat,
           doubles_mode: doublesMode,
           court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
+          allow_player_score_reporting: allowPlayerScoreReporting,
         })
         .select()
         .single();
@@ -362,6 +364,36 @@ export default function CreateTournamentPage() {
               placeholder="Courts, gym, park..."
             />
           </div>
+
+          <div
+  className="list-item"
+  style={{
+    padding: 14,
+    borderRadius: 16,
+    border: '1px solid rgba(255,203,5,0.18)',
+    background: 'rgba(255,203,5,0.05)',
+  }}
+>
+  <label className="label">Score Reporting</label>
+
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+    <input
+      type="checkbox"
+      checked={allowPlayerScoreReporting}
+      onChange={(e) => setAllowPlayerScoreReporting(e.target.checked)}
+      style={{ marginTop: 4 }}
+    />
+
+    <div>
+      <div style={{ fontWeight: 800 }}>
+        Allow players to report scores
+      </div>
+      <div className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>
+        Joined players can enter match scores from their device. The organizer can still edit scores.
+      </div>
+    </div>
+  </div>
+</div>
 
           <Stepper
             label={`Players (min ${minPlayers})`}

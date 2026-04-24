@@ -27,6 +27,7 @@ type Tournament = {
   match_format: string;
   doubles_mode: string | null;
   court_labels: string[] | null;
+  allow_player_score_reporting: boolean | null;
 };
 
 type PlayerSlot = {
@@ -1344,6 +1345,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   const isOrganizer = tournament?.organizer_user_id === userId;
 
+  const canReportScores =
+  isOrganizer ||
+  (!!tournament?.allow_player_score_reporting && !!claimedSlot && isStarted && !isCompleted);
+
   useEffect(() => {
     if (!isOrganizer && isStarted) {
       setActiveTab('rounds');
@@ -1952,6 +1957,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
     if (isCompleted) return;
+    if (!canReportScores) return;
     const match = matches.find((m) => m.id === matchId);
     if (match?.is_complete) return;
     const draft = scoreDrafts[matchId];
@@ -2185,10 +2191,15 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function submitGame(matchId: string, game: 1 | 2 | 3) {
-    if (isCompleted) {
-      setMessage('Final results are locked.');
-      return;
-    }
+   if (isCompleted) {
+  setMessage('Final results are locked.');
+  return;
+}
+
+if (!canReportScores) {
+  setMessage('Scores are locked for this tournament.');
+  return;
+}
 
     const draft = scoreDrafts[matchId];
     if (!draft) return;
@@ -2320,6 +2331,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       setMessage('Final results are locked.');
       return;
     }
+    if (!canReportScores) {
+  setMessage('Scores are locked for this tournament.');
+  return;
+}
 
     const draft = scoreDrafts[matchId];
     if (!draft) {
@@ -2654,7 +2669,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               value={draft.game_1_a}
               disabled={game1Done || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
-              placeholder={isOrganizer ? '0' : 'Organizer only'}
+              placeholder={canReportScores ? '0' : 'Scores locked'}
             />
             <input
               className="input"
@@ -2663,7 +2678,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               value={draft.game_1_b}
               disabled={game1Done || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
-              placeholder={isOrganizer ? '0' : 'Organizer only'}
+              placeholder={canReportScores ? '0' : 'Scores locked'}
             />
           </div>
           {!game1Done && !seriesComplete && !isCompleted ? (
@@ -2677,7 +2692,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 padding: '14px 16px',
               }}
             >
-              {isOrganizer ? 'Submit Game 1' : 'Organizer Submits Game 1'}
+              {canReportScores ? 'Submit Game 1' : 'Scores Locked'}
             </button>
           ) : (
             <div
@@ -2743,7 +2758,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               value={draft.game_2_a}
               disabled={!game1Done || game2Done || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
-              placeholder={isOrganizer ? '0' : 'Organizer only'}
+              placeholder={canReportScores ? '0' : 'Scores locked'}
             />
             <input
               className="input"
@@ -2752,7 +2767,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               value={draft.game_2_b}
               disabled={!game1Done || game2Done || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
-              placeholder={isOrganizer ? '0' : 'Organizer only'}
+              placeholder={canReportScores ? '0' : 'Scores locked'}
             />
           </div>
           {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
@@ -2766,7 +2781,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 padding: '14px 16px',
               }}
             >
-              {isOrganizer ? 'Submit Game 2' : 'Organizer Submits Game 2'}
+              {canReportScores ? 'Submit Game 2' : 'Scores Locked'}
             </button>
           ) : game2Done ? (
             <div
@@ -2866,7 +2881,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 value={draft.game_3_a}
                 disabled={match.game_3_a !== null || seriesComplete || isCompleted}
                 onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
-                placeholder={isOrganizer ? '0' : 'Organizer only'}
+                placeholder={canReportScores ? '0' : 'Scores locked'}
               />
               <input
                 className="input"
@@ -2875,7 +2890,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                 value={draft.game_3_b}
                 disabled={match.game_3_b !== null || seriesComplete || isCompleted}
                 onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
-                placeholder={isOrganizer ? '0' : 'Organizer only'}
+                placeholder={canReportScores ? '0' : 'Scores locked'}
               />
             </div>
             {match.game_3_a === null && !seriesComplete && !isCompleted ? (
@@ -2889,7 +2904,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                   padding: '14px 16px',
                 }}
               >
-                {isOrganizer ? 'Submit Game 3' : 'Organizer Submits Game 3'}
+                {canReportScores ? 'Submit Game 3' : 'Scores Locked'}
               </button>
             ) : match.game_3_a !== null ? (
               <div
@@ -3634,10 +3649,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
                           value={draft.team_a_score}
-                          disabled={!isOrganizer || match.is_complete || isCompleted}
+                          disabled={!canReportScores || match.is_complete || isCompleted}
                           onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_a_score')}
-                          placeholder={isOrganizer ? '0' : 'Organizer only'}
+                          placeholder={canReportScores ? '0' : 'Scores locked'}
                         />
                       </div>
 
@@ -3692,10 +3707,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
                           value={draft.team_b_score}
-                          disabled={!isOrganizer || match.is_complete || isCompleted}
+                          disabled={!canReportScores || match.is_complete || isCompleted}
                           onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_b_score')}
-                          placeholder={isOrganizer ? '0' : 'Organizer only'}
+                          placeholder={canReportScores ? '0' : 'Scores locked'}
                         />
                       </div>
                     </div>
@@ -3738,7 +3753,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                       <button
                         className="button primary"
                         onClick={() => submitMatchScore(match.id)}
-                        disabled={!isOrganizer}
+                        disabled={!canReportScores}
                         style={{
                           width: '100%',
                           fontWeight: 800,
@@ -3746,7 +3761,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
                           padding: '14px 16px',
                         }}
                       >
-                        {isOrganizer ? 'Submit Score' : 'Organizer Submits Score'}
+                        {canReportScores ? 'Submit Score' : 'Scores Locked'}
                       </button>
                     )}
                   </div>

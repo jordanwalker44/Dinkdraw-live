@@ -240,7 +240,15 @@ setFavoriteLocations(savedLocations || []);
 
       await supabase.from('tournament_players').insert(playerRows);
 
-      router.push(`/tournament/${tournament.id}`);
+if (saveLocationForLater && location.trim()) {
+  await supabase.from('favorite_locations').insert({
+    user_id: user.id,
+    name: favoriteLocationName.trim() || location.trim(),
+    location: location.trim(),
+  });
+}
+
+router.push(`/tournament/${tournament.id}`);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Something went wrong.');
     }

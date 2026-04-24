@@ -419,7 +419,7 @@ textarea.input:focus {
 
 @media (min-width: 720px) {
   .page-shell {
-  padding: 22px 18px calc(48px + env(safe-area-inset-bottom));
+  padding: 132px 16px calc(env(safe-area-inset-bottom, 0px) + 90px);
 }
 
   .top-nav-mobile-bar {

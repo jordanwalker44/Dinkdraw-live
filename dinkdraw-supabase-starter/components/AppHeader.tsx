@@ -38,10 +38,11 @@ right: 0,
             src="/dinkdraw-header-logo.png"
             alt="DinkDraw"
             style={{
-              width: 44,
-              height: 44,
+              width: 48,
+              height: 48,
               objectFit: 'contain',
               flexShrink: 0,
+              background: 'transparent',
             }}
           />
 

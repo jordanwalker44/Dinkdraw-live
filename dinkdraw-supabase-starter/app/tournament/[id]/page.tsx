@@ -1663,6 +1663,34 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setIsSavingNames(false);
   }
 
+  async function clearPlayerSlot(slotId: string) {
+  if (!isOrganizer || isLocked) {
+    setMessage('Player spots are locked.');
+    return;
+  }
+
+  const confirmed = window.confirm('Clear this player spot?');
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from('tournament_players')
+    .update({
+      display_name: '',
+      claimed_by_user_id: null,
+      gender: null,
+    })
+    .eq('id', slotId);
+
+  if (error) {
+    setMessage(`Clear failed: ${error.message}`);
+    return;
+  }
+
+  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
+  await loadTournamentData(userId);
+  setMessage('Player cleared.');
+}
+
   async function updatePlayerGender(slotId: string, gender: 'male' | 'female' | '') {
     if (isLocked) {
       setMessage('Player settings are locked.');
@@ -3152,10 +3180,26 @@ if (!canReportScores) {
                         ) : null}
 
                         {!isLocked && canClaim ? (
-                          <button className="button primary" onClick={() => claimSlot(slot.id)}>
-                            Claim Spot
-                          </button>
-                        ) : null}
+  <button className="button primary" onClick={() => claimSlot(slot.id)}>
+    Claim Spot
+  </button>
+) : null}
+
+{isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
+  <button
+    type="button"
+    className="button secondary"
+    onClick={() => clearPlayerSlot(slot.id)}
+    style={{
+      borderColor: 'rgba(255,80,80,0.35)',
+      background: 'rgba(255,80,80,0.10)',
+      color: '#ff9b9b',
+      fontWeight: 800,
+    }}
+  >
+    Clear Player
+  </button>
+) : null}
                       </div>
                     </div>
                   );

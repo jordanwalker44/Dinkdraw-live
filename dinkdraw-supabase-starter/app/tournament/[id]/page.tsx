@@ -3235,17 +3235,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
             {isOrganizer ? (
               <div className="grid">
-                {isStarted && !isCompleted ? (
-                  <button
-                    type="button"
-                    className="button secondary"
-                    onClick={endTournamentEarly}
-                    disabled={isEndingEarly}
-                  >
-                    {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
-                  </button>
-                ) : null}
-                {isCompleted ? (
+               {isCompleted ? (
                   <button
                     type="button"
                     className="button primary"
@@ -3423,6 +3413,26 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
               </div>
             </div>
           ) : null}
+
+          {isOrganizer && isStarted && !isCompleted ? (
+  <div style={{ marginBottom: 12 }}>
+    <button
+      type="button"
+      className="button secondary"
+      onClick={endTournamentEarly}
+      disabled={isEndingEarly}
+      style={{
+        width: '100%',
+        borderColor: 'rgba(255,80,80,0.35)',
+        background: 'rgba(255,80,80,0.10)',
+        color: '#ff9b9b',
+        fontWeight: 800,
+      }}
+    >
+      {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
+    </button>
+  </div>
+) : null}
 
           <div className="card-title">All Rounds</div>
           <div className="card-subtitle">

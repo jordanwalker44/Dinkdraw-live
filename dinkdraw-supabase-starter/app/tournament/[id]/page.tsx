@@ -1663,6 +1663,57 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     setIsSavingNames(false);
   }
 
+  async function deleteTournament() {
+  if (!tournament || !isOrganizer || isStarted || isCompleted) {
+    setMessage('Only the organizer can delete a tournament before it starts.');
+    return;
+  }
+
+  const confirmed = window.confirm(
+    'Delete this tournament? This cannot be undone.'
+  );
+
+  if (!confirmed) return;
+
+  setMessage('');
+
+  const { error: matchesError } = await supabase
+    .from('matches')
+    .delete()
+    .eq('tournament_id', tournament.id);
+
+  if (matchesError) {
+    setMessage(`Delete failed: ${matchesError.message}`);
+    return;
+  }
+
+  const { error: playersError } = await supabase
+    .from('tournament_players')
+    .delete()
+    .eq('tournament_id', tournament.id);
+
+  if (playersError) {
+    setMessage(`Delete failed: ${playersError.message}`);
+    return;
+  }
+
+  const { error: tournamentError } = await supabase
+    .from('tournaments')
+    .delete()
+    .eq('id', tournament.id);
+
+  if (tournamentError) {
+    setMessage(`Delete failed: ${tournamentError.message}`);
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(LAST_TOURNAMENT_KEY);
+  } catch {}
+
+  router.push('/my-tournaments');
+}
+
   async function clearPlayerSlot(slotId: string) {
   if (!isOrganizer || isLocked) {
     setMessage('Player spots are locked.');
@@ -3217,27 +3268,44 @@ if (!canReportScores) {
                   ) : null}
 
                   {isOrganizer ? (
-                    <>
-                      <button
-                        className="button primary"
-                        onClick={generateScheduleAndStart}
-                        disabled={isStarting || !canStartTournament || isScheduleLocked}
-                      >
-                        {isScheduleLocked
-                          ? 'Schedule Locked'
-                          : isStarting
-                          ? 'Starting...'
-                          : 'Start Tournament'}
-                      </button>
+  <>
+    <button
+      className="button primary"
+      onClick={generateScheduleAndStart}
+      disabled={isStarting || !canStartTournament || isScheduleLocked}
+    >
+      {isScheduleLocked
+        ? 'Schedule Locked'
+        : isStarting
+        ? 'Starting...'
+        : 'Start Tournament'}
+    </button>
 
-                      {isScheduleLocked ? (
-                        <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
-                          Schedule is locked after the tournament starts.
-                        </div>
-                      ) : null}
-                    </>
-                  ) : null}
-                </>
+    {isScheduleLocked ? (
+      <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+        Schedule is locked after the tournament starts.
+      </div>
+    ) : null}
+
+    {!isStarted && !isCompleted ? (
+      <button
+        type="button"
+        className="button secondary"
+        onClick={deleteTournament}
+        style={{
+          width: '100%',
+          marginTop: 10,
+          borderColor: 'rgba(255,80,80,0.35)',
+          background: 'rgba(255,80,80,0.10)',
+          color: '#ff9b9b',
+          fontWeight: 800,
+        }}
+      >
+        Delete Tournament
+      </button>
+    ) : null}
+  </>
+) : null}
               </div>
             )}
           </div>

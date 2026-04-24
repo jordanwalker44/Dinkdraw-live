@@ -70,7 +70,7 @@ img {
   width: 100%;
   max-width: var(--max);
   margin: 0 auto;
-  padding: 16px 14px calc(96px + env(safe-area-inset-bottom));
+  padding: 132px 14px calc(96px + env(safe-area-inset-bottom));
 }
 
 .hero {
@@ -418,10 +418,7 @@ textarea.input:focus {
 }
 
 @media (min-width: 720px) {
-  .page-shell {
-  padding: 132px 16px calc(env(safe-area-inset-bottom, 0px) + 90px);
 }
-
   .top-nav-mobile-bar {
   display: flex;
 }

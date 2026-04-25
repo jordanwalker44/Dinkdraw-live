@@ -1217,6 +1217,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
+  const [isDeletingTournament, setIsDeletingTournament] = useState(false);
   const [isRematching, setIsRematching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
@@ -2202,6 +2203,7 @@ const hasAnyScores = matches.some(
       'Are you sure you want to delete this tournament? This cannot be undone.'
     );
     if (!confirmed) return;
+      setIsDeletingTournament(true);
     setMessage('');
 
 const { error: matchesError } = await supabase
@@ -2211,6 +2213,7 @@ const { error: matchesError } = await supabase
 
 if (matchesError) {
   setMessage(`Delete failed: ${matchesError.message}`);
+  setIsDeletingTournament(false);
   return;
 }
 
@@ -2220,6 +2223,7 @@ if (matchesError) {
       .eq('tournament_id', tournament.id);
     if (playersError) {
       setMessage(`Delete failed: ${playersError.message}`);
+      setIsDeletingTournament(false);
       return;
     }
 
@@ -2229,6 +2233,7 @@ if (matchesError) {
       .eq('id', tournament.id);
     if (tournamentError) {
       setMessage(`Delete failed: ${tournamentError.message}`);
+      setIsDeletingTournament(false);
       return;
     }
 
@@ -2239,7 +2244,8 @@ if (matchesError) {
         if (parsed.id === tournament.id) window.localStorage.removeItem(LAST_TOURNAMENT_KEY);
       }
     } catch {}
-
+    
+    setIsDeletingTournament(false);
     router.push('/my-tournaments');
   }
 

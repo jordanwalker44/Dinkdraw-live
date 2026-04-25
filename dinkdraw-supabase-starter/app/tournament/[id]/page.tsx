@@ -2204,6 +2204,16 @@ const hasAnyScores = matches.some(
     if (!confirmed) return;
     setMessage('');
 
+const { error: matchesError } = await supabase
+  .from('matches')
+  .delete()
+  .eq('tournament_id', tournament.id);
+
+if (matchesError) {
+  setMessage(`Delete failed: ${matchesError.message}`);
+  return;
+}
+
     const { error: playersError } = await supabase
       .from('tournament_players')
       .delete()

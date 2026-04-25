@@ -1675,51 +1675,6 @@ const hasAnyScores = matches.some(
     setIsSavingNames(false);
   }
 
-  const confirmed = window.confirm(
-    'Delete this tournament? This cannot be undone.'
-  );
-
-  if (!confirmed) return;
-
-  setMessage('');
-
-  const { error: matchesError } = await supabase
-    .from('matches')
-    .delete()
-    .eq('tournament_id', tournament.id);
-
-  if (matchesError) {
-    setMessage(`Delete failed: ${matchesError.message}`);
-    return;
-  }
-
-  const { error: playersError } = await supabase
-    .from('tournament_players')
-    .delete()
-    .eq('tournament_id', tournament.id);
-
-  if (playersError) {
-    setMessage(`Delete failed: ${playersError.message}`);
-    return;
-  }
-
-  const { error: tournamentError } = await supabase
-    .from('tournaments')
-    .delete()
-    .eq('id', tournament.id);
-
-  if (tournamentError) {
-    setMessage(`Delete failed: ${tournamentError.message}`);
-    return;
-  }
-
-  try {
-    window.localStorage.removeItem(LAST_TOURNAMENT_KEY);
-  } catch {}
-
-  router.push('/my-tournaments');
-}
-
   async function clearPlayerSlot(slotId: string) {
   if (!isOrganizer || isLocked) {
     setMessage('Player spots are locked.');

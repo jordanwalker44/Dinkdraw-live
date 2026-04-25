@@ -2549,6 +2549,148 @@ if (!canReportScores) {
     const seriesComplete = match.is_complete;
     const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
     const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+    function renderGameScoreboard(
+  gameLabel: string,
+  aValue: string,
+  bValue: string,
+  aField: keyof ScoreDraft,
+  bField: keyof ScoreDraft,
+  gameNumber: 1 | 2 | 3,
+  gameDone: boolean,
+  gameDisabled: boolean
+) {
+  const aScoreNumber = Number(aValue);
+  const bScoreNumber = Number(bValue);
+  const hasBothScores = aValue !== '' && bValue !== '' && !Number.isNaN(aScoreNumber) && !Number.isNaN(bScoreNumber);
+  const aIsWinner = hasBothScores && aScoreNumber > bScoreNumber;
+  const bIsWinner = hasBothScores && bScoreNumber > aScoreNumber;
+
+  return (
+    <div
+      className="list-item"
+      style={{
+        padding: 14,
+        borderRadius: 18,
+        marginBottom: 12,
+        background: 'rgba(255,255,255,0.035)',
+        border: gameDone
+          ? '1px solid rgba(255,203,5,0.22)'
+          : '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 900,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: gameDone ? '#FFCB05' : 'rgba(255,255,255,0.62)',
+          marginBottom: 10,
+        }}
+      >
+        {gameLabel}
+      </div>
+
+      <div style={{ display: 'grid', gap: 8 }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 88px',
+            gap: 10,
+            alignItems: 'center',
+            padding: 10,
+            borderRadius: 14,
+            background: aIsWinner ? 'rgba(255,203,5,0.10)' : 'rgba(0,0,0,0.14)',
+            border: aIsWinner ? '1px solid rgba(255,203,5,0.30)' : '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.48)', marginBottom: 3 }}>
+              TEAM A
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, color: aIsWinner ? '#FFCB05' : '#fff' }}>
+              {teamAName}
+            </div>
+          </div>
+
+          <input
+            className="input"
+            style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, padding: '10px 6px' }}
+            type="number"
+            value={aValue}
+            disabled={gameDisabled}
+            onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
+            placeholder="0"
+          />
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 88px',
+            gap: 10,
+            alignItems: 'center',
+            padding: 10,
+            borderRadius: 14,
+            background: bIsWinner ? 'rgba(255,203,5,0.10)' : 'rgba(0,0,0,0.14)',
+            border: bIsWinner ? '1px solid rgba(255,203,5,0.30)' : '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.48)', marginBottom: 3 }}>
+              TEAM B
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, color: bIsWinner ? '#FFCB05' : '#fff' }}>
+              {teamBName}
+            </div>
+          </div>
+
+          <input
+            className="input"
+            style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, padding: '10px 6px' }}
+            type="number"
+            value={bValue}
+            disabled={gameDisabled}
+            onChange={(e) => setDraftScore(match.id, bField, e.target.value)}
+            placeholder="0"
+          />
+        </div>
+      </div>
+
+      {!gameDone && !seriesComplete && !isCompleted ? (
+        <button
+          className="button primary"
+          onClick={() => submitGame(match.id, gameNumber)}
+          disabled={!canReportScores}
+          style={{
+            width: '100%',
+            fontWeight: 900,
+            fontSize: 16,
+            padding: '14px 16px',
+            marginTop: 10,
+          }}
+        >
+          {canReportScores ? `Submit ${gameLabel}` : 'Scores Locked'}
+        </button>
+      ) : hasBothScores ? (
+        <div
+          style={{
+            marginTop: 10,
+            padding: '10px 12px',
+            borderRadius: 12,
+            background: 'rgba(255,203,5,0.08)',
+            border: '1px solid rgba(255,203,5,0.20)',
+            fontWeight: 900,
+            color: '#FFCB05',
+            textAlign: 'center',
+          }}
+        >
+          Winner: {aIsWinner ? teamAName : teamBName}
+        </div>
+      ) : null}
+    </div>
+  );
+}
     const isNextUp =
       !isCompleted &&
       match.round_number === currentRound &&
@@ -2700,334 +2842,54 @@ if (!canReportScores) {
           </div>
         </div>
 
-        <div style={{ marginBottom: 10 }}>
-          <div
-            className="muted"
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              marginBottom: 6,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}
-          >
-            Game 1
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_1_a}
-              disabled={game1Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
-              placeholder={canReportScores ? '0' : 'Scores locked'}
-            />
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_1_b}
-              disabled={game1Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
-              placeholder={canReportScores ? '0' : 'Scores locked'}
-            />
-          </div>
-          {!game1Done && !seriesComplete && !isCompleted ? (
-            <button
-              className="button primary"
-              onClick={() => submitGame(match.id, 1)}
-              style={{
-                width: '100%',
-                fontWeight: 800,
-                fontSize: 16,
-                padding: '14px 16px',
-              }}
-            >
-              {canReportScores ? 'Submit Game 1' : 'Scores Locked'}
-            </button>
-          ) : (
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: 12,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.6)',
-                  marginBottom: 4,
-                }}
-              >
-                Game 1 Result
-              </div>
+        {renderGameScoreboard(
+  'Game 1',
+  draft.game_1_a,
+  draft.game_1_b,
+  'game_1_a',
+  'game_1_b',
+  1,
+  game1Done,
+  game1Done || seriesComplete || isCompleted
+)}
 
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              >
-                {match.game_1_a}-{match.game_1_b} — {match.game_1_a! > match.game_1_b! ? teamAName : teamBName} wins
-              </div>
-            </div>
-          )}
-        </div>
+{renderGameScoreboard(
+  'Game 2',
+  draft.game_2_a,
+  draft.game_2_b,
+  'game_2_a',
+  'game_2_b',
+  2,
+  game2Done,
+  !game1Done || game2Done || seriesComplete || isCompleted
+)}
 
-        <div style={{ marginBottom: 10 }}>
-          <div
-            className="muted"
-            style={{
-              fontSize: 12,
-              fontWeight: 800,
-              marginBottom: 6,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}
-          >
-            Game 2
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 8,
-              marginBottom: 8,
-            }}
-          >
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_2_a}
-              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
-              placeholder={canReportScores ? '0' : 'Scores locked'}
-            />
-            <input
-              className="input"
-              style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-              type="number"
-              value={draft.game_2_b}
-              disabled={!game1Done || game2Done || seriesComplete || isCompleted}
-              onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
-              placeholder={canReportScores ? '0' : 'Scores locked'}
-            />
-          </div>
-          {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
-            <button
-              className="button primary"
-              onClick={() => submitGame(match.id, 2)}
-              style={{
-                width: '100%',
-                fontWeight: 800,
-                fontSize: 16,
-                padding: '14px 16px',
-              }}
-            >
-              {canReportScores ? 'Submit Game 2' : 'Scores Locked'}
-            </button>
-          ) : game2Done ? (
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: 12,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.6)',
-                  marginBottom: 4,
-                }}
-              >
-                Game 2 Result
-              </div>
-
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              >
-                {match.game_2_a}-{match.game_2_b} — {match.game_2_a! > match.game_2_b! ? teamAName : teamBName} wins
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '12px 14px',
-                borderRadius: 12,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
-                textAlign: 'center',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.6)',
-                  marginBottom: 4,
-                }}
-              >
-                Game 2 Status
-              </div>
-
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 800,
-                  color: 'rgba(255,255,255,0.92)',
-                }}
-              >
-                Waiting for Game 1
-              </div>
-            </div>
-          )}
-        </div>
-
-        {showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
-          <div style={{ marginBottom: 10 }}>
-            <div
-              className="muted"
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                marginBottom: 6,
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-              }}
-            >
-              Game 3
-            </div>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: 8,
-                marginBottom: 8,
-              }}
-            >
-              <input
-                className="input"
-                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-                type="number"
-                value={draft.game_3_a}
-                disabled={match.game_3_a !== null || seriesComplete || isCompleted}
-                onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
-                placeholder={canReportScores ? '0' : 'Scores locked'}
-              />
-              <input
-                className="input"
-                style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
-                type="number"
-                value={draft.game_3_b}
-                disabled={match.game_3_b !== null || seriesComplete || isCompleted}
-                onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
-                placeholder={canReportScores ? '0' : 'Scores locked'}
-              />
-            </div>
-            {match.game_3_a === null && !seriesComplete && !isCompleted ? (
-              <button
-                className="button primary"
-                onClick={() => submitGame(match.id, 3)}
-                style={{
-                  width: '100%',
-                  fontWeight: 800,
-                  fontSize: 16,
-                  padding: '14px 16px',
-                }}
-              >
-                {canReportScores ? 'Submit Game 3' : 'Scores Locked'}
-              </button>
-            ) : match.game_3_a !== null ? (
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 12,
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  background: 'rgba(255,255,255,0.03)',
-                  textAlign: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.6)',
-                    marginBottom: 4,
-                  }}
-                >
-                  Game 3 Result
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
-                    color: 'rgba(255,255,255,0.92)',
-                  }}
-                >
-                  {match.game_3_a}-{match.game_3_b} — {match.game_3_a! > match.game_3_b! ? teamAName : teamBName} wins
-                </div>
-              </div>
-            ) : null}
-          </div>
-        ) : game1Done && game2Done && !seriesComplete ? (
-          <div
-            className="list-item"
-            style={{
-              padding: 12,
-              textAlign: 'center',
-              border: '1px solid rgba(255,203,5,0.25)',
-              background: 'rgba(255,203,5,0.08)',
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: '#FFCB05',
-                marginBottom: 4,
-              }}
-            >
-              Series Result
-            </div>
-
-            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
-              {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
-            </div>
-          </div>
-        ) : null}
+{showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
+  renderGameScoreboard(
+    'Game 3',
+    draft.game_3_a,
+    draft.game_3_b,
+    'game_3_a',
+    'game_3_b',
+    3,
+    match.game_3_a !== null && match.game_3_b !== null,
+    match.game_3_a !== null || seriesComplete || isCompleted
+  )
+) : game1Done && game2Done && !seriesComplete ? (
+  <div
+    className="list-item"
+    style={{
+      padding: 12,
+      textAlign: 'center',
+      border: '1px solid rgba(255,203,5,0.25)',
+      background: 'rgba(255,203,5,0.08)',
+    }}
+  >
+    <div style={{ fontWeight: 900, color: '#FFCB05' }}>
+      {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
+    </div>
+  </div>
+) : null}
 
         {seriesComplete ? (
           <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>

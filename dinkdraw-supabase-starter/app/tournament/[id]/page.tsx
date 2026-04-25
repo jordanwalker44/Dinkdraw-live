@@ -3270,6 +3270,7 @@ if (!canReportScores) {
     ) : null}
   </>
 ) : null}
+</>
               </div>
             )}
           </div>

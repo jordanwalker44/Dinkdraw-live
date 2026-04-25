@@ -1300,6 +1300,18 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     [matches]
   );
 
+const hasAnyScores = matches.some(
+  (m) =>
+    m.team_a_score !== null ||
+    m.team_b_score !== null ||
+    m.game_1_a !== null ||
+    m.game_1_b !== null ||
+    m.game_2_a !== null ||
+    m.game_2_b !== null ||
+    m.game_3_a !== null ||
+    m.game_3_b !== null
+);
+
   const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
     for (const round of roundsAvailable) {
@@ -1661,12 +1673,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
       setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
     }
     setIsSavingNames(false);
-  }
-
-  async function deleteTournament() {
-  if (!tournament || !isOrganizer || isStarted || isCompleted) {
-    setMessage('Only the organizer can delete a tournament before it starts.');
-    return;
   }
 
   const confirmed = window.confirm(
@@ -2233,7 +2239,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   }
 
   async function deleteTournament() {
-    if (!tournament || !isOrganizer || isStarted || isCompleted) return;
+    if (!tournament || !isOrganizer || isCompleted || hasAnyScores) {
+  setMessage('You can only delete a tournament before any scores are submitted.');
+  return;
+}
     const confirmed = window.confirm(
       'Are you sure you want to delete this tournament? This cannot be undone.'
     );
@@ -3287,7 +3296,7 @@ if (!canReportScores) {
       </div>
     ) : null}
 
-    {!isStarted && !isCompleted ? (
+    {!isCompleted && !hasAnyScores ? (
       <button
         type="button"
         className="button secondary"
@@ -3382,7 +3391,7 @@ if (!canReportScores) {
                     🏆 View Results
                   </button>
                 ) : null}
-                {!isStarted && !isCompleted ? (
+                {!isCompleted && !hasAnyScores ? (
                   <button
                     type="button"
                     className="button secondary"

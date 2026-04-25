@@ -3129,7 +3129,7 @@ if (!canReportScores) {
 
       {activeTab === 'players' && (
         <>
-{isOrganizer && (
+{isOrganizer ? (
   <div className="card" style={{ marginBottom: 14 }}>
     <div className="card-title">Invite Players</div>
 
@@ -3143,7 +3143,7 @@ if (!canReportScores) {
       </button>
     </div>
   </div>
-)}
+) : null}
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Players</div>

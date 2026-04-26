@@ -3115,14 +3115,12 @@ if (!canReportScores) {
     Clear Player
   </button>
 ) : null}
-                      </div>
-)}
-                    </div>
-                  );
-                })}
-
-           </div>
-        </div>
+             </div>
+            );
+          })}
+         </div>
+        )}
+      </div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>
   <div className="card-title">Tournament Controls</div>

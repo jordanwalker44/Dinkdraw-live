@@ -3120,57 +3120,68 @@ if (!canReportScores) {
                   );
                 })}
 
-                <>
-                  {!isLocked ? (
-                    <button
-                      className="button secondary"
-                      onClick={saveAllPlayerNames}
-                      disabled={isSavingNames}
-                    >
-                      {isSavingNames ? 'Saving...' : 'Save Player Names'}
-                    </button>
-                  ) : null}
+           </div>
+        </div>
 
-                  {isOrganizer ? (
-  <>
-    <button
-      className="button primary"
-      onClick={generateScheduleAndStart}
-      disabled={isStarting || !canStartTournament || isScheduleLocked}
-    >
-      {isScheduleLocked
-        ? 'Schedule Locked'
-        : isStarting
-        ? 'Starting...'
-        : 'Start Tournament'}
-    </button>
+<div className="card" style={{ marginTop: 16, marginBottom: 14 }}>
+  <div className="card-title">Tournament Controls</div>
+  <div className="card-subtitle">
+    Save names first, then start the tournament when everyone is ready.
+  </div>
 
-    {isScheduleLocked ? (
-      <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
-        Schedule is locked after the tournament starts.
-      </div>
-    ) : null}
-
-    {!isCompleted && !hasAnyScores ? (
+  <div className="grid">
+    {!isLocked ? (
       <button
-        type="button"
         className="button secondary"
-        onClick={deleteTournament}
-        style={{
-          width: '100%',
-          marginTop: 10,
-          borderColor: 'rgba(255,80,80,0.35)',
-          background: 'rgba(255,80,80,0.10)',
-          color: '#ff9b9b',
-          fontWeight: 800,
-        }}
+        onClick={saveAllPlayerNames}
+        disabled={isSavingNames}
       >
-        Delete Tournament
+        {isSavingNames ? 'Saving...' : 'Save Player Names'}
       </button>
     ) : null}
-  </>
-) : null}
-</>
+
+    {isOrganizer ? (
+      <>
+        <button
+          className="button primary"
+          onClick={generateScheduleAndStart}
+          disabled={isStarting || !canStartTournament || isScheduleLocked}
+        >
+          {isScheduleLocked
+            ? 'Schedule Locked'
+            : isStarting
+            ? 'Starting...'
+            : 'Start Tournament'}
+        </button>
+
+        {isScheduleLocked ? (
+          <div className="muted" style={{ marginTop: 6, fontSize: 13 }}>
+            Schedule is locked after the tournament starts.
+          </div>
+        ) : null}
+
+        {!isCompleted && !hasAnyScores ? (
+          <button
+            type="button"
+            className="button secondary"
+            onClick={deleteTournament}
+            disabled={isDeletingTournament}
+            style={{
+              width: '100%',
+              marginTop: 10,
+              borderColor: 'rgba(255,80,80,0.35)',
+              background: 'rgba(255,80,80,0.10)',
+              color: '#ff9b9b',
+              fontWeight: 800,
+            }}
+          >
+            {isDeletingTournament ? 'Deleting...' : 'Delete Tournament'}
+          </button>
+        ) : null}
+      </>
+    ) : null}
+  </div>
+</div>
               </div>
             )}
           </div>

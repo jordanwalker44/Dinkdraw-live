@@ -1673,6 +1673,40 @@ setScoreDrafts((prev) => {
     setMessage('Spot claimed.');
   }
 
+async function unclaimMySpot(slotId: string) {
+  if (!userId) {
+    setMessage('Sign in first.');
+    return;
+  }
+
+  if (isLocked) {
+    setMessage('Tournament already started. Player spots are locked.');
+    return;
+  }
+
+  const confirmed = window.confirm('Give up your spot in this tournament?');
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from('tournament_players')
+    .update({
+      claimed_by_user_id: null,
+      display_name: '',
+      gender: null,
+    })
+    .eq('id', slotId)
+    .eq('claimed_by_user_id', userId);
+
+  if (error) {
+    setMessage(`Unclaim failed: ${error.message}`);
+    return;
+  }
+
+  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
+  await loadTournamentData(userId);
+  setMessage('You have given up your spot.');
+}
+
   async function saveAllPlayerNames() {
     if (isLocked) {
       setMessage('Player names are locked.');
@@ -3115,6 +3149,22 @@ if (!canReportScores) {
                   Claim Spot
                 </button>
               ) : null}
+
+              {isMine && !isLocked ? (
+  <button
+    type="button"
+    className="button secondary"
+    onClick={() => unclaimMySpot(slot.id)}
+    style={{
+      borderColor: 'rgba(255,80,80,0.35)',
+      background: 'rgba(255,80,80,0.10)',
+      color: '#ff9b9b',
+      fontWeight: 800,
+    }}
+  >
+    Unclaim My Spot
+  </button>
+) : null}
 
               {isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
                 <button

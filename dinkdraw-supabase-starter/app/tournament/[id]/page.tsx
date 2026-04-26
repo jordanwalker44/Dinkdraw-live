@@ -3059,7 +3059,7 @@ if (!canReportScores) {
             <div className="grid">
               <input
                 className="input"
-                value={newNames[slot.id] ?? ''}
+                value={newNames[slot.id] ?? slot.display_name ?? ''}
                 onChange={(e) =>
                   setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
                 }

@@ -3116,12 +3116,12 @@ if (!canReportScores) {
   </button>
 ) : null}
                       </div>
+)}
                     </div>
                   );
                 })}
 
            </div>
-)}
         </div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>

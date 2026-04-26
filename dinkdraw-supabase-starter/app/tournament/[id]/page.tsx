@@ -1680,6 +1680,11 @@ setScoreDrafts((prev) => {
     try {
       for (const slot of playerSlots) {
         const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
+
+if (slot.claimed_by_user_id && nextName === '') {
+  continue;
+}
+
         const { error } = await supabase
           .from('tournament_players')
           .update({ display_name: nextName })

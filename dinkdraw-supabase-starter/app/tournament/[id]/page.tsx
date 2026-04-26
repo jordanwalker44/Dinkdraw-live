@@ -3181,9 +3181,6 @@ if (!canReportScores) {
     ) : null}
   </div>
 </div>
-              </div>
-            )}
-          </div>
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Tournament Info</div>

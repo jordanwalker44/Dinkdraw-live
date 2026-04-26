@@ -1493,6 +1493,7 @@ setScoreDrafts((prev) => {
 
   return next;
 });
+}
 
   useEffect(() => {
     async function load() {

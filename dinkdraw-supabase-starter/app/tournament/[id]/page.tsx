@@ -1373,9 +1373,12 @@ const hasAnyScores = matches.some(
   const canStartTournament = useMemo(() => {
     if (!tournament) return false;
     if (tournament.status === 'started' || tournament.status === 'completed') return false;
-    const namedCount = playerSlots.filter(
-      (slot) => (newNames[slot.id] ?? slot.display_name ?? '').trim() !== ''
-    ).length;
+    const namedCount = playerSlots.filter((slot) => {
+  const typedName = (newNames[slot.id] ?? '').trim();
+  const savedName = (slot.display_name ?? '').trim();
+
+  return typedName !== '' || savedName !== '' || !!slot.claimed_by_user_id;
+}).length;
     return namedCount >= minPlayersRequired;
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 

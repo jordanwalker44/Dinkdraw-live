@@ -1682,7 +1682,9 @@ setScoreDrafts((prev) => {
     setIsSavingNames(true);
     try {
       for (const slot of playerSlots) {
-        const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
+        const typedName = (newNames[slot.id] ?? '').trim();
+const savedName = (slot.display_name ?? '').trim();
+const nextName = typedName || savedName;
 
 if (slot.claimed_by_user_id && nextName === '') {
   continue;
@@ -1770,7 +1772,9 @@ if (slot.claimed_by_user_id && nextName === '') {
     setIsStarting(true);
     try {
       for (const slot of playerSlots) {
-        const nextName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
+        const typedName = (newNames[slot.id] ?? '').trim();
+        const savedName = (slot.display_name ?? '').trim();
+        const nextName = typedName || savedName;
         const { error } = await supabase
           .from('tournament_players')
           .update({ display_name: nextName })
@@ -3059,7 +3063,11 @@ if (!canReportScores) {
             <div className="grid">
               <input
                 className="input"
-                value={newNames[slot.id] ?? slot.display_name ?? ''}
+                value={
+  (newNames[slot.id] ?? '').trim() !== ''
+    ? newNames[slot.id]
+    : slot.display_name ?? ''
+}
                 onChange={(e) =>
                   setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
                 }

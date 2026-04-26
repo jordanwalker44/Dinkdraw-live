@@ -3000,127 +3000,128 @@ if (!canReportScores) {
   </div>
 ) : null}
 
-          <div className="card" style={{ marginBottom: 14 }}>
-            <div className="card-title">Players</div>
-            <div className="card-subtitle">
-              {isCompleted
-                ? 'Tournament is complete. Player list is locked.'
-                : isStarted
-                ? 'Tournament has started. Player list is locked.'
-                : isSingles
-                ? 'Singles tournament — each player competes individually.'
-                : 'Players can claim a spot, or the organizer can type names manually.'}
+<div className="card" style={{ marginBottom: 14 }}>
+  <div className="card-title">Players</div>
+  <div className="card-subtitle">
+    {isCompleted
+      ? 'Tournament is complete. Player list is locked.'
+      : isStarted
+      ? 'Tournament has started. Player list is locked.'
+      : isSingles
+      ? 'Singles tournament — each player competes individually.'
+      : 'Players can claim a spot, or the organizer can type names manually.'}
+  </div>
+
+  {isLoading ? (
+    <div className="muted">Loading player spots...</div>
+  ) : (
+    <div className="grid">
+      {playerSlots.map((slot) => {
+        const isMine = slot.claimed_by_user_id === userId;
+        const isClaimedBySomeone = !!slot.claimed_by_user_id;
+        const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
+        const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
+
+        return (
+          <div
+            key={slot.id}
+            className="list-item"
+            style={{
+              borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
+              boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
+            }}
+          >
+            <div className="row-between" style={{ marginBottom: 10 }}>
+              <div>
+                <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
+                <div className="muted">{slot.display_name || 'Open spot'}</div>
+              </div>
+
+              {isMine ? (
+                <span className="tag green">Yours</span>
+              ) : isClaimedBySomeone ? (
+                <span className="tag green">Claimed</span>
+              ) : isLocked ? (
+                <span className="tag">Locked</span>
+              ) : (
+                <span className="tag">Open</span>
+              )}
             </div>
 
-            {isLoading ? (
-              <div className="muted">Loading player spots...</div>
-            ) : (
-              <div className="grid">
-                {playerSlots.map((slot) => {
-                  const isMine = slot.claimed_by_user_id === userId;
-                  const isClaimedBySomeone = !!slot.claimed_by_user_id;
-                  const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
-                  const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
+            <div className="grid">
+              <input
+                className="input"
+                value={newNames[slot.id] ?? ''}
+                onChange={(e) =>
+                  setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
+                }
+                placeholder={`Name for Player ${slot.slot_number}`}
+                disabled={!canEditName}
+              />
 
-                  return (
-                    <div
-                      key={slot.id}
-                      className="list-item"
-                      style={{
-                        borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
-                        boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
-                      }}
-                    >
-                      <div className="row-between" style={{ marginBottom: 10 }}>
-                        <div>
-                          <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
-                          <div className="muted">{slot.display_name || 'Open spot'}</div>
-                        </div>
+              {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gap: 8,
+                  }}
+                >
+                  <button
+                    type="button"
+                    className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
+                    onClick={() => updatePlayerGender(slot.id, 'male')}
+                    disabled={isLocked}
+                  >
+                    Male
+                  </button>
+                  <button
+                    type="button"
+                    className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
+                    onClick={() => updatePlayerGender(slot.id, 'female')}
+                    disabled={isLocked}
+                  >
+                    Female
+                  </button>
+                  <button
+                    type="button"
+                    className="button secondary"
+                    onClick={() => updatePlayerGender(slot.id, '')}
+                    disabled={isLocked}
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : null}
 
-                        {isMine ? (
-                          <span className="tag green">Yours</span>
-                        ) : isClaimedBySomeone ? (
-                          <span className="tag green">Claimed</span>
-                        ) : isLocked ? (
-                          <span className="tag">Locked</span>
-                        ) : (
-                          <span className="tag">Open</span>
-                        )}
-                      </div>
+              {!isLocked && canClaim ? (
+                <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                  Claim Spot
+                </button>
+              ) : null}
 
-                      <div className="grid">
-                        <input
-                          className="input"
-                          value={newNames[slot.id] ?? ''}
-                          onChange={(e) =>
-                            setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
-                          }
-                          placeholder={`Name for Player ${slot.slot_number}`}
-                          disabled={!canEditName}
-                        />
-
-                        {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
-                          <div
-                            style={{
-                              display: 'grid',
-                              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                              gap: 8,
-                            }}
-                          >
-                            <button
-                              type="button"
-                              className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
-                              onClick={() => updatePlayerGender(slot.id, 'male')}
-                              disabled={isLocked}
-                            >
-                              Male
-                            </button>
-                            <button
-                              type="button"
-                              className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
-                              onClick={() => updatePlayerGender(slot.id, 'female')}
-                              disabled={isLocked}
-                            >
-                              Female
-                            </button>
-                            <button
-                              type="button"
-                              className="button secondary"
-                              onClick={() => updatePlayerGender(slot.id, '')}
-                              disabled={isLocked}
-                            >
-                              Clear
-                            </button>
-                          </div>
-                        ) : null}
-
-                        {!isLocked && canClaim ? (
-  <button className="button primary" onClick={() => claimSlot(slot.id)}>
-    Claim Spot
-  </button>
-) : null}
-
-{isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
-  <button
-    type="button"
-    className="button secondary"
-    onClick={() => clearPlayerSlot(slot.id)}
-    style={{
-      borderColor: 'rgba(255,80,80,0.35)',
-      background: 'rgba(255,80,80,0.10)',
-      color: '#ff9b9b',
-      fontWeight: 800,
-    }}
-  >
-    Clear Player
-  </button>
-) : null}
-             </div>
-            );
-          })}
-         </div>
-        )}
-      </div>
+              {isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
+                <button
+                  type="button"
+                  className="button secondary"
+                  onClick={() => clearPlayerSlot(slot.id)}
+                  style={{
+                    borderColor: 'rgba(255,80,80,0.35)',
+                    background: 'rgba(255,80,80,0.10)',
+                    color: '#ff9b9b',
+                    fontWeight: 800,
+                  }}
+                >
+                  Clear Player
+                </button>
+              ) : null}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>
   <div className="card-title">Tournament Controls</div>

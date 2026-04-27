@@ -416,12 +416,6 @@ textarea.input:focus {
   color: #ffcb05;
 }
 
-.tag.green {
-  background: rgba(255,203,5,0.15);
-  border-color: rgba(255,203,5,0.35);
-  color: #FFCB05;
-}
-
 .code-pill {
   display: inline-block;
   padding: 6px 10px;

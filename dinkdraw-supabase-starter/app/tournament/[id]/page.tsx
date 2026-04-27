@@ -3092,7 +3092,7 @@ if (!canReportScores) {
               </div>
 
               {isMine ? (
-                <span className="tag green">Yours</span>
+                <span className="tag yours">Yours</span>
               ) : isClaimedBySomeone ? (
                 <span className="tag green">Claimed</span>
               ) : isLocked ? (

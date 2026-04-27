@@ -1674,7 +1674,10 @@ setScoreDrafts((prev) => {
   }
 
 async function unclaimMySpot(slotId: string) {
-  if (!userId) {
+  const { data: authData } = await supabase.auth.getUser();
+  const currentUserId = authData.user?.id;
+
+  if (!currentUserId) {
     setMessage('Sign in first.');
     return;
   }
@@ -1687,7 +1690,7 @@ async function unclaimMySpot(slotId: string) {
   const confirmed = window.confirm('Give up your spot in this tournament?');
   if (!confirmed) return;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('tournament_players')
     .update({
       claimed_by_user_id: null,
@@ -1695,15 +1698,27 @@ async function unclaimMySpot(slotId: string) {
       gender: null,
     })
     .eq('id', slotId)
-    .eq('claimed_by_user_id', userId);
+    .eq('claimed_by_user_id', currentUserId)
+    .select()
+    .maybeSingle();
 
   if (error) {
     setMessage(`Unclaim failed: ${error.message}`);
     return;
   }
 
-  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
-  await loadTournamentData(userId);
+  if (!data) {
+    setMessage('Could not unclaim this spot. Please refresh and try again.');
+    return;
+  }
+
+  setNewNames((prev) => {
+    const next = { ...prev };
+    delete next[slotId];
+    return next;
+  });
+
+  await loadTournamentData(currentUserId);
   setMessage('You have given up your spot.');
 }
 

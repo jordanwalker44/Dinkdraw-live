@@ -3163,22 +3163,6 @@ if (!canReportScores) {
                 </button>
               ) : null}
 
-              {isMine && !isLocked ? (
-  <button
-    type="button"
-    className="button secondary"
-    onClick={() => unclaimMySpot(slot.id)}
-    style={{
-      borderColor: 'rgba(255,80,80,0.35)',
-      background: 'rgba(255,80,80,0.10)',
-      color: '#ff9b9b',
-      fontWeight: 800,
-    }}
-  >
-    Unclaim My Spot
-  </button>
-) : null}
-
               {isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
                 <button
                   type="button"

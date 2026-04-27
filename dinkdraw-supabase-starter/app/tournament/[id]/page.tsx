@@ -3101,7 +3101,12 @@ if (!canReportScores) {
                 <span className="tag">Open</span>
               )}
             </div>
-
+{isMine && !isLocked ? (
+  <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+    Need to give up your spot? Ask the organizer to clear it.
+  </div>
+) : null}
+            
             <div className="grid">
               <input
                 className="input"

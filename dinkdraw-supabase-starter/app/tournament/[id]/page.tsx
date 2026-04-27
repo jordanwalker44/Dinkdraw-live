@@ -1674,31 +1674,30 @@ setScoreDrafts((prev) => {
   }
 
 async function unclaimMySpot(slotId: string) {
-  const { data: authData } = await supabase.auth.getUser();
-  const currentUserId = authData.user?.id;
-
-  if (!currentUserId) {
-    setMessage('Sign in first.');
-    return;
-  }
-
   if (isLocked) {
     setMessage('Tournament already started. Player spots are locked.');
     return;
   }
 
-  const confirmed = window.confirm('Give up your spot in this tournament?');
-  if (!confirmed) return;
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData.user;
+
+  if (!user) {
+    setMessage('Sign in first.');
+    return;
+  }
+
+  setMessage('');
 
   const { data, error } = await supabase
     .from('tournament_players')
     .update({
-      claimed_by_user_id: null,
       display_name: '',
+      claimed_by_user_id: null,
       gender: null,
     })
     .eq('id', slotId)
-    .eq('claimed_by_user_id', currentUserId)
+    .eq('claimed_by_user_id', user.id)
     .select()
     .maybeSingle();
 
@@ -1708,7 +1707,8 @@ async function unclaimMySpot(slotId: string) {
   }
 
   if (!data) {
-    setMessage('Could not unclaim this spot. Please refresh and try again.');
+    setMessage('Unclaim failed. This spot may not belong to your account.');
+    await loadTournamentData(user.id);
     return;
   }
 
@@ -1718,7 +1718,7 @@ async function unclaimMySpot(slotId: string) {
     return next;
   });
 
-  await loadTournamentData(currentUserId);
+  await loadTournamentData(user.id);
   setMessage('You have given up your spot.');
 }
 

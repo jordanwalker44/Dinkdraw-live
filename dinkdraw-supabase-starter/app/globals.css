@@ -202,17 +202,25 @@ img {
 }
 
 .card {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.04),
-    rgba(255, 255, 255, 0.015)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.06); /* softer than var(--line) */
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 
-  backdrop-filter: blur(6px); /* 👈 key upgrade */
+  border-radius: 18px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  padding: 16px;
+
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.25),
+    0 12px 28px rgba(0, 0, 0, 0.35);
+
+  transition: all 0.2s ease;
+}
+
+.card:active {
+  transform: scale(0.98);
 }
 
 .card + .card {

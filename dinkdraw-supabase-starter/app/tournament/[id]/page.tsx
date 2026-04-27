@@ -1675,7 +1675,7 @@ setScoreDrafts((prev) => {
 
 async function unclaimMySpot(slotId: string) {
   if (isLocked) {
-    setMessage('Tournament already started. Player spots are locked.');
+    setMessage('Player spots are locked.');
     return;
   }
 
@@ -1687,9 +1687,15 @@ async function unclaimMySpot(slotId: string) {
     return;
   }
 
-  setMessage('');
+  const slot = playerSlots.find((s) => s.id === slotId);
 
-  const { data, error } = await supabase
+  if (!slot || slot.claimed_by_user_id !== user.id) {
+    setMessage('This spot is not claimed by your account.');
+    await loadTournamentData(user.id);
+    return;
+  }
+
+  const { error } = await supabase
     .from('tournament_players')
     .update({
       display_name: '',
@@ -1697,27 +1703,14 @@ async function unclaimMySpot(slotId: string) {
       gender: null,
     })
     .eq('id', slotId)
-    .eq('claimed_by_user_id', user.id)
-    .select()
-    .maybeSingle();
+    .eq('claimed_by_user_id', user.id);
 
   if (error) {
     setMessage(`Unclaim failed: ${error.message}`);
     return;
   }
 
-  if (!data) {
-    setMessage('Unclaim failed. This spot may not belong to your account.');
-    await loadTournamentData(user.id);
-    return;
-  }
-
-  setNewNames((prev) => {
-    const next = { ...prev };
-    delete next[slotId];
-    return next;
-  });
-
+  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
   await loadTournamentData(user.id);
   setMessage('You have given up your spot.');
 }

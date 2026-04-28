@@ -1213,6 +1213,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
   const [newNames, setNewNames] = useState<Record<string, string>>({});
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
@@ -1226,7 +1227,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isLive, setIsLive] = useState(false);
   const [standingsView, setStandingsView] = useState<'leaderboard' | 'day'>('leaderboard');
   const [showSharingTools, setShowSharingTools] = useState(false);
-
+  
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
@@ -3078,13 +3079,17 @@ if (!canReportScores) {
 
         return (
           <div
-            key={slot.id}
-            className="list-item"
-            style={{
-              borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
-              boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
-            }}
-          >
+  key={slot.id}
+  className="list-item"
+  onClick={() =>
+    setEditingSlot(editingSlot === slot.id ? null : slot.id)
+  }
+  style={{
+    borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
+    boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
+    cursor: 'pointer',
+  }}
+>
            <div
   style={{
     display: 'grid',

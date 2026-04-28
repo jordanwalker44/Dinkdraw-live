@@ -2200,14 +2200,14 @@ if (slot.claimed_by_user_id && nextName === '') {
 
   const rowsToInsert = roundMatchCounts.flatMap((matchCount, roundIndex) => {
   const roundNumber = roundIndex + 1;
-  const normalizedRoundNumber = totalRounds - roundIndex;
+  const normalizedRoundNumber = roundIndex + 1;
 
     return Array.from({ length: matchCount }, (_, matchIndex) => {
-      const matchNumber = matchIndex + 1;
-      const firstRoundPair = roundNumber === 1 ? firstRoundPairs[matchIndex] : null;
+  const matchNumber = matchIndex + 1;
+  const firstRoundPair = roundNumber === 1 ? firstRoundPairs[matchIndex] : null;
 
-      const seedA = firstRoundPair?.[0] || null;
-      const seedB = firstRoundPair?.[1] || null;
+  const seedA = firstRoundPair?.[0] || null;
+  const seedB = firstRoundPair?.[1] || null;
 
       const competitorA = seedA ? seededCompetitors[seedA - 1] : null;
       const competitorB = seedB ? seededCompetitors[seedB - 1] : null;

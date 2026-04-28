@@ -4354,6 +4354,7 @@ if (!canReportScores) {
             </div>
           )}
         </div>
+        </>
       )}
 
       {activeTab === 'standings' && (

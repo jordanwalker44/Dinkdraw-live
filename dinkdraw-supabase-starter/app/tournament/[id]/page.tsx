@@ -3131,7 +3131,8 @@ if (!canReportScores) {
   </div>
 ) : null}
             
-            <div className="grid">
+            {editingSlot === slot.id ? (
+              <div className="grid">
               <input
                 className="input"
                 value={
@@ -3182,7 +3183,10 @@ if (!canReportScores) {
               ) : null}
 
               {!isLocked && canClaim ? (
-                <button className="button primary" onClick={() => claimSlot(slot.id)}>
+                <button className="button primary" onClick={(e) => {
+                  e.stopPropagation();
+                  claimSlot(slot.id);
+              }}>
                   Claim Spot
                 </button>
               ) : null}
@@ -3203,11 +3207,12 @@ if (!canReportScores) {
                 </button>
               ) : null}
             </div>
-          </div>
-        );
-      })}
-    </div>
-  )}
+          ) : null}
+        </div>
+      );
+    })}
+  </div>
+)}
 </div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>

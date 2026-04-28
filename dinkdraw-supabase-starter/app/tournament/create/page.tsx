@@ -108,6 +108,9 @@ export default function CreateTournamentPage() {
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
   const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
+  const [playoffFormat, setPlayoffFormat] = useState<'none' | 'everyone' | 'top_4' | 'top_8' | 'top_16' | 'custom'>('none');
+  const [playoffAdvanceCount, setPlayoffAdvanceCount] = useState(8);
+  const [playoffSeedingStyle, setPlayoffSeedingStyle] = useState<'traditional' | 'simple'>('traditional');
   
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
@@ -204,25 +207,40 @@ setFavoriteLocations(savedLocations || []);
 
           const { data: tournament, error } = await supabase
         .from('tournaments')
-        .insert({
-          title: title.trim(),
-          organizer_user_id: user.id,
-          organizer_name: safeOrganizerName,
-          join_code: joinCode,
-          event_date: eventDate || null,
-          event_time: eventTime || null,
-          location: location.trim() || null,
-          player_count: playerCount,
-          courts,
-          rounds,
-          games_to: gamesTo,
-          status: 'draft',
-          format,
-          match_format: matchFormat,
-          doubles_mode: doublesMode,
-          court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
-          allow_player_score_reporting: allowPlayerScoreReporting,
-        })
+       .insert({
+  title: title.trim(),
+  organizer_user_id: user.id,
+  organizer_name: safeOrganizerName,
+  join_code: joinCode,
+  event_date: eventDate || null,
+  event_time: eventTime || null,
+  location: location.trim() || null,
+  player_count: playerCount,
+  courts,
+  rounds,
+  games_to: gamesTo,
+  status: 'draft',
+  format,
+  match_format: matchFormat,
+  doubles_mode: doublesMode,
+  court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
+  allow_player_score_reporting: allowPlayerScoreReporting,
+
+  playoff_format: playoffFormat,
+  playoff_advance_count:
+    playoffFormat === 'custom'
+      ? playoffAdvanceCount
+      : playoffFormat === 'everyone'
+      ? playerCount
+      : playoffFormat === 'top_4'
+      ? 4
+      : playoffFormat === 'top_8'
+      ? 8
+      : playoffFormat === 'top_16'
+      ? 16
+      : null,
+  playoff_seeding_style: playoffSeedingStyle,
+})
         .select()
         .single();
 
@@ -418,6 +436,59 @@ router.push(`/tournament/${tournament.id}`);
     placeholder="Courts, gym, park..."
   />
 </div>
+
+  <div>
+  <label className="label">Playoff Format</label>
+  <select
+    className="input"
+    value={playoffFormat}
+    onChange={(e) =>
+  setPlayoffFormat(
+    e.target.value as
+      | 'none'
+      | 'everyone'
+      | 'top_4'
+      | 'top_8'
+      | 'top_16'
+      | 'custom'
+  )
+}
+  >
+    <option value="none">No Playoffs</option>
+    <option value="everyone">Everyone Advances</option>
+    <option value="top_4">Top 4</option>
+    <option value="top_8">Top 8</option>
+    <option value="top_16">Top 16</option>
+    <option value="custom">Custom</option>
+  </select>
+</div>
+
+{playoffFormat === 'custom' && (
+  <div>
+    <label className="label">Number of Teams Advancing</label>
+    <input
+      type="number"
+      className="input"
+      value={playoffAdvanceCount}
+      onChange={(e) => setPlayoffAdvanceCount(Number(e.target.value))}
+      min={2}
+    />
+  </div>
+)}
+
+{playoffFormat !== 'none' && (
+  <div>
+    <label className="label">Seeding Style</label>
+    <select
+      className="input"
+      value={playoffSeedingStyle}
+      onChange={(e) => setPlayoffSeedingStyle(e.target.value as any)}
+    >
+      <option value="traditional">Traditional (Byes for top seeds)</option>
+      <option value="simple">Simple (1 vs Last)</option>
+    </select>
+  </div>
+)}        
 
    <div
   className="list-item"

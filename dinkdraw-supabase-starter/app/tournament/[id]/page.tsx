@@ -2059,6 +2059,110 @@ if (slot.claimed_by_user_id && nextName === '') {
     setIsStarting(false);
   }
 
+  async function generatePlayoffBracket() {
+  if (!tournament) return;
+
+  if (!isOrganizer) {
+    setMessage('Only the organizer can generate the playoff bracket.');
+    return;
+  }
+
+  if (tournament.playoff_format === 'none') {
+    setMessage('This tournament does not have playoffs enabled.');
+    return;
+  }
+
+  if (!matches.length || !matches.every((match) => match.is_bye || match.is_complete)) {
+    setMessage('Finish all round robin matches before generating playoffs.');
+    return;
+  }
+
+  if (playoffMatches.length > 0) {
+    setMessage('Playoff bracket already exists.');
+    return;
+  }
+
+  const seedCount = Math.min(
+    tournament.playoff_advance_count || standings.length,
+    standings.length
+  );
+
+  if (seedCount < 2) {
+    setMessage('At least 2 players or teams are needed for playoffs.');
+    return;
+  }
+
+  const seededRows = standings.slice(0, seedCount);
+  const seedPairs = getSeedPairs(seedCount, tournament.playoff_seeding_style);
+  const bracketSize =
+    tournament.playoff_seeding_style === 'simple'
+      ? seedCount
+      : nextPowerOfTwo(seedCount);
+
+  const totalRounds = Math.ceil(Math.log2(bracketSize));
+
+  const rowsToInsert = seedPairs.map(([seedA, seedB], index) => {
+    const playerA = seedA <= seedCount ? seededRows[seedA - 1] : null;
+    const playerB = seedB <= seedCount ? seededRows[seedB - 1] : null;
+
+    const isBye = !!playerA && !playerB;
+
+    return {
+      tournament_id: tournament.id,
+      round_number: 1,
+      match_number: index + 1,
+      round_label: getPlayoffRoundLabel(1, totalRounds),
+      team_a_seed: playerA ? seedA : null,
+      team_b_seed: playerB ? seedB : null,
+      team_a_player_1_id: playerA?.playerId || null,
+      team_a_player_2_id: null,
+      team_b_player_1_id: playerB?.playerId || null,
+      team_b_player_2_id: null,
+      team_a_score: null,
+      team_b_score: null,
+      winner_team: isBye ? 'A' : null,
+      winner_player_1_id: isBye ? playerA?.playerId || null : null,
+      winner_player_2_id: null,
+      next_match_id: null,
+      next_match_team: null,
+      is_bye: isBye,
+      is_complete: isBye,
+    };
+  });
+
+  const { error: deleteError } = await supabase
+    .from('playoff_matches')
+    .delete()
+    .eq('tournament_id', tournament.id);
+
+  if (deleteError) {
+    setMessage(`Could not reset playoff bracket: ${deleteError.message}`);
+    return;
+  }
+
+  const { error: insertError } = await supabase
+    .from('playoff_matches')
+    .insert(rowsToInsert);
+
+  if (insertError) {
+    setMessage(`Could not generate playoff bracket: ${insertError.message}`);
+    return;
+  }
+
+  const { error: tournamentError } = await supabase
+    .from('tournaments')
+    .update({ playoff_status: 'started' })
+    .eq('id', tournament.id);
+
+  if (tournamentError) {
+    setMessage(`Could not update playoff status: ${tournamentError.message}`);
+    return;
+  }
+
+  await loadTournamentData(userId);
+  setMessage('Playoff bracket generated.');
+}
+
   async function rematchTournament() {
     if (!tournament) return;
     const { data: authData } = await supabase.auth.getUser();

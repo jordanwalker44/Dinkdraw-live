@@ -3472,6 +3472,29 @@ if (!canReportScores) {
     })}
   </div>
 )}
+  {isOrganizer &&
+tournament?.playoff_format !== 'none' &&
+isStarted &&
+!isCompleted &&
+matches.length > 0 &&
+matches.every((m) => m.is_bye || m.is_complete) &&
+playoffMatches.length === 0 ? (
+  <div style={{ marginTop: 14 }}>
+    <button
+      className="button primary"
+      onClick={generatePlayoffBracket}
+      style={{
+        width: '100%',
+        padding: '12px',
+        fontSize: 16,
+        fontWeight: 900,
+        borderRadius: 12,
+      }}
+    >
+      Generate Playoff Bracket
+    </button>
+  </div>
+) : null}
 </div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>

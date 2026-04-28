@@ -2273,7 +2273,7 @@ if (slot.claimed_by_user_id && nextName === '') {
     matchByRoundAndNumber.set(`${match.round_number}-${match.match_number}`, match);
   }
 
-  const updatePromises: Array<Promise<any>> = [];
+  const updatePromises: any[] = [];
 
   for (const match of insertedMatches as PlayoffMatch[]) {
     if (match.round_number >= totalRounds) continue;

@@ -3175,14 +3175,7 @@ if (!canReportScores) {
         e.stopPropagation();
         claimSlot(slot.id);
       }}
-      style={{
-        minHeight: 34,
-        padding: '6px 12px',
-        borderRadius: 999,
-        fontSize: 13,
-        fontWeight: 800,
-      }}
-    >
+  >
       Claim
     </button>
   ) : (

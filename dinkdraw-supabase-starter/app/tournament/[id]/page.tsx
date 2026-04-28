@@ -3479,8 +3479,7 @@ if (!canReportScores) {
 )}
   {isOrganizer &&
 tournament?.playoff_format !== 'none' &&
-isStarted &&
-!isCompleted &&
+(isStarted || isCompleted) &&
 matches.length > 0 &&
 matches.every((m) => m.is_bye || m.is_complete) &&
 playoffMatches.length === 0 ? (

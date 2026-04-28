@@ -28,6 +28,12 @@ type Tournament = {
   doubles_mode: string | null;
   court_labels: string[] | null;
   allow_player_score_reporting: boolean | null;
+  playoff_format: string | null;
+  playoff_advance_count: number | null;
+  playoff_seeding_style: string | null;
+  playoff_status: string | null;
+  champion_player_1_id: string | null;
+  champion_player_2_id: string | null;
 };
 
 type PlayerSlot = {
@@ -80,6 +86,29 @@ type ScoreDraft = {
   game_2_b: string;
   game_3_a: string;
   game_3_b: string;
+};
+
+type PlayoffMatch = {
+  id: string;
+  tournament_id: string;
+  round_number: number;
+  match_number: number;
+  round_label: string | null;
+  team_a_seed: number | null;
+  team_b_seed: number | null;
+  team_a_player_1_id: string | null;
+  team_a_player_2_id: string | null;
+  team_b_player_1_id: string | null;
+  team_b_player_2_id: string | null;
+  team_a_score: number | null;
+  team_b_score: number | null;
+  winner_team: string | null;
+  winner_player_1_id: string | null;
+  winner_player_2_id: string | null;
+  next_match_id: string | null;
+  next_match_team: string | null;
+  is_bye: boolean;
+  is_complete: boolean;
 };
 
 type ScheduleRow = {
@@ -1209,6 +1238,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [playoffMatches, setPlayoffMatches] = useState<PlayoffMatch[]>([]);
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
@@ -1431,6 +1461,14 @@ const hasAnyScores = matches.some(
 
 const safeMatches = matchesData || [];
 setMatches(safeMatches);
+const { data: playoffMatchesData } = await supabase
+  .from('playoff_matches')
+  .select('*')
+  .eq('tournament_id', params.id)
+  .order('round_number', { ascending: true })
+  .order('match_number', { ascending: true });
+
+setPlayoffMatches(playoffMatchesData || []);
 
 setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};
@@ -1524,6 +1562,18 @@ setScoreDrafts((prev) => {
    async () => {
   await loadTournamentData(userId);
 }
+)
+      .on(
+  'postgres_changes',
+  {
+    event: '*',
+    schema: 'public',
+    table: 'playoff_matches',
+    filter: `tournament_id=eq.${params.id}`,
+  },
+  async () => {
+    await loadTournamentData(userId);
+  }
 )
       .on(
         'postgres_changes',

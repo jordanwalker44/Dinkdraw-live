@@ -3085,22 +3085,40 @@ if (!canReportScores) {
               boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
             }}
           >
-            <div className="row-between" style={{ marginBottom: 10 }}>
-              <div>
-                <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
-                <div className="muted">{slot.display_name || 'Open spot'}</div>
-              </div>
+           <div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '1fr 2fr 1fr',
+    alignItems: 'center',
+    marginBottom: 10,
+  }}
+>
+  <div style={{ fontWeight: 800 }}>
+    Player {slot.slot_number}
+  </div>
 
-              {isMine ? (
-                <span className="tag yours">Yours</span>
-              ) : isClaimedBySomeone ? (
-                <span className="tag green">Claimed</span>
-              ) : isLocked ? (
-                <span className="tag">Locked</span>
-              ) : (
-                <span className="tag">Open</span>
-              )}
-            </div>
+  <div
+    style={{
+      textAlign: 'center',
+      fontWeight: 600,
+      fontSize: 16,
+    }}
+  >
+    {slot.display_name || 'Open'}
+  </div>
+
+  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+    {isMine ? (
+      <span className="tag yours">Yours</span>
+    ) : isClaimedBySomeone ? (
+      <span className="tag">Claimed</span>
+    ) : isLocked ? (
+      <span className="tag">Locked</span>
+    ) : (
+      <span className="tag">Open</span>
+    )}
+  </div>
+</div>
 {isMine && !isLocked ? (
   <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
     Need to give up your spot? Ask the organizer to clear it.

@@ -3085,10 +3085,28 @@ if (!canReportScores) {
     setEditingSlot(editingSlot === slot.id ? null : slot.id)
   }
   style={{
-    borderColor: isMine ? 'rgba(255,203,5,.45)' : undefined,
-    boxShadow: isMine ? '0 0 0 1px rgba(255,203,5,.18) inset' : undefined,
-    cursor: 'pointer',
-  }}
+  borderColor:
+    editingSlot === slot.id
+      ? 'rgba(255,203,5,0.7)'
+      : isMine
+      ? 'rgba(255,203,5,0.45)'
+      : undefined,
+
+  boxShadow:
+    editingSlot === slot.id
+      ? '0 0 0 2px rgba(255,203,5,0.25), 0 8px 24px rgba(0,0,0,0.35)'
+      : isMine
+      ? '0 0 0 1px rgba(255,203,5,0.18) inset'
+      : undefined,
+
+  background:
+    editingSlot === slot.id
+      ? 'rgba(255,255,255,0.06)'
+      : undefined,
+
+  cursor: 'pointer',
+  transition: 'all 0.2s ease',
+}}
 >
            <div
   style={{

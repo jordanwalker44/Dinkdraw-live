@@ -2199,7 +2199,8 @@ if (slot.claimed_by_user_id && nextName === '') {
   const totalRounds = roundMatchCounts.length;
 
   const rowsToInsert = roundMatchCounts.flatMap((matchCount, roundIndex) => {
-    const roundNumber = roundIndex + 1;
+  const roundNumber = roundIndex + 1;
+  const normalizedRoundNumber = totalRounds - roundIndex;
 
     return Array.from({ length: matchCount }, (_, matchIndex) => {
       const matchNumber = matchIndex + 1;
@@ -2215,7 +2216,7 @@ if (slot.claimed_by_user_id && nextName === '') {
 
       return {
         tournament_id: tournament.id,
-        round_number: roundNumber,
+        round_number: normalizedRoundNumber,
         match_number: matchNumber,
         round_label: getPlayoffRoundLabel(roundNumber, totalRounds),
 

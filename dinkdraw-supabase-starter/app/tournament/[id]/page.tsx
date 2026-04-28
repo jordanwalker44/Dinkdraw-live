@@ -3086,10 +3086,12 @@ if (!canReportScores) {
   onClick={() =>
     setEditingSlot(editingSlot === slot.id ? null : slot.id)
   }
-  style={{
+ style={{
   borderColor:
     editingSlot === slot.id
       ? 'rgba(255,203,5,0.7)'
+      : canClaim && isFirstOpenSlot
+      ? 'rgba(255,203,5,0.6)'
       : isMine
       ? 'rgba(255,203,5,0.45)'
       : undefined,
@@ -3097,6 +3099,8 @@ if (!canReportScores) {
   boxShadow:
     editingSlot === slot.id
       ? '0 0 0 2px rgba(255,203,5,0.25), 0 8px 24px rgba(0,0,0,0.35)'
+      : canClaim && isFirstOpenSlot
+      ? '0 0 0 2px rgba(255,203,5,0.18), 0 6px 20px rgba(0,0,0,0.3)'
       : isMine
       ? '0 0 0 1px rgba(255,203,5,0.18) inset'
       : undefined,
@@ -3104,6 +3108,8 @@ if (!canReportScores) {
   background:
     editingSlot === slot.id
       ? 'rgba(255,255,255,0.06)'
+      : canClaim && isFirstOpenSlot
+      ? 'rgba(255,203,5,0.06)'
       : undefined,
 
   cursor: 'pointer',

@@ -3391,7 +3391,10 @@ if (!canReportScores) {
 ) : null}
             
             {editingSlot === slot.id ? (
-              <div className="grid">
+  <div
+    className="grid"
+    onClick={(e) => e.stopPropagation()}
+  >
               <input
                 className="input"
                 value={

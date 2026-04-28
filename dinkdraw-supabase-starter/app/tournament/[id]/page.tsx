@@ -1450,26 +1450,6 @@ const hasAnyScores = matches.some(
     }));
 }, [playoffMatches]);
 
-  const playoffRounds = useMemo(() => {
-  const rounds = new Map<number, PlayoffMatch[]>();
-
-  for (const match of playoffMatches) {
-    if (!rounds.has(match.round_number)) {
-      rounds.set(match.round_number, []);
-    }
-
-    rounds.get(match.round_number)!.push(match);
-  }
-
-  return Array.from(rounds.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([roundNumber, matches]) => ({
-      roundNumber,
-      label: matches[0]?.round_label || `Round ${roundNumber}`,
-      matches: matches.sort((a, b) => a.match_number - b.match_number),
-    }));
-}, [playoffMatches]);
-
   useEffect(() => {
     setStandings(computeStandings(playerSlots, matches, isSingles, isBestOf3));
   }, [playerSlots, matches, isSingles, isBestOf3]);

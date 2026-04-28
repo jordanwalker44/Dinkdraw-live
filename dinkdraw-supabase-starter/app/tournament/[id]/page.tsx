@@ -3148,7 +3148,7 @@ if (!canReportScores) {
         letterSpacing: '0.02em',
       }}
     >
-      Tap to claim
+      Tap to Join
     </div>
   ) : null}
 </div>
@@ -3176,7 +3176,7 @@ if (!canReportScores) {
         claimSlot(slot.id);
       }}
   >
-      Claim
+      Join Game
     </button>
   ) : (
     <span className="tag">Open</span>

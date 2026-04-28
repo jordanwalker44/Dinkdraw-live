@@ -3164,6 +3164,13 @@ if (!canReportScores) {
     <button
       type="button"
       className={`button primary ${isFirstOpenSlot ? 'claim-pulse' : ''}`}
+       style={{
+        minHeight: 40,
+        padding: '8px 16px',
+        fontSize: 14,
+        fontWeight: 800,
+        borderRadius: 999,
+      }}
       onClick={(e) => {
         e.stopPropagation();
         claimSlot(slot.id);

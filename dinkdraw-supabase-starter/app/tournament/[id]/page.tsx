@@ -4114,6 +4114,7 @@ playoffMatches.length === 0 ? (
                     ) : (
                       <button
                         className="button primary"
+                        onMouseDown={(e) => e.preventDefault()}
                         onClick={() => submitMatchScore(match.id)}
                         disabled={!canReportScores}
                         style={{

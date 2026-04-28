@@ -677,3 +677,22 @@ box-shadow:
     transform: translateY(0);
   }
 }
+
+.claim-pulse {
+  animation: claimPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes claimPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 203, 5, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 16px 6px rgba(255, 203, 5, 0.35);
+    transform: scale(1.04);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 203, 5, 0);
+    transform: scale(1);
+  }
+}

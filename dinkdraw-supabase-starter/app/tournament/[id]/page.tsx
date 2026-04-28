@@ -3936,12 +3936,14 @@ if (!canReportScores) {
 
       {activeTab === 'rounds' && (
   <>
-    {isOrganizer &&
-    tournament?.playoff_format !== 'none' &&
-    (isStarted || isCompleted) &&
-    matches.length > 0 &&
-    matches.every((m) => m.is_bye || m.is_complete) &&
-    playoffMatches.length === 0 ? (
+    {(
+  isOrganizer &&
+  tournament?.playoff_format !== 'none' &&
+  (isStarted || isCompleted) &&
+  matches.length > 0 &&
+  matches.every((m) => m.is_bye || m.is_complete) &&
+  playoffMatches.length === 0
+) ? (
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Playoff Bracket</div>
         <div className="card-subtitle">

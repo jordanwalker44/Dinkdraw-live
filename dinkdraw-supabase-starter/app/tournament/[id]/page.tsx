@@ -3119,7 +3119,7 @@ if (!canReportScores) {
            <div
   style={{
     display: 'grid',
-    gridTemplateColumns: 'auto 1fr auto',
+    gridTemplateColumns: '90px 1fr 110px',
     alignItems: 'center',
     marginBottom: 10,
     padding: '0 4px',
@@ -3153,7 +3153,7 @@ if (!canReportScores) {
   ) : null}
 </div>
 
-  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+  <div style={{ width: 110, display: 'flex', justifyContent: 'flex-end' }}>
   {isMine ? (
     <span className="tag yours">Yours</span>
   ) : isClaimedBySomeone ? (

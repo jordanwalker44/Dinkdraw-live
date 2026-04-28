@@ -3088,9 +3088,10 @@ if (!canReportScores) {
            <div
   style={{
     display: 'grid',
-    gridTemplateColumns: '1fr 2fr 1fr',
+    gridTemplateColumns: 'auto 1fr auto',
     alignItems: 'center',
     marginBottom: 10,
+    padding: '0 4px',
   }}
 >
   <div style={{ fontWeight: 800 }}>

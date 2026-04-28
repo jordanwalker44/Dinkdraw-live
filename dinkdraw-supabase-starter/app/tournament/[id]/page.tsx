@@ -3163,7 +3163,7 @@ if (!canReportScores) {
   ) : canClaim && isFirstOpenSlot ? (
     <button
       type="button"
-      className="button primary"
+      className={`button primary ${isFirstOpenSlot ? 'claim-pulse' : ''}`}
       onClick={(e) => {
         e.stopPropagation();
         claimSlot(slot.id);

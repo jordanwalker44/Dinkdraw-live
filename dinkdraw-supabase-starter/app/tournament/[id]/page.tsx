@@ -1430,6 +1430,26 @@ const hasAnyScores = matches.some(
     [currentRoundMatches]
   );
 
+  const playoffRounds = useMemo(() => {
+  const rounds = new Map<number, PlayoffMatch[]>();
+
+  for (const match of playoffMatches) {
+    if (!rounds.has(match.round_number)) {
+      rounds.set(match.round_number, []);
+    }
+
+    rounds.get(match.round_number)!.push(match);
+  }
+
+  return Array.from(rounds.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([roundNumber, matches]) => ({
+      roundNumber,
+      label: matches[0]?.round_label || `Round ${roundNumber}`,
+      matches: matches.sort((a, b) => a.match_number - b.match_number),
+    }));
+}, [playoffMatches]);
+
   useEffect(() => {
     setStandings(computeStandings(playerSlots, matches, isSingles, isBestOf3));
   }, [playerSlots, matches, isSingles, isBestOf3]);
@@ -3656,29 +3676,7 @@ if (!canReportScores) {
     })}
   </div>
 )}
-  {isOrganizer &&
-tournament?.playoff_format !== 'none' &&
-(isStarted || isCompleted) &&
-matches.length > 0 &&
-matches.every((m) => m.is_bye || m.is_complete) &&
-playoffMatches.length === 0 ? (
-  <div style={{ marginTop: 14 }}>
-    <button
-      className="button primary"
-      onClick={generatePlayoffBracket}
-      style={{
-        width: '100%',
-        padding: '12px',
-        fontSize: 16,
-        fontWeight: 900,
-        borderRadius: 12,
-      }}
-    >
-      Generate Playoff Bracket
-    </button>
-  </div>
-) : null}
-</div>
+ </div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>
   <div className="card-title">Tournament Controls</div>
@@ -3937,6 +3935,34 @@ playoffMatches.length === 0 ? (
       )}
 
       {activeTab === 'rounds' && (
+  <>
+    {isOrganizer &&
+    tournament?.playoff_format !== 'none' &&
+    (isStarted || isCompleted) &&
+    matches.length > 0 &&
+    matches.every((m) => m.is_bye || m.is_complete) &&
+    playoffMatches.length === 0 ? (
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="card-title">Playoff Bracket</div>
+        <div className="card-subtitle">
+          Round robin is complete. Generate the seeded playoff bracket.
+        </div>
+
+        <button
+          className="button primary"
+          onClick={generatePlayoffBracket}
+          style={{
+            width: '100%',
+            padding: '12px',
+            fontSize: 16,
+            fontWeight: 900,
+            borderRadius: 12,
+          }}
+        >
+          Generate Playoff Bracket
+        </button>
+      </div>
+    ) : null}
         <div className="card">
           {isStarted && !isCompleted ? (
             <div

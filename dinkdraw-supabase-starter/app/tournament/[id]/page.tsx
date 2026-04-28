@@ -1207,6 +1207,53 @@ function computeStandings(
     });
 }
 
+function nextPowerOfTwo(value: number) {
+  let power = 1;
+  while (power < value) power *= 2;
+  return power;
+}
+
+function getPlayoffRoundLabel(roundNumber: number, totalRounds: number) {
+  if (roundNumber === totalRounds) return 'Championship';
+  if (roundNumber === totalRounds - 1) return 'Semifinals';
+  if (roundNumber === totalRounds - 2) return 'Quarterfinals';
+  return `Round ${roundNumber}`;
+}
+
+function getSeedPairs(seedCount: number, seedingStyle: string | null) {
+  const seeds = Array.from({ length: seedCount }, (_, index) => index + 1);
+
+  if (seedingStyle === 'simple') {
+    const pairs: Array<[number, number]> = [];
+    for (let i = 0; i < Math.floor(seeds.length / 2); i += 1) {
+      pairs.push([seeds[i], seeds[seeds.length - 1 - i]]);
+    }
+    return pairs;
+  }
+
+  const bracketSize = nextPowerOfTwo(seedCount);
+  const slots: Array<number | null> = Array.from({ length: bracketSize }, () => null);
+
+  for (let i = 0; i < Math.floor(bracketSize / 2); i += 1) {
+    slots[i * 2] = i + 1;
+    slots[i * 2 + 1] = bracketSize - i;
+  }
+
+  const pairs: Array<[number, number]> = [];
+
+  for (let i = 0; i < slots.length; i += 2) {
+    const a = slots[i];
+    const b = slots[i + 1];
+
+    if (a === null || b === null) continue;
+    if (a > seedCount && b > seedCount) continue;
+
+    pairs.push([a, b]);
+  }
+
+  return pairs;
+}
+
 function getTournamentModeBadges(tournament: Tournament | null) {
   if (!tournament) return [];
 

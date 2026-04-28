@@ -3130,14 +3130,28 @@ if (!canReportScores) {
   </div>
 
   <div
-    style={{
-      textAlign: 'center',
-      fontWeight: 600,
-      fontSize: 16,
-    }}
-  >
-    {slot.display_name || 'Open'}
-  </div>
+  style={{
+    textAlign: 'center',
+    fontWeight: 600,
+    fontSize: 16,
+  }}
+>
+  <div>{slot.display_name || 'Open'}</div>
+
+  {canClaim && isFirstOpenSlot ? (
+    <div
+      style={{
+        marginTop: 3,
+        fontSize: 11,
+        fontWeight: 800,
+        color: '#ffcb05',
+        letterSpacing: '0.02em',
+      }}
+    >
+      Tap to claim
+    </div>
+  ) : null}
+</div>
 
   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
   {isMine ? (

@@ -3075,6 +3075,8 @@ if (!canReportScores) {
         const isMine = slot.claimed_by_user_id === userId;
         const isClaimedBySomeone = !!slot.claimed_by_user_id;
         const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
+        const firstOpenSlot = playerSlots.find((player) => !player.claimed_by_user_id);
+        const isFirstOpenSlot = firstOpenSlot?.id === slot.id;
         const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 
         return (
@@ -3132,16 +3134,34 @@ if (!canReportScores) {
   </div>
 
   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-    {isMine ? (
-      <span className="tag yours">Yours</span>
-    ) : isClaimedBySomeone ? (
-      <span className="tag">Claimed</span>
-    ) : isLocked ? (
-      <span className="tag">Locked</span>
-    ) : (
-      <span className="tag">Open</span>
-    )}
-  </div>
+  {isMine ? (
+    <span className="tag yours">Yours</span>
+  ) : isClaimedBySomeone ? (
+    <span className="tag">Claimed</span>
+  ) : isLocked ? (
+    <span className="tag">Locked</span>
+  ) : canClaim && isFirstOpenSlot ? (
+    <button
+      type="button"
+      className="button primary"
+      onClick={(e) => {
+        e.stopPropagation();
+        claimSlot(slot.id);
+      }}
+      style={{
+        minHeight: 34,
+        padding: '6px 12px',
+        borderRadius: 999,
+        fontSize: 13,
+        fontWeight: 800,
+      }}
+    >
+      Claim
+    </button>
+  ) : (
+    <span className="tag">Open</span>
+  )}
+</div>
 </div>
 {isMine && !isLocked ? (
   <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>

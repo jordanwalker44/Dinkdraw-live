@@ -2709,6 +2709,8 @@ if (!canReportScores) {
     );
 
     setMessage('Submitting score...');
+    setMatches(optimisticMatches);
+    setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
 
     const completedMatch = optimisticMatches.find((m) => m.id === matchId);
     if (!completedMatch) return;

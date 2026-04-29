@@ -2864,7 +2864,136 @@ if (!canReportScores) {
       }
     }
   }
+  async function submitPlayoffScore(matchId: string) {
+  if (!tournament) return;
 
+  if (!isOrganizer) {
+    setMessage('Only the organizer can submit playoff scores.');
+    return;
+  }
+
+  const match = playoffMatches.find((m) => m.id === matchId);
+  if (!match) return;
+
+  if (match.is_complete) {
+    setMessage('This playoff match is already complete.');
+    return;
+  }
+
+  if (!match.team_a_player_1_id || !match.team_b_player_1_id) {
+    setMessage('Both playoff teams must be set before submitting a score.');
+    return;
+  }
+
+  const draft = playoffScoreDrafts[matchId];
+
+  const aRaw =
+    draft?.team_a_score ??
+    (match.team_a_score === null ? '' : String(match.team_a_score));
+
+  const bRaw =
+    draft?.team_b_score ??
+    (match.team_b_score === null ? '' : String(match.team_b_score));
+
+  if (aRaw.trim() === '' || bRaw.trim() === '') {
+    setMessage('Enter both playoff scores before submitting.');
+    return;
+  }
+
+  const aScore = Math.max(0, Number(aRaw));
+  const bScore = Math.max(0, Number(bRaw));
+
+  if (Number.isNaN(aScore) || Number.isNaN(bScore)) {
+    setMessage('Playoff scores must be valid numbers.');
+    return;
+  }
+
+  if (aScore === bScore) {
+    setMessage('A playoff match cannot end in a tie.');
+    return;
+  }
+
+  const teamAWins = aScore > bScore;
+
+  const winnerPlayer1Id = teamAWins
+    ? match.team_a_player_1_id
+    : match.team_b_player_1_id;
+
+  const winnerPlayer2Id = teamAWins
+    ? match.team_a_player_2_id
+    : match.team_b_player_2_id;
+
+  const winnerSeed = teamAWins ? match.team_a_seed : match.team_b_seed;
+  const winnerTeam = teamAWins ? 'A' : 'B';
+
+  setMessage('Submitting playoff score...');
+
+  const { error: matchError } = await supabase
+    .from('playoff_matches')
+    .update({
+      team_a_score: aScore,
+      team_b_score: bScore,
+      winner_team: winnerTeam,
+      winner_player_1_id: winnerPlayer1Id,
+      winner_player_2_id: winnerPlayer2Id,
+      is_complete: true,
+    })
+    .eq('id', match.id);
+
+  if (matchError) {
+    setMessage(`Playoff score failed: ${matchError.message}`);
+    return;
+  }
+
+  if (match.next_match_id && match.next_match_team) {
+    const nextUpdate =
+      match.next_match_team === 'A'
+        ? {
+            team_a_seed: winnerSeed,
+            team_a_player_1_id: winnerPlayer1Id,
+            team_a_player_2_id: winnerPlayer2Id,
+          }
+        : {
+            team_b_seed: winnerSeed,
+            team_b_player_1_id: winnerPlayer1Id,
+            team_b_player_2_id: winnerPlayer2Id,
+          };
+
+    const { error: nextError } = await supabase
+      .from('playoff_matches')
+      .update(nextUpdate)
+      .eq('id', match.next_match_id);
+
+    if (nextError) {
+      setMessage(`Winner saved, but advance failed: ${nextError.message}`);
+      await loadTournamentData(userId);
+      return;
+    }
+
+    await loadTournamentData(userId);
+    setMessage('Playoff score submitted. Winner advanced.');
+    return;
+  }
+
+  const { error: tournamentError } = await supabase
+    .from('tournaments')
+    .update({
+      playoff_status: 'completed',
+      champion_player_1_id: winnerPlayer1Id,
+      champion_player_2_id: winnerPlayer2Id,
+      status: 'completed',
+    })
+    .eq('id', tournament.id);
+
+  if (tournamentError) {
+    setMessage(`Champion saved, but tournament update failed: ${tournamentError.message}`);
+    await loadTournamentData(userId);
+    return;
+  }
+
+  await loadTournamentData(userId);
+  setMessage('🏆 Championship complete. Winner crowned!');
+}
   async function submitMatchScore(matchId: string) {
     if (isCompleted) {
       setMessage('Final results are locked.');

@@ -4339,10 +4339,17 @@ if (!canReportScores) {
       alignItems: 'center',
       padding: 10,
       borderRadius: 12,
-      background: match.winner_team === 'A' ? 'rgba(255,203,5,0.10)' : 'rgba(255,255,255,0.035)',
-      border: match.winner_team === 'A'
-        ? '1px solid rgba(255,203,5,0.35)'
-        : '1px solid rgba(255,255,255,0.08)',
+      background: match.is_bye
+      ? 'rgba(34,197,94,0.12)'
+      : match.winner_team === 'A'
+      ? 'rgba(255,203,5,0.10)'
+      : 'rgba(255,255,255,0.035)',
+
+      border: match.is_bye
+      ? '1px solid rgba(34,197,94,0.45)'
+      : match.winner_team === 'A'
+      ? '1px solid rgba(255,203,5,0.35)'
+      : '1px solid rgba(255,255,255,0.08)',
     }}
   >
     <div>

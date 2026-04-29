@@ -842,7 +842,8 @@ export default function PublicTournamentViewPage({
 }}
         >
                     {roundsAvailable.map((round) => {
-            const isSelected = selectedRound === round;
+            const isSelected =
+              selectedPlayoffRound === null && selectedRound === round;
             const status = roundStatusByRound.get(round);
             const isCurrent = status === 'current';
 

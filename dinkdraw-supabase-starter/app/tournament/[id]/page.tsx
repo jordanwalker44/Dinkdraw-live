@@ -4470,10 +4470,10 @@ if (!canReportScores) {
   </div>
 ) : null}
 
-          {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
+          {selectedPlayoffRound === null && !matchesForSelectedRound.length && !byesForSelectedRound.length ? (
             <div className="muted">No matches in this round yet.</div>
           ) : (
-            <div className="grid">
+            <div className="grid" style={{ display: selectedPlayoffRound === null ? undefined : 'none' }}>
               {matchesForSelectedRound.map((match) => {
                 const isNextUp =
                   !isCompleted &&

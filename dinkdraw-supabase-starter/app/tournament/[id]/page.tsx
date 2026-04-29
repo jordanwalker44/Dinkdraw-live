@@ -3995,7 +3995,24 @@ if (!canReportScores) {
                   </div>
 
                   <div style={{ textAlign: 'right', fontWeight: 800 }}>
-                    {match.team_a_score ?? '-'} : {match.team_b_score ?? '-'}
+                    <div style={{ display: 'grid', gridTemplateColumns: '48px 48px', gap: 6 }}>
+  <input
+    className="input"
+    type="number"
+    value={match.team_a_score ?? ''}
+    disabled={match.is_complete}
+    placeholder="0"
+    style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
+  />
+  <input
+    className="input"
+    type="number"
+    value={match.team_b_score ?? ''}
+    disabled={match.is_complete || !match.team_b_player_1_id}
+    placeholder="0"
+    style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
+  />
+</div>
                   </div>
                 </div>
 

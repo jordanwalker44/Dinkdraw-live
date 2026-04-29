@@ -4310,6 +4310,8 @@ if (!canReportScores) {
 
         <div style={{ display: 'grid', gap: 10 }}>
           {round.matches.map((match) => {
+            const playoffCourtLabel = `Court ${match.match_number}`;
+          
             const teamAName = match.team_a_player_1_id
               ? renderPlayerName(match.team_a_player_1_id) +
                 (match.team_a_player_2_id
@@ -4330,6 +4332,18 @@ if (!canReportScores) {
                 className="list-item"
                 style={{ padding: 12 }}
               >
+                <div
+  style={{
+    fontSize: 12,
+    fontWeight: 900,
+    color: 'rgba(255,255,255,0.55)',
+    marginBottom: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  }}
+>
+  {playoffCourtLabel}
+</div>
           <div style={{ display: 'grid', gap: 8 }}>
   <div
     style={{

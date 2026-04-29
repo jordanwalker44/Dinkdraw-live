@@ -972,9 +972,10 @@ export default function PublicTournamentViewPage({
         setSelectedRound(round.roundNumber);
       }}
       style={{
+        flex: '0 0 auto',
+        minWidth: 140,        
         padding: '16px',
         borderRadius: 16,
-        minWidth: 140,
         border: isSelected
           ? '1px solid rgba(255, 203, 5, 0.72)'
           : '1px solid rgba(255,255,255,0.08)',

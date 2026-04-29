@@ -3936,13 +3936,89 @@ if (!canReportScores) {
 
       {activeTab === 'rounds' && (
   <>
+
+{playoffRounds.length > 0 ? (
+  <div className="card" style={{ marginTop: 14 }}>
+    <div className="card-title">Playoffs</div>
+
+    {playoffRounds.map((round) => (
+      <div key={round.roundNumber} style={{ marginBottom: 18 }}>
+        <div
+          style={{
+            fontSize: 14,
+            fontWeight: 800,
+            marginBottom: 8,
+            color: '#FFCB05',
+            letterSpacing: 1,
+          }}
+        >
+          {round.label.toUpperCase()}
+        </div>
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          {round.matches.map((match) => {
+            const teamAName = match.team_a_player_1_id
+              ? getPlayerName(match.team_a_player_1_id) +
+                (match.team_a_player_2_id
+                  ? ` & ${getPlayerName(match.team_a_player_2_id)}`
+                  : '')
+              : 'TBD';
+
+            const teamBName = match.team_b_player_1_id
+              ? getPlayerName(match.team_b_player_1_id) +
+                (match.team_b_player_2_id
+                  ? ` & ${getPlayerName(match.team_b_player_2_id)}`
+                  : '')
+              : 'TBD';
+
+            return (
+              <div
+                key={match.id}
+                className="list-item"
+                style={{ padding: 12 }}
+              >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: 8,
+                    alignItems: 'center',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 700 }}>
+                      {teamAName}
+                    </div>
+                    <div style={{ fontWeight: 700 }}>
+                      {teamBName}
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right', fontWeight: 800 }}>
+                    {match.team_a_score ?? '-'} : {match.team_b_score ?? '-'}
+                  </div>
+                </div>
+
+                {match.is_bye ? (
+                  <div className="muted" style={{ marginTop: 6 }}>
+                    Bye → auto advances
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ))}
+  </div>
+) : null}
     {(
   isOrganizer &&
   tournament?.playoff_format !== 'none' &&
   (isStarted || isCompleted) &&
   matches.length > 0 &&
   matches.every((m) => m.is_bye || m.is_complete) &&
-  playoffMatches.length === 0
+  playoffRounds.length === 0
 ) ? (
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-title">Playoff Bracket</div>

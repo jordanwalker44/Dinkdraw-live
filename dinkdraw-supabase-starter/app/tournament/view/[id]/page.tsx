@@ -309,39 +309,7 @@ export default function PublicTournamentViewPage({
     return Array.from(roundSet).sort((a, b) => a - b);
   }, [matches, tournament]);
 
-  {playoffRounds.map((round) => {
-  const isSelected = selectedPlayoffRound === round.roundNumber;
-
-  return (
-    <button
-      key={`playoff-${round.roundNumber}`}
-      type="button"
-      onClick={() => {
-        setSelectedPlayoffRound(round.roundNumber);
-        setSelectedRound(round.roundNumber);
-      }}
-      style={{
-        minWidth: 140,
-        padding: '14px 16px',
-        borderRadius: 14,
-        border: isSelected
-          ? '1px solid rgba(255, 203, 5, 0.85)'
-          : '1px solid rgba(255,255,255,0.08)',
-        background: isSelected
-          ? 'rgba(255, 203, 5, 0.14)'
-          : 'rgba(255,255,255,0.03)',
-        fontWeight: 900,
-        color: '#fff',
-        cursor: 'pointer',
-        flex: '0 0 auto',
-      }}
-    >
-      {round.label}
-    </button>
-  );
-})}
-
-  const currentRound = useMemo(() => {
+    const currentRound = useMemo(() => {
     if (!matches.length) return roundsAvailable[0] || 1;
 
     for (const round of roundsAvailable) {

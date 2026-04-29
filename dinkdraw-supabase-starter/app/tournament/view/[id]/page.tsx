@@ -1241,7 +1241,8 @@ export default function PublicTournamentViewPage({
           <div
               key={selectedRound}
               className="grid soft-enter"
-    >
+              style={{ display: selectedPlayoffRound === null ? undefined : 'none' }}
+      >
               {matchesForSelectedRound.map((match) => {
               const isCurrentMatch =
                 !isCompleted &&

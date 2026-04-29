@@ -987,7 +987,6 @@ export default function PublicTournamentViewPage({
           : '0 6px 16px rgba(0,0,0,0.10)',
         textAlign: 'left',
         cursor: 'pointer',
-        flex: '0 0 auto',
       }}
     >
       <div

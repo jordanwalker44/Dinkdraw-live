@@ -832,12 +832,14 @@ export default function PublicTournamentViewPage({
 
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: 12,
+            display: 'flex',
+            gap: 10,
             marginTop: 12,
             marginBottom: 18,
-          }}
+            overflowX: 'auto',
+            paddingBottom: 6,
+            WebkitOverflowScrolling: 'touch',
+}}
         >
                     {roundsAvailable.map((round) => {
             const isSelected = selectedRound === round;
@@ -853,6 +855,8 @@ export default function PublicTournamentViewPage({
                 setSelectedPlayoffRound(null);
               }}
                 style={{
+                  flex: '0 0 auto',
+                  minWidth: 132,
                   padding: '16px',
                   borderRadius: 16,
                   border: isSelected

@@ -4471,7 +4471,12 @@ if (!canReportScores) {
   boxShadow: 'inset 0 0 0 1px rgba(139, 92, 246, 0.12)',
 }}
   >
-    BYE — Advances Automatically
+    <div style={{ fontSize: 11, opacity: 0.7, letterSpacing: 1.5, marginBottom: 4 }}>
+  AUTO ADVANCE
+</div>
+<div>
+  BYE — Advances Automatically
+</div>
   </div>
 ) : null}
               </div>

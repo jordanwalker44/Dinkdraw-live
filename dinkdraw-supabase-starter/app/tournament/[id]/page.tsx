@@ -4002,7 +4002,21 @@ if (!canReportScores) {
   <input
     className="input"
     type="number"
-    value={match.team_a_score ?? ''}
+    value={
+  playoffScoreDrafts[match.id]?.team_a_score ??
+  (match.team_a_score === null ? '' : String(match.team_a_score))
+}
+onChange={(e) =>
+  setPlayoffScoreDrafts((prev) => ({
+    ...prev,
+    [match.id]: {
+      team_a_score: e.target.value.replace(/[^\d]/g, ''),
+      team_b_score:
+        prev[match.id]?.team_b_score ??
+        (match.team_b_score === null ? '' : String(match.team_b_score)),
+    },
+  }))
+}
     disabled={match.is_complete}
     placeholder="0"
     style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
@@ -4010,7 +4024,21 @@ if (!canReportScores) {
   <input
     className="input"
     type="number"
-    value={match.team_b_score ?? ''}
+    value={
+  playoffScoreDrafts[match.id]?.team_b_score ??
+  (match.team_b_score === null ? '' : String(match.team_b_score))
+}
+onChange={(e) =>
+  setPlayoffScoreDrafts((prev) => ({
+    ...prev,
+    [match.id]: {
+      team_a_score:
+        prev[match.id]?.team_a_score ??
+        (match.team_a_score === null ? '' : String(match.team_a_score)),
+      team_b_score: e.target.value.replace(/[^\d]/g, ''),
+    },
+  }))
+}
     disabled={match.is_complete || !match.team_b_player_1_id}
     placeholder="0"
     style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}

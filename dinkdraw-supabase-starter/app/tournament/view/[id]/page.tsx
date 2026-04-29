@@ -309,6 +309,26 @@ export default function PublicTournamentViewPage({
     return Array.from(roundSet).sort((a, b) => a - b);
   }, [matches, tournament]);
 
+  const playoffRounds = useMemo(() => {
+  const rounds = new Map<number, PlayoffMatch[]>();
+
+  for (const match of playoffMatches) {
+    if (!rounds.has(match.round_number)) {
+      rounds.set(match.round_number, []);
+    }
+
+    rounds.get(match.round_number)!.push(match);
+  }
+
+  return Array.from(rounds.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([roundNumber, matches]) => ({
+      roundNumber,
+      label: matches[0]?.round_label || `Round ${roundNumber}`,
+      matches: matches.sort((a, b) => a.match_number - b.match_number),
+    }));
+}, [playoffMatches]);
+
     const currentRound = useMemo(() => {
     if (!matches.length) return roundsAvailable[0] || 1;
 

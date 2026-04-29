@@ -848,7 +848,10 @@ export default function PublicTournamentViewPage({
               <button className="round-card"
                 key={round}
                 type="button"
-                onClick={() => setSelectedRound(round)}
+                onClick={() => {
+                setSelectedRound(round);
+                setSelectedPlayoffRound(null);
+              }}
                 style={{
                   padding: '16px',
                   borderRadius: 16,
@@ -895,6 +898,63 @@ export default function PublicTournamentViewPage({
               </button>
             );
           })}
+
+          {playoffRounds.map((round) => {
+  const isSelected = selectedPlayoffRound === round.roundNumber;
+
+  return (
+    <button
+      key={`playoff-${round.roundNumber}`}
+      type="button"
+      onClick={() => {
+        setSelectedPlayoffRound(round.roundNumber);
+        setSelectedRound(round.roundNumber);
+      }}
+      style={{
+        padding: '16px',
+        borderRadius: 16,
+        minWidth: 140,
+        border: isSelected
+          ? '1px solid rgba(255, 203, 5, 0.72)'
+          : '1px solid rgba(255,255,255,0.08)',
+        background: isSelected
+          ? 'linear-gradient(180deg, rgba(255, 203, 5, 0.14), rgba(255, 203, 5, 0.06))'
+          : 'rgba(255,255,255,0.03)',
+        boxShadow: isSelected
+          ? '0 0 0 1px rgba(255,203,5,0.12) inset, 0 8px 20px rgba(0,0,0,0.18)'
+          : '0 6px 16px rgba(0,0,0,0.10)',
+        textAlign: 'left',
+        cursor: 'pointer',
+        flex: '0 0 auto',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: '0.12em',
+          color: 'rgba(255,255,255,0.48)',
+          marginBottom: 6,
+          textTransform: 'uppercase',
+        }}
+      >
+        PLAYOFF
+      </div>
+
+      <div
+        style={{
+          fontSize: 21,
+          fontWeight: 900,
+          color: '#fff',
+          letterSpacing: '-0.02em',
+          lineHeight: 1.05,
+        }}
+      >
+        {round.label}
+      </div>
+    </button>
+  );
+})}
 
           {playoffRounds.map((round) => {
   const isSelected = selectedPlayoffRound === round.roundNumber;

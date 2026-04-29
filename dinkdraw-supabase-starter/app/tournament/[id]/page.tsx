@@ -3958,16 +3958,16 @@ if (!canReportScores) {
         <div style={{ display: 'grid', gap: 10 }}>
           {round.matches.map((match) => {
             const teamAName = match.team_a_player_1_id
-              ? getPlayerName(match.team_a_player_1_id) +
+              ? renderPlayerName(match.team_a_player_1_id) +
                 (match.team_a_player_2_id
-                  ? ` & ${getPlayerName(match.team_a_player_2_id)}`
+                  ? ` & ${renderPlayerName(match.team_a_player_2_id)}`
                   : '')
               : 'TBD';
 
             const teamBName = match.team_b_player_1_id
-              ? getPlayerName(match.team_b_player_1_id) +
+              ? renderPlayerName(match.team_b_player_1_id) +
                 (match.team_b_player_2_id
-                  ? ` & ${getPlayerName(match.team_b_player_2_id)}`
+                  ? ` & ${renderPlayerName(match.team_b_player_2_id)}`
                   : '')
               : 'TBD';
 

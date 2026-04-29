@@ -1303,6 +1303,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
   const [selectedRound, setSelectedRound] = useState(1);
+  const [selectedPlayoffRound, setSelectedPlayoffRound] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [isLive, setIsLive] = useState(false);
   const [standingsView, setStandingsView] = useState<'leaderboard' | 'day'>('leaderboard');
@@ -4185,7 +4186,10 @@ if (!canReportScores) {
                 <button
                   key={round}
                   type="button"
-                  onClick={() => setSelectedRound(round)}
+                  onClick={() => {
+                    setSelectedRound(round);
+                    setSelectedPlayoffRound(null);
+                  }}
                   style={{
                     padding: '16px',
                     borderRadius: 14,
@@ -4225,46 +4229,64 @@ if (!canReportScores) {
             })}
 {playoffRounds.length > 0 && (
   <>
-    {playoffRounds.map((round) => (
-      <div
-        key={`playoff-${round.roundNumber}`}
-        className="round-card"
-        style={{
-          border: '1px solid rgba(255,255,255,0.08)',
-          padding: 16,
-          borderRadius: 16,
-        }}
-      >
-        <div
+    {playoffRounds.map((round) => {
+      const isSelected = selectedPlayoffRound === round.roundNumber;
+
+      return (
+        <button
+          key={`playoff-${round.roundNumber}`}
+          type="button"
+          onClick={() => {
+            setSelectedPlayoffRound(round.roundNumber);
+            setSelectedRound(round.roundNumber);
+          }}
+          className="round-card"
           style={{
-            fontSize: 12,
-            letterSpacing: 2,
-            opacity: 0.7,
-            marginBottom: 6,
+            border: isSelected
+              ? '1px solid rgba(255, 203, 5, 0.6)'
+              : '1px solid rgba(255,255,255,0.08)',
+            background: isSelected
+              ? 'rgba(255, 203, 5, 0.08)'
+              : 'rgba(255,255,255,0.03)',
+            padding: 16,
+            borderRadius: 16,
+            textAlign: 'left',
+            cursor: 'pointer',
           }}
         >
-          PLAYOFF
-        </div>
+          <div
+            style={{
+              fontSize: 12,
+              letterSpacing: 2,
+              opacity: 0.7,
+              marginBottom: 6,
+            }}
+          >
+            PLAYOFF
+          </div>
 
-        <div style={{ fontWeight: 900, fontSize: 18 }}>
-          {round.label}
-        </div>
-      </div>
-    ))}
+          <div style={{ fontWeight: 900, fontSize: 18, color: '#fff' }}>
+            {round.label}
+          </div>
+        </button>
+      );
+    })}
   </>
 )}
           </div>
 
-{playoffRounds.length > 0 ? (
+{playoffRounds.length > 0 && selectedPlayoffRound !== null ? (
   <div className="card" style={{ marginTop: 14 }}>
     <div className="card-title">Playoffs</div>
 
-    {playoffRounds.map((round) => (
-      <div
-  id={`playoff-round-${round.roundNumber}`}
-  key={round.roundNumber}
-  style={{ marginBottom: 18, scrollMarginTop: 120 }}
->
+    {playoffRounds
+      .filter((round) => round.roundNumber === selectedPlayoffRound)
+      .map((round) => (
+        <div
+          id={`playoff-round-${round.roundNumber}`}
+          key={round.roundNumber}
+          style={{ marginBottom: 18 }}
+        >
         <div
           style={{
             fontSize: 14,

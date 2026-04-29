@@ -4176,6 +4176,36 @@ onChange={(e) =>
                   </div>
                 </div>
 
+                {!match.is_complete && !match.is_bye ? (
+  <button
+    className="button primary"
+    onClick={() => submitPlayoffScore(match.id)}
+    disabled={!isOrganizer || !match.team_a_player_1_id || !match.team_b_player_1_id}
+    style={{
+      width: '100%',
+      marginTop: 10,
+      fontWeight: 900,
+      padding: '12px 14px',
+    }}
+  >
+    {isOrganizer ? 'Submit Playoff Score' : 'Scores Locked'}
+  </button>
+) : match.is_complete && !match.is_bye ? (
+  <div
+    style={{
+      marginTop: 10,
+      padding: '10px 12px',
+      borderRadius: 12,
+      background: 'rgba(255,203,5,0.08)',
+      border: '1px solid rgba(255,203,5,0.20)',
+      fontWeight: 900,
+      color: '#FFCB05',
+      textAlign: 'center',
+    }}
+  >
+    Winner Advanced
+  </div>
+) : null}
                 {match.is_bye ? (
                   <div className="muted" style={{ marginTop: 6 }}>
                     Bye → auto advances

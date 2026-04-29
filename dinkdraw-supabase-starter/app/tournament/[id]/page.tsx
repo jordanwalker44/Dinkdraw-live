@@ -4379,52 +4379,85 @@ if (!canReportScores) {
   </div>
 
   <div
-    style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 64px',
-      gap: 10,
-      alignItems: 'center',
-      padding: 10,
-      borderRadius: 12,
-      background: match.winner_team === 'B' ? 'rgba(255,203,5,0.10)' : 'rgba(255,255,255,0.035)',
-      border: match.winner_team === 'B'
-        ? '1px solid rgba(255,203,5,0.35)'
-        : '1px solid rgba(255,255,255,0.08)',
-    }}
-  >
-    <div>
-      <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.5)', marginBottom: 3 }}>
-        {match.team_b_seed ? `SEED ${match.team_b_seed}` : 'TEAM B'}
-      </div>
-      <div style={{ fontWeight: 900, color: match.winner_team === 'B' ? '#FFCB05' : '#fff' }}>
-        {teamBName}
-      </div>
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '1fr 64px',
+    gap: 10,
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    background: match.is_bye
+      ? 'rgba(139, 92, 246, 0.08)'
+      : match.winner_team === 'B'
+      ? 'rgba(255,203,5,0.10)'
+      : 'rgba(255,255,255,0.035)',
+    border: match.is_bye
+      ? '1px dashed rgba(196, 181, 253, 0.35)'
+      : match.winner_team === 'B'
+      ? '1px solid rgba(255,203,5,0.35)'
+      : '1px solid rgba(255,255,255,0.08)',
+    opacity: match.is_bye ? 0.55 : 1,
+  }}
+>
+  <div>
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 900,
+        color: 'rgba(255,255,255,0.5)',
+        marginBottom: 3,
+      }}
+    >
+      {match.is_bye
+        ? 'NO OPPONENT'
+        : match.team_b_seed
+        ? `SEED ${match.team_b_seed}`
+        : 'TEAM B'}
     </div>
 
-    <input
-      className="input"
-      type="number"
-      value={
-        playoffScoreDrafts[match.id]?.team_b_score ??
-        (match.team_b_score === null ? '' : String(match.team_b_score))
-      }
-      onChange={(e) =>
-        setPlayoffScoreDrafts((prev) => ({
-          ...prev,
-          [match.id]: {
-            team_a_score:
-              prev[match.id]?.team_a_score ??
-              (match.team_a_score === null ? '' : String(match.team_a_score)),
-            team_b_score: e.target.value.replace(/[^\d]/g, ''),
-          },
-        }))
-      }
-      disabled={match.is_complete || !match.team_b_player_1_id}
-      placeholder="0"
-      style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
-    />
+    <div
+      style={{
+        fontWeight: 900,
+        color: match.is_bye
+          ? 'rgba(255,255,255,0.65)'
+          : match.winner_team === 'B'
+          ? '#FFCB05'
+          : '#fff',
+      }}
+    >
+      {match.is_bye ? 'Bye' : teamBName}
+    </div>
   </div>
+
+  <input
+    className="input"
+    type="number"
+    value={
+      playoffScoreDrafts[match.id]?.team_b_score ??
+      (match.team_b_score === null ? '' : String(match.team_b_score))
+    }
+    onChange={(e) =>
+      setPlayoffScoreDrafts((prev) => ({
+        ...prev,
+        [match.id]: {
+          team_a_score:
+            prev[match.id]?.team_a_score ??
+            (match.team_a_score === null ? '' : String(match.team_a_score)),
+          team_b_score: e.target.value.replace(/[^\d]/g, ''),
+        },
+      }))
+    }
+    disabled={match.is_complete || !match.team_b_player_1_id}
+    placeholder="0"
+    style={{
+      textAlign: 'center',
+      padding: '8px 4px',
+      fontWeight: 900,
+      opacity: match.is_bye ? 0.45 : 1,
+    }}
+  />
 </div>
+            </div>
 
                 {!match.is_complete && !match.is_bye ? (
   <button

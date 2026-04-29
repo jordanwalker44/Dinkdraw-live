@@ -4402,6 +4402,36 @@ if (!canReportScores) {
                 </button>
               );
             })}
+{playoffRounds.length > 0 && (
+  <>
+    {playoffRounds.map((round) => (
+      <div
+        key={`playoff-${round.roundNumber}`}
+        className="round-card"
+        style={{
+          border: '1px solid rgba(255,255,255,0.08)',
+          padding: 16,
+          borderRadius: 16,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 12,
+            letterSpacing: 2,
+            opacity: 0.7,
+            marginBottom: 6,
+          }}
+        >
+          PLAYOFF
+        </div>
+
+        <div style={{ fontWeight: 900, fontSize: 18 }}>
+          {round.label}
+        </div>
+      </div>
+    ))}
+  </>
+)}
           </div>
 
           {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (

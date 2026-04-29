@@ -4457,10 +4457,22 @@ if (!canReportScores) {
   </div>
 ) : null}
                 {match.is_bye ? (
-                  <div className="muted" style={{ marginTop: 6 }}>
-                    Bye → auto advances
-                  </div>
-                ) : null}
+  <div
+    style={{
+      marginTop: 10,
+      padding: '12px 14px',
+      borderRadius: 12,
+      background: 'rgba(255, 203, 5, 0.10)',
+      border: '1px dashed rgba(255, 203, 5, 0.45)',
+      color: '#FFCB05',
+      fontWeight: 900,
+      textAlign: 'center',
+      letterSpacing: 0.3,
+    }}
+  >
+    BYE — Automatically advances
+  </div>
+) : null}
               </div>
             );
           })}

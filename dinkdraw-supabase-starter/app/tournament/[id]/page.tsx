@@ -4260,7 +4260,11 @@ if (!canReportScores) {
     <div className="card-title">Playoffs</div>
 
     {playoffRounds.map((round) => (
-      <div key={round.roundNumber} style={{ marginBottom: 18 }}>
+      <div
+  id={`playoff-round-${round.roundNumber}`}
+  key={round.roundNumber}
+  style={{ marginBottom: 18, scrollMarginTop: 120 }}
+>
         <div
           style={{
             fontSize: 14,

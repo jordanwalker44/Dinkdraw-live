@@ -4456,22 +4456,21 @@ if (!canReportScores) {
     Winner Advanced
   </div>
 ) : null}
-                {match.is_bye ? (
+             {match.is_bye ? (
   <div
-      style={{
-    marginTop: 10,
-    padding: '12px 14px',
-    borderRadius: 12,
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px dashed rgba(255,255,255,0.25)',
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: 800,
-    textAlign: 'center',
-    letterSpacing: 0.4,
-}}
+    style={{
+      marginTop: 10,
+      padding: '12px 14px',
+      borderRadius: 12,
+      background: 'rgba(255,255,255,0.04)',
+      border: '1px dashed rgba(255,255,255,0.25)',
+      color: 'rgba(255,255,255,0.75)',
+      fontWeight: 800,
+      textAlign: 'center',
+      letterSpacing: 0.4,
     }}
   >
-    BYE — Automatically advances
+    BYE — Advances Automatically
   </div>
 ) : null}
               </div>

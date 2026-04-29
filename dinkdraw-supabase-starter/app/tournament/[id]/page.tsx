@@ -4356,9 +4356,32 @@ if (!canReportScores) {
       <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.5)', marginBottom: 3 }}>
         {match.team_a_seed ? `SEED ${match.team_a_seed}` : 'TEAM A'}
       </div>
-      <div style={{ fontWeight: 900, color: match.winner_team === 'A' ? '#FFCB05' : '#fff' }}>
-        {teamAName}
-      </div>
+      <div>
+  <div
+    style={{
+      fontSize: 10,
+      fontWeight: 900,
+      letterSpacing: 1.2,
+      color: match.is_bye ? '#22C55E' : 'transparent',
+      marginBottom: 2,
+    }}
+  >
+    {match.is_bye ? 'ADVANCES' : ''}
+  </div>
+
+  <div
+    style={{
+      fontWeight: 900,
+      color: match.is_bye
+        ? '#22C55E'
+        : match.winner_team === 'A'
+        ? '#FFCB05'
+        : '#fff',
+    }}
+  >
+    {teamAName}
+  </div>
+</div>
     </div>
 
     <input

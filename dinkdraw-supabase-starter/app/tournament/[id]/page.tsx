@@ -4458,16 +4458,17 @@ if (!canReportScores) {
 ) : null}
                 {match.is_bye ? (
   <div
-    style={{
-      marginTop: 10,
-      padding: '12px 14px',
-      borderRadius: 12,
-      background: 'rgba(255, 203, 5, 0.10)',
-      border: '1px dashed rgba(255, 203, 5, 0.45)',
-      color: '#FFCB05',
-      fontWeight: 900,
-      textAlign: 'center',
-      letterSpacing: 0.3,
+      style={{
+    marginTop: 10,
+    padding: '12px 14px',
+    borderRadius: 12,
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px dashed rgba(255,255,255,0.25)',
+    color: 'rgba(255,255,255,0.75)',
+    fontWeight: 800,
+    textAlign: 'center',
+    letterSpacing: 0.4,
+}}
     }}
   >
     BYE — Automatically advances

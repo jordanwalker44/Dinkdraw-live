@@ -4245,11 +4245,12 @@ if (!canReportScores) {
           className="round-card"
           style={{
             border: isSelected
-              ? '1px solid rgba(255, 203, 5, 0.6)'
-              : '1px solid rgba(255,255,255,0.08)',
+            ? '1px solid rgba(255, 203, 5, 0.85)'
+            : '1px solid rgba(255,255,255,0.08)',
+
             background: isSelected
-              ? 'rgba(255, 203, 5, 0.08)'
-              : 'rgba(255,255,255,0.03)',
+            ? 'rgba(255, 203, 5, 0.14)'
+            : 'rgba(255,255,255,0.03)',
             padding: 16,
             borderRadius: 16,
             textAlign: 'left',

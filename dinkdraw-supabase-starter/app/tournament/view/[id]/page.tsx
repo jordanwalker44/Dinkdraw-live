@@ -54,6 +54,29 @@ type Match = {
   is_complete: boolean;
 };
 
+type PlayoffMatch = {
+  id: string;
+  tournament_id: string;
+  round_number: number;
+  match_number: number;
+  round_label: string | null;
+  team_a_seed: number | null;
+  team_b_seed: number | null;
+  team_a_player_1_id: string | null;
+  team_a_player_2_id: string | null;
+  team_b_player_1_id: string | null;
+  team_b_player_2_id: string | null;
+  team_a_score: number | null;
+  team_b_score: number | null;
+  winner_team: string | null;
+  winner_player_1_id: string | null;
+  winner_player_2_id: string | null;
+  next_match_id: string | null;
+  next_match_team: string | null;
+  is_bye: boolean;
+  is_complete: boolean;
+};
+
 type StandingRow = {
   playerId: string;
   name: string;
@@ -261,8 +284,10 @@ export default function PublicTournamentViewPage({
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [playoffMatches, setPlayoffMatches] = useState<PlayoffMatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRound, setSelectedRound] = useState(1);
+  const [selectedPlayoffRound, setSelectedPlayoffRound] = useState<number | null>(null);
   const [isLive, setIsLive] = useState(false);
 
   const isSingles = tournament?.format === 'singles';
@@ -384,24 +409,32 @@ export default function PublicTournamentViewPage({
   );
 
   async function loadTournamentData() {
-    const [tournamentResult, playersResult, matchesResult] = await Promise.all([
-      supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-      supabase
-        .from('tournament_players')
-        .select('*')
-        .eq('tournament_id', params.id)
-        .order('slot_number', { ascending: true }),
-      supabase
-        .from('matches')
-        .select('*')
-        .eq('tournament_id', params.id)
-        .order('round_number', { ascending: true })
-        .order('court_number', { ascending: true }),
-    ]);
+    const [tournamentResult, playersResult, matchesResult, playoffMatchesResult] =
+  await Promise.all([
+    supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
+    supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('slot_number', { ascending: true }),
+    supabase
+      .from('matches')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('round_number', { ascending: true })
+      .order('court_number', { ascending: true }),
+    supabase
+      .from('playoff_matches')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('round_number', { ascending: true })
+      .order('match_number', { ascending: true }),
+  ]);
 
     setTournament(tournamentResult.data || null);
     setPlayerSlots(playersResult.data || []);
     setMatches(matchesResult.data || []);
+    setPlayoffMatches(playoffMatchesResult.data || []);
   }
 
   useEffect(() => {

@@ -4459,16 +4459,17 @@ if (!canReportScores) {
              {match.is_bye ? (
   <div
     style={{
-      marginTop: 10,
-      padding: '12px 14px',
-      borderRadius: 12,
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px dashed rgba(255,255,255,0.25)',
-      color: 'rgba(255,255,255,0.75)',
-      fontWeight: 800,
-      textAlign: 'center',
-      letterSpacing: 0.4,
-    }}
+  marginTop: 12,
+  padding: '14px 16px',
+  borderRadius: 14,
+  background: 'rgba(139, 92, 246, 0.16)',
+  border: '1px dashed rgba(196, 181, 253, 0.65)',
+  color: '#DDD6FE',
+  fontWeight: 900,
+  textAlign: 'center',
+  letterSpacing: 0.4,
+  boxShadow: 'inset 0 0 0 1px rgba(139, 92, 246, 0.12)',
+}}
   >
     BYE — Advances Automatically
   </div>

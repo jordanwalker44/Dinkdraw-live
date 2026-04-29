@@ -4170,11 +4170,13 @@ if (!canReportScores) {
 
           <div
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: 12,
+              display: 'flex',
+              gap: 10,
               marginTop: 12,
               marginBottom: 18,
+              overflowX: 'auto',
+              paddingBottom: 6,
+              WebkitOverflowScrolling: 'touch',
             }}
           >
             {roundsAvailable.map((round) => {
@@ -4191,8 +4193,10 @@ if (!canReportScores) {
                     setSelectedPlayoffRound(null);
                   }}
                   style={{
-                    padding: '16px',
+                    minWidth: 132,
+                    padding: '14px 16px',
                     borderRadius: 14,
+                    flex: '0 0 auto',
                     border:
                     selectedPlayoffRound === null && isSelected
                     ? '1px solid rgba(255, 203, 5, 0.85)'
@@ -4251,8 +4255,10 @@ if (!canReportScores) {
             background: isSelected
             ? 'rgba(255, 203, 5, 0.14)'
             : 'rgba(255,255,255,0.03)',
-            padding: 16,
-            borderRadius: 16,
+            minWidth: 158,
+            padding: '14px 16px',
+            borderRadius: 14,
+            flex: '0 0 auto',
             textAlign: 'left',
             cursor: 'pointer',
           }}

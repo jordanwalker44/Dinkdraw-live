@@ -1292,6 +1292,9 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
+  const [playoffScoreDrafts, setPlayoffScoreDrafts] = useState<
+  Record<string, { team_a_score: string; team_b_score: string }>
+  >({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);

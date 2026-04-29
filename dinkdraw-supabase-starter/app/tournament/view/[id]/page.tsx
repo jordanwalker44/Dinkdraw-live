@@ -1019,7 +1019,224 @@ export default function PublicTournamentViewPage({
 })}
         </div>
 
-        {!matchesForSelectedRound.length && !byesForSelectedRound.length ? (
+         {selectedPlayoffRound !== null ? (
+  <div style={{ display: 'grid', gap: 12 }}>
+    {playoffRounds
+      .filter((round) => round.roundNumber === selectedPlayoffRound)
+      .map((round) => (
+        <div key={round.roundNumber}>
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 900,
+              color: '#FFCB05',
+              marginBottom: 10,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+            }}
+          >
+            {round.label}
+          </div>
+
+          <div style={{ display: 'grid', gap: 12 }}>
+            {round.matches.map((match) => {
+              const teamAName =
+                playersById[match.team_a_player_1_id || '']?.display_name ||
+                'TBD';
+
+              const teamBName = match.is_bye
+                ? 'Bye'
+                : playersById[match.team_b_player_1_id || '']?.display_name ||
+                  'TBD';
+
+              return (
+                <div
+                  key={match.id}
+                  className="card"
+                  style={{
+                    padding: 14,
+                    border: match.is_complete
+                      ? '1px solid rgba(255,203,5,0.28)'
+                      : '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 900,
+                      color: 'rgba(255,255,255,0.55)',
+                      marginBottom: 10,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    MATCH {match.match_number}
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
+                        gap: 10,
+                        alignItems: 'center',
+                        padding: 10,
+                        borderRadius: 12,
+                        background: match.is_bye
+                          ? 'rgba(34,197,94,0.12)'
+                          : match.winner_team === 'A'
+                          ? 'rgba(255,203,5,0.10)'
+                          : 'rgba(255,255,255,0.035)',
+                        border: match.is_bye
+                          ? '1px solid rgba(34,197,94,0.45)'
+                          : match.winner_team === 'A'
+                          ? '1px solid rgba(255,203,5,0.35)'
+                          : '1px solid rgba(255,255,255,0.08)',
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 900,
+                            color: 'rgba(255,255,255,0.5)',
+                            marginBottom: 3,
+                          }}
+                        >
+                          {match.team_a_seed ? `SEED ${match.team_a_seed}` : 'TEAM A'}
+                        </div>
+
+                        {match.is_bye ? (
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 900,
+                              letterSpacing: 1.2,
+                              color: '#22C55E',
+                              marginBottom: 2,
+                            }}
+                          >
+                            ADVANCES
+                          </div>
+                        ) : null}
+
+                        <div
+                          style={{
+                            fontWeight: 900,
+                            color: match.is_bye
+                              ? '#22C55E'
+                              : match.winner_team === 'A'
+                              ? '#FFCB05'
+                              : '#fff',
+                          }}
+                        >
+                          {teamAName}
+                        </div>
+                      </div>
+
+                      <div style={{ fontWeight: 900, fontSize: 18 }}>
+                        {match.team_a_score ?? '—'}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr auto',
+                        gap: 10,
+                        alignItems: 'center',
+                        padding: 10,
+                        borderRadius: 12,
+                        background: match.is_bye
+                          ? 'rgba(139, 92, 246, 0.08)'
+                          : match.winner_team === 'B'
+                          ? 'rgba(255,203,5,0.10)'
+                          : 'rgba(255,255,255,0.035)',
+                        border: match.is_bye
+                          ? '1px dashed rgba(196, 181, 253, 0.35)'
+                          : match.winner_team === 'B'
+                          ? '1px solid rgba(255,203,5,0.35)'
+                          : '1px solid rgba(255,255,255,0.08)',
+                        opacity: match.is_bye ? 0.55 : 1,
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 900,
+                            color: 'rgba(255,255,255,0.5)',
+                            marginBottom: 3,
+                          }}
+                        >
+                          {match.is_bye
+                            ? 'NO OPPONENT'
+                            : match.team_b_seed
+                            ? `SEED ${match.team_b_seed}`
+                            : 'TEAM B'}
+                        </div>
+
+                        <div
+                          style={{
+                            fontWeight: 900,
+                            color: match.is_bye
+                              ? 'rgba(255,255,255,0.65)'
+                              : match.winner_team === 'B'
+                              ? '#FFCB05'
+                              : '#fff',
+                          }}
+                        >
+                          {teamBName}
+                        </div>
+                      </div>
+
+                      <div style={{ fontWeight: 900, fontSize: 18 }}>
+                        {match.is_bye ? '—' : match.team_b_score ?? '—'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {match.is_complete && !match.is_bye ? (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        padding: '10px 12px',
+                        borderRadius: 12,
+                        background: 'rgba(255,203,5,0.08)',
+                        border: '1px solid rgba(255,203,5,0.20)',
+                        fontWeight: 900,
+                        color: '#FFCB05',
+                        textAlign: 'center',
+                      }}
+                    >
+                      Winner Advanced
+                    </div>
+                  ) : match.is_bye ? (
+                    <div
+                      style={{
+                        marginTop: 12,
+                        padding: '14px 16px',
+                        borderRadius: 14,
+                        background: 'rgba(139, 92, 246, 0.16)',
+                        border: '1px dashed rgba(196, 181, 253, 0.65)',
+                        color: '#DDD6FE',
+                        fontWeight: 900,
+                        textAlign: 'center',
+                        letterSpacing: 0.4,
+                      }}
+                    >
+                      BYE — Advances Automatically
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+  </div>
+) : null}
+
+        {selectedPlayoffRound === null && !matchesForSelectedRound.length && !byesForSelectedRound.length ? (
           <div className="muted">No matches in this round yet.</div>
         ) : (
           <div

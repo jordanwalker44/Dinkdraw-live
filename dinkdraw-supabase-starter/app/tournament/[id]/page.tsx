@@ -1939,39 +1939,50 @@ async function unclaimMySpot(slotId: string) {
 }
 
   async function saveAllPlayerNames() {
-    if (isLocked) {
-      setMessage('Player names are locked.');
+  if (isLocked) {
+    setMessage('Player names are locked.');
+    return;
+  }
+
+  setMessage('');
+  setIsSavingNames(true);
+
+  try {
+    const rowsToUpdate = playerSlots
+      .map((slot) => {
+        const typedName = (newNames[slot.id] ?? '').trim();
+        const savedName = (slot.display_name ?? '').trim();
+        const nextName = typedName || savedName;
+
+        if (slot.claimed_by_user_id && nextName === '') {
+          return null;
+        }
+
+        return {
+          id: slot.id,
+          display_name: nextName,
+        };
+      })
+      .filter(Boolean);
+
+    const { error } = await supabase
+      .from('tournament_players')
+      .upsert(rowsToUpdate, { onConflict: 'id' });
+
+    if (error) {
+      setMessage(`Save failed: ${error.message}`);
+      setIsSavingNames(false);
       return;
     }
-    setMessage('');
-    setIsSavingNames(true);
-    try {
-      for (const slot of playerSlots) {
-        const typedName = (newNames[slot.id] ?? '').trim();
-const savedName = (slot.display_name ?? '').trim();
-const nextName = typedName || savedName;
 
-if (slot.claimed_by_user_id && nextName === '') {
-  continue;
-}
-
-        const { error } = await supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
-        if (error) {
-          setMessage(`Save failed: ${error.message}`);
-          setIsSavingNames(false);
-          return;
-        }
-      }
-      await loadTournamentData(userId);
-      setMessage('Player names saved.');
-    } catch (err) {
-      setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
-    }
-    setIsSavingNames(false);
+    await loadTournamentData(userId);
+    setMessage('Player names saved.');
+  } catch (err) {
+    setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
   }
+
+  setIsSavingNames(false);
+}
 
   async function clearPlayerSlot(slotId: string) {
   if (!isOrganizer || isLocked) {

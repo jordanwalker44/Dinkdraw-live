@@ -96,6 +96,7 @@ export default function CreateTournamentPage() {
   const router = useRouter();
 
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
+  const [tournamentMode, setTournamentMode] = useState<'round_robin' | 'cream_of_the_crop'>('round_robin');
   const [matchFormat, setMatchFormat] = useState<'single' | 'best_of_3'>('single');
   const [doublesMode, setDoublesMode] = useState<'rotating' | 'fixed' | 'mixed'>('rotating');
   const [title, setTitle] = useState('Saturday Round Robin');
@@ -223,6 +224,7 @@ setFavoriteLocations(savedLocations || []);
   format,
   match_format: matchFormat,
   doubles_mode: doublesMode,
+  tournament_mode: tournamentMode,
   court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
   allow_player_score_reporting: allowPlayerScoreReporting,
 
@@ -323,6 +325,20 @@ router.push(`/tournament/${tournament.id}`);
               </button>
             </div>
           </div>
+
+          <div>
+            <label className="label">Tournament Mode</label>
+            <select
+              className="input"
+              value={tournamentMode}
+              onChange={(e) =>
+              setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
+        }
+      >
+            <option value="round_robin">Round Robin</option>
+            <option value="cream_of_the_crop">Cream of the Crop</option>
+        </select>
+      </div>
 
                     {format === 'doubles' ? (
             <div>

@@ -984,6 +984,7 @@ export default function PublicTournamentViewPage({
 
           <div style={{ display: 'grid', gap: 12 }}>
             {round.matches.map((match) => {
+                  const playoffCourtLabel = `Court ${match.match_number}`;
               const teamAName =
                 playersById[match.team_a_player_1_id || '']?.display_name ||
                 'TBD';
@@ -1013,7 +1014,7 @@ export default function PublicTournamentViewPage({
                       letterSpacing: 1,
                     }}
                   >
-                    MATCH {match.match_number}
+                    {!match.is_bye ? playoffCourtLabel : ''}
                   </div>
 
                   <div style={{ display: 'grid', gap: 8 }}>

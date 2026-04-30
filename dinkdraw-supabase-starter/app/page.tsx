@@ -85,7 +85,13 @@ export default function HomePage() {
   <div className="grid">
     {lastTournament ? (
   <Link href={`/tournament/${lastTournament.id}`}>
-    <button className="action-button white">
+    <button
+  className="action-button black"
+  style={{
+    border: '1px solid rgba(255, 203, 5, 0.35)',
+    background: 'linear-gradient(180deg, rgba(255,203,5,0.10), rgba(255,255,255,0.035))',
+  }}
+>
       <div className="action-title">Resume Tournament</div>
       <div className="action-subtitle">
         {lastTournament.title || 'Open your most recent tournament'}

@@ -1,4 +1,4 @@
-import type { PlayerSlot, ScheduleRow } from '../app/tournament/[id]/page';
+import type { PlayerSlot, ScheduleRow } from './tournament-types';
 
 export function buildCreamOfTheCropStageSchedule(
   players: PlayerSlot[],

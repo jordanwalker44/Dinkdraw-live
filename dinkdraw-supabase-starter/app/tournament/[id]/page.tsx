@@ -2208,37 +2208,6 @@ async function clearPlayerSlot(slotId: string) {
         Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
       );
 
-      // ===== CREAM OF THE CROP DEBUG (TEMP) =====
-if (tournament.format === 'doubles' && tournament.doubles_mode === 'fixed') {
-  console.error('--- CREAM TEST START ---');
-
-  const creamPlayers = namedPlayers.slice(0, Math.floor(namedPlayers.length / 4) * 4);
-
-  const sortSchedule = buildCreamOfTheCropStageSchedule(creamPlayers, 1);
-
-  console.error('SORT ROUND PLAYERS', creamPlayers.map(p => p.display_name));
-
-  console.error('SORT SCHEDULE', sortSchedule);
-
-  // FAKE matches (temporary so we can test movement)
-  const fakeMatches = sortSchedule.map((m) => ({
-    ...m,
-    is_complete: true,
-    team_a_score: Math.floor(Math.random() * 11),
-    team_b_score: Math.floor(Math.random() * 11),
-  }));
-
-  const nextPlayers = buildNextCreamOfTheCropStagePlayers(
-    creamPlayers,
-    fakeMatches,
-    1
-  );
-
-  console.error('NEXT ROUND PLAYERS (AFTER MOVEMENT)', nextPlayers.map(p => p.display_name));
-
-  console.error('--- CREAM TEST END ---');
-}
-
       const scheduleRows = buildSchedule(
         namedPlayers,
         tournament.rounds,

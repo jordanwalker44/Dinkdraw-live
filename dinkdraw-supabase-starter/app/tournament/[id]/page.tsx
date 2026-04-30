@@ -617,7 +617,14 @@ function buildFixedPartnersSchedule(
   if (activePlayers.length < 4) return [];
   if (activePlayers.length % 2 !== 0) return [];
 
-  const teams = [];
+  type FixedTeam = {
+    id: string;
+    player1Id: string;
+    player2Id: string;
+  };
+
+  const teams: FixedTeam[] = [];
+
   for (let i = 0; i < activePlayers.length; i += 2) {
     const player1 = activePlayers[i];
     const player2 = activePlayers[i + 1];
@@ -625,6 +632,7 @@ function buildFixedPartnersSchedule(
     if (!player1 || !player2) return [];
 
     teams.push({
+      id: [player1.id, player2.id].sort().join('__'),
       player1Id: player1.id,
       player2Id: player2.id,
     });
@@ -632,71 +640,114 @@ function buildFixedPartnersSchedule(
 
   if (teams.length < 2) return [];
 
-  const allMatchups: Array<{
-    teamA: { player1Id: string; player2Id: string };
-    teamB: { player1Id: string; player2Id: string };
-  }> = [];
-
-  for (let i = 0; i < teams.length; i += 1) {
-    for (let j = i + 1; j < teams.length; j += 1) {
-      allMatchups.push({
-        teamA: teams[i],
-        teamB: teams[j],
-      });
-    }
+  function getMatchupKey(team1Id: string, team2Id: string) {
+    return [team1Id, team2Id].sort().join('__vs__');
   }
 
-  if (!allMatchups.length) return [];
-
   const output: ScheduleRow[] = [];
-  let matchupIndex = 0;
+
+  const matchupCounts = new Map<string, number>();
+  const teamASideCounts = new Map<string, number>();
+  const teamCourtHistory = new Map<string, number[]>();
+
+  for (const team of teams) {
+    teamASideCounts.set(team.id, 0);
+    teamCourtHistory.set(team.id, []);
+  }
 
   for (let round = 1; round <= rounds; round += 1) {
+    const usedTeamIds = new Set<string>();
     let courtsUsedThisRound = 0;
-    const usedTeamIndexes = new Set<number>();
 
-    for (let i = 0; i < allMatchups.length; i += 1) {
-      if (courtsUsedThisRound >= courts) break;
+    while (courtsUsedThisRound < courts) {
+      let bestPair: { team1: FixedTeam; team2: FixedTeam; score: number } | null = null;
 
-      const currentIndex = (matchupIndex + i) % allMatchups.length;
-      const matchup = allMatchups[currentIndex];
+      for (let i = 0; i < teams.length; i += 1) {
+        const team1 = teams[i];
+        if (usedTeamIds.has(team1.id)) continue;
 
-      const teamAIndex = teams.findIndex(
-        (t) =>
-          t.player1Id === matchup.teamA.player1Id &&
-          t.player2Id === matchup.teamA.player2Id
-      );
+        for (let j = i + 1; j < teams.length; j += 1) {
+          const team2 = teams[j];
+          if (usedTeamIds.has(team2.id)) continue;
 
-      const teamBIndex = teams.findIndex(
-        (t) =>
-          t.player1Id === matchup.teamB.player1Id &&
-          t.player2Id === matchup.teamB.player2Id
-      );
+          const key = getMatchupKey(team1.id, team2.id);
+          const repeatCount = matchupCounts.get(key) || 0;
 
-      if (usedTeamIndexes.has(teamAIndex) || usedTeamIndexes.has(teamBIndex)) {
-        continue;
+          const team1CourtHistory = teamCourtHistory.get(team1.id) || [];
+          const team2CourtHistory = teamCourtHistory.get(team2.id) || [];
+          const nextCourtNumber = courtsUsedThisRound + 1;
+
+          const team1SameCourtRecently = team1CourtHistory
+            .slice(-2)
+            .filter((courtNumber) => courtNumber === nextCourtNumber).length;
+
+          const team2SameCourtRecently = team2CourtHistory
+            .slice(-2)
+            .filter((courtNumber) => courtNumber === nextCourtNumber).length;
+
+          const score =
+            repeatCount * 10000 +
+            team1SameCourtRecently * 100 +
+            team2SameCourtRecently * 100 +
+            Math.random();
+
+          if (!bestPair || score < bestPair.score) {
+            bestPair = {
+              team1,
+              team2,
+              score,
+            };
+          }
+        }
       }
 
-      usedTeamIndexes.add(teamAIndex);
-      usedTeamIndexes.add(teamBIndex);
+      if (!bestPair) break;
+
+      let teamA = bestPair.team1;
+      let teamB = bestPair.team2;
+
+      const team1ACount = teamASideCounts.get(bestPair.team1.id) || 0;
+      const team2ACount = teamASideCounts.get(bestPair.team2.id) || 0;
+
+      if (team1ACount > team2ACount) {
+        teamA = bestPair.team2;
+        teamB = bestPair.team1;
+      }
+
       courtsUsedThisRound += 1;
 
       output.push({
         round_number: round,
         court_number: courtsUsedThisRound,
         court_label: null,
-        team_a_player_1_id: matchup.teamA.player1Id,
-        team_a_player_2_id: matchup.teamA.player2Id,
-        team_b_player_1_id: matchup.teamB.player1Id,
-        team_b_player_2_id: matchup.teamB.player2Id,
+        team_a_player_1_id: teamA.player1Id,
+        team_a_player_2_id: teamA.player2Id,
+        team_b_player_1_id: teamB.player1Id,
+        team_b_player_2_id: teamB.player2Id,
         team_a_score: null,
         team_b_score: null,
         is_bye: false,
         is_complete: false,
       });
-    }
 
-    matchupIndex = (matchupIndex + courtsUsedThisRound) % allMatchups.length;
+      const key = getMatchupKey(teamA.id, teamB.id);
+
+      matchupCounts.set(key, (matchupCounts.get(key) || 0) + 1);
+      teamASideCounts.set(teamA.id, (teamASideCounts.get(teamA.id) || 0) + 1);
+
+      teamCourtHistory.set(teamA.id, [
+        ...(teamCourtHistory.get(teamA.id) || []),
+        courtsUsedThisRound,
+      ]);
+
+      teamCourtHistory.set(teamB.id, [
+        ...(teamCourtHistory.get(teamB.id) || []),
+        courtsUsedThisRound,
+      ]);
+
+      usedTeamIds.add(teamA.id);
+      usedTeamIds.add(teamB.id);
+    }
   }
 
   return output;

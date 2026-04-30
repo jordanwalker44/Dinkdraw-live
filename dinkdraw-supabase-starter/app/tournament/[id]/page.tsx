@@ -4332,18 +4332,20 @@ if (!canReportScores) {
                 className="list-item"
                 style={{ padding: 12 }}
               >
-                <div
-  style={{
-    fontSize: 12,
-    fontWeight: 900,
-    color: 'rgba(255,255,255,0.55)',
-    marginBottom: 10,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  }}
->
-  {playoffCourtLabel}
-</div>
+               {!match.is_bye ? (
+  <div
+    style={{
+      fontSize: 12,
+      fontWeight: 900,
+      color: 'rgba(255,255,255,0.55)',
+      marginBottom: 10,
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+    }}
+  >
+    {playoffCourtLabel}
+  </div>
+) : null}
           <div style={{ display: 'grid', gap: 8 }}>
   <div
     style={{

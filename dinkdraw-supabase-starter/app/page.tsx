@@ -90,6 +90,7 @@ export default function HomePage() {
   style={{
     border: '1px solid rgba(255, 203, 5, 0.35)',
     background: 'linear-gradient(180deg, rgba(255,203,5,0.10), rgba(255,255,255,0.035))',
+    textAlign: 'center',
   }}
 >
       <div className="action-title">Resume Tournament</div>
@@ -106,6 +107,7 @@ export default function HomePage() {
   style={{
     transform: 'scale(1.02)',
     boxShadow: '0 12px 28px rgba(255, 203, 5, 0.25)',
+    textAlign: 'center',
   }}
 >
         <div className="action-title">Create Tournament</div>
@@ -116,7 +118,12 @@ export default function HomePage() {
     </Link>
 
     <Link href="/tournament/join">
-      <button className="action-button black">
+      <button
+  className="action-button black"
+  style={{
+    textAlign: 'center',
+  }}
+>
         <div className="action-title">Join Tournament</div>
         <div className="action-subtitle">
           Enter a 6-letter code from the organizer to claim your spot.

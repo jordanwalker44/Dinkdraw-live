@@ -1955,50 +1955,32 @@ async function unclaimMySpot(slotId: string) {
   setMessage('You have given up your spot.');
 }
 
- async function saveAllPlayerNames() {
-  if (isLocked) {
-    setMessage('Player names are locked.');
+ async function clearPlayerSlot(slotId: string) {
+  if (!isOrganizer || isLocked) {
+    setMessage('Player spots are locked.');
     return;
   }
 
-  setMessage('');
-  setIsSavingNames(true);
+  const confirmed = window.confirm('Clear this player spot?');
+  if (!confirmed) return;
 
-  try {
-    const updates = playerSlots
-      .map((slot) => {
-        const typedName = (newNames[slot.id] ?? '').trim();
-        const savedName = (slot.display_name ?? '').trim();
-        const nextName = typedName || savedName;
+  const { error } = await supabase
+    .from('tournament_players')
+    .update({
+      display_name: '',
+      claimed_by_user_id: null,
+      gender: null,
+    })
+    .eq('id', slotId);
 
-        if (slot.claimed_by_user_id && nextName === '') {
-          return null;
-        }
-
-        return supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
-      })
-      .filter(Boolean);
-
-    const results = await Promise.all(updates);
-
-    const failed = results.find((result) => result?.error);
-
-    if (failed?.error) {
-      setMessage(`Save failed: ${failed.error.message}`);
-      setIsSavingNames(false);
-      return;
-    }
-
-    await loadTournamentData(userId);
-    setMessage('Player names saved.');
-  } catch (err) {
-    setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
+  if (error) {
+    setMessage(`Clear failed: ${error.message}`);
+    return;
   }
 
-  setIsSavingNames(false);
+  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
+  await loadTournamentData(userId);
+  setMessage('Player cleared.');
 }
 
   async function updatePlayerGender(slotId: string, gender: 'male' | 'female' | '') {

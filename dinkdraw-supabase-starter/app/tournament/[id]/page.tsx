@@ -1938,7 +1938,7 @@ async function unclaimMySpot(slotId: string) {
   setMessage('You have given up your spot.');
 }
 
-  async function saveAllPlayerNames() {
+ async function saveAllPlayerNames() {
   if (isLocked) {
     setMessage('Player names are locked.');
     return;
@@ -1948,7 +1948,7 @@ async function unclaimMySpot(slotId: string) {
   setIsSavingNames(true);
 
   try {
-    const rowsToUpdate = playerSlots
+    const updates = playerSlots
       .map((slot) => {
         const typedName = (newNames[slot.id] ?? '').trim();
         const savedName = (slot.display_name ?? '').trim();
@@ -1958,19 +1958,19 @@ async function unclaimMySpot(slotId: string) {
           return null;
         }
 
-        return {
-          id: slot.id,
-          display_name: nextName,
-        };
+        return supabase
+          .from('tournament_players')
+          .update({ display_name: nextName })
+          .eq('id', slot.id);
       })
       .filter(Boolean);
 
-    const { error } = await supabase
-      .from('tournament_players')
-      .upsert(rowsToUpdate, { onConflict: 'id' });
+    const results = await Promise.all(updates);
 
-    if (error) {
-      setMessage(`Save failed: ${error.message}`);
+    const failed = results.find((result) => result?.error);
+
+    if (failed?.error) {
+      setMessage(`Save failed: ${failed.error.message}`);
       setIsSavingNames(false);
       return;
     }

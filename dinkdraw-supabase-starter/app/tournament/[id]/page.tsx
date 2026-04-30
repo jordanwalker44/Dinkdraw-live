@@ -22,6 +22,7 @@ type Tournament = {
   rounds: number;
   games_to: number;
   status: string;
+  tournament_mode: string | null;
   started_at: string | null;
   format: string;
   match_format: string;

@@ -1109,6 +1109,57 @@ function buildMixedDoublesSchedule(
   return output;
 }
 
+function validateFixedPartnersSchedule(scheduleRows: ScheduleRow[]) {
+  const matchupCounts = new Map<string, number>();
+  const teamASideCounts = new Map<string, number>();
+  const teamTotalCounts = new Map<string, number>();
+
+  function teamKey(player1Id: string | null, player2Id: string | null) {
+    return [player1Id, player2Id].filter(Boolean).sort().join('__');
+  }
+
+  function matchupKey(teamAKey: string, teamBKey: string) {
+    return [teamAKey, teamBKey].sort().join('__vs__');
+  }
+
+  for (const row of scheduleRows) {
+    if (row.is_bye) continue;
+
+    const teamAKey = teamKey(row.team_a_player_1_id, row.team_a_player_2_id);
+    const teamBKey = teamKey(row.team_b_player_1_id, row.team_b_player_2_id);
+
+    if (!teamAKey || !teamBKey) continue;
+
+    const key = matchupKey(teamAKey, teamBKey);
+
+    matchupCounts.set(key, (matchupCounts.get(key) || 0) + 1);
+    teamASideCounts.set(teamAKey, (teamASideCounts.get(teamAKey) || 0) + 1);
+    teamTotalCounts.set(teamAKey, (teamTotalCounts.get(teamAKey) || 0) + 1);
+    teamTotalCounts.set(teamBKey, (teamTotalCounts.get(teamBKey) || 0) + 1);
+  }
+
+  const repeatedMatchups = Array.from(matchupCounts.entries()).filter(
+    ([, count]) => count > 1
+  );
+
+  const teamSideReport = Array.from(teamTotalCounts.entries()).map(([team, total]) => ({
+    team,
+    totalMatches: total,
+    teamAMatches: teamASideCounts.get(team) || 0,
+    teamBMatches: total - (teamASideCounts.get(team) || 0),
+  }));
+
+  console.log('Fixed Partners Schedule Report', {
+    totalMatches: scheduleRows.filter((row) => !row.is_bye).length,
+    repeatedMatchups,
+    teamSideReport,
+  });
+
+  if (repeatedMatchups.length > 0) {
+    console.warn('Repeated fixed-partner matchups found:', repeatedMatchups);
+  }
+}
+
 function buildSchedule(
   players: PlayerSlot[],
   rounds: number,
@@ -2164,6 +2215,10 @@ if (failed?.error) {
         tournament.format,
         tournament.doubles_mode
       );
+
+      if (tournament.format === 'doubles' && tournament.doubles_mode === 'fixed') {
+      validateFixedPartnersSchedule(scheduleRows);
+      }
 
       if (!scheduleRows.length) {
         setMessage('Could not generate a schedule.');

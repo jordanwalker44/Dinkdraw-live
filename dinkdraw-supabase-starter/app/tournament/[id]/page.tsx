@@ -2067,13 +2067,6 @@ if (failed?.error) {
   setIsStarting(false);
   return;
 }
-        if (error) {
-          setMessage(`Save failed: ${error.message}`);
-          setIsStarting(false);
-          return;
-        }
-      }
-
       const { data: freshPlayers, error: freshPlayersError } = await supabase
         .from('tournament_players')
         .select('*')

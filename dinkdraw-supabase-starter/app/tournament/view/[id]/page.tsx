@@ -12,6 +12,7 @@ type Tournament = {
   join_code: string;
   organizer_user_id: string;
   organizer_name: string | null;
+  court_labels: string[] | null;
   event_date: string | null;
   event_time: string | null;
   location: string | null;

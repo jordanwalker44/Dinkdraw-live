@@ -2047,14 +2047,26 @@ async function unclaimMySpot(slotId: string) {
     setMessage('');
     setIsStarting(true);
     try {
-      for (const slot of playerSlots) {
-        const typedName = (newNames[slot.id] ?? '').trim();
-        const savedName = (slot.display_name ?? '').trim();
-        const nextName = typedName || savedName;
-        const { error } = await supabase
-          .from('tournament_players')
-          .update({ display_name: nextName })
-          .eq('id', slot.id);
+      const updates = playerSlots
+  .map((slot) => {
+    const typedName = (newNames[slot.id] ?? '').trim();
+    const savedName = (slot.display_name ?? '').trim();
+    const nextName = typedName || savedName;
+
+    return supabase
+      .from('tournament_players')
+      .update({ display_name: nextName })
+      .eq('id', slot.id);
+  });
+
+const results = await Promise.all(updates);
+
+const failed = results.find((r) => r?.error);
+if (failed?.error) {
+  setMessage(`Save failed: ${failed.error.message}`);
+  setIsStarting(false);
+  return;
+}
         if (error) {
           setMessage(`Save failed: ${error.message}`);
           setIsStarting(false);

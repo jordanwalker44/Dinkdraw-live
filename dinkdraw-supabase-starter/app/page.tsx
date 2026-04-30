@@ -93,8 +93,15 @@ export default function HomePage() {
     textAlign: 'center',
   }}
 >
-      <div className="action-title">Resume Tournament</div>
-      <div className="action-subtitle">
+      <div className="action-title" style={{ marginBottom: 6 }}>Resume Tournament</div>
+      <div
+  className="action-subtitle"
+  style={{
+    opacity: 0.75,
+    maxWidth: 220,
+    margin: '0 auto',
+  }}
+>
         {lastTournament.title || 'Open your most recent tournament'}
       </div>
     </button>
@@ -110,8 +117,15 @@ export default function HomePage() {
     textAlign: 'center',
   }}
 >
-        <div className="action-title">Create Tournament</div>
-        <div className="action-subtitle">
+        <div className="action-title" style={{ marginBottom: 6 }}>Create Tournament</div>
+        <div
+  className="action-subtitle"
+  style={{
+    opacity: 0.75,
+    maxWidth: 220,
+    margin: '0 auto',
+  }}
+>
           Set up players, courts, rounds, and share the join code.
         </div>
       </button>
@@ -124,8 +138,15 @@ export default function HomePage() {
     textAlign: 'center',
   }}
 >
-        <div className="action-title">Join Tournament</div>
-        <div className="action-subtitle">
+        <div className="action-title" style={{ marginBottom: 6 }}>Join Tournament</div>
+        <div
+  className="action-subtitle"
+  style={{
+    opacity: 0.75,
+    maxWidth: 220,
+    margin: '0 auto',
+  }}
+>
           Enter a 6-letter code from the organizer to claim your spot.
         </div>
       </button>

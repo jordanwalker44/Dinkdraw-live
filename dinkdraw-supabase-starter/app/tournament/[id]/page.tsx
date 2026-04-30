@@ -389,6 +389,56 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
       if (participants.length % 4 !== 0) return null;
 
+      if (participants.length >= 20) {
+  let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+  let bestPenalty = Infinity;
+
+  for (let attempt = 0; attempt < 250; attempt += 1) {
+    const shuffled = shuffle(participants);
+    const groups = chunkIntoGroups(shuffled, 4);
+    const currentMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> = [];
+    let totalPenalty = 0;
+    let failed = false;
+
+    for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+      const group = groups[groupIndex];
+      const pairings = getAllPairings(group);
+
+      let bestPairing: { teamA: [string, string]; teamB: [string, string] } | null = null;
+      let bestPairingScore = Infinity;
+
+      for (const pairing of pairings) {
+        const score = scoreMatch(
+          pairing.teamA,
+          pairing.teamB,
+          allowRepeatPartners,
+          groupIndex + 1
+        );
+
+        if (score !== null && score < bestPairingScore) {
+          bestPairingScore = score;
+          bestPairing = pairing;
+        }
+      }
+
+      if (!bestPairing) {
+        failed = true;
+        break;
+      }
+
+      currentMatches.push(bestPairing);
+      totalPenalty += bestPairingScore;
+    }
+
+    if (!failed && totalPenalty < bestPenalty) {
+      bestPenalty = totalPenalty;
+      bestMatches = currentMatches;
+    }
+  }
+
+  return bestMatches;
+}
+
       let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
       let bestPenalty = Infinity;
 

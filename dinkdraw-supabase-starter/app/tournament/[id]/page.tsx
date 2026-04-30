@@ -662,43 +662,60 @@ function buildFixedPartnersSchedule(
     while (courtsUsedThisRound < courts) {
       let bestPair: { team1: FixedTeam; team2: FixedTeam; score: number } | null = null;
 
-      for (let i = 0; i < teams.length; i += 1) {
-        const team1 = teams[i];
-        if (usedTeamIds.has(team1.id)) continue;
+      // First pass: only allow matchups that have never happened.
+      // Second pass: allow repeats only if absolutely necessary.
+      for (const allowRepeatMatchup of [false, true]) {
+        bestPair = null;
 
-        for (let j = i + 1; j < teams.length; j += 1) {
-          const team2 = teams[j];
-          if (usedTeamIds.has(team2.id)) continue;
+        for (let i = 0; i < teams.length; i += 1) {
+          const team1 = teams[i];
+          if (usedTeamIds.has(team1.id)) continue;
 
-          const key = getMatchupKey(team1.id, team2.id);
-          const repeatCount = matchupCounts.get(key) || 0;
+          for (let j = i + 1; j < teams.length; j += 1) {
+            const team2 = teams[j];
+            if (usedTeamIds.has(team2.id)) continue;
 
-          const team1CourtHistory = teamCourtHistory.get(team1.id) || [];
-          const team2CourtHistory = teamCourtHistory.get(team2.id) || [];
-          const nextCourtNumber = courtsUsedThisRound + 1;
+            const key = getMatchupKey(team1.id, team2.id);
+            const repeatCount = matchupCounts.get(key) || 0;
 
-          const team1SameCourtRecently = team1CourtHistory
-            .slice(-2)
-            .filter((courtNumber) => courtNumber === nextCourtNumber).length;
+            if (!allowRepeatMatchup && repeatCount > 0) {
+              continue;
+            }
 
-          const team2SameCourtRecently = team2CourtHistory
-            .slice(-2)
-            .filter((courtNumber) => courtNumber === nextCourtNumber).length;
+            const team1CourtHistory = teamCourtHistory.get(team1.id) || [];
+            const team2CourtHistory = teamCourtHistory.get(team2.id) || [];
+            const nextCourtNumber = courtsUsedThisRound + 1;
 
-          const score =
-            repeatCount * 10000 +
-            team1SameCourtRecently * 100 +
-            team2SameCourtRecently * 100 +
-            Math.random();
+            const team1SameCourtRecently = team1CourtHistory
+              .slice(-2)
+              .filter((courtNumber) => courtNumber === nextCourtNumber).length;
 
-          if (!bestPair || score < bestPair.score) {
-            bestPair = {
-              team1,
-              team2,
-              score,
-            };
+            const team2SameCourtRecently = team2CourtHistory
+              .slice(-2)
+              .filter((courtNumber) => courtNumber === nextCourtNumber).length;
+
+            const team1ACount = teamASideCounts.get(team1.id) || 0;
+            const team2ACount = teamASideCounts.get(team2.id) || 0;
+            const sideImbalance = Math.abs(team1ACount - team2ACount);
+
+            const score =
+              repeatCount * 100000 +
+              team1SameCourtRecently * 100 +
+              team2SameCourtRecently * 100 +
+              sideImbalance * 10 +
+              Math.random();
+
+            if (!bestPair || score < bestPair.score) {
+              bestPair = {
+                team1,
+                team2,
+                score,
+              };
+            }
           }
         }
+
+        if (bestPair) break;
       }
 
       if (!bestPair) break;

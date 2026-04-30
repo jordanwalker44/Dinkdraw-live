@@ -4310,7 +4310,9 @@ if (!canReportScores) {
 
         <div style={{ display: 'grid', gap: 10 }}>
           {round.matches.map((match) => {
-            const playoffCourtLabel = `Court ${match.match_number}`;
+            const playoffCourtLabel =
+                tournament?.court_labels?.[match.match_number - 1]?.trim() ||
+                `Court ${match.match_number}`;
           
             const teamAName = match.team_a_player_1_id
               ? renderPlayerName(match.team_a_player_1_id) +

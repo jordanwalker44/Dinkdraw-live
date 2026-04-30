@@ -101,7 +101,13 @@ export default function HomePage() {
 ) : null}
 
     <Link href="/tournament/create">
-      <button className="action-button green">
+      <button
+  className="action-button green"
+  style={{
+    transform: 'scale(1.02)',
+    boxShadow: '0 12px 28px rgba(255, 203, 5, 0.25)',
+  }}
+>
         <div className="action-title">Create Tournament</div>
         <div className="action-subtitle">
           Set up players, courts, rounds, and share the join code.

@@ -2001,34 +2001,6 @@ async function unclaimMySpot(slotId: string) {
   setIsSavingNames(false);
 }
 
-  async function clearPlayerSlot(slotId: string) {
-  if (!isOrganizer || isLocked) {
-    setMessage('Player spots are locked.');
-    return;
-  }
-
-  const confirmed = window.confirm('Clear this player spot?');
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from('tournament_players')
-    .update({
-      display_name: '',
-      claimed_by_user_id: null,
-      gender: null,
-    })
-    .eq('id', slotId);
-
-  if (error) {
-    setMessage(`Clear failed: ${error.message}`);
-    return;
-  }
-
-  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
-  await loadTournamentData(userId);
-  setMessage('Player cleared.');
-}
-
   async function updatePlayerGender(slotId: string, gender: 'male' | 'female' | '') {
     if (isLocked) {
       setMessage('Player settings are locked.');

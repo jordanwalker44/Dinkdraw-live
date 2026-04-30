@@ -1955,35 +1955,7 @@ async function unclaimMySpot(slotId: string) {
   setMessage('You have given up your spot.');
 }
 
- async function clearPlayerSlot(slotId: string) {
-  if (!isOrganizer || isLocked) {
-    setMessage('Player spots are locked.');
-    return;
-  }
-
-  const confirmed = window.confirm('Clear this player spot?');
-  if (!confirmed) return;
-
-  const { error } = await supabase
-    .from('tournament_players')
-    .update({
-      display_name: '',
-      claimed_by_user_id: null,
-      gender: null,
-    })
-    .eq('id', slotId);
-
-  if (error) {
-    setMessage(`Clear failed: ${error.message}`);
-    return;
-  }
-
-  setNewNames((prev) => ({ ...prev, [slotId]: '' }));
-  await loadTournamentData(userId);
-  setMessage('Player cleared.');
-}
-
-  async function saveAllPlayerNames() {
+ async function saveAllPlayerNames() {
   if (isLocked) {
     setMessage('Player names are locked.');
     return;

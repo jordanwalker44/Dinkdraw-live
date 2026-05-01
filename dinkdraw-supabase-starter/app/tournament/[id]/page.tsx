@@ -3301,137 +3301,151 @@ if (!canReportScores) {
   setMessage('🏆 Championship complete. Winner crowned!');
 }
   async function submitMatchScore(matchId: string) {
-    if (isCompleted) {
-      setMessage('Final results are locked.');
-      return;
-    }
-    if (!canReportScores) {
-  setMessage('Scores are locked for this tournament.');
-  return;
-}
-
-    const draft = scoreDrafts[matchId];
-    if (!draft) {
-      setMessage('Enter both scores first.');
-      return;
-    }
-
-    const a = draft.team_a_score.trim();
-    const b = draft.team_b_score.trim();
-
-    if (a === '' || b === '') {
-      setMessage('Enter both scores before submitting.');
-      return;
-    }
-
-    const aNum = Math.max(0, Number(a));
-    const bNum = Math.max(0, Number(b));
-
-    if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
-      setMessage('Scores must be valid numbers.');
-      return;
-    }
-
-    const previousMatches = matches;
-
-    const optimisticMatches = matches.map((m) =>
-      m.id === matchId
-        ? {
-            ...m,
-            team_a_score: aNum,
-            team_b_score: bNum,
-            is_complete: true,
-          }
-        : m
-    );
-
-    setMessage('Submitting score...');
-    setMatches(optimisticMatches);
-    setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
-
-    const completedMatch = optimisticMatches.find((m) => m.id === matchId);
-    if (!completedMatch) return;
-
-    const submittedRound = completedMatch.round_number ?? selectedRound;
-    const submittedRoundMatches = optimisticMatches.filter(
-      (m) => m.round_number === submittedRound && !m.is_bye
-    );
-    const submittedRoundComplete =
-      submittedRoundMatches.length > 0 &&
-      submittedRoundMatches.every((m) => m.is_complete);
-
-    const nextRound = getNextIncompleteRound(optimisticMatches);
-
-    if (!nextRound) {
-  if (tournament?.tournament_mode === 'cream_of_the_crop') {
-    setSelectedRound(submittedRound);
-    setActiveTab('rounds');
-  } else {
-    setSelectedRound(finalRound);
-    setActiveTab('standings');
-  }
-} else if (submittedRoundComplete && nextRound !== submittedRound) {
-  setSelectedRound(nextRound);
-  setActiveTab('rounds');
-}
-
-const { error } = await supabase
-      .from('matches')
-      .update({
-        team_a_score: aNum,
-        team_b_score: bNum,
-        is_complete: true,
-      })
-      .eq('id', matchId);
-
-    if (error) {
-      setMatches(previousMatches);
-      setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
-      setMessage(`Submit failed: ${error.message}`);
-      return;
-    }
-
-    const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
-
-    if (!nextRound) {
-  if (tournament?.tournament_mode === 'cream_of_the_crop') {
-    setSelectedRound(submittedRound);
-    setActiveTab('rounds');
-    setMessage(
-      statsSaved
-        ? 'Stage complete. Generate the next Cream of the Crop round.'
-        : 'Stage complete. Generate the next Cream of the Crop round. Stats update failed.'
-    );
+  if (isCompleted) {
+    setMessage('Final results are locked.');
     return;
   }
 
-  const completed = await markTournamentCompleted();
-  if (!completed) return;
+  if (!canReportScores) {
+    setMessage('Scores are locked for this tournament.');
+    return;
+  }
 
-  setSelectedRound(finalRound);
-  setActiveTab('standings');
+  const draft = scoreDrafts[matchId];
+  if (!draft) {
+    setMessage('Enter both scores first.');
+    return;
+  }
 
-  setMessage(
-    statsSaved
-      ? 'Score submitted. Tournament complete.'
-      : 'Score submitted. Tournament complete, but stats update failed.'
+  const a = draft.team_a_score.trim();
+  const b = draft.team_b_score.trim();
+
+  if (a === '' || b === '') {
+    setMessage('Enter both scores before submitting.');
+    return;
+  }
+
+  const aNum = Math.max(0, Number(a));
+  const bNum = Math.max(0, Number(b));
+
+  if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+    setMessage('Scores must be valid numbers.');
+    return;
+  }
+
+  const previousMatches = matches;
+
+  const optimisticMatches = matches.map((m) =>
+    m.id === matchId
+      ? {
+          ...m,
+          team_a_score: aNum,
+          team_b_score: bNum,
+          is_complete: true,
+        }
+      : m
   );
-  return;
-}
 
-    if (submittedRoundComplete && nextRound !== submittedRound) {
+  setMessage('Submitting score...');
+  setMatches(optimisticMatches);
+  setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
+
+  const completedMatch = optimisticMatches.find((m) => m.id === matchId);
+  if (!completedMatch) return;
+
+  const submittedRound = completedMatch.round_number ?? selectedRound;
+  const submittedRoundMatches = optimisticMatches.filter(
+    (m) => m.round_number === submittedRound && !m.is_bye
+  );
+
+  const submittedRoundComplete =
+    submittedRoundMatches.length > 0 &&
+    submittedRoundMatches.every((m) => m.is_complete);
+
+  const nextRound = getNextIncompleteRound(optimisticMatches);
+
+  const { error } = await supabase
+    .from('matches')
+    .update({
+      team_a_score: aNum,
+      team_b_score: bNum,
+      is_complete: true,
+    })
+    .eq('id', matchId);
+
+  if (error) {
+    setMatches(previousMatches);
+    setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
+    setMessage(`Submit failed: ${error.message}`);
+    return;
+  }
+
+  const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
+
+  if (!nextRound) {
+    if (tournament?.tournament_mode === 'cream_of_the_crop') {
+      const finalMatches = optimisticMatches.filter(
+        (m) => m.round_number >= 7 && m.round_number <= 9 && !m.is_bye
+      );
+
+      const finalComplete =
+        finalMatches.length > 0 &&
+        finalMatches.every((m) => m.is_complete);
+
+      if (!finalComplete) {
+        setSelectedRound(submittedRound);
+        setActiveTab('rounds');
+        setMessage(
+          statsSaved
+            ? 'Stage complete. Generate the next Cream of the Crop round.'
+            : 'Stage complete. Generate the next Cream of the Crop round. Stats update failed.'
+        );
+        return;
+      }
+
+      const completed = await markTournamentCompleted();
+      if (!completed) return;
+
+      setSelectedRound(finalRound);
+      setActiveTab('standings');
+
       setMessage(
         statsSaved
-          ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
-          : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`
+          ? 'Final Round complete. Tournament finished.'
+          : 'Final Round complete. Tournament finished, but stats update failed.'
       );
       return;
     }
 
+    const completed = await markTournamentCompleted();
+    if (!completed) return;
+
+    setSelectedRound(finalRound);
+    setActiveTab('standings');
+
     setMessage(
-      statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
+      statsSaved
+        ? 'Score submitted. Tournament complete.'
+        : 'Score submitted. Tournament complete, but stats update failed.'
     );
+    return;
   }
+
+  if (submittedRoundComplete && nextRound !== submittedRound) {
+    setSelectedRound(nextRound);
+    setActiveTab('rounds');
+    setMessage(
+      statsSaved
+        ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
+        : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`
+    );
+    return;
+  }
+
+  setMessage(
+    statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
+  );
+}
 
   function renderPlayerName(id: string | null) {
     if (!id) return '-';

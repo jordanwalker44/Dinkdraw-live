@@ -487,7 +487,6 @@ router.push(`/tournament/${tournament.id}`);
   />
 </div>
 
-  {tournamentMode === 'round_robin' && (
   <div>
   <label className="label">Playoff Format</label>
   <select

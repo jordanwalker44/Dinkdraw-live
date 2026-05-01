@@ -315,7 +315,7 @@ router.push(`/tournament/${tournament.id}`);
   Game Setup
 </div>
 
-              <div>
+            <div>
   <label className="label">Tournament Mode</label>
   <select
     className="input"
@@ -351,32 +351,28 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 )}
 
-          <div>
-            <label className="label">Match Format</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
-              <button
-                type="button"
-                className={`button ${matchFormat === 'single' ? 'primary' : 'secondary'}`}
-                onClick={() => setMatchFormat('single')}
-              >
-                Single Game
-              </button>
-              <button
-                type="button"
-                className={`button ${matchFormat === 'best_of_3' ? 'primary' : 'secondary'}`}
-                onClick={() => setMatchFormat('best_of_3')}
-              >
-                Best of 3
-              </button>
-            </div>
-          </div>
-
-           >
-            <option value="round_robin">Round Robin</option>
-            <option value="cream_of_the_crop">Cream of the Crop</option>
-        </select>
-      </div>
-
+{tournamentMode === 'round_robin' && (
+  <div>
+    <label className="label">Match Format</label>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+      <button
+        type="button"
+        className={`button ${matchFormat === 'single' ? 'primary' : 'secondary'}`}
+        onClick={() => setMatchFormat('single')}
+      >
+        Single Game
+      </button>
+      <button
+        type="button"
+        className={`button ${matchFormat === 'best_of_3' ? 'primary' : 'secondary'}`}
+        onClick={() => setMatchFormat('best_of_3')}
+      >
+        Best of 3
+      </button>
+    </div>
+  </div>
+)}
+           
                     {format === 'doubles' && tournamentMode === 'round_robin' ? (
             <div>
               <label className="label">Doubles Mode</label>

@@ -336,7 +336,7 @@ router.push(`/tournament/${tournament.id}`);
       className={`button ${tournamentMode === 'cream_of_the_crop' ? 'primary' : 'secondary'}`}
       onClick={() => setTournamentMode('cream_of_the_crop')}
     >
-      Cream
+      Cream of the Crop
     </button>
   </div>
 </div>

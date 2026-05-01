@@ -174,6 +174,18 @@ setFavoriteLocations(savedLocations || []);
   }
 }, [tournamentMode, playerCount]);
 
+useEffect(() => {
+  if (tournamentMode === 'cream_of_the_crop') {
+    setFormat('doubles');
+    setMatchFormat('single');
+    setDoublesMode('rotating');
+
+    if (playerCount % 4 !== 0) {
+      setPlayerCount(Math.max(4, Math.ceil(playerCount / 4) * 4));
+    }
+  }
+}, [tournamentMode, playerCount]);
+
   useEffect(() => {
     if (format === 'singles' && playerCount < 3) {
       setPlayerCount(3);
@@ -189,6 +201,11 @@ setFavoriteLocations(savedLocations || []);
       setMessage(`You need at least ${minPlayers} players for ${format}.`);
       return;
     }
+
+if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
+  setMessage('Cream of the Crop requires players in groups of 4.');
+  return;
+}
 
     if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
       setMessage('Cream of the Crop requires players in groups of 4.');

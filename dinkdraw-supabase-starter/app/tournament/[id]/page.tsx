@@ -4635,12 +4635,12 @@ if (!canReportScores) {
   }}
 >
   {tournament?.tournament_mode === 'cream_of_the_crop'
-    ? round <= 3
-      ? 'Sort Round'
-      : round <= 6
-      ? 'Re-Rank Round'
-      : 'Final Round'
-    : `Round ${round}`}
+  ? round <= 3
+    ? `Sort • Round ${round}`
+    : round <= 6
+    ? `Re-Rank • Round ${round}`
+    : `Final • Round ${round}`
+  : `Round ${round}`}
 </div>
                 </button>
               );

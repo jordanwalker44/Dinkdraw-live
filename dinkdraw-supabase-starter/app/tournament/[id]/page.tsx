@@ -4628,14 +4628,20 @@ if (!canReportScores) {
                   </div>
 
                   <div
-                    style={{
-                      fontSize: 20,
-                      fontWeight: 800,
-                      color: '#fff',
-                    }}
-                  >
-                    Round {round}
-                  </div>
+  style={{
+    fontSize: 20,
+    fontWeight: 800,
+    color: '#fff',
+  }}
+>
+  {tournament?.tournament_mode === 'cream_of_the_crop'
+    ? round <= 3
+      ? 'Sort Round'
+      : round <= 6
+      ? 'Re-Rank Round'
+      : 'Final Round'
+    : `Round ${round}`}
+</div>
                 </button>
               );
             })}

@@ -167,22 +167,15 @@ setFavoriteLocations(savedLocations || []);
     setFormat('doubles');
     setMatchFormat('single');
     setDoublesMode('rotating');
+    setRounds(9);
+    setGamesTo(11);
 
     if (playerCount % 4 !== 0) {
       setPlayerCount(Math.max(4, Math.ceil(playerCount / 4) * 4));
+      return;
     }
-  }
-}, [tournamentMode, playerCount]);
 
-useEffect(() => {
-  if (tournamentMode === 'cream_of_the_crop') {
-    setFormat('doubles');
-    setMatchFormat('single');
-    setDoublesMode('rotating');
-
-    if (playerCount % 4 !== 0) {
-      setPlayerCount(Math.max(4, Math.ceil(playerCount / 4) * 4));
-    }
+    setCourts(Math.max(1, Math.floor(playerCount / 4)));
   }
 }, [tournamentMode, playerCount]);
 
@@ -321,24 +314,42 @@ router.push(`/tournament/${tournament.id}`);
             <div className="card-title" style={{ color: '#FFCB05', marginBottom: 6 }}>
   Game Setup
 </div>
-            <label className="label">Player Format</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
-              <button
-                type="button"
-                className={`button ${format === 'doubles' ? 'primary' : 'secondary'}`}
-                onClick={() => setFormat('doubles')}
-              >
-                Doubles
-              </button>
-              <button
-                type="button"
-                className={`button ${format === 'singles' ? 'primary' : 'secondary'}`}
-                onClick={() => setFormat('singles')}
-              >
-                Singles
-              </button>
-            </div>
-          </div>
+
+              <div>
+  <label className="label">Tournament Mode</label>
+  <select
+    className="input"
+    value={tournamentMode}
+    onChange={(e) =>
+      setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
+    }
+  >
+    <option value="round_robin">Round Robin</option>
+    <option value="cream_of_the_crop">Cream of the Crop</option>
+  </select>
+</div>
+
+{tournamentMode === 'round_robin' && (
+  <div>
+    <label className="label">Player Format</label>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+      <button
+        type="button"
+        className={`button ${format === 'doubles' ? 'primary' : 'secondary'}`}
+        onClick={() => setFormat('doubles')}
+      >
+        Doubles
+      </button>
+      <button
+        type="button"
+        className={`button ${format === 'singles' ? 'primary' : 'secondary'}`}
+        onClick={() => setFormat('singles')}
+      >
+        Singles
+      </button>
+    </div>
+  </div>
+)}
 
           <div>
             <label className="label">Match Format</label>
@@ -360,15 +371,7 @@ router.push(`/tournament/${tournament.id}`);
             </div>
           </div>
 
-          <div>
-            <label className="label">Tournament Mode</label>
-            <select
-              className="input"
-              value={tournamentMode}
-              onChange={(e) =>
-              setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
-        }
-      >
+           >
             <option value="round_robin">Round Robin</option>
             <option value="cream_of_the_crop">Cream of the Crop</option>
         </select>

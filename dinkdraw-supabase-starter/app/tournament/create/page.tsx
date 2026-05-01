@@ -315,16 +315,30 @@ router.push(`/tournament/${tournament.id}`);
 
            <div>
   <label className="label">Tournament Mode</label>
-  <select
-    className="input"
-    value={tournamentMode}
-    onChange={(e) =>
-      setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
-    }
+
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 8,
+    }}
   >
-    <option value="round_robin">Round Robin</option>
-    <option value="cream_of_the_crop">Cream of the Crop</option>
-  </select>
+    <button
+      type="button"
+      className={`button ${tournamentMode === 'round_robin' ? 'primary' : 'secondary'}`}
+      onClick={() => setTournamentMode('round_robin')}
+    >
+      Round Robin
+    </button>
+
+    <button
+      type="button"
+      className={`button ${tournamentMode === 'cream_of_the_crop' ? 'primary' : 'secondary'}`}
+      onClick={() => setTournamentMode('cream_of_the_crop')}
+    >
+      Cream
+    </button>
+  </div>
 </div>
 
 {tournamentMode === 'cream_of_the_crop' && (

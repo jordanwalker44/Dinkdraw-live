@@ -116,7 +116,7 @@ export default function CreateTournamentPage() {
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
   const [courtLabels, setCourtLabels] = useState<string[]>([]);
-  const [rounds, setRounds] = useState(4);
+  const [rounds, setRounds] = useState(7);
   const [gamesTo, setGamesTo] = useState(11);
 
   const [message, setMessage] = useState('');
@@ -162,7 +162,7 @@ setFavoriteLocations(savedLocations || []);
     );
   }, [courts]);
 
-  useEffect(() => {
+    useEffect(() => {
   if (tournamentMode === 'cream_of_the_crop') {
     setFormat('doubles');
     setMatchFormat('single');
@@ -176,6 +176,8 @@ setFavoriteLocations(savedLocations || []);
     }
 
     setCourts(Math.max(1, Math.floor(playerCount / 4)));
+  } else {
+    setRounds(Math.max(1, playerCount - 1));
   }
 }, [tournamentMode, playerCount]);
 
@@ -334,16 +336,24 @@ router.push(`/tournament/${tournament.id}`);
     </div>
   </div>
 )}
-  <select
-    className="input"
-    value={tournamentMode}
-    onChange={(e) =>
-      setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
-    }
-  >
-    <option value="round_robin">Round Robin</option>
-    <option value="cream_of_the_crop">Cream of the Crop</option>
-  </select>
+  <div>
+  <label className="label">Tournament Mode</label>
+  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+    <button
+      type="button"
+      className={`button ${tournamentMode === 'round_robin' ? 'primary' : 'secondary'}`}
+      onClick={() => setTournamentMode('round_robin')}
+    >
+      Round Robin
+    </button>
+    <button
+      type="button"
+      className={`button ${tournamentMode === 'cream_of_the_crop' ? 'primary' : 'secondary'}`}
+      onClick={() => setTournamentMode('cream_of_the_crop')}
+    >
+      Cream
+    </button>
+  </div>
 </div>
 
           <Stepper
@@ -569,12 +579,9 @@ router.push(`/tournament/${tournament.id}`);
       style={{ marginTop: 4 }}
     />
 
-    <div style={{ flex: 1 }}>
+          <div style={{ flex: 1 }}>
       <div style={{ fontWeight: 800 }}>
         Save this location for next time
-      </div>
-      <div className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>
-        Use this court, gym, or park again when creating future tournaments.
       </div>
 
       {saveLocationForLater ? (
@@ -609,12 +616,9 @@ router.push(`/tournament/${tournament.id}`);
       style={{ marginTop: 4 }}
     />
 
-    <div>
+          <div>
       <div style={{ fontWeight: 800 }}>
-        Allow players to report scores
-      </div>
-      <div className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.4 }}>
-        Joined players can enter match scores from their device. The organizer can still edit scores.
+        Allow players to submit scores
       </div>
     </div>
   </div>

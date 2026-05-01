@@ -195,17 +195,12 @@ setFavoriteLocations(savedLocations || []);
       return;
     }
 
-if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
+      if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
   setMessage('Cream of the Crop requires players in groups of 4.');
   return;
 }
 
-    if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
-      setMessage('Cream of the Crop requires players in groups of 4.');
-      return;
-    }
-
-    if (!title.trim()) {
+      if (!title.trim()) {
       setMessage('Please enter a tournament name.');
       return;
     }
@@ -318,6 +313,27 @@ router.push(`/tournament/${tournament.id}`);
 
             <div>
   <label className="label">Tournament Mode</label>
+              {tournamentMode === 'cream_of_the_crop' && (
+  <div
+    style={{
+      marginTop: 10,
+      padding: 14,
+      borderRadius: 16,
+      border: '1px solid rgba(255,203,5,0.25)',
+      background: 'rgba(255,203,5,0.06)',
+    }}
+  >
+    <div style={{ fontWeight: 800, marginBottom: 6 }}>
+      Cream of the Crop Format
+    </div>
+    <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+      • Doubles only<br />
+      • 3 stages (Sort, Re-Rank, Final)<br />
+      • 9 total rounds<br />
+      • Players move up/down based on performance
+    </div>
+  </div>
+)}
   <select
     className="input"
     value={tournamentMode}
@@ -487,33 +503,7 @@ router.push(`/tournament/${tournament.id}`);
   />
 </div>
 
-  <div>
-  <label className="label">Playoff Format</label>
-  <select
-    className="input"
-    value={playoffFormat}
-    onChange={(e) =>
-  setPlayoffFormat(
-    e.target.value as
-      | 'none'
-      | 'everyone'
-      | 'top_4'
-      | 'top_8'
-      | 'top_16'
-      | 'custom'
-  )
-}
-  >
-    <option value="none">No Playoffs</option>
-    <option value="everyone">Everyone Advances</option>
-    <option value="top_4">Top 4</option>
-    <option value="top_8">Top 8</option>
-    <option value="top_16">Top 16</option>
-    <option value="custom">Custom</option>
-  </select>
-</div>
-
-{tournamentMode === 'round_robin' && playoffFormat === 'custom' && (
+  {tournamentMode === 'round_robin' && playoffFormat === 'custom' && (
   <div>
     <label className="label">Number of Teams Advancing</label>
     <input
@@ -630,46 +620,44 @@ router.push(`/tournament/${tournament.id}`);
   }}
 />
 
-          <Stepper
-            label={`Courts (max ${maxCourtsAllowed})`}
-            value={courts}
-            min={1}
-            max={maxCourtsAllowed}
-            onChange={setCourts}
-          />
-                    <div>
-  <label className="label">Court Names (optional)</label>
-  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-    Customize court numbers or names (e.g. Court 4, Championship Court)
+          {tournamentMode === 'round_robin' ? (
+  <Stepper
+    label={`Courts (max ${maxCourtsAllowed})`}
+    value={courts}
+    min={1}
+    max={maxCourtsAllowed}
+    onChange={setCourts}
+  />
+) : (
+  <div>
+    <label className="label">Courts</label>
+    <div
+      style={{
+        height: 56,
+        borderRadius: 16,
+        background: '#001428',
+        border: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 22,
+        fontWeight: 800,
+      }}
+    >
+      {courts} (auto-calculated)
+    </div>
   </div>
-  <div className="grid" style={{ gap: 10 }}>
-              {courtLabels.map((label, index) => (
-                <div key={index}>
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-                    Court {index + 1}
-                  </div>
-                  <input
-                    className="input"
-                    value={label}
-                    onChange={(e) => {
-                      const next = [...courtLabels];
-                      next[index] = e.target.value;
-                      setCourtLabels(next);
-                    }}
-                    placeholder={`Court ${index + 1}`}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+)}
 
-          <Stepper
-            label="Rounds"
-            value={rounds}
-            min={1}
-            max={30}
-            onChange={setRounds}
-          />
+          {tournamentMode === 'round_robin' && (
+  <Stepper
+    label="Rounds"
+    value={rounds}
+    min={1}
+    max={30}
+    onChange={setRounds}
+  />
+)}
 
           <Stepper
             label="Games to"
@@ -700,7 +688,7 @@ router.push(`/tournament/${tournament.id}`);
  <div style={{ fontSize: 15, lineHeight: 1.5 }}>
   {tournamentMode === 'cream_of_the_crop' ? (
     <>
-      Cream of the Crop • Doubles • 3 games per court • {playerCount} players • {courts} courts
+      Cream of the Crop • Doubles • 3 stages (9 rounds) • {playerCount} players • {courts} courts
     </>
   ) : (
     <>

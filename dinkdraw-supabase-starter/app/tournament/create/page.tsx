@@ -312,7 +312,8 @@ router.push(`/tournament/${tournament.id}`);
 
           <div>
             <div className="card-title" style={{ color: '#FFCB05', marginBottom: 6 }}>
-  Game Setup
+    Game Setup
+  </div>
 </div>
 
             <div>

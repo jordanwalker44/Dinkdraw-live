@@ -1646,6 +1646,35 @@ const hasAnyScores = matches.some(
 
   const tournamentWinner = standings[0] || null;
 
+  const biggestClimber = useMemo(() => {
+  if (tournament?.tournament_mode !== 'cream_of_the_crop') return null;
+  if (!standings.length) return null;
+
+  const climbers = standings
+    .map((row, index) => {
+      const player = playerSlots.find((slot) => slot.id === row.playerId);
+      if (!player) return null;
+
+      const startingRank = player.slot_number;
+      const finalRank = index + 1;
+      const climb = startingRank - finalRank;
+
+      return {
+        ...row,
+        startingRank,
+        finalRank,
+        climb,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (!a || !b) return 0;
+      return b.climb - a.climb;
+    });
+
+  return climbers[0] || null;
+}, [tournament?.tournament_mode, standings, playerSlots]);
+
   const canStartTournament = useMemo(() => {
     if (!tournament) return false;
     if (tournament.status === 'started' || tournament.status === 'completed') return false;
@@ -5349,6 +5378,77 @@ if (!canReportScores) {
                   {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
                 </div>
               </div>
+
+              {tournament?.tournament_mode === 'cream_of_the_crop' && standings.length > 0 && (
+  <div
+    className="card"
+    style={{
+      marginBottom: 14,
+      border: '1px solid rgba(255,203,5,0.35)',
+      background: 'rgba(255,203,5,0.08)',
+    }}
+  >
+    <div className="card-title" style={{ color: '#FFCB05' }}>
+      Cream of the Crop Results
+    </div>
+
+    {biggestClimber && biggestClimber.climb > 0 && (
+  <div
+    className="list-item"
+    style={{
+      marginTop: 12,
+      border: '1px solid rgba(255,203,5,0.35)',
+      background: 'rgba(255,203,5,0.10)',
+    }}
+  >
+    <div style={{ fontWeight: 900, color: '#FFCB05', marginBottom: 4 }}>
+      Biggest Climber
+    </div>
+    <div style={{ fontSize: 16, fontWeight: 800 }}>
+      🚀 {biggestClimber.name} climbed {biggestClimber.climb} spots
+    </div>
+    <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+      Started #{biggestClimber.startingRank} → Finished #{biggestClimber.finalRank}
+    </div>
+  </div>
+)}
+
+    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+      {standings.slice(0, 3).map((row, index) => (
+        <div
+          key={row.playerId}
+          className="list-item"
+          style={{
+            border:
+              index === 0
+                ? '1px solid rgba(255,203,5,0.5)'
+                : '1px solid rgba(255,255,255,0.10)',
+            background:
+              index === 0
+                ? 'rgba(255,203,5,0.12)'
+                : 'rgba(255,255,255,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontSize: 28 }}>
+              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
+            </div>
+
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 18 }}>
+                {index + 1}. {row.name}
+              </div>
+              <div className="muted" style={{ fontSize: 13 }}>
+                {row.wins} wins • {row.pointDiff >= 0 ? '+' : ''}
+                {row.pointDiff} point diff • {row.pointsFor} points for
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
               {standings.map((row, index) => {
                 const place = index + 1;

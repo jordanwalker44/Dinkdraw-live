@@ -3363,11 +3363,14 @@ if (!canReportScores) {
     const nextRound = getNextIncompleteRound(optimisticMatches);
 
     if (!nextRound) {
-      setSelectedRound(finalRound);
-      setActiveTab('standings');
-    } else if (submittedRoundComplete && nextRound !== submittedRound) {
-      setSelectedRound(nextRound);
-    }
+  if (tournament?.tournament_mode === 'cream_of_the_crop') {
+    setSelectedRound(submittedRound);
+    setActiveTab('rounds');
+  } else {
+    setSelectedRound(finalRound);
+    setActiveTab('standings');
+  }
+} else if (submittedRoundComplete && nextRound !== submittedRound) {
 
     const { error } = await supabase
       .from('matches')
@@ -3388,19 +3391,30 @@ if (!canReportScores) {
     const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
 
     if (!nextRound) {
-      const completed = await markTournamentCompleted();
-      if (!completed) return;
+  if (tournament?.tournament_mode === 'cream_of_the_crop') {
+    setSelectedRound(submittedRound);
+    setActiveTab('rounds');
+    setMessage(
+      statsSaved
+        ? 'Stage complete. Generate the next Cream of the Crop round.'
+        : 'Stage complete. Generate the next Cream of the Crop round. Stats update failed.'
+    );
+    return;
+  }
 
-      setSelectedRound(finalRound);
-      setActiveTab('standings');
+  const completed = await markTournamentCompleted();
+  if (!completed) return;
 
-      setMessage(
-        statsSaved
-          ? 'Score submitted. Tournament complete.'
-          : 'Score submitted. Tournament complete, but stats update failed.'
-      );
-      return;
-    }
+  setSelectedRound(finalRound);
+  setActiveTab('standings');
+
+  setMessage(
+    statsSaved
+      ? 'Score submitted. Tournament complete.'
+      : 'Score submitted. Tournament complete, but stats update failed.'
+  );
+  return;
+}
 
     if (submittedRoundComplete && nextRound !== submittedRound) {
       setMessage(

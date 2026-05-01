@@ -4538,19 +4538,24 @@ if (!canReportScores) {
 
           {tournament?.tournament_mode === 'cream_of_the_crop' && (
   <div style={{ marginBottom: 12, display: 'grid', gap: 8 }}>
-    <button
-      className="button primary"
-      onClick={handleGenerateSiftRound}
-    >
-      Generate Re-Rank Round
-    </button>
+    {!matches.some((m) => m.round_number >= 4 && m.round_number <= 6 && !m.is_bye) && (
+      <button
+        className="button primary"
+        onClick={handleGenerateSiftRound}
+      >
+        Generate Re-Rank Round
+      </button>
+    )}
 
-    <button
-      className="button primary"
-      onClick={handleGenerateFinalRound}
-    >
-      Generate Final Round
-    </button>
+    {matches.some((m) => m.round_number >= 4 && m.round_number <= 6 && !m.is_bye) &&
+      !matches.some((m) => m.round_number >= 7 && m.round_number <= 9 && !m.is_bye) && (
+        <button
+          className="button primary"
+          onClick={handleGenerateFinalRound}
+        >
+          Generate Final Round
+        </button>
+      )}
   </div>
 )}
 

@@ -374,7 +374,7 @@ router.push(`/tournament/${tournament.id}`);
         </select>
       </div>
 
-                    {format === 'doubles' ? (
+                    {format === 'doubles' && tournamentMode === 'round_robin' ? (
             <div>
               <label className="label">Doubles Mode</label>
               <div
@@ -487,6 +487,7 @@ router.push(`/tournament/${tournament.id}`);
   />
 </div>
 
+  {tournamentMode === 'round_robin' && (
   <div>
   <label className="label">Playoff Format</label>
   <select
@@ -513,7 +514,7 @@ router.push(`/tournament/${tournament.id}`);
   </select>
 </div>
 
-{playoffFormat === 'custom' && (
+{tournamentMode === 'round_robin' && playoffFormat === 'custom' && (
   <div>
     <label className="label">Number of Teams Advancing</label>
     <input
@@ -526,7 +527,7 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 )}
 
-{playoffFormat !== 'none' && (
+{tournamentMode === 'round_robin' && playoffFormat !== 'none' && (
   <div>
     <label className="label">Seeding Style</label>
     <select
@@ -685,11 +686,19 @@ router.push(`/tournament/${tournament.id}`);
     Tournament Summary
   </div>
 
-  <div style={{ fontSize: 15, lineHeight: 1.5 }}>
-    {format === 'singles' ? 'Singles' : 'Doubles'} •{' '}
-    {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} •{' '}
-    {playerCount} players • {courts} courts • {rounds} rounds
-  </div>
+ <div style={{ fontSize: 15, lineHeight: 1.5 }}>
+  {tournamentMode === 'cream_of_the_crop' ? (
+    <>
+      Cream of the Crop • Doubles • 3 games per court • {playerCount} players • {courts} courts
+    </>
+  ) : (
+    <>
+      {format === 'singles' ? 'Singles' : 'Doubles'} •{' '}
+      {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} •{' '}
+      {playerCount} players • {courts} courts • {rounds} rounds
+    </>
+  )}
+</div>
 </div>
 
           <div className="muted" style={{ marginBottom: 8, textAlign: 'center' }}>

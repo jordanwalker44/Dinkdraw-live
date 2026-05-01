@@ -317,28 +317,67 @@ router.push(`/tournament/${tournament.id}`);
   <label className="label">Tournament Mode</label>
 
   <div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 10,
+  }}
+>
+  <button
+    type="button"
+    onClick={() => setTournamentMode('round_robin')}
     style={{
-      display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
-      gap: 8,
+      minHeight: 74,
+      borderRadius: 18,
+      padding: '14px 10px',
+      border:
+        tournamentMode === 'round_robin'
+          ? '1px solid rgba(255,203,5,0.9)'
+          : '1px solid rgba(255,255,255,0.12)',
+      background:
+        tournamentMode === 'round_robin'
+          ? 'linear-gradient(135deg, rgba(255,203,5,0.95), rgba(255,203,5,0.68))'
+          : 'rgba(255,255,255,0.05)',
+      color: tournamentMode === 'round_robin' ? '#001428' : '#ffffff',
+      fontWeight: 900,
+      fontSize: 15,
+      boxShadow:
+        tournamentMode === 'round_robin'
+          ? '0 12px 28px rgba(255,203,5,0.20)'
+          : 'none',
+      cursor: 'pointer',
     }}
   >
-    <button
-      type="button"
-      className={`button ${tournamentMode === 'round_robin' ? 'primary' : 'secondary'}`}
-      onClick={() => setTournamentMode('round_robin')}
-    >
-      Round Robin
-    </button>
+    Round Robin
+  </button>
 
-    <button
-      type="button"
-      className={`button ${tournamentMode === 'cream_of_the_crop' ? 'primary' : 'secondary'}`}
-      onClick={() => setTournamentMode('cream_of_the_crop')}
-    >
-      Cream of the Crop
-    </button>
-  </div>
+  <button
+    type="button"
+    onClick={() => setTournamentMode('cream_of_the_crop')}
+    style={{
+      minHeight: 74,
+      borderRadius: 18,
+      padding: '14px 10px',
+      border:
+        tournamentMode === 'cream_of_the_crop'
+          ? '1px solid rgba(255,203,5,0.9)'
+          : '1px solid rgba(255,255,255,0.12)',
+      background:
+        tournamentMode === 'cream_of_the_crop'
+          ? 'linear-gradient(135deg, rgba(255,203,5,0.95), rgba(255,203,5,0.68))'
+          : 'rgba(255,255,255,0.05)',
+      color: tournamentMode === 'cream_of_the_crop' ? '#001428' : '#ffffff',
+      fontWeight: 900,
+      fontSize: 15,
+      boxShadow:
+        tournamentMode === 'cream_of_the_crop'
+          ? '0 12px 28px rgba(255,203,5,0.20)'
+          : 'none',
+      cursor: 'pointer',
+    }}
+  >
+    Cream of the Crop
+  </button>
 </div>
 
 {tournamentMode === 'cream_of_the_crop' && (

@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
-import { buildCreamOfTheCropStageSchedule } from '../../../lib/scheduler';
+import {
+  buildCreamOfTheCropStageSchedule,
+  buildNextCreamOfTheCropStagePlayers
+} from '../../../lib/scheduler';
 
 export const dynamic = 'force-dynamic';
 
@@ -2105,6 +2108,56 @@ async function clearPlayerSlot(slotId: string) {
     await loadTournamentData(userId);
     setMessage('Player gender saved.');
   }
+
+  async function handleGenerateSiftRound() {
+  if (!tournament) return;
+
+  setMessage('');
+
+  // 1. Check if Sort Round is complete
+  const sortMatches = matches.filter(
+    (m) => m.round_number >= 1 && m.round_number <= 3
+  );
+
+  const incomplete = sortMatches.some((m) => !m.is_complete);
+
+  if (incomplete) {
+    setMessage('Finish all Sort Round matches first.');
+    return;
+  }
+
+  // 2. Build next stage players
+  const nextPlayers = buildNextCreamOfTheCropStagePlayers(
+    playerSlots,
+    matches,
+    1
+  );
+
+  if (!nextPlayers.length) {
+    setMessage('Could not generate Sift Round.');
+    return;
+  }
+
+  // 3. Build Sift schedule (rounds 4–6)
+  const siftSchedule = buildCreamOfTheCropStageSchedule(nextPlayers, 4);
+
+  // 4. Insert into database
+  const { error } = await supabase.from('matches').insert(
+    siftSchedule.map((row) => ({
+      tournament_id: tournament.id,
+      ...row,
+      court_label: getCourtLabel(tournament, row.court_number),
+    }))
+  );
+
+  if (error) {
+    setMessage(`Failed to create Sift Round: ${error.message}`);
+    return;
+  }
+
+  await loadTournamentData(userId);
+  setMessage('Sift Round created.');
+}
 
   async function generateScheduleAndStart() {
     if (!tournament) return;
@@ -4354,6 +4407,17 @@ if (!canReportScores) {
     </button>
   </div>
 ) : null}
+
+          {tournament?.tournament_mode === 'cream_of_the_crop' && (
+            <div style={{ marginBottom: 12 }}>
+            <button
+            className="button primary"
+         onClick={handleGenerateSiftRound}
+    >
+      Generate Sift Round
+    </button>
+  </div>
+)}
 
           <div className="card-title">All Rounds</div>
           <div className="card-subtitle">

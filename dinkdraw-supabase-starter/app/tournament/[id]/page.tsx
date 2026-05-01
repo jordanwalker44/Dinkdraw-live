@@ -2159,6 +2159,56 @@ async function clearPlayerSlot(slotId: string) {
   setMessage('Sift Round created.');
 }
 
+  async function handleGenerateFinalRound() {
+  if (!tournament) return;
+
+  setMessage('');
+
+  // 1. Check if Sift Round is complete (rounds 4–6)
+  const siftMatches = matches.filter(
+    (m) => m.round_number >= 4 && m.round_number <= 6
+  );
+
+  const incomplete = siftMatches.some((m) => !m.is_complete);
+
+  if (incomplete) {
+    setMessage('Finish all Sift Round matches first.');
+    return;
+  }
+
+  // 2. Build next stage players (based on Sift results)
+  const nextPlayers = buildNextCreamOfTheCropStagePlayers(
+    playerSlots,
+    matches,
+    4
+  );
+
+  if (!nextPlayers.length) {
+    setMessage('Could not generate Final Round.');
+    return;
+  }
+
+  // 3. Build Final schedule (rounds 7–9)
+  const finalSchedule = buildCreamOfTheCropStageSchedule(nextPlayers, 7);
+
+  // 4. Insert into database
+  const { error } = await supabase.from('matches').insert(
+    finalSchedule.map((row) => ({
+      tournament_id: tournament.id,
+      ...row,
+      court_label: getCourtLabel(tournament, row.court_number),
+    }))
+  );
+
+  if (error) {
+    setMessage(`Failed to create Final Round: ${error.message}`);
+    return;
+  }
+
+  await loadTournamentData(userId);
+  setMessage('Final Round created.');
+}
+
   async function generateScheduleAndStart() {
     if (!tournament) return;
 
@@ -4409,12 +4459,19 @@ if (!canReportScores) {
 ) : null}
 
           {tournament?.tournament_mode === 'cream_of_the_crop' && (
-            <div style={{ marginBottom: 12 }}>
-            <button
-            className="button primary"
-         onClick={handleGenerateSiftRound}
+  <div style={{ marginBottom: 12, display: 'grid', gap: 8 }}>
+    <button
+      className="button primary"
+      onClick={handleGenerateSiftRound}
     >
       Generate Sift Round
+    </button>
+
+    <button
+      className="button primary"
+      onClick={handleGenerateFinalRound}
+    >
+      Generate Final Round
     </button>
   </div>
 )}

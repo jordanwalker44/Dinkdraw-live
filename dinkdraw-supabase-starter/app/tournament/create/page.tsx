@@ -346,6 +346,26 @@ router.push(`/tournament/${tournament.id}`);
   </select>
 </div>
 
+          <Stepper
+  label={`Players (min ${minPlayers})`}
+  value={playerCount}
+  min={minPlayers}
+  max={40}
+  onChange={(next) => {
+    if (tournamentMode === 'cream_of_the_crop') {
+      const diff = next - playerCount;
+
+      if (diff > 0) {
+        setPlayerCount(Math.min(40, playerCount + 4));
+      } else if (diff < 0) {
+        setPlayerCount(Math.max(minPlayers, playerCount - 4));
+      }
+    } else {
+      setPlayerCount(next);
+    }
+  }}
+/>
+
 {tournamentMode === 'round_robin' && (
   <div>
     <label className="label">Player Format</label>
@@ -599,27 +619,7 @@ router.push(`/tournament/${tournament.id}`);
     </div>
   </div>
 </div>
-
-          <Stepper
-  label={`Players (min ${minPlayers})`}
-  value={playerCount}
-  min={minPlayers}
-  max={40}
-  onChange={(next) => {
-    if (tournamentMode === 'cream_of_the_crop') {
-      const diff = next - playerCount;
-
-      if (diff > 0) {
-        setPlayerCount(Math.min(40, playerCount + 4));
-      } else if (diff < 0) {
-        setPlayerCount(Math.max(minPlayers, playerCount - 4));
-      }
-    } else {
-      setPlayerCount(next);
-    }
-  }}
-/>
-
+ 
           {tournamentMode === 'round_robin' ? (
   <Stepper
     label={`Courts (max ${maxCourtsAllowed})`}

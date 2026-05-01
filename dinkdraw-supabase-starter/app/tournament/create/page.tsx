@@ -379,6 +379,7 @@ router.push(`/tournament/${tournament.id}`);
     Cream of the Crop
   </button>
 </div>
+</div>             
 
 {tournamentMode === 'cream_of_the_crop' && (
   <div

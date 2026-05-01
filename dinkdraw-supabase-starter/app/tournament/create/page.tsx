@@ -313,9 +313,21 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 </div>
 
-            <div>
+           <div>
   <label className="label">Tournament Mode</label>
-              {tournamentMode === 'cream_of_the_crop' && (
+  <select
+    className="input"
+    value={tournamentMode}
+    onChange={(e) =>
+      setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
+    }
+  >
+    <option value="round_robin">Round Robin</option>
+    <option value="cream_of_the_crop">Cream of the Crop</option>
+  </select>
+</div>
+
+{tournamentMode === 'cream_of_the_crop' && (
   <div
     style={{
       marginTop: 10,
@@ -336,19 +348,6 @@ router.push(`/tournament/${tournament.id}`);
     </div>
   </div>
 )}
-  <div>
-  <label className="label">Tournament Mode</label>
-  <select
-    className="input"
-    value={tournamentMode}
-    onChange={(e) =>
-      setTournamentMode(e.target.value as 'round_robin' | 'cream_of_the_crop')
-    }
-  >
-    <option value="round_robin">Round Robin</option>
-    <option value="cream_of_the_crop">Cream of the Crop</option>
-  </select>
-</div>
 
           <Stepper
   label={`Players (min ${minPlayers})`}

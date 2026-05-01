@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
+import { buildCreamOfTheCropStageSchedule } from '../../../lib/scheduler';
 
 export const dynamic = 'force-dynamic';
 
@@ -2209,7 +2210,18 @@ async function clearPlayerSlot(slotId: string) {
         Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
       );
 
-      const scheduleRows = buildSchedule(
+      if (tournament.tournament_mode === 'cream_of_the_crop') {
+      if (namedPlayers.length % 4 !== 0) {
+        setMessage('Cream of the Crop requires players in groups of 4.');
+        setIsStarting(false);
+      return;
+  }
+}
+
+      const scheduleRows =
+        tournament.tournament_mode === 'cream_of_the_crop'
+        ? buildCreamOfTheCropStageSchedule(namedPlayers, 1)
+        : buildSchedule(
         namedPlayers,
         tournament.rounds,
         availableCourts,

@@ -3371,8 +3371,11 @@ if (!canReportScores) {
     setActiveTab('standings');
   }
 } else if (submittedRoundComplete && nextRound !== submittedRound) {
+  setSelectedRound(nextRound);
+  setActiveTab('rounds');
+}
 
-    const { error } = await supabase
+const { error } = await supabase
       .from('matches')
       .update({
         team_a_score: aNum,

@@ -2114,6 +2114,15 @@ async function clearPlayerSlot(slotId: string) {
 
   setMessage('');
 
+    const existingSiftMatches = matches.filter(
+  (m) => m.round_number >= 4 && m.round_number <= 6 && !m.is_bye
+);
+
+if (existingSiftMatches.length > 0) {
+  setMessage('Re-Rank Round has already been created.');
+  return;
+}
+
   // 1. Check if Sort Round is complete
   const sortMatches = matches.filter(
     (m) => m.round_number >= 1 && m.round_number <= 3
@@ -2134,7 +2143,7 @@ async function clearPlayerSlot(slotId: string) {
   );
 
   if (!nextPlayers.length) {
-    setMessage('Could not generate Sift Round.');
+    setMessage('Could not generate Re-Rank Round.');
     return;
   }
 
@@ -2156,13 +2165,22 @@ async function clearPlayerSlot(slotId: string) {
   }
 
   await loadTournamentData(userId);
-  setMessage('Sift Round created.');
+  setMessage('Re-Rank Round created.');
 }
 
   async function handleGenerateFinalRound() {
   if (!tournament) return;
 
   setMessage('');
+
+    const existingFinalMatches = matches.filter(
+  (m) => m.round_number >= 7 && m.round_number <= 9 && !m.is_bye
+);
+
+if (existingFinalMatches.length > 0) {
+  setMessage('Final Round has already been created.');
+  return;
+}
 
   // 1. Check if Sift Round is complete (rounds 4–6)
   const siftMatches = matches.filter(
@@ -2172,7 +2190,7 @@ async function clearPlayerSlot(slotId: string) {
   const incomplete = siftMatches.some((m) => !m.is_complete);
 
   if (incomplete) {
-    setMessage('Finish all Sift Round matches first.');
+    setMessage('Finish all Re-Rank Round matches first.');
     return;
   }
 
@@ -4495,7 +4513,7 @@ if (!canReportScores) {
       className="button primary"
       onClick={handleGenerateSiftRound}
     >
-      Generate Sift Round
+      Generate Re-Rank Round
     </button>
 
     <button

@@ -719,13 +719,15 @@ router.push(`/tournament/${tournament.id}`);
   />
 )}
 
-          <Stepper
-            label="Games to"
-            value={gamesTo}
-            min={1}
-            max={21}
-            onChange={setGamesTo}
-          />
+    {tournamentMode === 'round_robin' && (
+  <Stepper
+    label="Games to"
+    value={gamesTo}
+    min={1}
+    max={21}
+    onChange={setGamesTo}
+  />
+)}
 
           <div
   className="list-item"

@@ -2848,9 +2848,13 @@ function renderBestOf3Match(match: Match) {
           ) : (
             <div className="grid">
               {playerSlots.map((slot) => {
-                const liveName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
                 const isMine = slot.claimed_by_user_id === userId;
-                const isClaimedBySomeone = !!slot.claimed_by_user_id || liveName !== '';
+                const isClaimedBySomeone = !!slot.claimed_by_user_id;
+                const liveName = (
+                  isClaimedBySomeone
+                  ? slot.display_name ?? ''
+                  : newNames[slot.id] ?? slot.display_name ?? ''
+                  ).trim();
                 const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
                 const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 

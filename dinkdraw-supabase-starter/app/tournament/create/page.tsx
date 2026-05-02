@@ -719,7 +719,7 @@ router.push(`/tournament/${tournament.id}`);
   />
 )}
 
-    {tournamentMode === 'round_robin' && (
+    {tournamentMode === 'round_robin' ? (
   <Stepper
     label="Games to"
     value={gamesTo}
@@ -727,6 +727,25 @@ router.push(`/tournament/${tournament.id}`);
     max={21}
     onChange={setGamesTo}
   />
+) : (
+  <div>
+    <label className="label">Games to</label>
+    <div
+      style={{
+        height: 56,
+        borderRadius: 16,
+        background: '#001428',
+        border: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 22,
+        fontWeight: 800,
+      }}
+    >
+      11 (fixed)
+    </div>
+  </div>
 )}
 
           <div

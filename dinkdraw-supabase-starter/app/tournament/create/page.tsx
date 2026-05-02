@@ -639,10 +639,11 @@ router.push(`/tournament/${tournament.id}`);
             </div>
           ) : null}
 
-          <div>
+            <div>
             <div className="card-title" style={{ marginTop: 18 }}>
               Event Details
-  </div>
+            </div>
+
             <label className="label">Event name</label>
             <input
               className="input"
@@ -660,158 +661,164 @@ router.push(`/tournament/${tournament.id}`);
             />
           </div>
 
-       <div style={{ maxWidth: 310 }}>
-  <label className="label">Date</label>
-  <input
-    className="input"
-    type="date"
-    value={eventDate}
-    onChange={(e) => setEventDate(e.target.value)}
-  />
-</div>
+          <div style={{ maxWidth: 310 }}>
+            <label className="label">Date</label>
+            <input
+              className="input"
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+          </div>
 
-<div style={{ maxWidth: 310 }}>
-  <label className="label">Time</label>
-  <input
-    className="input"
-    type="time"
-    value={eventTime}
-    onChange={(e) => setEventTime(e.target.value)}
-  />
-</div>
+          <div style={{ maxWidth: 310 }}>
+            <label className="label">Time</label>
+            <input
+              className="input"
+              type="time"
+              value={eventTime}
+              onChange={(e) => setEventTime(e.target.value)}
+            />
+          </div>
 
           <div>
-  <label className="label">Location</label>
+            <label className="label">Location</label>
 
-  {favoriteLocations.length ? (
-    <div style={{ marginBottom: 10 }}>
-      <select
-        className="input"
-        value={selectedFavoriteLocationId}
-        onChange={(e) => {
-          const selectedId = e.target.value;
-          setSelectedFavoriteLocationId(selectedId);
+            {favoriteLocations.length ? (
+              <div style={{ marginBottom: 10 }}>
+                <select
+                  className="input"
+                  value={selectedFavoriteLocationId}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    setSelectedFavoriteLocationId(selectedId);
 
-          const selected = favoriteLocations.find((item) => item.id === selectedId);
-          if (selected) {
-            setLocation(selected.location);
-            setFavoriteLocationName(selected.name);
-          }
-        }}
-      >
-        <option value="">Choose a saved location...</option>
-        {favoriteLocations.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.name}
-          </option>
-        ))}
-      </select>
-    </div>
-  ) : null}
+                    const selected = favoriteLocations.find((item) => item.id === selectedId);
+                    if (selected) {
+                      setLocation(selected.location);
+                      setFavoriteLocationName(selected.name);
+                    }
+                  }}
+                >
+                  <option value="">Choose a saved location...</option>
+                  {favoriteLocations.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
 
-  <input
-    className="input"
-    value={location}
-    onChange={(e) => {
-      setLocation(e.target.value);
-      setSelectedFavoriteLocationId('');
-    }}
-    placeholder="Courts, gym, park..."
-  />
-</div>
+            <input
+              className="input"
+              value={location}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                setSelectedFavoriteLocationId('');
+              }}
+              placeholder="Courts, gym, park..."
+            />
+          </div>
 
-  {tournamentMode === 'round_robin' && playoffFormat === 'custom' && (
-  <div>
-    <label className="label">Number of Teams Advancing</label>
-    <input
-      type="number"
-      className="input"
-      value={playoffAdvanceCount}
-      onChange={(e) => setPlayoffAdvanceCount(Number(e.target.value))}
-      min={2}
-    />
-  </div>
-)}
+          {tournamentMode === 'round_robin' && playoffFormat === 'custom' && (
+            <div>
+              <label className="label">Number of Teams Advancing</label>
+              <input
+                type="number"
+                className="input"
+                value={playoffAdvanceCount}
+                onChange={(e) => setPlayoffAdvanceCount(Number(e.target.value))}
+                min={2}
+              />
+            </div>
+          )}
 
-{tournamentMode === 'round_robin' && playoffFormat !== 'none' && (
-  <div>
-    <label className="label">Seeding Style</label>
-    <select
-      className="input"
-      value={playoffSeedingStyle}
-      onChange={(e) => setPlayoffSeedingStyle(e.target.value as any)}
-    >
-      <option value="traditional">Traditional (Byes for top seeds)</option>
-      <option value="simple">Simple (1 vs Last)</option>
-    </select>
-  </div>
-)}        
+          {tournamentMode === 'round_robin' && playoffFormat !== 'none' && (
+            <div>
+              <label className="label">Seeding Style</label>
+              <select
+                className="input"
+                value={playoffSeedingStyle}
+                onChange={(e) => setPlayoffSeedingStyle(e.target.value as any)}
+              >
+                <option value="traditional">Traditional (Byes for top seeds)</option>
+                <option value="simple">Simple (1 vs Last)</option>
+              </select>
+            </div>
+          )}
 
-   <div
-  className="list-item"
-  style={{
-    padding: 14,
-    borderRadius: 16,
-    border: '1px solid rgba(255,203,5,0.18)',
-    background: 'rgba(255,203,5,0.05)',
-  }}
->
-  Optional Settings
-</div>
-  <label className="label">Saved Location</label>
-
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-    <input
-      type="checkbox"
-      checked={saveLocationForLater}
-      onChange={(e) => setSaveLocationForLater(e.target.checked)}
-      style={{ marginTop: 4 }}
-    />
-
-          <div style={{ flex: 1 }}>
-      <div style={{ fontWeight: 800 }}>
-        Save this location for next time
-      </div>
-
-      {saveLocationForLater ? (
-        <input
-          className="input"
-          value={favoriteLocationName}
-          onChange={(e) => setFavoriteLocationName(e.target.value)}
-          placeholder="Location nickname, like Legacy Courts"
-          style={{ marginTop: 10 }}
-        />
-      ) : null}
-    </div>
-  </div>
-</div>       
+          <div className="card-title" style={{ marginTop: 18 }}>
+            Optional Settings
+          </div>
 
           <div
-  className="list-item"
-  style={{
-    padding: 14,
-    borderRadius: 16,
-    border: '1px solid rgba(255,203,5,0.18)',
-    background: 'rgba(255,203,5,0.05)',
-  }}
->
-  <label className="label">Score Reporting</label>
+            className="list-item"
+            style={{
+              padding: 14,
+              borderRadius: 16,
+              border: '1px solid rgba(255,203,5,0.18)',
+              background: 'rgba(255,203,5,0.05)',
+            }}
+          >
+            <label className="label">Saved Location</label>
 
-  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-    <input
-      type="checkbox"
-      checked={allowPlayerScoreReporting}
-      onChange={(e) => setAllowPlayerScoreReporting(e.target.checked)}
-      style={{ marginTop: 4 }}
-    />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <input
+                type="checkbox"
+                checked={saveLocationForLater}
+                onChange={(e) => setSaveLocationForLater(e.target.checked)}
+                style={{ marginTop: 4 }}
+              />
 
-          <div>
-      <div style={{ fontWeight: 800 }}>
-        Allow players to submit scores
-      </div>
-    </div>
-  </div>
-</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 800 }}>
+                  Save this location for next time
+                </div>
+
+                {saveLocationForLater ? (
+                  <input
+                    className="input"
+                    value={favoriteLocationName}
+                    onChange={(e) => setFavoriteLocationName(e.target.value)}
+                    placeholder="Location nickname, like Legacy Courts"
+                    style={{ marginTop: 10 }}
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className="list-item"
+            style={{
+              padding: 14,
+              borderRadius: 16,
+              border: '1px solid rgba(255,203,5,0.18)',
+              background: 'rgba(255,203,5,0.05)',
+            }}
+          >
+            <label className="label">Score Reporting</label>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <input
+                type="checkbox"
+                checked={allowPlayerScoreReporting}
+                onChange={(e) => setAllowPlayerScoreReporting(e.target.checked)}
+                style={{ marginTop: 4 }}
+              />
+
+              <div>
+                <div style={{ fontWeight: 800 }}>
+                  Allow players to submit scores
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-title" style={{ marginTop: 18 }}>
+            Review
+          </div>
  
           <div
   className="list-item"

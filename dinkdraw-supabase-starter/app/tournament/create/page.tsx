@@ -723,15 +723,17 @@ router.push(`/tournament/${tournament.id}`);
               </div>
             ) : null}
 
+            {!selectedFavoriteLocationId ? (
             <input
-              className="input"
-              value={location}
-              onChange={(e) => {
-                setLocation(e.target.value);
-                setSelectedFavoriteLocationId('');
-              }}
-              placeholder="Courts, gym, park..."
-            />
+            className="input"
+            value={location}
+            onChange={(e) => {
+            setLocation(e.target.value);
+            setSelectedFavoriteLocationId('');
+          }}
+            placeholder="Courts, gym, park..."
+  />
+) : null}
           </div>
 
           {tournamentMode === 'round_robin' && playoffFormat === 'custom' && (

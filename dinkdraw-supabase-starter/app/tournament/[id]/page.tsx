@@ -1349,37 +1349,55 @@ const currentRoundComplete = useMemo(
     load();
   }, [params.id, supabase]);
 
-  useEffect(() => {
-  if (activeTab !== 'players' || isLocked) return;
+    useEffect(() => {
+    if (isLocked) return;
 
-  const refreshPlayerSpots = async () => {
-    const { data } = await supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', params.id)
-      .order('slot_number', { ascending: true });
+    let isMounted = true;
 
-    const freshPlayers = data || [];
+    async function refreshPlayerSlotsOnly() {
+      const { data } = await supabase
+        .from('tournament_players')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('slot_number', { ascending: true });
 
-    setPlayerSlots(freshPlayers);
+      if (!isMounted) return;
 
-    setNewNames(() => {
-      const next: Record<string, string> = {};
-      for (const slot of freshPlayers) {
-        next[slot.id] = slot.display_name || '';
-      }
-      return next;
-    });
-  };
+      const freshPlayers = data || [];
 
-  const intervalId = window.setInterval(refreshPlayerSpots, 1500);
+      setPlayerSlots(freshPlayers);
 
-  return () => {
-    window.clearInterval(intervalId);
-  };
-}, [activeTab, isLocked, params.id, supabase]);
+      setNewNames(() => {
+        const next: Record<string, string> = {};
+        for (const slot of freshPlayers) {
+          next[slot.id] = slot.display_name || '';
+        }
+        return next;
+      });
+    }
 
-useEffect(() => {
+    void refreshPlayerSlotsOnly();
+
+    const intervalId = window.setInterval(() => {
+      void refreshPlayerSlotsOnly();
+    }, 2000);
+
+    function handleFocusRefresh() {
+      void refreshPlayerSlotsOnly();
+    }
+
+    window.addEventListener('focus', handleFocusRefresh);
+    document.addEventListener('visibilitychange', handleFocusRefresh);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocusRefresh);
+      document.removeEventListener('visibilitychange', handleFocusRefresh);
+    };
+  }, [isLocked, params.id, supabase]);
+
+      useEffect(() => {
   const channel = supabase
     .channel(`organizer-tournament-live-${params.id}`)
     .on(

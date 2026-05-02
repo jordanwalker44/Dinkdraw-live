@@ -39,7 +39,7 @@ function Stepper({
   style={{
     display: 'grid',
     gridTemplateColumns: '64px 1fr 64px',
-    gap: 10,
+    gap: 8,
     alignItems: 'center',
   }}
 >
@@ -319,7 +319,7 @@ router.push(`/tournament/${tournament.id}`);
       <TopNav />
 
       <div className="card">
-        <div className="grid">
+        <div className="grid" style={{ gap: 12 }}>
 
           <div>
             <div className="card-title" style={{ color: '#FFCB05', marginBottom: 6 }}>
@@ -334,7 +334,7 @@ router.push(`/tournament/${tournament.id}`);
   style={{
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: 10,
+    gap: 8,
   }}
 >
   <button
@@ -427,7 +427,7 @@ router.push(`/tournament/${tournament.id}`);
   style={{
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: 8,
+    gap: 6,
     marginTop: 12,
   }}
 >
@@ -625,7 +625,7 @@ router.push(`/tournament/${tournament.id}`);
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                  gap: 8,
+                  gap: 6,
                 }}
               >
                 <button
@@ -654,7 +654,7 @@ router.push(`/tournament/${tournament.id}`);
           ) : null}
 
             <div>
-            <div className="card-title" style={{ marginTop: 18 }}>
+            <div className="card-title" style={{ marginTop: 14 }}>
               Event Details
             </div>
 
@@ -762,14 +762,14 @@ router.push(`/tournament/${tournament.id}`);
             </div>
           )}
 
-          <div className="card-title" style={{ marginTop: 18 }}>
+          <div className="card-title" style={{ marginTop: 14 }}>
             Optional Settings
           </div>
 
           <div
             className="list-item"
             style={{
-              padding: 14,
+              padding: 12,
               borderRadius: 16,
               border: '1px solid rgba(255,203,5,0.18)',
               background: 'rgba(255,203,5,0.05)',
@@ -806,7 +806,7 @@ router.push(`/tournament/${tournament.id}`);
           <div
             className="list-item"
             style={{
-              padding: 14,
+              padding: 12,
               borderRadius: 16,
               border: '1px solid rgba(255,203,5,0.18)',
               background: 'rgba(255,203,5,0.05)',
@@ -830,7 +830,7 @@ router.push(`/tournament/${tournament.id}`);
             </div>
           </div>
 
-          <div className="card-title" style={{ marginTop: 18 }}>
+          <div className="card-title" style={{ marginTop: 14 }}>
             Review
           </div>
  

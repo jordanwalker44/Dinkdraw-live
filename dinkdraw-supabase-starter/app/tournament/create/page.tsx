@@ -400,15 +400,75 @@ router.push(`/tournament/${tournament.id}`);
       background: 'rgba(255,203,5,0.06)',
     }}
   >
-    <div style={{ fontWeight: 800, marginBottom: 6 }}>
-      Cream of the Crop Format
-    </div>
-    <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
-      • Doubles only<br />
-      • 3 stages (Sort, Re-Rank, Final)<br />
-      • 9 total rounds<br />
-      • Players move up/down based on performance
-    </div>
+ <div style={{ fontWeight: 900, marginBottom: 6, color: '#FFCB05' }}>
+  Guided Cream of the Crop Setup
+</div>
+
+<div className="muted" style={{ fontSize: 13, lineHeight: 1.55 }}>
+  Pick the number of players. DinkDraw will automatically set doubles, courts,
+  9 rounds, and games to 11.
+</div>
+
+<div
+  style={{
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
+    marginTop: 12,
+  }}
+>
+  <div
+    style={{
+      padding: 10,
+      borderRadius: 14,
+      background: 'rgba(0,20,40,0.55)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      fontSize: 12,
+      fontWeight: 800,
+    }}
+  >
+    3 stages
+  </div>
+
+  <div
+    style={{
+      padding: 10,
+      borderRadius: 14,
+      background: 'rgba(0,20,40,0.55)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      fontSize: 12,
+      fontWeight: 800,
+    }}
+  >
+    9 rounds
+  </div>
+
+  <div
+    style={{
+      padding: 10,
+      borderRadius: 14,
+      background: 'rgba(0,20,40,0.55)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      fontSize: 12,
+      fontWeight: 800,
+    }}
+  >
+    Doubles only
+  </div>
+
+  <div
+    style={{
+      padding: 10,
+      borderRadius: 14,
+      background: 'rgba(0,20,40,0.55)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      fontSize: 12,
+      fontWeight: 800,
+    }}
+  >
+    Games to 11
+  </div>
+</div>
   </div>
 )}
 

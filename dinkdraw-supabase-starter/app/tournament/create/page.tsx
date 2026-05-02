@@ -289,30 +289,6 @@ setFavoriteLocations(savedLocations || []);
       return;
     }
 
-    const playerRows = Array.from({ length: playerCount }, (_, i) => ({
-      tournament_id: tournament.id,
-      slot_number: i + 1,
-      display_name: '',
-    }));
-
-    await supabase.from('tournament_players').insert(playerRows);
-
-    if (saveLocationForLater && location.trim()) {
-      await supabase.from('favorite_locations').insert({
-        user_id: user.id,
-        name: favoriteLocationName.trim() || location.trim(),
-        location: location.trim(),
-      });
-    }
-
-    router.push(`/tournament/${tournament.id}`);
-  } catch (err) {
-    setMessage(err instanceof Error ? err.message : 'Something went wrong.');
-  }
-
-  setIsCreating(false);
-}
-
       const playerRows = Array.from({ length: playerCount }, (_, i) => ({
         tournament_id: tournament.id,
         slot_number: i + 1,

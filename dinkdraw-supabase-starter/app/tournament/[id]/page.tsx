@@ -1297,12 +1297,12 @@ const currentRoundComplete = useMemo(
 
     if ((playersData || []).length > 0) {
     setNewNames(() => {
-      const next: Record<string, string> = {};
-      for (const slot of playersData || []) {
-        next[slot.id] = slot.display_name || '';
-      }
-      return next;
-    });
+  const next: Record<string, string> = {};
+  for (const slot of playersData || []) {
+    next[slot.id] = slot.display_name || '';
+  }
+  return next;
+});
   }
 
   if (currentUserId) setUserId(currentUserId);
@@ -1348,6 +1348,36 @@ const currentRoundComplete = useMemo(
     }
     load();
   }, [params.id, supabase]);
+
+  useEffect(() => {
+  if (activeTab !== 'players' || isLocked) return;
+
+  const refreshPlayerSpots = async () => {
+    const { data } = await supabase
+      .from('tournament_players')
+      .select('*')
+      .eq('tournament_id', params.id)
+      .order('slot_number', { ascending: true });
+
+    const freshPlayers = data || [];
+
+    setPlayerSlots(freshPlayers);
+
+    setNewNames(() => {
+      const next: Record<string, string> = {};
+      for (const slot of freshPlayers) {
+        next[slot.id] = slot.display_name || '';
+      }
+      return next;
+    });
+  };
+
+  const intervalId = window.setInterval(refreshPlayerSpots, 1500);
+
+  return () => {
+    window.clearInterval(intervalId);
+  };
+}, [activeTab, isLocked, params.id, supabase]);
 
 useEffect(() => {
   const channel = supabase

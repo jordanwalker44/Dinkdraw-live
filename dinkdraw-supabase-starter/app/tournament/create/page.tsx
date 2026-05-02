@@ -432,6 +432,74 @@ router.push(`/tournament/${tournament.id}`);
   }}
 />
 
+   {tournamentMode === 'round_robin' ? (
+  <Stepper
+    label={`Courts (max ${maxCourtsAllowed})`}
+    value={courts}
+    min={1}
+    max={maxCourtsAllowed}
+    onChange={setCourts}
+  />
+) : (
+  <div>
+    <label className="label">Courts</label>
+    <div
+      style={{
+        height: 56,
+        borderRadius: 16,
+        background: '#001428',
+        border: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 22,
+        fontWeight: 800,
+      }}
+    >
+      {courts} (auto-calculated)
+    </div>
+  </div>
+)}
+
+          {tournamentMode === 'round_robin' && (
+  <Stepper
+    label="Rounds"
+    value={rounds}
+    min={1}
+    max={30}
+    onChange={setRounds}
+  />
+)}
+
+    {tournamentMode === 'round_robin' ? (
+  <Stepper
+    label="Games to"
+    value={gamesTo}
+    min={1}
+    max={21}
+    onChange={setGamesTo}
+  />
+) : (
+  <div>
+    <label className="label">Games to</label>
+    <div
+      style={{
+        height: 56,
+        borderRadius: 16,
+        background: '#001428',
+        border: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 22,
+        fontWeight: 800,
+      }}
+    >
+      11 (fixed)
+    </div>
+  </div>
+)}
+
 {tournamentMode === 'round_robin' && (
   <div>
     <label className="label">Player Format</label>
@@ -680,74 +748,6 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 </div>
  
-          {tournamentMode === 'round_robin' ? (
-  <Stepper
-    label={`Courts (max ${maxCourtsAllowed})`}
-    value={courts}
-    min={1}
-    max={maxCourtsAllowed}
-    onChange={setCourts}
-  />
-) : (
-  <div>
-    <label className="label">Courts</label>
-    <div
-      style={{
-        height: 56,
-        borderRadius: 16,
-        background: '#001428',
-        border: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 22,
-        fontWeight: 800,
-      }}
-    >
-      {courts} (auto-calculated)
-    </div>
-  </div>
-)}
-
-          {tournamentMode === 'round_robin' && (
-  <Stepper
-    label="Rounds"
-    value={rounds}
-    min={1}
-    max={30}
-    onChange={setRounds}
-  />
-)}
-
-    {tournamentMode === 'round_robin' ? (
-  <Stepper
-    label="Games to"
-    value={gamesTo}
-    min={1}
-    max={21}
-    onChange={setGamesTo}
-  />
-) : (
-  <div>
-    <label className="label">Games to</label>
-    <div
-      style={{
-        height: 56,
-        borderRadius: 16,
-        background: '#001428',
-        border: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 22,
-        fontWeight: 800,
-      }}
-    >
-      11 (fixed)
-    </div>
-  </div>
-)}
-
           <div
   className="list-item"
   style={{

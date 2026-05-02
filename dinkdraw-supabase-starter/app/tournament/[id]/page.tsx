@@ -1509,6 +1509,38 @@ useEffect(() => {
     setMessage('Spot claimed.');
   }
 
+    async function clearPlayerSpot(slotId: string) {
+    if (!isOrganizer) {
+      setMessage('Only the organizer can clear player spots.');
+      return;
+    }
+
+    if (isLocked) {
+      setMessage('Tournament already started. Player spots are locked.');
+      return;
+    }
+
+    setMessage('');
+
+    const { error } = await supabase
+      .from('tournament_players')
+      .update({
+        claimed_by_user_id: null,
+        display_name: '',
+        gender: null,
+      })
+      .eq('id', slotId);
+
+    if (error) {
+      setMessage(`Clear failed: ${error.message}`);
+      return;
+    }
+
+    setNewNames((prev) => ({ ...prev, [slotId]: '' }));
+    await loadTournamentData(userId);
+    setMessage('Player spot cleared.');
+  }
+
   async function saveAllPlayerNames() {
     if (isLocked) { setMessage('Player names are locked.'); return; }
     setMessage('');
@@ -2830,9 +2862,23 @@ function renderBestOf3Match(match: Match) {
                         </div>
                       ) : null}
 
-                      {!isLocked && canClaim ? (
+                                            {!isLocked && canClaim ? (
                         <button className="button primary" onClick={() => claimSlot(slot.id)}>
                           Claim Spot
+                        </button>
+                      ) : null}
+
+                      {!isLocked && isOrganizer && isClaimedBySomeone ? (
+                        <button
+                          type="button"
+                          className="button secondary"
+                          onClick={() => clearPlayerSpot(slot.id)}
+                          style={{
+                            borderColor: 'rgba(248,113,113,.4)',
+                            color: '#f87171',
+                          }}
+                        >
+                          Clear Spot
                         </button>
                       ) : null}
                     </div>

@@ -1295,13 +1295,11 @@ const currentRoundComplete = useMemo(
     } catch {}
   }
 
-  if ((playersData || []).length > 0) {
-    setNewNames((prev) => {
-      const next = { ...prev };
+    if ((playersData || []).length > 0) {
+    setNewNames(() => {
+      const next: Record<string, string> = {};
       for (const slot of playersData || []) {
-        if (typeof next[slot.id] !== 'string') {
-          next[slot.id] = slot.display_name || '';
-        }
+        next[slot.id] = slot.display_name || '';
       }
       return next;
     });

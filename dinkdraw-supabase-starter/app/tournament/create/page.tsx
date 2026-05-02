@@ -864,6 +864,7 @@ router.push(`/tournament/${tournament.id}`);
         } • ${rounds} rounds`}
   </div>
 </div> 
+</div>
 
           <div className="muted" style={{ marginBottom: 8, textAlign: 'center' }}>
   Review your setup, then create your tournament

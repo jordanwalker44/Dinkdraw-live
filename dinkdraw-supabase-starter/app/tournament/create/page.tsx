@@ -348,7 +348,10 @@ router.push(`/tournament/${tournament.id}`);
       cursor: 'pointer',
     }}
   >
-    Round Robin
+        <div style={{ fontSize: 15, fontWeight: 900 }}>Round Robin</div>
+    <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
+      Flexible scheduling
+    </div>
   </button>
 
   <button
@@ -373,10 +376,16 @@ router.push(`/tournament/${tournament.id}`);
         tournamentMode === 'cream_of_the_crop'
           ? '0 12px 28px rgba(255,203,5,0.20)'
           : 'none',
-      cursor: 'pointer',
+            cursor: 'pointer',
+      textAlign: 'center',
     }}
   >
-    Cream of the Crop
+        <div style={{ fontSize: 15, fontWeight: 900 }}>
+      Cream of the Crop
+    </div>
+    <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
+      Ladder-style progression
+    </div>
   </button>
 </div>
 </div>             

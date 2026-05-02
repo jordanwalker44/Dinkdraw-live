@@ -642,7 +642,7 @@ router.push(`/tournament/${tournament.id}`);
           <div>
             <div className="card-title" style={{ marginTop: 18 }}>
               Event Details
-  {</div>
+  </div>
             <label className="label">Event name</label>
             <input
               className="input"
@@ -755,7 +755,7 @@ router.push(`/tournament/${tournament.id}`);
     border: '1px solid rgba(255,203,5,0.18)',
     background: 'rgba(255,203,5,0.05)',
   }}
->((((.<div className="card-title" style={{ marginTop: 18 }}>
+>
   Optional Settings
 </div>
   <label className="label">Saved Location</label>
@@ -814,7 +814,7 @@ router.push(`/tournament/${tournament.id}`);
 </div>
  
           <div
-  className="list-item"q
+  className="list-item"
   style={{
     border: '1px solid rgba(255,203,5,0.25)',
     background: 'rgba(255,203,5,0.06)',

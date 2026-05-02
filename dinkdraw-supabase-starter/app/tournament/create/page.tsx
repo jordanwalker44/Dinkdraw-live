@@ -204,91 +204,114 @@ setFavoriteLocations(savedLocations || []);
   }, [format]);
 
   async function handleCreate() {
-    setMessage('');
+  setMessage('');
 
-    if (!isValidSetup) {
-      setMessage(`You need at least ${minPlayers} players for ${format}.`);
+  if (!isValidSetup) {
+    setMessage(`You need at least ${minPlayers} players for ${format}.`);
+    return;
+  }
+
+  if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
+    setMessage('Cream of the Crop requires players in groups of 4.');
+    return;
+  }
+
+  if (!title.trim()) {
+    setMessage('Please enter a tournament name.');
+    return;
+  }
+
+  setIsCreating(true);
+
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+
+    if (!user) {
+      setMessage('Sign in first.');
+      setIsCreating(false);
       return;
     }
 
-      if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
-  setMessage('Cream of the Crop requires players in groups of 4.');
-  return;
-}
+    const safeOrganizerName =
+      organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
 
-      if (!title.trim()) {
-      setMessage('Please enter a tournament name.');
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      display_name: safeOrganizerName,
+      email: user.email,
+    });
+
+    const joinCode = makeJoinCode();
+
+    const { data: tournament, error } = await supabase
+      .from('tournaments')
+      .insert({
+        title: title.trim(),
+        organizer_user_id: user.id,
+        organizer_name: safeOrganizerName,
+        join_code: joinCode,
+        event_date: eventDate || null,
+        event_time: eventTime || null,
+        location: location.trim() || null,
+        player_count: playerCount,
+        courts,
+        rounds,
+        games_to: gamesTo,
+        status: 'draft',
+        format,
+        match_format: matchFormat,
+        doubles_mode: doublesMode,
+        tournament_mode: tournamentMode,
+        court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
+        allow_player_score_reporting: allowPlayerScoreReporting,
+        playoff_format: playoffFormat,
+        playoff_advance_count:
+          playoffFormat === 'custom'
+            ? playoffAdvanceCount
+            : playoffFormat === 'everyone'
+            ? playerCount
+            : playoffFormat === 'top_4'
+            ? 4
+            : playoffFormat === 'top_8'
+            ? 8
+            : playoffFormat === 'top_16'
+            ? 16
+            : null,
+        playoff_seeding_style: playoffSeedingStyle,
+      })
+      .select()
+      .single();
+
+    if (error || !tournament) {
+      setMessage(error?.message || 'Failed to create tournament.');
+      setIsCreating(false);
       return;
     }
 
-    setIsCreating(true);
+    const playerRows = Array.from({ length: playerCount }, (_, i) => ({
+      tournament_id: tournament.id,
+      slot_number: i + 1,
+      display_name: '',
+    }));
 
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData.user;
+    await supabase.from('tournament_players').insert(playerRows);
 
-      if (!user) {
-        setMessage('Sign in first.');
-        setIsCreating(false);
-        return;
-      }
-
-      const safeOrganizerName =
-        organizerName.trim() || user.email?.split('@')[0] || 'Organizer';
-
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        display_name: safeOrganizerName,
-        email: user.email,
+    if (saveLocationForLater && location.trim()) {
+      await supabase.from('favorite_locations').insert({
+        user_id: user.id,
+        name: favoriteLocationName.trim() || location.trim(),
+        location: location.trim(),
       });
+    }
 
-      const joinCode = makeJoinCode();
+    router.push(`/tournament/${tournament.id}`);
+  } catch (err) {
+    setMessage(err instanceof Error ? err.message : 'Something went wrong.');
+  }
 
-          const { data: tournament, error } = await supabase
-        .from('tournaments')
-       .insert({
-  title: title.trim(),
-  organizer_user_id: user.id,
-  organizer_name: safeOrganizerName,
-  join_code: joinCode,
-  event_date: eventDate || null,
-  event_time: eventTime || null,
-  location: location.trim() || null,
-  player_count: playerCount,
-  courts,
-  rounds,
-  games_to: gamesTo,
-  status: 'draft',
-  format,
-  match_format: matchFormat,
-  doubles_mode: doublesMode,
-  tournament_mode: tournamentMode,
-  court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
-  allow_player_score_reporting: allowPlayerScoreReporting,
-
-  playoff_format: playoffFormat,
-  playoff_advance_count:
-    playoffFormat === 'custom'
-      ? playoffAdvanceCount
-      : playoffFormat === 'everyone'
-      ? playerCount
-      : playoffFormat === 'top_4'
-      ? 4
-      : playoffFormat === 'top_8'
-      ? 8
-      : playoffFormat === 'top_16'
-      ? 16
-      : null,
-  playoff_seeding_style: playoffSeedingStyle,
-})
-        .select()
-        .single();
-
-      if (error || !tournament) {
-        setMessage(error?.message || 'Failed to create tournament.');
-        setIsCreating(false);
-        return;
-      }
+  setIsCreating(false);
+}
 
       const playerRows = Array.from({ length: playerCount }, (_, i) => ({
         tournament_id: tournament.id,

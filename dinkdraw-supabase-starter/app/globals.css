@@ -220,7 +220,6 @@ img {
 }
 
 .card:active {
-  transform: scale(0.98);
 }
 
 .card + .card {
@@ -331,7 +330,6 @@ textarea.input:focus {
 
 .button:active,
 .action-button:active {
-  transform: scale(0.99);
 }
 
 .button.primary,
@@ -348,7 +346,6 @@ textarea.input:focus {
 
 .button.primary:active,
 .action-button.green:active {
-  transform: scale(0.97);
   box-shadow:
     0 6px 14px rgba(255,203,5,0.22),
     0 1px 3px rgba(0, 0, 0, 0.3);
@@ -363,7 +360,6 @@ textarea.input:focus {
 
 .button.secondary:active,
 .action-button.black:active {
-  transform: scale(0.99);
   border-color: rgba(255,203,5,0.35);
 }
 
@@ -461,7 +457,6 @@ textarea.input:focus {
 }
 
 .nav-avatar:active {
-  transform: scale(0.92);
   box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.25);
 }
 
@@ -594,15 +589,12 @@ box-shadow:
 
 @keyframes livePulse {
   0% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(255, 203, 5, 0.18);
   }
   50% {
-    transform: scale(1.03);
     box-shadow: 0 0 0 6px rgba(255, 203, 5, 0);
   }
   100% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(255, 203, 5, 0);
   }
 }
@@ -685,14 +677,11 @@ box-shadow:
 @keyframes claimPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 203, 5, 0.6);
-    transform: scale(1);
   }
   50% {
     box-shadow: 0 0 16px 6px rgba(255, 203, 5, 0.35);
-    transform: scale(1.04);
   }
   100% {
     box-shadow: 0 0 0 0 rgba(255, 203, 5, 0);
-    transform: scale(1);
   }
 }

@@ -713,7 +713,7 @@ router.push(`/tournament/${tournament.id}`);
                     }
                   }}
                 >
-                  <option value="">Use custom location…</option>
+                  <option value="">Use saved location…</option>
                   {favoriteLocations.map((item) => (
                     <option key={item.id} value={item.id}>
                       {item.name}

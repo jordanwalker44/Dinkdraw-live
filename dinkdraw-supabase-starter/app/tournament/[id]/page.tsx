@@ -2848,8 +2848,9 @@ function renderBestOf3Match(match: Match) {
           ) : (
             <div className="grid">
               {playerSlots.map((slot) => {
+                const liveName = (newNames[slot.id] ?? slot.display_name ?? '').trim();
                 const isMine = slot.claimed_by_user_id === userId;
-                const isClaimedBySomeone = !!slot.claimed_by_user_id;
+                const isClaimedBySomeone = !!slot.claimed_by_user_id || liveName !== '';
                 const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
                 const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 
@@ -2858,14 +2859,14 @@ function renderBestOf3Match(match: Match) {
                     <div className="row-between" style={{ marginBottom: 10 }}>
                       <div>
                         <div style={{ fontWeight: 800 }}>Player {slot.slot_number}</div>
-                        <div className="muted">{slot.display_name || 'Open spot'}</div>
+                        <div className="muted">{liveName || 'Open spot'}</div>
                       </div>
                       {isMine ? <span className="tag green">Yours</span> : isClaimedBySomeone ? <span className="tag green">Claimed</span> : isLocked ? <span className="tag">Locked</span> : <span className="tag">Open</span>}
                     </div>
                                         <div className="grid">
                       <input
                         className="input"
-                        value={newNames[slot.id] ?? ''}
+                        value={liveName}
                         onChange={(e) =>
                           setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
                         }

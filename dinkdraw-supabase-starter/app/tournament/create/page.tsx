@@ -852,20 +852,19 @@ router.push(`/tournament/${tournament.id}`);
     Tournament Summary
   </div>
 
- <div style={{ fontSize: 15, lineHeight: 1.5 }}>
-  {tournamentMode === 'cream_of_the_crop' ? (
-    <>
-      Cream of the Crop • Doubles • 3 stages (9 rounds) • {playerCount} players • {courts} courts
-    </>
-  ) : (
-    <>
-      {format === 'singles' ? 'Singles' : 'Doubles'} •{' '}
-      {matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'} •{' '}
-      {playerCount} players • {courts} courts • {rounds} rounds
-    </>
-  )}
-</div>
-</div>
+    <div style={{ fontSize: 15, lineHeight: 1.5 }}>
+  <div style={{ fontWeight: 800 }}>
+    {playerCount} players • {courts} courts
+  </div>
+
+  <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+    {tournamentMode === 'cream_of_the_crop'
+      ? 'Cream of the Crop • 9 rounds • Doubles'
+      : `${format === 'singles' ? 'Singles' : 'Doubles'} • ${
+          matchFormat === 'best_of_3' ? 'Best of 3' : 'Single Game'
+        } • ${rounds} rounds`}
+  </div>
+</div> 
 
           <div className="muted" style={{ marginBottom: 8, textAlign: 'center' }}>
   Review your setup, then create your tournament
@@ -878,10 +877,13 @@ router.push(`/tournament/${tournament.id}`);
     onClick={handleCreate}
     disabled={isCreating}
     style={{
-      height: 56,
-      fontSize: 16,
-      borderRadius: 16,
-    }}
+  height: 60,
+  fontSize: 17,
+  borderRadius: 18,
+  fontWeight: 900,
+  letterSpacing: 0.2,
+  boxShadow: '0 14px 32px rgba(255,203,5,0.25)',
+}}
   >
     {isCreating ? 'Creating...' : 'Create Tournament'}
   </button>

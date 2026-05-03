@@ -1451,9 +1451,7 @@ const currentRoundComplete = useMemo(
   // 🔥 CLEAR stale draft names when claims update
   setNewNames({});
 }
-    )
-    .subscribe();
-        
+    )    
     .on(
       'postgres_changes',
       {

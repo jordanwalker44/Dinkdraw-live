@@ -1,4 +1,4 @@
-'use client';
+    'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -3297,7 +3297,13 @@ function renderBestOf3Match(match: Match) {
                     className="input"
                     style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                     type="number"
-                    value={draft.team_a_score}
+                    value={
+                isOrganizer
+                ? draft.team_a_score
+                : match.team_a_score === null
+                ? ''
+                : String(match.team_a_score)
+}
                     disabled={!isOrganizer || match.is_complete || isCompleted}
                     onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                     onBlur={() => saveScoreField(match.id, 'team_a_score')}
@@ -3313,7 +3319,13 @@ function renderBestOf3Match(match: Match) {
                     className="input"
                     style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                     type="number"
-                    value={draft.team_b_score}
+                    value={
+                  isOrganizer
+                  ? draft.team_b_score
+                  : match.team_b_score === null
+                  ? ''
+                  : String(match.team_b_score)
+              }
                     disabled={!isOrganizer || match.is_complete || isCompleted}
                     onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                     onBlur={() => saveScoreField(match.id, 'team_b_score')}

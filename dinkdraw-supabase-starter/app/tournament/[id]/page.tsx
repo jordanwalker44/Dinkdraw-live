@@ -1452,6 +1452,8 @@ const currentRoundComplete = useMemo(
   setNewNames({});
 }
     )
+    .subscribe();
+        
     .on(
       'postgres_changes',
       {

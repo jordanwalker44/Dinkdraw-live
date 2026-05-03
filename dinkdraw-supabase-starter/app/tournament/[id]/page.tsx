@@ -1446,8 +1446,11 @@ const currentRoundComplete = useMemo(
         filter: `tournament_id=eq.${params.id}`,
       },
       async () => {
-        await loadTournamentData();
-      }
+  await loadTournamentData();
+
+  // 🔥 CLEAR stale draft names when claims update
+  setNewNames({});
+}
     )
     .on(
       'postgres_changes',

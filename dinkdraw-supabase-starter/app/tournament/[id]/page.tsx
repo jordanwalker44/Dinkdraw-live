@@ -1261,6 +1261,55 @@ const currentRoundComplete = useMemo(
     setActiveTab('rounds');
   }
 }, [isOrganizer, isStarted]);
+
+    useEffect(() => {
+    if (isOrganizer || !isStarted || isCompleted) return;
+
+    let cancelled = false;
+
+    async function refreshMatchesOnly() {
+      const { data } = await supabase
+        .from('matches')
+        .select('*')
+        .eq('tournament_id', params.id)
+        .order('round_number', { ascending: true })
+        .order('court_number', { ascending: true });
+
+      if (cancelled) return;
+
+      const freshMatches = data || [];
+      setMatches(freshMatches);
+
+      setScoreDrafts(() => {
+        const next: Record<string, ScoreDraft> = {};
+        for (const match of freshMatches) {
+          next[match.id] = {
+            team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+            team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+            game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
+            game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
+            game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
+            game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
+            game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
+            game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
+          };
+        }
+        return next;
+      });
+    }
+
+    void refreshMatchesOnly();
+
+    const intervalId = window.setInterval(() => {
+      void refreshMatchesOnly();
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [isOrganizer, isStarted, isCompleted, params.id, supabase]);
+  
   const tournamentWinner = standings[0] || null;
 
   const canStartTournament = useMemo(() => {

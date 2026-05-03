@@ -5127,7 +5127,13 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                           className="input"
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
-                          value={draft.team_a_score}
+                          value={
+                            match.is_complete || !isOrganizer
+                            ? match.team_a_score === null
+                            ? ''
+                            : String(match.team_a_score)
+                            : draft.team_a_score
+                      }
                           disabled={!canReportScores || match.is_complete || isCompleted}
                           onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_a_score')}
@@ -5185,7 +5191,13 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                           className="input"
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
-                          value={draft.team_b_score}
+                          value={
+                            match.is_complete || !isOrganizer
+                            ? match.team_b_score === null
+                            ? ''
+                            : String(match.team_b_score)
+                            : draft.team_b_score
+                      }
                           disabled={!canReportScores || match.is_complete || isCompleted}
                           onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_b_score')}

@@ -2871,27 +2871,15 @@ function renderBestOf3Match(match: Match) {
                       {isMine ? <span className="tag green">Yours</span> : isClaimedBySomeone ? <span className="tag green">Claimed</span> : isLocked ? <span className="tag">Locked</span> : <span className="tag">Open</span>}
                     </div>
                                         <div className="grid">
-                      {isClaimedBySomeone ? (
-  <div
-    className="input"
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      color: '#ffffff',
-      fontWeight: 700,
-    }}
-  >
-    {slot.display_name || liveName || `Player ${slot.slot_number}`}
-  </div>
-) : (
-  {isClaimedBySomeone ? (
-  <div
-    className="input"
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      color: '#ffffff',
-      fontWeight: 700,
+
+                          {isClaimedBySomeone ? (
+                            <div
+                              className="input"
+                               style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#ffffff',
+                                fontWeight: 700,
     }}
   >
     {slot.display_name || `Player ${slot.slot_number}`}
@@ -2906,7 +2894,6 @@ function renderBestOf3Match(match: Match) {
     placeholder={`Name for Player ${slot.slot_number}`}
     disabled={!canEditName}
   />
-)}
 )}
 
                       {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (

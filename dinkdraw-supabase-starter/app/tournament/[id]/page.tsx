@@ -3394,8 +3394,28 @@ if (!canReportScores) {
   );
 
   setMessage('Submitting score...');
-  setMatches(optimisticMatches);
-  setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
+setMatches(optimisticMatches);
+
+setScoreDrafts(() => {
+  const next: Record<string, ScoreDraft> = {};
+
+  for (const match of optimisticMatches) {
+    next[match.id] = {
+      team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
+      team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
+      game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
+      game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
+      game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
+      game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
+      game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
+      game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
+    };
+  }
+
+  return next;
+});
+
+setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
 
   const completedMatch = optimisticMatches.find((m) => m.id === matchId);
   if (!completedMatch) return;

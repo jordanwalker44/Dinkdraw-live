@@ -5232,56 +5232,72 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                       </div>
                     </div>
 
-                    {match.is_complete || isCompleted ? (
-                      <div
-                        style={{
-                          marginTop: 2,
-                          padding: '12px 14px',
-                          borderRadius: 12,
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          background: 'rgba(255,255,255,0.03)',
-                          textAlign: 'center',
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            color: 'rgba(255,255,255,0.6)',
-                            marginBottom: 4,
-                          }}
-                        >
-                          Status
-                        </div>
+                    {match.is_complete ? (
+  isOrganizer && !isCompleted ? (
+    <button
+      className="button secondary"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={() => submitMatchScore(match.id)}
+      style={{
+        width: '100%',
+        fontWeight: 900,
+        fontSize: 16,
+        padding: '14px 16px',
+        borderColor: 'rgba(255,203,5,0.35)',
+      }}
+    >
+      Save Score Edit
+    </button>
+  ) : (
+    <div
+      style={{
+        padding: 14,
+        borderRadius: 14,
+        background: 'rgba(34,197,94,0.10)',
+        border: '1px solid rgba(34,197,94,0.25)',
+        textAlign: 'center',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.6)',
+          marginBottom: 4,
+        }}
+      >
+        Status
+      </div>
 
-                        <div
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 800,
-                            color: isCompleted ? 'rgba(255,255,255,0.9)' : '#86efac',
-                          }}
-                        >
-                          {isCompleted ? 'Final Locked' : 'Score Submitted'}
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        className="button primary"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => submitMatchScore(match.id)}
-                        disabled={!canReportScores}
-                        style={{
-                          width: '100%',
-                          fontWeight: 800,
-                          fontSize: 16,
-                          padding: '14px 16px',
-                        }}
-                      >
-                        {canReportScores ? 'Submit Score' : 'Scores Locked'}
-                      </button>
-                    )}
+      <div
+        style={{
+          fontSize: 16,
+          fontWeight: 800,
+          color: isCompleted ? 'rgba(255,255,255,0.9)' : '#86efac',
+        }}
+      >
+        {isCompleted ? 'Final Locked' : 'Score Submitted'}
+      </div>
+    </div>
+  )
+) : (
+  <button
+    className="button primary"
+    onMouseDown={(e) => e.preventDefault()}
+    onClick={() => submitMatchScore(match.id)}
+    disabled={!canReportScores}
+    style={{
+      width: '100%',
+      fontWeight: 800,
+      fontSize: 16,
+      padding: '14px 16px',
+    }}
+  >
+    {canReportScores ? 'Submit Score' : 'Scores Locked'}
+  </button>
+)}
                   </div>
                 );
               })}

@@ -277,7 +277,12 @@ export default function PublicTournamentViewPage({
     tournament?.match_format === 'single');
 
 function getRoundDisplayName(round: number) {
-  if (!isCreamOfTheCrop) return `Round ${round}`;
+  const shouldUseCreamLabels =
+    tournament?.tournament_mode === 'cream_of_the_crop' ||
+    tournament?.rounds === 9 ||
+    roundsAvailable.length === 9;
+
+  if (!shouldUseCreamLabels) return `Round ${round}`;
 
   if (round <= 3) return `Sort • Round ${round}`;
   if (round <= 6) return `Re-Rank • Round ${round}`;

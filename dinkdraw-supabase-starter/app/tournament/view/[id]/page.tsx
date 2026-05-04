@@ -279,8 +279,13 @@ export default function PublicTournamentViewPage({
 function getRoundDisplayName(round: number) {
   const shouldUseCreamLabels =
     tournament?.tournament_mode === 'cream_of_the_crop' ||
-    tournament?.rounds === 9 ||
-    roundsAvailable.length === 9;
+    tournament?.title?.toLowerCase().includes('cream') ||
+    (
+      tournament?.format === 'doubles' &&
+      tournament?.match_format === 'single' &&
+      tournament?.player_count % 4 === 0 &&
+      tournament?.courts === Math.floor(tournament.player_count / 4)
+    );
 
   if (!shouldUseCreamLabels) return `Round ${round}`;
 

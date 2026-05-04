@@ -406,8 +406,10 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     }
 
     function buildRoundMatches(
-      participants: string[],
-      allowRepeatPartners: boolean
+  participants: string[],
+  allowRepeatPartners: boolean,
+  roundNumber: number
+)
     ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
       if (participants.length % 4 !== 0) return null;
 
@@ -435,7 +437,7 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
           pairing.teamB,
           allowRepeatPartners,
           groupIndex + 1,
-          round
+          roundNumber
     );
 
         if (score !== null && score < bestPairingScore) {
@@ -495,7 +497,7 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
                   pairing.teamB,
                   allowRepeatPartners,
                   courtNumber,
-                  round
+                  roundNumber
               );
                 if (score === null) continue;
 
@@ -524,12 +526,12 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
       let matches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
 
       for (let roundAttempt = 0; roundAttempt < 25; roundAttempt++) {
-        matches = buildRoundMatches(shuffle(participants), false);
+        matches = buildRoundMatches(shuffle(participants), false, round);
         if (matches) break;
       }
 
       if (!matches) {
-        matches = buildRoundMatches(participants, true);
+        matches = buildRoundMatches(participants, true, round);
       }
 
       if (!matches || !matches.length) {
@@ -893,11 +895,12 @@ function buildMixedDoublesSchedule(
   }
 
   function scoreMatch(
-    teamA: [string, string],
-    teamB: [string, string],
-    allowRepeatPartners: boolean,
-    courtNumber: number
-  ) {
+  teamA: [string, string],
+  teamB: [string, string],
+  allowRepeatPartners: boolean,
+  courtNumber: number,
+  roundNumber: number
+) {
     const [a1, a2] = teamA;
     const [b1, b2] = teamB;
 

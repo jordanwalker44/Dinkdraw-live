@@ -384,12 +384,10 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
   if (lastSeenRound !== undefined) {
     const roundsSinceSeen = roundNumber - lastSeenRound;
 
-    if (roundsSinceSeen === 1) {
-      penalty += 50000;
-    } else if (roundsSinceSeen === 2) {
-      penalty += 20000;
-    } else if (roundsSinceSeen === 3) {
-      penalty += 5000;
+    if (roundsSinceSeen === 1) penalty += 200000;
+else if (roundsSinceSeen === 2) penalty += 80000;
+else if (roundsSinceSeen === 3) penalty += 20000;
+else if (roundsSinceSeen === 4) penalty += 5000;
     }
   }
 

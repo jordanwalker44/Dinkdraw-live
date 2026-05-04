@@ -385,10 +385,9 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     const roundsSinceSeen = roundNumber - lastSeenRound;
 
     if (roundsSinceSeen === 1) penalty += 200000;
-else if (roundsSinceSeen === 2) penalty += 80000;
-else if (roundsSinceSeen === 3) penalty += 20000;
-else if (roundsSinceSeen === 4) penalty += 5000;
-    }
+    else if (roundsSinceSeen === 2) penalty += 80000;
+    else if (roundsSinceSeen === 3) penalty += 20000;
+    else if (roundsSinceSeen === 4) penalty += 5000;
   }
 
   const history1 = recentMatchHistory.get(p1) || [];
@@ -513,7 +512,7 @@ else if (roundsSinceSeen === 4) penalty += 5000;
       backtrack(shuffle([...participants]), [], 0);
       return bestMatches;
     }
-
+  
     let success = true;
 
     for (let round = 1; round <= rounds; round++) {

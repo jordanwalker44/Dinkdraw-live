@@ -258,6 +258,7 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     const partnerCounts = new Map<string, number>();
     const matchupCounts = new Map<string, number>();
     const sameMatchCounts = new Map<string, number>();
+    const sameMatchLastSeenRound = new Map<string, number>();
     const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
     const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
     const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
@@ -306,10 +307,11 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
     }
 
     function scoreMatch(
-      teamA: [string, string],
-      teamB: [string, string],
-      allowRepeatPartners: boolean,
-      courtNumber: number
+       teamA: [string, string],
+       teamB: [string, string],
+       allowRepeatPartners: boolean,
+       courtNumber: number,
+       roundNumber: number
     ) {
       const [a1, a2] = teamA;
       const [b1, b2] = teamB;
@@ -376,13 +378,28 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
       }
 
       for (const [p1, p2] of sameMatchPairs) {
-        const history1 = recentMatchHistory.get(p1) || [];
-        const history2 = recentMatchHistory.get(p2) || [];
+  const pair = pairKey(p1, p2);
+  const lastSeenRound = sameMatchLastSeenRound.get(pair);
 
-        if (history1.includes(p2) || history2.includes(p1)) {
-          penalty += 800;
-        }
-      }
+  if (lastSeenRound !== undefined) {
+    const roundsSinceSeen = roundNumber - lastSeenRound;
+
+    if (roundsSinceSeen === 1) {
+      penalty += 50000;
+    } else if (roundsSinceSeen === 2) {
+      penalty += 20000;
+    } else if (roundsSinceSeen === 3) {
+      penalty += 5000;
+    }
+  }
+
+  const history1 = recentMatchHistory.get(p1) || [];
+  const history2 = recentMatchHistory.get(p2) || [];
+
+  if (history1.includes(p2) || history2.includes(p1)) {
+    penalty += 3000;
+  }
+}
 
       penalty += Math.random();
       return penalty;
@@ -417,8 +434,9 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
           pairing.teamA,
           pairing.teamB,
           allowRepeatPartners,
-          groupIndex + 1
-        );
+          groupIndex + 1,
+          round
+    );
 
         if (score !== null && score < bestPairingScore) {
           bestPairingScore = score;
@@ -472,7 +490,13 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
               for (const pairing of pairings) {
                 const courtNumber = current.length + 1;
-                const score = scoreMatch(pairing.teamA, pairing.teamB, allowRepeatPartners, courtNumber);
+                const score = scoreMatch(
+                  pairing.teamA,
+                  pairing.teamB,
+                  allowRepeatPartners,
+                  courtNumber,
+                  round
+              );
                 if (score === null) continue;
 
                 const used = new Set(group);
@@ -560,7 +584,10 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
         ];
 
         sameMatchPairs.forEach(([p1, p2]) => {
-          sameMatchCounts.set(pairKey(p1, p2), getSameMatchCount(p1, p2) + 1);
+          const pair = pairKey(p1, p2);
+
+          sameMatchCounts.set(pair, getSameMatchCount(p1, p2) + 1);
+          sameMatchLastSeenRound.set(pair, round);
 
           const p1History = recentMatchHistory.get(p1) || [];
           const p2History = recentMatchHistory.get(p2) || [];

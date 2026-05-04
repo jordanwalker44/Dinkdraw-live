@@ -409,7 +409,6 @@ function buildDoublesSchedule(players: PlayerSlot[], rounds: number, courts: num
   participants: string[],
   allowRepeatPartners: boolean,
   roundNumber: number
-)
     ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
       if (participants.length % 4 !== 0) return null;
 

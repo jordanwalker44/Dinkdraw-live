@@ -270,7 +270,11 @@ export default function PublicTournamentViewPage({
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
-  const isCreamOfTheCrop = tournament?.tournament_mode === 'cream_of_the_crop';
+  const isCreamOfTheCrop =
+  tournament?.tournament_mode === 'cream_of_the_crop' ||
+  (tournament?.rounds === 9 &&
+    tournament?.format === 'doubles' &&
+    tournament?.match_format === 'single');
 
 function getRoundDisplayName(round: number) {
   if (!isCreamOfTheCrop) return `Round ${round}`;

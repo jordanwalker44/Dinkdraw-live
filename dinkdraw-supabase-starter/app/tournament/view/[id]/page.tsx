@@ -23,6 +23,7 @@ type Tournament = {
   started_at: string | null;
   format: string;
   match_format: string;
+  tournament_mode: string | null;
 };
 
 type PlayerSlot = {
@@ -269,6 +270,15 @@ export default function PublicTournamentViewPage({
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
+  const isCreamOfTheCrop = tournament?.tournament_mode === 'cream_of_the_crop';
+
+function getRoundDisplayName(round: number) {
+  if (!isCreamOfTheCrop) return `Round ${round}`;
+
+  if (round <= 3) return `Sort • Round ${round}`;
+  if (round <= 6) return `Re-Rank • Round ${round}`;
+  return `Final • Round ${round}`;
+}
 
   const playersById = useMemo(
     () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
@@ -617,11 +627,13 @@ function renderStyledMatchLabel(match: Match) {
   }
 
   function getRoundStatusLabel(round: number) {
-    const status = roundStatusByRound.get(round);
-    if (status === 'complete') return `Round ${round} · Final`;
-    if (status === 'current') return `Round ${round} · Live`;
-    return `Round ${round} · Next`;
-  }
+  const status = roundStatusByRound.get(round);
+  const label = getRoundDisplayName(round);
+
+  if (status === 'complete') return `${label} · Final`;
+  if (status === 'current') return `${label} · Live`;
+  return `${label} · Next`;
+}
 
   function renderBroadcastScore(match: Match, team: 'a' | 'b') {
     if (isBestOf3) {
@@ -731,7 +743,7 @@ function renderStyledMatchLabel(match: Match) {
               {renderCourtLabel(match)}
             </div>
             <div className="muted" style={{ fontSize: 12 }}>
-              Round {match.round_number}
+              {getRoundDisplayName(match.round_number)}
             </div>
           </div>
 
@@ -841,7 +853,7 @@ function renderStyledMatchLabel(match: Match) {
             {isCompleted
               ? 'Tournament complete'
               : isStarted
-              ? `Live now • Round ${currentRound}`
+              ? `Live now • ${getRoundDisplayName(currentRound)}`
               : 'Waiting to start'}
           </p>
         </div>
@@ -903,7 +915,7 @@ function renderStyledMatchLabel(match: Match) {
               {isCompleted
                 ? 'Final Event Summary'
                 : isStarted
-                ? `Round ${currentRound} Live`
+                ? `${getRoundDisplayName(currentRound)} Live`
                 : 'Tournament Preview'}
             </div>
             <div className="card-subtitle" style={{ marginBottom: 0 }}>
@@ -988,7 +1000,7 @@ function renderStyledMatchLabel(match: Match) {
                     Featured Match
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 4 }}>
-                    Round {currentRound} • {renderCourtLabel(featuredLiveMatch)}
+                    {getRoundDisplayName(currentRound)} • {renderCourtLabel(featuredLiveMatch)}
                   </div>
                   <div className="muted" style={{ fontSize: 13 }}>
                     {liveMatches.length} live court{liveMatches.length === 1 ? '' : 's'} right now

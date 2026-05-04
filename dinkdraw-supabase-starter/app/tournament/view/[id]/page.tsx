@@ -967,7 +967,7 @@ function renderStyledMatchLabel(match: Match) {
           <div className="grid" style={{ gap: 10 }}>
             <div className="list-item" style={{ padding: 16 }}>
               <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 6 }}>
-                Round {currentRound} is complete
+                {getRoundDisplayName(currentRound)} is complete
               </div>
               <div className="muted">
                 All live matches for this round have finished. The next matchup will appear automatically.
@@ -1118,7 +1118,7 @@ function renderStyledMatchLabel(match: Match) {
                 </div>
                 <div style={{ marginBottom: 6 }}>{renderStyledMatchLabel(nextUpMatch)}</div>
                 <div className="muted" style={{ fontSize: 13 }}>
-                  Round {nextUpMatch.round_number} • {renderCourtLabel(nextUpMatch)}
+                  {getRoundDisplayName(nextUpMatch.round_number)} • {renderCourtLabel(nextUpMatch)}
                 </div>
               </div>
             ) : null}

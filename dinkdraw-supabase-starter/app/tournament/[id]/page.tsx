@@ -1964,20 +1964,32 @@ setScoreDrafts((prev) => {
   }, [isStarted, isCompleted, matches.length, currentRound, finalRound]);
 
   useEffect(() => {
-    if (!isStarted || isCompleted || !nextUpMatch) return;
+  if (!isStarted || isCompleted) return;
 
-    const timeout = window.setTimeout(() => {
-      const el = document.getElementById(getMatchElementId(nextUpMatch.id));
-      if (!el) return;
+  const timeout = window.setTimeout(() => {
+    const yourMatchCard = document.getElementById('your-match-card');
 
-      el.scrollIntoView({
+    if (yourMatchCard) {
+      yourMatchCard.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
+        block: 'start',
       });
-    }, 150);
+      return;
+    }
 
-    return () => window.clearTimeout(timeout);
-  }, [nextUpMatch?.id, isStarted, isCompleted]);
+    if (!nextUpMatch) return;
+
+    const nextMatchCard = document.getElementById(getMatchElementId(nextUpMatch.id));
+    if (!nextMatchCard) return;
+
+    nextMatchCard.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }, 150);
+
+  return () => window.clearTimeout(timeout);
+}, [yourMatch?.id, nextUpMatch?.id, isStarted, isCompleted]);
 
   async function copyJoinCode() {
     try {
@@ -4000,6 +4012,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 
       {isStarted && yourMatch && (
   <div
+    id="your-match-card"
     className="card"
     style={{
       position: 'sticky',

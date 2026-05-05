@@ -5162,12 +5162,14 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
                           value={
-                            match.is_complete || !isOrganizer
+                            isOrganizer && match.is_complete && !isCompleted
+                            ? draft.team_a_score
+                            : match.is_complete || !isOrganizer
                             ? match.team_a_score === null
                             ? ''
                             : String(match.team_a_score)
                             : draft.team_a_score
-                      }
+              }
                           disabled={isCompleted || (!canReportScores && !(isOrganizer && match.is_complete))}
                           onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_a_score')}
@@ -5226,12 +5228,14 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
                           value={
-                            match.is_complete || !isOrganizer
+                            isOrganizer && match.is_complete && !isCompleted
+                            ? draft.team_b_score
+                            : match.is_complete || !isOrganizer
                             ? match.team_b_score === null
                             ? ''
                             : String(match.team_b_score)
                             : draft.team_b_score
-                      }
+                    }
                           disabled={isCompleted || (!canReportScores && !(isOrganizer && match.is_complete))}
                           onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_b_score')}

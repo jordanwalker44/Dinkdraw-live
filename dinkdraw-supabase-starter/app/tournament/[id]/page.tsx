@@ -3999,32 +3999,106 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
       <TopNav />
 
       {isStarted && yourMatch && (
-        <div
-          className="card"
-          style={{
-            border: '1px solid rgba(255,203,5,0.4)',
-            background: 'rgba(255,203,5,0.08)',
-            marginBottom: 12,
-          }}
-        >
-          <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 6 }}>Your Match</div>
+  <div
+    className="card"
+    style={{
+      position: 'sticky',
+      top: 10,
+      zIndex: 20,
+      border: '1px solid rgba(255,203,5,0.72)',
+      background:
+        'linear-gradient(180deg, rgba(255,203,5,0.18), rgba(255,203,5,0.07))',
+      boxShadow: '0 18px 44px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,203,5,0.16) inset',
+      marginBottom: 14,
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 10,
+        marginBottom: 10,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 950,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: '#FFCB05',
+        }}
+      >
+        Your Match
+      </div>
 
-          <div style={{ fontSize: 16, fontWeight: 700 }}>
-            {getCourtLabel(tournament, yourMatch.court_number)}
-          </div>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 950,
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: '#001830',
+          background: '#FFCB05',
+          borderRadius: 999,
+          padding: '6px 10px',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        Go Now
+      </div>
+    </div>
 
-          <div className="muted" style={{ marginTop: 4 }}>
-            {playersById[yourMatch.team_a_player_1_id!]?.display_name}
-            {yourMatch.team_a_player_2_id
-              ? ` & ${playersById[yourMatch.team_a_player_2_id!]?.display_name}`
-              : ''}{' '}
-            vs {playersById[yourMatch.team_b_player_1_id!]?.display_name}
-            {yourMatch.team_b_player_2_id
-              ? ` & ${playersById[yourMatch.team_b_player_2_id!]?.display_name}`
-              : ''}
-          </div>
-        </div>
-      )}
+    <div
+      style={{
+        fontSize: 26,
+        fontWeight: 950,
+        lineHeight: 1,
+        color: '#ffffff',
+        marginBottom: 10,
+      }}
+    >
+      {getCourtLabel(tournament, yourMatch.court_number)}
+    </div>
+
+    <div
+      style={{
+        fontSize: 15,
+        fontWeight: 800,
+        lineHeight: 1.35,
+        color: 'rgba(255,255,255,0.9)',
+        marginBottom: 12,
+      }}
+    >
+      {renderTeam(yourMatch.team_a_player_1_id, yourMatch.team_a_player_2_id)}
+      {' vs '}
+      {renderTeam(yourMatch.team_b_player_1_id, yourMatch.team_b_player_2_id)}
+    </div>
+
+    <button
+      type="button"
+      className="button primary"
+      style={{
+        width: '100%',
+        minHeight: 46,
+        fontWeight: 950,
+      }}
+      onClick={() => {
+        setActiveTab('rounds');
+        setSelectedRound(yourMatch.round_number);
+
+        setTimeout(() => {
+          document
+            .getElementById(getMatchElementId(yourMatch.id))
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }}
+    >
+      Open Scorecard
+    </button>
+  </div>
+)}
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
 

@@ -1162,6 +1162,56 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
+  const allRoundRobinMatches = matches.filter((m) => !m.is_playoff);
+const completedRoundRobinMatches = allRoundRobinMatches.filter((m) => m.is_complete);
+
+const allPlayoffMatches = playoffMatches || [];
+const completedPlayoffMatches = allPlayoffMatches.filter((m) => m.is_complete);
+
+let tournamentPhase: 
+  | 'not_started'
+  | 'round_in_progress'
+  | 'between_rounds'
+  | 'round_robin_complete'
+  | 'playoffs'
+  | 'completed' = 'not_started';
+
+if (!isStarted) {
+  tournamentPhase = 'not_started';
+} else if (isCompleted) {
+  tournamentPhase = 'completed';
+} else if (
+  allRoundRobinMatches.length > 0 &&
+  completedRoundRobinMatches.length < allRoundRobinMatches.length
+) {
+  const currentRoundMatches = matches.filter(
+    (m) => m.round_number === currentRound && !m.is_playoff
+  );
+
+  const completedCurrentRoundMatches = currentRoundMatches.filter((m) => m.is_complete);
+
+  if (completedCurrentRoundMatches.length < currentRoundMatches.length) {
+    tournamentPhase = 'round_in_progress';
+  } else {
+    tournamentPhase = 'between_rounds';
+  }
+} else if (
+  allRoundRobinMatches.length > 0 &&
+  completedRoundRobinMatches.length === allRoundRobinMatches.length &&
+  allPlayoffMatches.length === 0
+) {
+  tournamentPhase = 'round_robin_complete';
+} else if (allPlayoffMatches.length > 0 && completedPlayoffMatches.length < allPlayoffMatches.length) {
+  tournamentPhase = 'playoffs';
+} else if (
+  allPlayoffMatches.length > 0 &&
+  completedPlayoffMatches.length === allPlayoffMatches.length
+) {
+  tournamentPhase = 'completed';
+}  
+
+console.log('tournamentPhase:', tournamentPhase);
+    
   const isLocked = isStarted || isCompleted;
   const isScheduleLocked = isStarted || isCompleted || matches.length > 0;
   const publicViewUrl =

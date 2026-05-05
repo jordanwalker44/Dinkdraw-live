@@ -3405,6 +3405,9 @@ if (!canReportScores) {
     return;
   }
 
+  const existingMatch = matches.find((m) => m.id === matchId);
+  const isEditingCompletedMatch = !!existingMatch?.is_complete;
+
   const previousMatches = matches;
 
   const optimisticMatches = matches.map((m) =>
@@ -3473,6 +3476,12 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   }
 
   const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
+
+  if (isEditingCompletedMatch) {
+    await loadTournamentData(userId);
+    setMessage(statsSaved ? 'Score edit saved.' : 'Score edit saved, but stats update failed.');
+    return;
+  }
 
   if (!nextRound) {
     if (tournament?.tournament_mode === 'cream_of_the_crop') {
@@ -5159,7 +5168,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                             : String(match.team_a_score)
                             : draft.team_a_score
                       }
-                          disabled={!canReportScores || match.is_complete || isCompleted}
+                          disabled={isCompleted || (!canReportScores && !(isOrganizer && match.is_complete))}
                           onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_a_score')}
                           placeholder={canReportScores ? '0' : 'Scores locked'}
@@ -5223,7 +5232,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                             : String(match.team_b_score)
                             : draft.team_b_score
                       }
-                          disabled={!canReportScores || match.is_complete || isCompleted}
+                          disabled={isCompleted || (!canReportScores && !(isOrganizer && match.is_complete))}
                           onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_b_score')}
                           placeholder={canReportScores ? '0' : 'Scores locked'}

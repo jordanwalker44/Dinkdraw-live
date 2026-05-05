@@ -4321,8 +4321,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
           </div>
         ) : null}
 
-        <div className="card" style={{ marginTop: 14 }}>
-  <div className="card" style={{ marginTop: 14 }}>
+          <div className="card" style={{ marginTop: 14 }}>
   <div className="card-title">Co-Organizer</div>
   <div className="card-subtitle">
     Add one trusted person who can submit and edit scores.

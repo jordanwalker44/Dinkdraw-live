@@ -4308,7 +4308,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
       </button>
     ) : null}
 
-    {isOrganizer ? (
+    {canManageScores ? (
       <>
         <button
           className="button primary"

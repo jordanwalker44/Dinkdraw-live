@@ -3479,7 +3479,11 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 
   if (isEditingCompletedMatch) {
     await loadTournamentData(userId);
-    setMessage(statsSaved ? 'Score edit saved.' : 'Score edit saved, but stats update failed.');
+    setMessage(
+  statsSaved
+    ? 'Score updated successfully.'
+    : 'Score updated, but stats update failed.'
+);
     return;
   }
 
@@ -5247,30 +5251,32 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                     {match.is_complete ? (
   isOrganizer && !isCompleted ? (
     <button
-      className="button secondary"
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => submitMatchScore(match.id)}
-      style={{
-        width: '100%',
-        fontWeight: 900,
-        fontSize: 16,
-        padding: '14px 16px',
-        borderColor: 'rgba(255,203,5,0.35)',
-      }}
-    >
-      Save Score Edit
-    </button>
-  ) : (
-    <div
-      style={{
-        padding: 14,
-        borderRadius: 14,
-        background: 'rgba(34,197,94,0.10)',
-        border: '1px solid rgba(34,197,94,0.25)',
-        textAlign: 'center',
-      }}
-    >
-      <div
+  className="button secondary"
+  onMouseDown={(e) => e.preventDefault()}
+  onClick={() => submitMatchScore(match.id)}
+  style={{
+    width: '100%',
+    fontWeight: 900,
+    fontSize: 16,
+    padding: '14px 16px',
+    borderColor: 'rgba(255,203,5,0.35)',
+  }}
+>
+  Save Score Edit
+</button>
+
+<div
+  style={{
+    marginTop: 8,
+    fontSize: 12,
+    fontWeight: 700,
+    textAlign: 'center',
+    color: 'rgba(255,203,5,0.85)',
+    letterSpacing: '0.04em',
+  }}
+>
+  Editing submitted score
+</div>
         style={{
           fontSize: 11,
           fontWeight: 800,

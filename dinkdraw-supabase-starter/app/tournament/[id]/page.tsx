@@ -117,6 +117,12 @@ type PlayoffMatch = {
   is_complete: boolean;
 };
 
+type SavedCoOrganizer = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
 type ScheduleRow = {
   round_number: number;
   court_number: number | null;
@@ -1490,6 +1496,10 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [savedCoOrganizers, setSavedCoOrganizers] = useState<SavedCoOrganizer[]>([]);
+  const [selectedSavedCoOrganizerId, setSelectedSavedCoOrganizerId] = useState('');
+  const [saveCoOrganizerForLater, setSaveCoOrganizerForLater] = useState(false);
+  const [savedCoOrganizerName, setSavedCoOrganizerName] = useState('');
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
@@ -1853,6 +1863,15 @@ setScoreDrafts((prev) => {
       const currentUserEmail = authData.user?.email ?? '';
 
       setUserEmail(currentUserEmail);
+      if (currentUserId) {
+      const { data: savedAdmins } = await supabase
+    .from('saved_co_organizers')
+    .select('id, name, email')
+    .eq('user_id', currentUserId)
+    .order('name', { ascending: true });
+
+  setSavedCoOrganizers(savedAdmins || []);
+}
 
       await loadTournamentData(currentUserId);
       setIsLoading(false);
@@ -4303,23 +4322,80 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         ) : null}
 
         <div className="card" style={{ marginTop: 14 }}>
+  <div className="card" style={{ marginTop: 14 }}>
   <div className="card-title">Co-Organizer</div>
   <div className="card-subtitle">
     Add one trusted person who can submit and edit scores.
   </div>
 
+  {savedCoOrganizers.length ? (
+    <select
+      className="input"
+      value={selectedSavedCoOrganizerId}
+      onChange={(e) => {
+        const selectedId = e.target.value;
+        setSelectedSavedCoOrganizerId(selectedId);
+
+        const selected = savedCoOrganizers.find((item) => item.id === selectedId);
+        if (selected) {
+          setTournament((prev) =>
+            prev ? { ...prev, co_organizer_email: selected.email } : prev
+          );
+          setSavedCoOrganizerName(selected.name || selected.email);
+        }
+      }}
+      style={{ marginTop: 10 }}
+    >
+      <option value="">Choose saved co-organizer...</option>
+      {savedCoOrganizers.map((item) => (
+        <option key={item.id} value={item.id}>
+          {item.name || item.email}
+        </option>
+      ))}
+    </select>
+  ) : null}
+
   <input
     className="input"
     type="email"
     value={tournament?.co_organizer_email || ''}
-    onChange={(e) =>
+    onChange={(e) => {
       setTournament((prev) =>
         prev ? { ...prev, co_organizer_email: e.target.value } : prev
-      )
-    }
+      );
+      setSelectedSavedCoOrganizerId('');
+    }}
     placeholder="coorganizer@email.com"
     style={{ marginTop: 10 }}
   />
+
+  <label
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: 10,
+      fontSize: 13,
+      fontWeight: 700,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={saveCoOrganizerForLater}
+      onChange={(e) => setSaveCoOrganizerForLater(e.target.checked)}
+    />
+    Save this co-organizer for next time
+  </label>
+
+  {saveCoOrganizerForLater ? (
+    <input
+      className="input"
+      value={savedCoOrganizerName}
+      onChange={(e) => setSavedCoOrganizerName(e.target.value)}
+      placeholder="Name, like Jordan or Assistant Coach"
+      style={{ marginTop: 10 }}
+    />
+  ) : null}
 
   <button
     type="button"
@@ -4327,16 +4403,42 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     onClick={async () => {
       if (!tournament) return;
 
+      const cleanEmail = tournament.co_organizer_email?.trim() || '';
+
       const { error } = await supabase
         .from('tournaments')
         .update({
-          co_organizer_email: tournament.co_organizer_email?.trim() || null,
+          co_organizer_email: cleanEmail || null,
         })
         .eq('id', tournament.id);
 
       if (error) {
         setMessage(`Co-organizer save failed: ${error.message}`);
         return;
+      }
+
+      if (saveCoOrganizerForLater && cleanEmail) {
+        const { data: authData } = await supabase.auth.getUser();
+        const user = authData.user;
+
+        if (user) {
+          await supabase.from('saved_co_organizers').upsert(
+            {
+              user_id: user.id,
+              name: savedCoOrganizerName.trim() || cleanEmail,
+              email: cleanEmail,
+            },
+            { onConflict: 'user_id,email' }
+          );
+
+          const { data: savedAdmins } = await supabase
+            .from('saved_co_organizers')
+            .select('id, name, email')
+            .eq('user_id', user.id)
+            .order('name', { ascending: true });
+
+          setSavedCoOrganizers(savedAdmins || []);
+        }
       }
 
       setMessage('Co-organizer saved.');

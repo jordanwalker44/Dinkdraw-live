@@ -4328,12 +4328,13 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
           </div>
         ) : null}
 
+        {isOrganizer ? (
           <div className="card" style={{ marginTop: 14 }}>
   <div className="card-title">Co-Organizer</div>
   <div className="card-subtitle">
     Add one trusted person who can submit and edit scores.
   </div>
-
+        
   {savedCoOrganizers.length ? (
     <select
       className="input"
@@ -4480,9 +4481,9 @@ Sign in with this same email address to submit and edit scores.`;
   style={{ marginTop: 10 }}
 >
   Copy Invite Message
-</button>
-            
+</button>         
 </div>
+) : null}
 
         {!isCompleted && !hasAnyScores ? (
           <button

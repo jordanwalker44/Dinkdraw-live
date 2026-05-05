@@ -18,6 +18,7 @@ type Tournament = {
   join_code: string;
   organizer_user_id: string;
   organizer_name: string | null;
+  co_organizer_email: string | null;
   event_date: string | null;
   event_time: string | null;
   location: string | null;
@@ -1488,6 +1489,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
@@ -1659,8 +1661,15 @@ const hasAnyScores = matches.some(
 
   const isOrganizer = tournament?.organizer_user_id === userId;
 
+  const isCoOrganizer =
+  !!tournament?.co_organizer_email &&
+  !!userEmail &&
+  tournament.co_organizer_email.toLowerCase().trim() === userEmail.toLowerCase().trim();
+
+  const canManageScores = isOrganizer || isCoOrganizer;
+
   const canReportScores =
-  isOrganizer ||
+  canManageScores ||
   (!!tournament?.allow_player_score_reporting && !!claimedSlot && isStarted && !isCompleted);
 
   useEffect(() => {
@@ -1841,6 +1850,10 @@ setScoreDrafts((prev) => {
       setIsLoading(true);
       const { data: authData } = await supabase.auth.getUser();
       const currentUserId = authData.user?.id ?? '';
+      const currentUserEmail = authData.user?.email ?? '';
+
+      setUserEmail(currentUserEmail);
+
       await loadTournamentData(currentUserId);
       setIsLoading(false);
     }
@@ -4289,6 +4302,52 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
           </div>
         ) : null}
 
+        <div className="card" style={{ marginTop: 14 }}>
+  <div className="card-title">Co-Organizer</div>
+  <div className="card-subtitle">
+    Add one trusted person who can submit and edit scores.
+  </div>
+
+  <input
+    className="input"
+    type="email"
+    value={tournament?.co_organizer_email || ''}
+    onChange={(e) =>
+      setTournament((prev) =>
+        prev ? { ...prev, co_organizer_email: e.target.value } : prev
+      )
+    }
+    placeholder="coorganizer@email.com"
+    style={{ marginTop: 10 }}
+  />
+
+  <button
+    type="button"
+    className="button secondary"
+    onClick={async () => {
+      if (!tournament) return;
+
+      const { error } = await supabase
+        .from('tournaments')
+        .update({
+          co_organizer_email: tournament.co_organizer_email?.trim() || null,
+        })
+        .eq('id', tournament.id);
+
+      if (error) {
+        setMessage(`Co-organizer save failed: ${error.message}`);
+        return;
+      }
+
+      setMessage('Co-organizer saved.');
+      await loadTournamentData(userId);
+    }}
+    style={{ marginTop: 10 }}
+  >
+    Save Co-Organizer
+  </button>
+</div>
+
         {!isCompleted && !hasAnyScores ? (
           <button
             type="button"
@@ -5166,7 +5225,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
                           value={
-                            isOrganizer && match.is_complete && !isCompleted
+                            canManageScores && match.is_complete && !isCompleted
                             ? draft.team_a_score
                             : match.is_complete || !isOrganizer
                             ? match.team_a_score === null
@@ -5174,7 +5233,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                             : String(match.team_a_score)
                             : draft.team_a_score
               }
-                          disabled={isCompleted || (!canReportScores && !(isOrganizer && match.is_complete))}
+                          disabled={isCompleted || (!canReportScores && !(canManageScores && match.is_complete))}
                           onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_a_score')}
                           placeholder={canReportScores ? '0' : 'Scores locked'}
@@ -5232,7 +5291,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                           style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
                           type="number"
                           value={
-                            isOrganizer && match.is_complete && !isCompleted
+                            canManageScores && match.is_complete && !isCompleted
                             ? draft.team_b_score
                             : match.is_complete || !isOrganizer
                             ? match.team_b_score === null
@@ -5240,7 +5299,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                             : String(match.team_b_score)
                             : draft.team_b_score
                     }
-                          disabled={isCompleted || (!canReportScores && !(isOrganizer && match.is_complete))}
+                          disabled={isCompleted || (!canReportScores && !(canManageScores && match.is_complete))}
                           onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
                           onBlur={() => saveScoreField(match.id, 'team_b_score')}
                           placeholder={canReportScores ? '0' : 'Scores locked'}
@@ -5249,7 +5308,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
                     </div>
 
                     {match.is_complete ? (
-  isOrganizer && !isCompleted ? (
+  canManageScores && !isCompleted ? (
     <button
   className="button secondary"
   onMouseDown={(e) => e.preventDefault()}

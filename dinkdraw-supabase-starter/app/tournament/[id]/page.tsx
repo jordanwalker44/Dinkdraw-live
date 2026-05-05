@@ -1162,8 +1162,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
-  const allRoundRobinMatches = matches.filter((m) => !m.is_playoff);
-const completedRoundRobinMatches = allRoundRobinMatches.filter((m) => m.is_complete);
+  const allRoundRobinMatches = matches;
+  const completedRoundRobinMatches = allRoundRobinMatches.filter((m) => m.is_complete);
 
 const allPlayoffMatches = playoffMatches || [];
 const completedPlayoffMatches = allPlayoffMatches.filter((m) => m.is_complete);

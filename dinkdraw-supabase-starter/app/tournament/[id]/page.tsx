@@ -1496,6 +1496,13 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
   const [userEmail, setUserEmail] = useState('');
+
+  function getTournamentLink(id: string) {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/tournament/${id}`;
+  }
+  return `/tournament/${id}`;
+}
   const [savedCoOrganizers, setSavedCoOrganizers] = useState<SavedCoOrganizer[]>([]);
   const [selectedSavedCoOrganizerId, setSelectedSavedCoOrganizerId] = useState('');
   const [saveCoOrganizerForLater, setSaveCoOrganizerForLater] = useState(false);
@@ -4447,6 +4454,34 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   >
     Save Co-Organizer
   </button>
+
+<button
+  type="button"
+  className="button secondary"
+  onClick={async () => {
+    if (!tournament) return;
+
+    const link = getTournamentLink(tournament.id);
+
+    const message = `You’ve been added as a co-organizer for a DinkDraw tournament.
+
+Use this link to access it:
+${link}
+
+Sign in with this same email address to submit and edit scores.`;
+
+    try {
+      await navigator.clipboard.writeText(message);
+      setMessage('Invite message copied.');
+    } catch {
+      setMessage('Could not copy invite message.');
+    }
+  }}
+  style={{ marginTop: 10 }}
+>
+  Copy Invite Message
+</button>
+            
 </div>
 
         {!isCompleted && !hasAnyScores ? (

@@ -1229,7 +1229,31 @@ if (isCompleted) {
   }
 }
 
-console.log('tournamentPhase:', tournamentPhase);
+  const tournamentPhaseTitle =
+  tournamentPhase === 'completed'
+    ? 'Tournament Complete'
+    : tournamentPhase === 'not_started'
+    ? 'Ready to Start'
+    : tournamentPhase === 'round_in_progress'
+    ? `Round ${currentRound} In Progress`
+    : tournamentPhase === 'between_rounds'
+    ? `Round ${currentRound} Complete`
+    : tournamentPhase === 'round_robin_complete'
+    ? 'Round Robin Complete'
+    : 'Tournament Status';
+
+const tournamentPhaseSubtitle =
+  tournamentPhase === 'completed'
+    ? 'Final results are locked.'
+    : tournamentPhase === 'not_started'
+    ? 'The schedule will appear after the organizer starts the tournament.'
+    : tournamentPhase === 'round_in_progress'
+    ? `${completedMatchCount} of ${totalPlayableMatchCount} matches complete.`
+    : tournamentPhase === 'between_rounds'
+    ? 'All matches in this round are complete. The next round is ready.'
+    : tournamentPhase === 'round_robin_complete'
+    ? 'All round robin matches are complete. Review standings and finish the event.'
+    : '';
 
   const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
   const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
@@ -3057,22 +3081,18 @@ function renderBestOf3Match(match: Match) {
      {activeTab === 'rounds' && (
   <div className="card">
     <div className="card-title">Rounds</div>
-    <div className="card-subtitle">
-      {isCompleted
-        ? 'Tournament complete. Scores are locked.'
-        : isStarted
-        ? `Current live round: ${currentRound}`
-        : 'Round schedule appears here after the tournament starts.'}
+<div className="card-subtitle">
+  {tournamentPhaseSubtitle}
 
-      {!isCompleted && isStarted ? (
-        <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
-          Organizer enters official scores
-        </div>
-      ) : null}
+  {!isCompleted && isStarted ? (
+    <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 700 }}>
+      {tournamentPhaseTitle}
     </div>
+  ) : null}
+</div>
 
     <div className="card" style={{ marginTop: 12 }}>
-      <div className="card-title">Current Round</div>
+      <div className="card-title">{tournamentPhaseTitle}</div>
 
       {!isStarted ? (
         <div className="muted">Tournament has not started yet.</div>

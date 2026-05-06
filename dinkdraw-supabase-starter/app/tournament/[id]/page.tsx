@@ -1242,7 +1242,12 @@ if (isCompleted) {
     ? 'Round Robin Complete'
     : 'Tournament Status';
 
-const tournamentPhaseSubtitle =
+    const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
+    const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
+    const totalPlayableMatchCount = useMemo(() => matches.filter((m) => !m.is_bye).length, [matches]);
+
+    const tournamentPhaseTitle =
+    const tournamentPhaseSubtitle =
   tournamentPhase === 'completed'
     ? 'Final results are locked.'
     : tournamentPhase === 'not_started'
@@ -1255,10 +1260,7 @@ const tournamentPhaseSubtitle =
     ? 'All round robin matches are complete. Review standings and finish the event.'
     : '';
 
-  const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
-  const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
-  const totalPlayableMatchCount = useMemo(() => matches.filter((m) => !m.is_bye).length, [matches]);
-
+  
   const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
     for (const round of roundsAvailable) {

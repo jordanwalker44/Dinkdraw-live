@@ -2611,7 +2611,7 @@ function renderBestOf3Match(match: Match) {
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
             type="number"
             value={draft.game_1_a}
-            disabled={game1Done || seriesComplete || isCompleted}
+            disabled={match.is_complete || game1Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_1_a', e.target.value)}
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />
@@ -2620,7 +2620,7 @@ function renderBestOf3Match(match: Match) {
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
             type="number"
             value={draft.game_1_b}
-            disabled={game1Done || seriesComplete || isCompleted}
+            disabled=match.is_complete || {game1Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />
@@ -2663,8 +2663,9 @@ function renderBestOf3Match(match: Match) {
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
             type="number"
             value={draft.game_2_a}
-            disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+            disabled={match.is_complete || !game1Done || game2Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
+            disabled={match.is_complete || isCompleted}
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />
           <input
@@ -2672,7 +2673,7 @@ function renderBestOf3Match(match: Match) {
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
             type="number"
             value={draft.game_2_b}
-            disabled={!game1Done || game2Done || seriesComplete || isCompleted}
+            disabled={match.is_complete || !game1Done || game2Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_2_b', e.target.value)}
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />
@@ -2720,7 +2721,7 @@ function renderBestOf3Match(match: Match) {
               style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
               type="number"
               value={draft.game_3_a}
-              disabled={match.game_3_a !== null || seriesComplete || isCompleted}
+              disabled={match.is_complete ||match.game_3_a !== null || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_3_a', e.target.value)}
               placeholder={isOrganizer ? "0" : "Organizer only"}
             />
@@ -2729,7 +2730,7 @@ function renderBestOf3Match(match: Match) {
               style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
               type="number"
               value={draft.game_3_b}
-              disabled={match.game_3_b !== null || seriesComplete || isCompleted}
+              disabled={match.is_complete ||match.game_3_b !== null || seriesComplete || isCompleted}
               onChange={(e) => setDraftScore(match.id, 'game_3_b', e.target.value)}
               placeholder={isOrganizer ? "0" : "Organizer only"}
             />

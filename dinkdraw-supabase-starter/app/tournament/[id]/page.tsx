@@ -1229,6 +1229,10 @@ if (isCompleted) {
   }
 }
 
+  const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
+  const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
+  const totalPlayableMatchCount = useMemo(() => matches.filter((m) => !m.is_bye).length, [matches]);  
+
   const tournamentPhaseTitle =
   tournamentPhase === 'completed'
     ? 'Tournament Complete'
@@ -1242,12 +1246,7 @@ if (isCompleted) {
     ? 'Round Robin Complete'
     : 'Tournament Status';
 
-    const finalRound = useMemo(() => roundsAvailable[roundsAvailable.length - 1] || 1, [roundsAvailable]);
-    const completedMatchCount = useMemo(() => matches.filter((m) => !m.is_bye && m.is_complete).length, [matches]);
-    const totalPlayableMatchCount = useMemo(() => matches.filter((m) => !m.is_bye).length, [matches]);
-
-    const tournamentPhaseTitle =
-    const tournamentPhaseSubtitle =
+  const tournamentPhaseSubtitle =
   tournamentPhase === 'completed'
     ? 'Final results are locked.'
     : tournamentPhase === 'not_started'

@@ -2620,7 +2620,7 @@ function renderBestOf3Match(match: Match) {
             style={{ textAlign: 'center', fontSize: 20, fontWeight: 800 }}
             type="number"
             value={draft.game_1_b}
-            disabled=match.is_complete || {game1Done || seriesComplete || isCompleted}
+            disabled={match.is_complete || game1Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_1_b', e.target.value)}
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />

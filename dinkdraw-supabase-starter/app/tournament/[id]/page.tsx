@@ -2963,6 +2963,13 @@ if (existingFinalMatches.length > 0) {
 
   function setDraftScore(matchId: string, field: keyof ScoreDraft, value: string) {
     if (isCompleted) return;
+
+    const match = matches.find((m) => m.id === matchId);
+    if (match?.is_complete) {
+      setMessage('This match is locked. Reopen it before editing.');
+      return;
+    }
+    
     const sanitized = value.replace(/[^\d]/g, '');
     setScoreDrafts((prev) => ({
       ...prev,
@@ -3239,6 +3246,12 @@ if (matchesError) {
   return;
 }
 
+  const lockedMatch = matches.find((m) => m.id === matchId);
+  if (lockedMatch?.is_complete) {
+    setMessage('This match is locked. Reopen it before editing.');
+    return;
+  }
+
 if (!canReportScores) {
   setMessage('Scores are locked for this tournament.');
   return;
@@ -3501,6 +3514,12 @@ if (!canReportScores) {
   async function submitMatchScore(matchId: string) {
   if (isCompleted) {
     setMessage('Final results are locked.');
+    return;
+  }
+
+  const lockedMatch = matches.find((m) => m.id === matchId);
+  if (lockedMatch?.is_complete) {
+    setMessage('This match is locked. Reopen it before editing.');
     return;
   }
 

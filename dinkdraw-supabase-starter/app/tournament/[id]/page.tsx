@@ -1597,9 +1597,84 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   );
 
   const totalPlayableMatchCount = useMemo(
-    () => matches.filter((m) => !m.is_bye).length,
-    [matches]
+  () => matches.filter((m) => !m.is_bye).length,
+  [matches]
+);
+
+const playableMatches = matches.filter((m) => !m.is_bye);
+const completedPlayableMatches = playableMatches.filter((m) => m.is_complete);
+
+let tournamentPhase:
+  | 'not_started'
+  | 'round_in_progress'
+  | 'between_rounds'
+  | 'round_robin_complete'
+  | 'playoffs'
+  | 'completed' = 'not_started';
+
+if (isCompleted) {
+  tournamentPhase = 'completed';
+} else if (!isStarted) {
+  tournamentPhase = 'not_started';
+} else if (playoffMatches.length > 0) {
+  const completedPlayoffMatches = playoffMatches.filter((m) => m.is_complete);
+
+  if (completedPlayoffMatches.length === playoffMatches.length) {
+    tournamentPhase = 'completed';
+  } else {
+    tournamentPhase = 'playoffs';
+  }
+} else if (
+  playableMatches.length > 0 &&
+  completedPlayableMatches.length === playableMatches.length
+) {
+  tournamentPhase = 'round_robin_complete';
+} else {
+  const liveRoundMatches = matches.filter(
+    (m) => m.round_number === currentRound && !m.is_bye
   );
+
+  const completedLiveRoundMatches = liveRoundMatches.filter((m) => m.is_complete);
+
+  if (
+    liveRoundMatches.length > 0 &&
+    completedLiveRoundMatches.length === liveRoundMatches.length
+  ) {
+    tournamentPhase = 'between_rounds';
+  } else {
+    tournamentPhase = 'round_in_progress';
+  }
+}
+
+const tournamentPhaseTitle =
+  tournamentPhase === 'completed'
+    ? 'Tournament Complete'
+    : tournamentPhase === 'not_started'
+    ? 'Ready to Start'
+    : tournamentPhase === 'round_in_progress'
+    ? `Round ${currentRound} In Progress`
+    : tournamentPhase === 'between_rounds'
+    ? `Round ${currentRound} Complete`
+    : tournamentPhase === 'round_robin_complete'
+    ? 'Round Robin Complete'
+    : tournamentPhase === 'playoffs'
+    ? 'Playoffs In Progress'
+    : 'Tournament Status';
+
+const tournamentPhaseSubtitle =
+  tournamentPhase === 'completed'
+    ? 'Final results are locked.'
+    : tournamentPhase === 'not_started'
+    ? 'The schedule will appear after the organizer starts the tournament.'
+    : tournamentPhase === 'round_in_progress'
+    ? `${completedMatchCount} of ${totalPlayableMatchCount} round robin matches complete.`
+    : tournamentPhase === 'between_rounds'
+    ? 'All matches in this round are complete. The next round is ready.'
+    : tournamentPhase === 'round_robin_complete'
+    ? 'All round robin matches are complete. Generate playoffs or review standings.'
+    : tournamentPhase === 'playoffs'
+    ? 'Playoff matches are active. Winners advance through the bracket.'
+    : '';
 
 const hasAnyScores = matches.some(
   (m) =>
@@ -4911,19 +4986,15 @@ Sign in with this same email address to submit and edit scores.`;
 )}
 
           <div className="card-title">All Rounds</div>
-          <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Scores are locked.'
-              : isStarted
-              ? `Current live round: ${currentRound}`
-              : 'Round schedule appears here after the tournament starts.'}
+<div className="card-subtitle">
+  {tournamentPhaseSubtitle}
 
-            {!isCompleted && isStarted ? (
-              <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 600 }}>
-                Organizer enters official scores
-              </div>
-            ) : null}
-          </div>
+  {!isCompleted && isStarted ? (
+    <div style={{ marginTop: 6, fontSize: 13, color: '#FFCB05', fontWeight: 700 }}>
+      {tournamentPhaseTitle}
+    </div>
+  ) : null}
+</div>
 
           <div
             style={{

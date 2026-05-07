@@ -3678,6 +3678,55 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   );
 }
 
+  async function reopenMatch(matchId: string) {
+  if (!isOrganizer) {
+    setMessage('Only the organizer can reopen matches.');
+    return;
+  }
+
+  if (isCompleted) {
+    setMessage('Final results are locked.');
+    return;
+  }
+
+  const match = matches.find((m) => m.id === matchId);
+
+  if (!match) {
+    setMessage('Match not found.');
+    return;
+  }
+
+  if (!match.is_complete) {
+    setMessage('This match is already open.');
+    return;
+  }
+
+  const previousMatches = matches;
+
+  const optimisticMatches = matches.map((m) =>
+    m.id === matchId ? { ...m, is_complete: false } : m
+  );
+
+  setMatches(optimisticMatches);
+  setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
+  setMessage('Reopening match...');
+
+  const { error } = await supabase
+    .from('matches')
+    .update({ is_complete: false })
+    .eq('id', matchId);
+
+  if (error) {
+    setMatches(previousMatches);
+    setStandings(computeStandings(playerSlots, previousMatches, isSingles, isBestOf3));
+    setMessage(`Reopen failed: ${error.message}`);
+    return;
+  }
+
+  await loadTournamentData(userId);
+  setMessage('Match reopened. You can now edit the score.');
+}
+
   function renderPlayerName(id: string | null) {
     if (!id) return '-';
     return playersById[id]?.display_name || 'Player';

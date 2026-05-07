@@ -2665,7 +2665,6 @@ function renderBestOf3Match(match: Match) {
             value={draft.game_2_a}
             disabled={match.is_complete || !game1Done || game2Done || seriesComplete || isCompleted}
             onChange={(e) => setDraftScore(match.id, 'game_2_a', e.target.value)}
-            disabled={match.is_complete || isCompleted}
             placeholder={isOrganizer ? "0" : "Organizer only"}
           />
           <input

@@ -3996,12 +3996,22 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 ) : null}
 
         {seriesComplete ? (
-          <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
-            <div style={{ fontWeight: 800, color: '#FFCB05' }}>
-              {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
-            </div>
-          </div>
-        ) : null}
+  <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
+    <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 10 }}>
+      {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
+    </div>
+
+    {isOrganizer && !isCompleted ? (
+      <button
+        type="button"
+        className="button secondary"
+        onClick={() => reopenMatch(match.id)}
+      >
+        Reopen Match to Edit Scores
+      </button>
+    ) : null}
+  </div>
+) : null}
       </div>
     );
   }

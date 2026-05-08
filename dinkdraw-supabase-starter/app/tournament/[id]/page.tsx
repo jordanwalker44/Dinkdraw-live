@@ -187,68 +187,70 @@ function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: num
   if (activePlayers.length < 3) return [];
 
   const ids = activePlayers.map((p) => p.id);
-  const maxParticipantsPerRound = Math.min(courts * 2, ids.length);
-  const matchupCounts = new Map<string, number>();
-  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
-  const courtHistory = new Map<string, number[]>(ids.map((id) => [id, []]));
   const output: ScheduleRow[] = [];
 
-  function getMatchupCount(a: string, b: string) {
-    return matchupCounts.get(singlesMatchupKey(a, b)) || 0;
-  }
+  const hasBye = ids.length % 2 !== 0;
+  const rotationPlayers = hasBye ? [...ids, 'BYE'] : [...ids];
 
-  function chooseParticipantsForRound() {
-    const sorted = [...ids].sort((a, b) => {
-      const byeDiff = (byeCounts.get(b) || 0) - (byeCounts.get(a) || 0);
-      if (byeDiff !== 0) return byeDiff;
-      const playDiff = (playedCounts.get(a) || 0) - (playedCounts.get(b) || 0);
-      if (playDiff !== 0) return playDiff;
-      return Math.random() - 0.5;
-    });
-    const count = Math.min(maxParticipantsPerRound, sorted.length);
-    return count % 2 === 0 ? sorted.slice(0, count) : sorted.slice(0, count - 1);
-  }
+  const playerCountForRotation = rotationPlayers.length;
+  const maxRounds = playerCountForRotation - 1;
+  const roundsToGenerate = Math.min(rounds, maxRounds);
 
-  function findBestSinglesMatches(participants: string[]) {
-    let bestResult: Array<{ playerA: string; playerB: string }> | null = null;
-    let bestPenalty = Infinity;
+  let rotating = [...rotationPlayers];
 
-    for (let attempt = 0; attempt < 500; attempt++) {
-      const shuffled = shuffle(participants);
-      const pairs = chunkIntoGroups(shuffled, 2).filter((g) => g.length === 2);
-      let penalty = 0;
-      for (const [a, b] of pairs) {
-        penalty += getMatchupCount(a, b) * 1000;
-        penalty += (playedCounts.get(a) || 0) + (playedCounts.get(b) || 0);
-        penalty += Math.random();
+  for (let round = 1; round <= roundsToGenerate; round += 1) {
+    let courtNumber = 1;
+
+    for (let i = 0; i < playerCountForRotation / 2; i += 1) {
+      const playerA = rotating[i];
+      const playerB = rotating[playerCountForRotation - 1 - i];
+
+      if (playerA === 'BYE' || playerB === 'BYE') {
+        const byePlayerId = playerA === 'BYE' ? playerB : playerA;
+
+        output.push({
+          round_number: round,
+          court_number: null,
+          court_label: null,
+          team_a_player_1_id: byePlayerId,
+          team_a_player_2_id: null,
+          team_b_player_1_id: null,
+          team_b_player_2_id: null,
+          team_a_score: null,
+          team_b_score: null,
+          is_bye: true,
+          is_complete: false,
+        });
+
+        continue;
       }
-      if (penalty < bestPenalty) {
-        bestPenalty = penalty;
-        bestResult = pairs.map(([a, b]) => ({ playerA: a, playerB: b }));
-      }
+
+      if (courtNumber > courts) continue;
+
+      output.push({
+        round_number: round,
+        court_number: courtNumber,
+        court_label: null,
+        team_a_player_1_id: playerA,
+        team_a_player_2_id: null,
+        team_b_player_1_id: playerB,
+        team_b_player_2_id: null,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: false,
+        is_complete: false,
+      });
+
+      courtNumber += 1;
     }
-    return bestResult || [];
+
+    rotating = [
+      rotating[0],
+      rotating[rotating.length - 1],
+      ...rotating.slice(1, rotating.length - 1),
+    ];
   }
 
-  for (let round = 1; round <= rounds; round++) {
-    const participants = chooseParticipantsForRound();
-    const benched = ids.filter((id) => !participants.includes(id));
-    const matches = findBestSinglesMatches(participants);
-    if (!matches.length) break;
-
-    benched.forEach((id) => {
-      byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({ round_number: round, court_number: null, court_label: null, team_a_player_1_id: id, team_a_player_2_id: null, team_b_player_1_id: null, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: true, is_complete: false });
-    });
-
-    matches.forEach((match, index) => {
-      const { playerA, playerB } = match;
-      matchupCounts.set(singlesMatchupKey(playerA, playerB), getMatchupCount(playerA, playerB) + 1);
-      playedCounts.set(playerA, (playedCounts.get(playerA) || 0) + 1);
-      playedCounts.set(playerB, (playedCounts.get(playerB) || 0) + 1);
-output.push({ round_number: round, court_number: index + 1, court_label: null, team_a_player_1_id: playerA, team_a_player_2_id: null, team_b_player_1_id: playerB, team_b_player_2_id: null, team_a_score: null, team_b_score: null, is_bye: false, is_complete: false });    });
-  }
   return output;
 }
 

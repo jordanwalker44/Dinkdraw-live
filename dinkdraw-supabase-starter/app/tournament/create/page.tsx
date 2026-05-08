@@ -699,6 +699,24 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 ) : null}
 
+          {tournamentMode === 'round_robin' && playoffFormat !== 'none' ? (
+  <div style={{ marginTop: 10 }}>
+    <label className="label">Seeding Style</label>
+    <select
+      className="input"
+      value={playoffSeedingStyle}
+      onChange={(e) =>
+        setPlayoffSeedingStyle(
+          e.target.value as 'traditional' | 'simple'
+        )
+      }
+    >
+      <option value="traditional">Traditional (1 vs 8)</option>
+      <option value="simple">Simple (1 vs last)</option>
+    </select>
+  </div>
+) : null}
+
             <div>
             <div className="card-title" style={{ marginTop: 14 }}>
               Event Details
@@ -784,17 +802,7 @@ router.push(`/tournament/${tournament.id}`);
           </div>
 
           {tournamentMode === 'round_robin' && playoffFormat !== 'none' && (
-            <div>
-              <label className="label">Seeding Style</label>
-              <select
-                className="input"
-                value={playoffSeedingStyle}
-                onChange={(e) => setPlayoffSeedingStyle(e.target.value as any)}
-              >
-                <option value="traditional">Traditional (Byes for top seeds)</option>
-                <option value="simple">Simple (1 vs Last)</option>
-              </select>
-            </div>
+            
           )}
 
           <div className="card-title" style={{ marginTop: 14 }}>

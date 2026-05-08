@@ -801,10 +801,6 @@ router.push(`/tournament/${tournament.id}`);
 ) : null}
           </div>
 
-          {tournamentMode === 'round_robin' && playoffFormat !== 'none' && (
-            
-          )}
-
           <div className="card-title" style={{ marginTop: 14 }}>
             Optional Settings
           </div>

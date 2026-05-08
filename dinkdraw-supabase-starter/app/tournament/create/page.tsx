@@ -709,25 +709,7 @@ router.push(`/tournament/${tournament.id}`);
       Top seeds automatically receive byes when the bracket needs them.
     </div>
   </div>
-) : null}
-
-          {tournamentMode === 'round_robin' && playoffFormat !== 'none' ? (
-  <div style={{ marginTop: 10 }}>
-    <label className="label">Seeding Style</label>
-    <select
-      className="input"
-      value={playoffSeedingStyle}
-      onChange={(e) =>
-        setPlayoffSeedingStyle(
-          e.target.value as 'traditional' | 'simple'
-        )
-      }
-    >
-      <option value="traditional">Traditional (1 vs 8)</option>
-      <option value="simple">Simple (1 vs last)</option>
-    </select>
-  </div>
-) : null}
+) : null}         
 
             <div>
             <div className="card-title" style={{ marginTop: 14 }}>

@@ -5695,13 +5695,13 @@ Sign in with this same email address to submit and edit scores.`;
                       </div>
                     </div>
 
-                    {match.is_complete ? (
+     {match.is_complete ? (
   canManageScores && !isCompleted ? (
     <div>
       <button
+        type="button"
         className="button secondary"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => submitMatchScore(match.id)}
+        onClick={() => reopenMatch(match.id)}
         style={{
           width: '100%',
           fontWeight: 900,
@@ -5710,7 +5710,7 @@ Sign in with this same email address to submit and edit scores.`;
           borderColor: 'rgba(255,203,5,0.35)',
         }}
       >
-        Save Score Edit
+        Reopen Match to Edit Scores
       </button>
 
       <div
@@ -5723,7 +5723,7 @@ Sign in with this same email address to submit and edit scores.`;
           letterSpacing: '0.04em',
         }}
       >
-        Editing submitted score
+        Match complete. Reopen to edit.
       </div>
     </div>
   ) : (

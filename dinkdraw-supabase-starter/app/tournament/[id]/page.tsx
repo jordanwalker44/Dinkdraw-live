@@ -3999,11 +3999,26 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
             ) : null}
 
             <span
-              className={match.is_complete ? 'tag green' : 'tag'}
-              style={!match.is_complete ? { fontWeight: 800 } : undefined}
-            >
-              {match.is_complete ? 'COMPLETE' : 'LIVE'}
-            </span>
+  className={match.is_complete ? 'tag green' : 'tag'}
+  style={!match.is_complete ? { fontWeight: 800 } : undefined}
+>
+  {match.is_complete ? 'COMPLETE' : 'LIVE'}
+</span>
+
+{canManageScores && match.is_complete && !isCompleted ? (
+  <button
+    type="button"
+    className="button secondary"
+    onClick={() => reopenMatch(match.id)}
+    style={{
+      padding: '6px 10px',
+      fontSize: 12,
+      minHeight: 0,
+    }}
+  >
+    Reopen
+  </button>
+) : null}
           </div>
         </div>
 

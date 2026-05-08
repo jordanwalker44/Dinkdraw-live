@@ -123,7 +123,7 @@ export default function CreateTournamentPage() {
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
   const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
-  const [playoffFormat, setPlayoffFormat] = useState<'none' | 'everyone' | 'top_4' | 'top_8' | 'top_16' | 'custom'>('none');
+  const [playoffFormat, setPlayoffFormat] = useState<'none' | 'everyone' | 'top_4' | 'top_8' | 'top_16'>('none');
   const [playoffAdvanceCount, setPlayoffAdvanceCount] = useState(8);
   const [playoffSeedingStyle, setPlayoffSeedingStyle] = useState<'traditional' | 'simple'>('traditional');
   
@@ -267,9 +267,7 @@ setFavoriteLocations(savedLocations || []);
         allow_player_score_reporting: allowPlayerScoreReporting,
         playoff_format: playoffFormat,
         playoff_advance_count:
-          playoffFormat === 'custom'
-            ? playoffAdvanceCount
-            : playoffFormat === 'everyone'
+          playoffFormat === 'everyone'
             ? playerCount
             : playoffFormat === 'top_4'
             ? 4
@@ -277,7 +275,7 @@ setFavoriteLocations(savedLocations || []);
             ? 8
             : playoffFormat === 'top_16'
             ? 16
-            : null,
+          : null,
         playoff_seeding_style: playoffSeedingStyle,
       })
       .select()
@@ -712,7 +710,24 @@ router.push(`/tournament/${tournament.id}`);
       </button>
     </div>
   </div>
-) : null}
+          ) : null}
+
+          {tournamentMode === 'round_robin' ? (
+            <div>
+              <label className="label">Playoff Bracket</label>
+              <select
+                className="input"
+                value={playoffFormat}
+                onChange={(e) => setPlayoffFormat(e.target.value as typeof playoffFormat)}
+              >
+                <option value="none">No playoff bracket</option>
+                <option value="everyone">Everyone advances</option>
+                <option value="top_4">Top 4 advance</option>
+                <option value="top_8">Top 8 advance</option>
+                <option value="top_16">Top 16 advance</option>
+              </select>
+            </div>
+          ) : null}
 
             <div>
             <div className="card-title" style={{ marginTop: 14 }}>
@@ -797,19 +812,6 @@ router.push(`/tournament/${tournament.id}`);
   />
 ) : null}
           </div>
-
-          {tournamentMode === 'round_robin' && playoffFormat === 'custom' && (
-            <div>
-              <label className="label">Number of Teams Advancing</label>
-              <input
-                type="number"
-                className="input"
-                value={playoffAdvanceCount}
-                onChange={(e) => setPlayoffAdvanceCount(Number(e.target.value))}
-                min={2}
-              />
-            </div>
-          )}
 
           {tournamentMode === 'round_robin' && playoffFormat !== 'none' && (
             <div>

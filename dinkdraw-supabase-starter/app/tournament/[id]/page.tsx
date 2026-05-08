@@ -1146,6 +1146,141 @@ function buildMixedDoublesSchedule(
   return output;
 }
 
+function validateScheduleRows(
+  scheduleRows: ScheduleRow[],
+  options: {
+    format: string;
+    tournamentMode: string | null;
+    expectedRoundCount: number;
+    availableCourts: number;
+  }
+): { isValid: boolean; message: string } {
+  const playableRows = scheduleRows.filter((row) => !row.is_bye);
+
+  if (!scheduleRows.length) {
+    return {
+      isValid: false,
+      message: 'Could not generate a schedule.',
+    };
+  }
+
+  if (!playableRows.length) {
+    return {
+      isValid: false,
+      message: 'Could not generate any playable matches.',
+    };
+  }
+
+  const generatedPlayableRounds = new Set(
+    playableRows.map((row) => row.round_number)
+  );
+
+  if (generatedPlayableRounds.size < options.expectedRoundCount) {
+    return {
+      isValid: false,
+      message: `Could only generate ${generatedPlayableRounds.size} of ${options.expectedRoundCount} required rounds. Please reduce rounds, reduce courts, or adjust player count.`,
+    };
+  }
+
+  const playersByRound = new Map<number, Set<string>>();
+  const courtsByRound = new Map<number, Set<number>>();
+
+  for (const row of scheduleRows) {
+    if (!Number.isFinite(row.round_number) || row.round_number < 1) {
+      return {
+        isValid: false,
+        message: 'Schedule validation failed: invalid round number.',
+      };
+    }
+
+    const playerIds = [
+      row.team_a_player_1_id,
+      row.team_a_player_2_id,
+      row.team_b_player_1_id,
+      row.team_b_player_2_id,
+    ].filter(Boolean) as string[];
+
+    const uniquePlayersInMatch = new Set(playerIds);
+
+    if (uniquePlayersInMatch.size !== playerIds.length) {
+      return {
+        isValid: false,
+        message: 'Schedule validation failed: the same player appears twice in one match.',
+      };
+    }
+
+    if (!playersByRound.has(row.round_number)) {
+      playersByRound.set(row.round_number, new Set<string>());
+    }
+
+    const roundPlayers = playersByRound.get(row.round_number)!;
+
+    for (const playerId of playerIds) {
+      if (roundPlayers.has(playerId)) {
+        return {
+          isValid: false,
+          message: 'Schedule validation failed: a player appears more than once in the same round.',
+        };
+      }
+
+      roundPlayers.add(playerId);
+    }
+
+    if (row.is_bye) continue;
+
+    if (!row.team_a_player_1_id || !row.team_b_player_1_id) {
+      return {
+        isValid: false,
+        message: 'Schedule validation failed: a match is missing required players.',
+      };
+    }
+
+    const requiresDoublesPlayers =
+      options.format === 'doubles' || options.tournamentMode === 'cream_of_the_crop';
+
+    if (
+      requiresDoublesPlayers &&
+      (!row.team_a_player_2_id || !row.team_b_player_2_id)
+    ) {
+      return {
+        isValid: false,
+        message: 'Schedule validation failed: a doubles match is missing a partner.',
+      };
+    }
+
+    if (
+      row.court_number === null ||
+      row.court_number < 1 ||
+      row.court_number > options.availableCourts
+    ) {
+      return {
+        isValid: false,
+        message: 'Schedule validation failed: invalid court assignment.',
+      };
+    }
+
+    if (!courtsByRound.has(row.round_number)) {
+      courtsByRound.set(row.round_number, new Set<number>());
+    }
+
+    const roundCourts = courtsByRound.get(row.round_number)!;
+
+    if (roundCourts.has(row.court_number)) {
+      return {
+        isValid: false,
+        message: 'Schedule validation failed: two matches were assigned to the same court in the same round.',
+      };
+    }
+
+    roundCourts.add(row.court_number);
+  }
+
+  return {
+    isValid: true,
+    message: '',
+  };
+}
+
 function buildSchedule(
   players: PlayerSlot[],
   rounds: number,

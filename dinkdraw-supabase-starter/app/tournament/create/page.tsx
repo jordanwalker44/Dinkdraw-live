@@ -651,61 +651,6 @@ router.push(`/tournament/${tournament.id}`);
           ) : null}
 
           {tournamentMode === 'round_robin' ? (
-  <div>
-    <label className="label">Playoff Bracket</label>
-
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        gap: 8,
-      }}
-    >
-      <button
-        type="button"
-        className={`button ${playoffFormat === 'none' ? 'primary' : 'secondary'}`}
-        onClick={() => setPlayoffFormat('none')}
-      >
-        None
-      </button>
-
-      <button
-        type="button"
-        className={`button ${playoffFormat === 'everyone' ? 'primary' : 'secondary'}`}
-        onClick={() => setPlayoffFormat('everyone')}
-      >
-        Everyone
-      </button>
-
-      <button
-        type="button"
-        className={`button ${playoffFormat === 'top_4' ? 'primary' : 'secondary'}`}
-        onClick={() => setPlayoffFormat('top_4')}
-      >
-        Top 4
-      </button>
-
-      <button
-        type="button"
-        className={`button ${playoffFormat === 'top_8' ? 'primary' : 'secondary'}`}
-        onClick={() => setPlayoffFormat('top_8')}
-      >
-        Top 8
-      </button>
-
-      <button
-        type="button"
-        className={`button ${playoffFormat === 'top_16' ? 'primary' : 'secondary'}`}
-        onClick={() => setPlayoffFormat('top_16')}
-      >
-        Top 16
-      </button>
-      
-    </div>
-  </div>
-          ) : null}
-
-          {tournamentMode === 'round_robin' ? (
             <div>
               <label className="label">Playoff Bracket</label>
               <select

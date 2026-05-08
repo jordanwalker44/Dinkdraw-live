@@ -3915,10 +3915,10 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   type="number"
   inputMode="numeric"
   pattern="[0-9]*"
-  value={aValue}
+  value={bValue}
   disabled={gameDisabled}
   onFocus={(e) => e.currentTarget.select()}
-  onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
+  onChange={(e) => setDraftScore(match.id, bField, e.target.value)}
   placeholder="0"
 />
         </div>

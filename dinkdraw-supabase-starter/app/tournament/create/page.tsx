@@ -650,22 +650,54 @@ router.push(`/tournament/${tournament.id}`);
             </div>
           ) : null}
 
-          {tournamentMode === 'round_robin' ? (
-            <div>
-              <label className="label">Playoff Bracket</label>
-              <select
-                className="input"
-                value={playoffFormat}
-                onChange={(e) => setPlayoffFormat(e.target.value as typeof playoffFormat)}
-              >
-                <option value="none">No playoff bracket</option>
-                <option value="everyone">Everyone advances</option>
-                <option value="top_4">Top 4 advance</option>
-                <option value="top_8">Top 8 advance</option>
-                <option value="top_16">Top 16 advance</option>
-              </select>
-            </div>
-          ) : null}
+{tournamentMode === 'round_robin' ? (
+  <div>
+    <label className="label">Playoff Bracket</label>
+
+    <div style={{ position: 'relative' }}>
+      <select
+        className="input"
+        value={playoffFormat}
+        onChange={(e) =>
+          setPlayoffFormat(e.target.value as typeof playoffFormat)
+        }
+        style={{
+          width: '100%',
+          background: 'rgba(0,0,0,0.35)',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12,
+          padding: '12px 40px 12px 14px',
+          fontWeight: 700,
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          MozAppearance: 'none',
+        }}
+      >
+        <option value="none">No playoff bracket</option>
+        <option value="everyone">Everyone advances</option>
+        <option value="top_4">Top 4 advance</option>
+        <option value="top_8">Top 8 advance</option>
+        <option value="top_16">Top 16 advance</option>
+      </select>
+
+      <div
+        style={{
+          position: 'absolute',
+          right: 12,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          pointerEvents: 'none',
+          color: '#FFCB05',
+          fontSize: 14,
+          fontWeight: 900,
+        }}
+      >
+        ▼
+      </div>
+    </div>
+  </div>
+) : null}
 
             <div>
             <div className="card-title" style={{ marginTop: 14 }}>

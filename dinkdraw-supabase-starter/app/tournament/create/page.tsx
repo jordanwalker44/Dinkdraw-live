@@ -276,7 +276,7 @@ setFavoriteLocations(savedLocations || []);
             : playoffFormat === 'top_16'
             ? 16
           : null,
-        playoff_seeding_style: playoffSeedingStyle,
+        playoff_seeding_style: 'traditional',
       })
       .select()
       .single();
@@ -695,6 +695,18 @@ router.push(`/tournament/${tournament.id}`);
       >
         ▼
       </div>
+    </div>
+
+    {/* 👇 THIS IS YOUR NEW TEXT */}
+    <div
+      style={{
+        marginTop: 6,
+        fontSize: 12,
+        lineHeight: 1.35,
+        color: 'rgba(255,255,255,0.58)',
+      }}
+    >
+      Top seeds automatically receive byes when the bracket needs them.
     </div>
   </div>
 ) : null}

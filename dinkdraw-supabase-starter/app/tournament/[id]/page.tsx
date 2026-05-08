@@ -3869,12 +3869,13 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     padding: '10px 6px',
     opacity: match.is_complete ? 0.65 : 1,
     cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}       
+  }}
   type="number"
   inputMode="numeric"
-  pattern="[0-9]*"             
+  pattern="[0-9]*"
   value={aValue}
   disabled={gameDisabled}
+  onFocus={(e) => e.currentTarget.select()}
   onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
   placeholder="0"
 />
@@ -3910,13 +3911,14 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     padding: '10px 6px',
     opacity: match.is_complete ? 0.65 : 1,
     cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}         
+  }}
   type="number"
   inputMode="numeric"
-  pattern="[0-9]*"           
-  value={bValue}
+  pattern="[0-9]*"
+  value={aValue}
   disabled={gameDisabled}
-  onChange={(e) => setDraftScore(match.id, bField, e.target.value)}
+  onFocus={(e) => e.currentTarget.select()}
+  onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
   placeholder="0"
 />
         </div>
@@ -5640,23 +5642,29 @@ Sign in with this same email address to submit and edit scores.`;
                         </div>
 
                         <input
-                          className="input"
-                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                          type="number"
-                          value={
-                            canManageScores && match.is_complete && !isCompleted
-                            ? draft.team_a_score
-                            : match.is_complete || !isOrganizer
-                            ? match.team_a_score === null
-                            ? ''
-                            : String(match.team_a_score)
-                            : draft.team_a_score
-              }
-                          disabled={isCompleted || (!canReportScores && !(canManageScores && match.is_complete))}
-                          onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
-                          onBlur={() => saveScoreField(match.id, 'team_a_score')}
-                          placeholder={canReportScores ? '0' : 'Scores locked'}
-                        />
+  className="input"
+  style={{
+    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: 800,
+    opacity: match.is_complete ? 0.65 : 1,
+    cursor: match.is_complete ? 'not-allowed' : 'text',
+  }}
+  type="number"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  value={
+    match.is_complete
+      ? match.team_a_score === null
+        ? ''
+        : String(match.team_a_score)
+      : draft.team_a_score
+  }
+  disabled={isCompleted || match.is_complete || !canReportScores}
+  onFocus={(e) => e.currentTarget.select()}
+  onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
+  placeholder={canReportScores ? '0' : 'Scores locked'}
+/>
                       </div>
 
                       <div
@@ -5706,23 +5714,29 @@ Sign in with this same email address to submit and edit scores.`;
                         </div>
 
                         <input
-                          className="input"
-                          style={{ textAlign: 'center', fontSize: 22, fontWeight: 800 }}
-                          type="number"
-                          value={
-                            canManageScores && match.is_complete && !isCompleted
-                            ? draft.team_b_score
-                            : match.is_complete || !isOrganizer
-                            ? match.team_b_score === null
-                            ? ''
-                            : String(match.team_b_score)
-                            : draft.team_b_score
-                    }
-                          disabled={isCompleted || (!canReportScores && !(canManageScores && match.is_complete))}
-                          onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
-                          onBlur={() => saveScoreField(match.id, 'team_b_score')}
-                          placeholder={canReportScores ? '0' : 'Scores locked'}
-                        />
+  className="input"
+  style={{
+    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: 800,
+    opacity: match.is_complete ? 0.65 : 1,
+    cursor: match.is_complete ? 'not-allowed' : 'text',
+  }}
+  type="number"
+  inputMode="numeric"
+  pattern="[0-9]*"
+  value={
+    match.is_complete
+      ? match.team_b_score === null
+        ? ''
+        : String(match.team_b_score)
+      : draft.team_b_score
+  }
+  disabled={isCompleted || match.is_complete || !canReportScores}
+  onFocus={(e) => e.currentTarget.select()}
+  onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
+  placeholder={canReportScores ? '0' : 'Scores locked'}
+/>
                       </div>
                     </div>
 

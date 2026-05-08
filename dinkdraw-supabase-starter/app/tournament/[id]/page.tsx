@@ -1146,20 +1146,6 @@ function buildMixedDoublesSchedule(
   return output;
 }
 
-const scheduleValidation = validateScheduleRows(scheduleRows, {
-  format: tournament.format,
-  tournamentMode: tournament.tournament_mode,
-  expectedRoundCount:
-    tournament.tournament_mode === 'cream_of_the_crop' ? 3 : tournament.rounds,
-  availableCourts,
-});
-
-if (!scheduleValidation.isValid) {
-  setMessage(scheduleValidation.message);
-  setIsStarting(false);
-  return;
-}
-
 function buildSchedule(
   players: PlayerSlot[],
   rounds: number,

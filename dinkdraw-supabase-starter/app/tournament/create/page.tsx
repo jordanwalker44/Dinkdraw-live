@@ -700,14 +700,7 @@ router.push(`/tournament/${tournament.id}`);
       >
         Top 16
       </button>
-
-      <button
-        type="button"
-        className={`button ${playoffFormat === 'custom' ? 'primary' : 'secondary'}`}
-        onClick={() => setPlayoffFormat('custom')}
-      >
-        Custom
-      </button>
+      
     </div>
   </div>
           ) : null}

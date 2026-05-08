@@ -4007,17 +4007,21 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 
 {canManageScores && match.is_complete && !isCompleted ? (
   <button
-    type="button"
-    className="button secondary"
-    onClick={() => reopenMatch(match.id)}
-    style={{
-      padding: '6px 10px',
-      fontSize: 12,
-      minHeight: 0,
-    }}
-  >
-    Reopen
-  </button>
+  type="button"
+  className="button secondary"
+  onClick={() => reopenMatch(match.id)}
+  style={{
+    width: '100%',
+    fontWeight: 900,
+    fontSize: 16,
+    padding: '14px 16px',
+    borderColor: 'rgba(255,203,5,0.6)',
+    background: 'rgba(255,203,5,0.08)',
+    boxShadow: '0 0 0 1px rgba(255,203,5,0.2) inset',
+  }}
+>
+  🔓 Reopen Match to Edit Scores
+</button>
 ) : null}
           </div>
         </div>
@@ -4161,12 +4165,21 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 
     {isOrganizer && !isCompleted ? (
       <button
-        type="button"
-        className="button secondary"
-        onClick={() => reopenMatch(match.id)}
-      >
-        Reopen Match to Edit Scores
-      </button>
+  type="button"
+  className="button secondary"
+  onClick={() => reopenMatch(match.id)}
+  style={{
+    width: '100%',
+    fontWeight: 900,
+    fontSize: 16,
+    padding: '14px 16px',
+    borderColor: 'rgba(255,203,5,0.6)',
+    background: 'rgba(255,203,5,0.08)',
+    boxShadow: '0 0 0 1px rgba(255,203,5,0.2) inset',
+  }}
+>
+  🔓 Reopen Match to Edit Scores
+</button>
     ) : null}
   </div>
 ) : null}
@@ -5699,19 +5712,21 @@ Sign in with this same email address to submit and edit scores.`;
   canManageScores && !isCompleted ? (
     <div>
       <button
-        type="button"
-        className="button secondary"
-        onClick={() => reopenMatch(match.id)}
-        style={{
-          width: '100%',
-          fontWeight: 900,
-          fontSize: 16,
-          padding: '14px 16px',
-          borderColor: 'rgba(255,203,5,0.35)',
-        }}
-      >
-        Reopen Match to Edit Scores
-      </button>
+  type="button"
+  className="button secondary"
+  onClick={() => reopenMatch(match.id)}
+  style={{
+    width: '100%',
+    fontWeight: 900,
+    fontSize: 16,
+    padding: '14px 16px',
+    borderColor: 'rgba(255,203,5,0.6)',
+    background: 'rgba(255,203,5,0.08)',
+    boxShadow: '0 0 0 1px rgba(255,203,5,0.2) inset',
+  }}
+>
+  🔓 Reopen Match to Edit Scores
+</button>
 
       <div
         style={{

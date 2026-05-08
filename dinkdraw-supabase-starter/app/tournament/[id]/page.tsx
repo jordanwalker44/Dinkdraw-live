@@ -3869,8 +3869,10 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     padding: '10px 6px',
     opacity: match.is_complete ? 0.65 : 1,
     cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}
+  }}       
   type="number"
+  inputMode="numeric"
+  pattern="[0-9]*"             
   value={aValue}
   disabled={gameDisabled}
   onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
@@ -3908,8 +3910,10 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     padding: '10px 6px',
     opacity: match.is_complete ? 0.65 : 1,
     cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}
+  }}         
   type="number"
+  inputMode="numeric"
+  pattern="[0-9]*"           
   value={bValue}
   disabled={gameDisabled}
   onChange={(e) => setDraftScore(match.id, bField, e.target.value)}

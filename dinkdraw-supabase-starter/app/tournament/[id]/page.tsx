@@ -3861,14 +3861,21 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
           </div>
 
           <input
-            className="input"
-            style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, padding: '10px 6px' }}
-            type="number"
-            value={aValue}
-            disabled={gameDisabled}
-            onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
-            placeholder="0"
-          />
+  className="input"
+  style={{
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: 900,
+    padding: '10px 6px',
+    opacity: match.is_complete ? 0.65 : 1,
+    cursor: match.is_complete ? 'not-allowed' : 'text',
+  }}
+  type="number"
+  value={aValue}
+  disabled={gameDisabled}
+  onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
+  placeholder="0"
+/>
         </div>
 
         <div
@@ -3893,14 +3900,21 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
           </div>
 
           <input
-            className="input"
-            style={{ textAlign: 'center', fontSize: 24, fontWeight: 900, padding: '10px 6px' }}
-            type="number"
-            value={bValue}
-            disabled={gameDisabled}
-            onChange={(e) => setDraftScore(match.id, bField, e.target.value)}
-            placeholder="0"
-          />
+  className="input"
+  style={{
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: 900,
+    padding: '10px 6px',
+    opacity: match.is_complete ? 0.65 : 1,
+    cursor: match.is_complete ? 'not-allowed' : 'text',
+  }}
+  type="number"
+  value={bValue}
+  disabled={gameDisabled}
+  onChange={(e) => setDraftScore(match.id, bField, e.target.value)}
+  placeholder="0"
+/>
         </div>
       </div>
 

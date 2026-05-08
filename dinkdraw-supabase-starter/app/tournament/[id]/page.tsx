@@ -2479,15 +2479,19 @@ if (existingFinalMatches.length > 0) {
         tournament.doubles_mode
       );
 
-      if (tournament.format === 'doubles' && tournament.doubles_mode === 'fixed') {
-      validateFixedPartnersSchedule(scheduleRows);
-      }
+      const scheduleValidation = validateScheduleRows(scheduleRows, {
+        format: tournament.format,
+        tournamentMode: tournament.tournament_mode,
+        expectedRoundCount:
+        tournament.tournament_mode === 'cream_of_the_crop' ? 3 : tournament.rounds,
+        availableCourts,
+  });
 
-      if (!scheduleRows.length) {
-        setMessage('Could not generate a schedule.');
-        setIsStarting(false);
-        return;
-      }
+if (!scheduleValidation.isValid) {
+  setMessage(scheduleValidation.message);
+  setIsStarting(false);
+  return;
+}
 
       const { error: deleteError } = await supabase
         .from('matches')

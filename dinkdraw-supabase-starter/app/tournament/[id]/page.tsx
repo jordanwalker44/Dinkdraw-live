@@ -1118,6 +1118,7 @@ function buildMixedDoublesSchedule(
   courts: number
 ): ScheduleRow[] {
   const activePlayers = players.filter((p) => (p.display_name || '').trim() !== '');
+
   if (activePlayers.length < 4) return [];
   if (activePlayers.length % 2 !== 0) return [];
 
@@ -1127,180 +1128,72 @@ function buildMixedDoublesSchedule(
   if (!malePlayers.length || !femalePlayers.length) return [];
   if (malePlayers.length !== femalePlayers.length) return [];
 
-  const maxParticipantsPerRound = Math.min(courts * 4, activePlayers.length);
+  type MixedTeam = {
+    maleId: string;
+    femaleId: string;
+  };
 
+  type MixedMatch = {
+    teamA: [string, string];
+    teamB: [string, string];
+  };
+
+  const output: ScheduleRow[] = [];
   const partnerCounts = new Map<string, number>();
-  const matchupCounts = new Map<string, number>();
-    const mixedPartnerSets = new Map<string, Set<string>>(
-    activePlayers.map((player) => [player.id, new Set<string>()])
-  );
-
-  const foursomeRounds = new Map<string, number[]>();
-  const playedCounts = new Map<string, number>(
-    activePlayers.map((player) => [player.id, 0])
-  );
-  const byeCounts = new Map<string, number>(
-    activePlayers.map((player) => [player.id, 0])
-  );
+  const mixedTeamOpponentCounts = new Map<string, number>();
+  const foursomeCounts = new Map<string, number>();
   const courtHistory = new Map<string, number[]>(
     activePlayers.map((player) => [player.id, []])
   );
-  const recentMatchHistory = new Map<string, string[]>(
+  const recentSharedHistory = new Map<string, string[]>(
     activePlayers.map((player) => [player.id, []])
   );
 
-  const output: ScheduleRow[] = [];
-
-  function getPartnerCount(a: string, b: string) {
+  function getPartnerCount(a: string, b: string): number {
     return partnerCounts.get(pairKey(a, b)) || 0;
   }
 
-  function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
-    return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
+  function getMixedTeamKey(team: [string, string]): string {
+    return pairKey(team[0], team[1]);
   }
 
-    function getOppositeGenderPoolSize(id: string): number {
-    const player = activePlayers.find((p) => p.id === id);
-
-    if (player?.gender === 'male') return femalePlayers.length;
-    if (player?.gender === 'female') return malePlayers.length;
-
-    return 0;
-  }
-
-  function hasPartneredWithEveryone(id: string): boolean {
-    const partnerSet = mixedPartnerSets.get(id);
-
-    if (!partnerSet) return false;
-
-    return partnerSet.size >= getOppositeGenderPoolSize(id);
-  }
-
-  function canRepeatMixedPartner(a: string, b: string): boolean {
-    return hasPartneredWithEveryone(a) && hasPartneredWithEveryone(b);
+  function getMixedTeamOpponentKey(teamA: [string, string], teamB: [string, string]): string {
+    return pairKey(getMixedTeamKey(teamA), getMixedTeamKey(teamB));
   }
 
   function getFoursomeKey(a1: string, a2: string, b1: string, b2: string): string {
     return [a1, a2, b1, b2].sort().join('|');
   }
 
-  function getFoursomeLastSeen(a1: string, a2: string, b1: string, b2: string): number {
-    const roundsSeen = foursomeRounds.get(getFoursomeKey(a1, a2, b1, b2)) || [];
-
-    return roundsSeen.length ? roundsSeen[roundsSeen.length - 1] : -999;
-  }
-
-  function chooseParticipantsForRound() {
-    const maleSorted = [...malePlayers].sort((a, b) => {
-      const byeDiff = (byeCounts.get(b.id) || 0) - (byeCounts.get(a.id) || 0);
-      if (byeDiff !== 0) return byeDiff;
-
-      const playDiff = (playedCounts.get(a.id) || 0) - (playedCounts.get(b.id) || 0);
-      if (playDiff !== 0) return playDiff;
-
-      return Math.random() - 0.5;
-    });
-
-    const femaleSorted = [...femalePlayers].sort((a, b) => {
-      const byeDiff = (byeCounts.get(b.id) || 0) - (byeCounts.get(a.id) || 0);
-      if (byeDiff !== 0) return byeDiff;
-
-      const playDiff = (playedCounts.get(a.id) || 0) - (playedCounts.get(b.id) || 0);
-      if (playDiff !== 0) return playDiff;
-
-      return Math.random() - 0.5;
-    });
-
-    const pairsPerRound = Math.min(
-      Math.floor(maxParticipantsPerRound / 4) * 2,
-      maleSorted.length,
-      femaleSorted.length
-    );
-
-    return {
-      selectedMaleIds: maleSorted.slice(0, pairsPerRound).map((p) => p.id),
-      selectedFemaleIds: femaleSorted.slice(0, pairsPerRound).map((p) => p.id),
-    };
-  }
-
-  function getAllMixedPairings(
-    maleIds: string[],
-    femaleIds: string[]
-  ): Array<{ teamA: [string, string]; teamB: [string, string] }> {
-    if (maleIds.length !== 2 || femaleIds.length !== 2) return [];
-
-    const [m1, m2] = maleIds;
-    const [f1, f2] = femaleIds;
-
-    return [
-      { teamA: [m1, f1], teamB: [m2, f2] },
-      { teamA: [m1, f2], teamB: [m2, f1] },
-    ];
-  }
-
-  function scoreMatch(
-  teamA: [string, string],
-  teamB: [string, string],
-  allowRepeatPartners: boolean,
-  courtNumber: number,
-  round: number
-  ) {
-    const [a1, a2] = teamA;
-    const [b1, b2] = teamB;
-
-    const partnerRepeatA = getPartnerCount(a1, a2);
-    const partnerRepeatB = getPartnerCount(b1, b2);
-
-    if (!allowRepeatPartners) {
-      if (partnerRepeatA > 0 && !canRepeatMixedPartner(a1, a2)) {
-        return null;
-      }
-
-      if (partnerRepeatB > 0 && !canRepeatMixedPartner(b1, b2)) {
-        return null;
-      }
-    }
+  function scoreMixedMatch(match: MixedMatch, courtNumber: number): number {
+    const [a1, a2] = match.teamA;
+    const [b1, b2] = match.teamB;
+    const allPlayers = [a1, a2, b1, b2];
 
     let penalty = 0;
 
-    penalty += partnerRepeatA * 100000;
-    penalty += partnerRepeatB * 100000;
-    penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
-        const lastFoursomeRound = getFoursomeLastSeen(a1, a2, b1, b2);
+    penalty += getPartnerCount(a1, a2) * 100000;
+    penalty += getPartnerCount(b1, b2) * 100000;
 
-    if (lastFoursomeRound > 0) {
-      const roundsSinceFoursome = Math.max(1, round - lastFoursomeRound);
+    penalty +=
+      (mixedTeamOpponentCounts.get(getMixedTeamOpponentKey(match.teamA, match.teamB)) || 0) *
+      30000;
 
-      penalty += Math.max(0, 8 - roundsSinceFoursome) * 25000;
-      penalty += 50000;
-    }
-
-    penalty += (playedCounts.get(a1) || 0) * 10;
-    penalty += (playedCounts.get(a2) || 0) * 10;
-    penalty += (playedCounts.get(b1) || 0) * 10;
-    penalty += (playedCounts.get(b2) || 0) * 10;
-
-    const allPlayers = [a1, a2, b1, b2];
-
-    if (courts > 1) {
-  for (const id of allPlayers) {
-    const history = courtHistory.get(id) || [];
-    const lastTwo = history.slice(-2);
-
-    if (lastTwo.length === 2 && lastTwo.every((c) => c === courtNumber)) {
-      return null;
-    }
-  }
-}
+    penalty += (foursomeCounts.get(getFoursomeKey(a1, a2, b1, b2)) || 0) * 75000;
 
     for (const id of allPlayers) {
       const history = courtHistory.get(id) || [];
       const lastCourt = history[history.length - 1];
 
       if (lastCourt === courtNumber) penalty += 300;
+
+      const lastTwo = history.slice(-2);
+      if (lastTwo.length === 2 && lastTwo.every((court) => court === courtNumber)) {
+        penalty += 1500;
+      }
     }
 
-    const recentPairs: Array<[string, string]> = [
+    const sharedPairs: Array<[string, string]> = [
       [a1, a2],
       [a1, b1],
       [a1, b2],
@@ -1309,51 +1202,38 @@ function buildMixedDoublesSchedule(
       [b1, b2],
     ];
 
-    for (const [p1, p2] of recentPairs) {
-      const history1 = recentMatchHistory.get(p1) || [];
-      const history2 = recentMatchHistory.get(p2) || [];
+    for (const [p1, p2] of sharedPairs) {
+      const p1History = recentSharedHistory.get(p1) || [];
+      const p2History = recentSharedHistory.get(p2) || [];
 
-      if (history1.includes(p2) || history2.includes(p1)) {
-        penalty += 800;
+      if (p1History.includes(p2) || p2History.includes(p1)) {
+        penalty += 900;
       }
     }
-
-    penalty += Math.random();
 
     return penalty;
   }
 
-    function buildStructuredMixedRound(
-    selectedMaleIds: string[],
-    selectedFemaleIds: string[],
-    allowRepeatPartners: boolean,
-    round: number
-  ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
-    if (selectedMaleIds.length !== selectedFemaleIds.length) return null;
-    if (selectedMaleIds.length < 8) return null;
-    if (selectedMaleIds.length % 2 !== 0) return null;
+  function buildTeamsForRound(round: number): MixedTeam[] {
+    const femaleShift = (round - 1) % femalePlayers.length;
 
-    const playerCountPerGender = selectedMaleIds.length;
-    const femaleShift = (round - 1) % playerCountPerGender;
-
-    type MixedTeam = {
-      maleId: string;
-      femaleId: string;
-    };
-
-    const teams: MixedTeam[] = selectedMaleIds.map((maleId, index) => ({
-      maleId,
-      femaleId: selectedFemaleIds[(index + femaleShift) % playerCountPerGender],
+    return malePlayers.map((malePlayer, index) => ({
+      maleId: malePlayer.id,
+      femaleId: femalePlayers[(index + femaleShift) % femalePlayers.length].id,
     }));
+  }
 
-    let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+  function pairMixedTeams(teams: MixedTeam[]): MixedMatch[] | null {
+    if (teams.length < 2 || teams.length % 2 !== 0) return null;
+
+    let bestMatches: MixedMatch[] | null = null;
     let bestPenalty = Infinity;
     let searched = 0;
-    const searchLimit = selectedMaleIds.length <= 10 ? 12000 : 6000;
+    const searchLimit = teams.length <= 10 ? 20000 : 8000;
 
     function search(
       remainingTeams: MixedTeam[],
-      current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
+      currentMatches: MixedMatch[],
       currentPenalty: number
     ): void {
       if (searched >= searchLimit) return;
@@ -1363,7 +1243,7 @@ function buildMixedDoublesSchedule(
       if (remainingTeams.length === 0) {
         if (currentPenalty < bestPenalty) {
           bestPenalty = currentPenalty;
-          bestMatches = [...current];
+          bestMatches = [...currentMatches];
         }
 
         return;
@@ -1372,72 +1252,45 @@ function buildMixedDoublesSchedule(
       if (currentPenalty >= bestPenalty) return;
 
       const firstTeam = remainingTeams[0];
-      const courtNumber = current.length + 1;
-
-      type Option = {
-        opponentIndex: number;
-        match: { teamA: [string, string]; teamB: [string, string] };
-        score: number;
-      };
-
-      const options: Option[] = [];
+      const courtNumber = currentMatches.length + 1;
+      const options: Array<{ index: number; match: MixedMatch; score: number }> = [];
 
       for (let i = 1; i < remainingTeams.length; i += 1) {
         const secondTeam = remainingTeams[i];
 
-        const normalMatch = {
-          teamA: [firstTeam.maleId, firstTeam.femaleId] as [string, string],
-          teamB: [secondTeam.maleId, secondTeam.femaleId] as [string, string],
+        const normalMatch: MixedMatch = {
+          teamA: [firstTeam.maleId, firstTeam.femaleId],
+          teamB: [secondTeam.maleId, secondTeam.femaleId],
         };
 
-        const flippedMatch = {
-          teamA: [secondTeam.maleId, secondTeam.femaleId] as [string, string],
-          teamB: [firstTeam.maleId, firstTeam.femaleId] as [string, string],
+        const flippedMatch: MixedMatch = {
+          teamA: [secondTeam.maleId, secondTeam.femaleId],
+          teamB: [firstTeam.maleId, firstTeam.femaleId],
         };
 
-        const normalScore = scoreMatch(
-          normalMatch.teamA,
-          normalMatch.teamB,
-          allowRepeatPartners,
-          courtNumber,
-          round
-        );
+        options.push({
+          index: i,
+          match: normalMatch,
+          score: scoreMixedMatch(normalMatch, courtNumber),
+        });
 
-        if (normalScore !== null) {
-          options.push({
-            opponentIndex: i,
-            match: normalMatch,
-            score: normalScore,
-          });
-        }
-
-        const flippedScore = scoreMatch(
-          flippedMatch.teamA,
-          flippedMatch.teamB,
-          allowRepeatPartners,
-          courtNumber,
-          round
-        );
-
-        if (flippedScore !== null) {
-          options.push({
-            opponentIndex: i,
-            match: flippedMatch,
-            score: flippedScore,
-          });
-        }
+        options.push({
+          index: i,
+          match: flippedMatch,
+          score: scoreMixedMatch(flippedMatch, courtNumber),
+        });
       }
 
       options.sort((a, b) => a.score - b.score);
 
-      for (const option of options.slice(0, 8)) {
+      for (const option of options.slice(0, 10)) {
         const nextRemainingTeams = remainingTeams.filter(
-          (_, index) => index !== 0 && index !== option.opponentIndex
+          (_, index) => index !== 0 && index !== option.index
         );
 
         search(
           nextRemainingTeams,
-          [...current, option.match],
+          [...currentMatches, option.match],
           currentPenalty + option.score
         );
       }
@@ -1448,190 +1301,60 @@ function buildMixedDoublesSchedule(
     return bestMatches;
   }
 
-  function buildRoundMatches(
-    selectedMaleIds: string[],
-    selectedFemaleIds: string[],
-    allowRepeatPartners: boolean,
-    round: number
-  ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
-    if (selectedMaleIds.length !== selectedFemaleIds.length) return null;
-    if ((selectedMaleIds.length + selectedFemaleIds.length) % 4 !== 0) return null;
-    if (selectedMaleIds.length >= 8) {
-      return buildStructuredMixedRound(
-        selectedMaleIds,
-        selectedFemaleIds,
-        allowRepeatPartners,
-        round
-      );
-    }
+  function recordMixedMatch(match: MixedMatch, courtNumber: number): void {
+    const [a1, a2] = match.teamA;
+    const [b1, b2] = match.teamB;
 
-    let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
-    let bestPenalty = Infinity;
+    partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
+    partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
 
-    function backtrack(
-      remainingMaleIds: string[],
-      remainingFemaleIds: string[],
-      current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
-      currentPenalty: number
-    ) {
-      if (remainingMaleIds.length === 0 && remainingFemaleIds.length === 0) {
-        if (currentPenalty < bestPenalty) {
-          bestPenalty = currentPenalty;
-          bestMatches = [...current];
-        }
-        return;
-      }
-
-      if (currentPenalty >= bestPenalty) return;
-      if (remainingMaleIds.length < 2 || remainingFemaleIds.length < 2) return;
-
-      const firstMale = remainingMaleIds[0];
-
-      for (let i = 1; i < remainingMaleIds.length; i += 1) {
-        for (let j = 0; j < remainingFemaleIds.length; j += 1) {
-          for (let k = j + 1; k < remainingFemaleIds.length; k += 1) {
-            const maleGroup = [firstMale, remainingMaleIds[i]];
-            const femaleGroup = [remainingFemaleIds[j], remainingFemaleIds[k]];
-            const pairings = getAllMixedPairings(maleGroup, femaleGroup);
-
-            for (const pairing of pairings) {
-              const courtNumber = current.length + 1;
-              const score = scoreMatch(
-                pairing.teamA,
-                pairing.teamB,
-                allowRepeatPartners,
-                courtNumber,
-                round
-              );
-
-              if (score === null) continue;
-
-              const usedMale = new Set(maleGroup);
-              const usedFemale = new Set(femaleGroup);
-
-              const nextRemainingMaleIds = remainingMaleIds.filter((id) => !usedMale.has(id));
-              const nextRemainingFemaleIds = remainingFemaleIds.filter((id) => !usedFemale.has(id));
-
-              current.push(pairing);
-              backtrack(
-                nextRemainingMaleIds,
-                nextRemainingFemaleIds,
-                current,
-                currentPenalty + score
-              );
-              current.pop();
-            }
-          }
-        }
-      }
-    }
-
-    backtrack(
-      shuffle([...selectedMaleIds]),
-      shuffle([...selectedFemaleIds]),
-      [],
-      0
+    const mixedTeamOpponentKey = getMixedTeamOpponentKey(match.teamA, match.teamB);
+    mixedTeamOpponentCounts.set(
+      mixedTeamOpponentKey,
+      (mixedTeamOpponentCounts.get(mixedTeamOpponentKey) || 0) + 1
     );
 
-    return bestMatches;
+    const foursomeKey = getFoursomeKey(a1, a2, b1, b2);
+    foursomeCounts.set(foursomeKey, (foursomeCounts.get(foursomeKey) || 0) + 1);
+
+    for (const id of [a1, a2, b1, b2]) {
+      courtHistory.set(id, [...(courtHistory.get(id) || []), courtNumber]);
+    }
+
+    const sharedPairs: Array<[string, string]> = [
+      [a1, a2],
+      [a1, b1],
+      [a1, b2],
+      [a2, b1],
+      [a2, b2],
+      [b1, b2],
+    ];
+
+    for (const [p1, p2] of sharedPairs) {
+      const p1History = recentSharedHistory.get(p1) || [];
+      const p2History = recentSharedHistory.get(p2) || [];
+
+      recentSharedHistory.set(p1, [...p1History, p2].slice(-4));
+      recentSharedHistory.set(p2, [...p2History, p1].slice(-4));
+    }
   }
 
   for (let round = 1; round <= rounds; round += 1) {
-    const { selectedMaleIds, selectedFemaleIds } = chooseParticipantsForRound();
-    const participants = new Set([...selectedMaleIds, ...selectedFemaleIds]);
-
-    const benched = activePlayers
-      .map((player) => player.id)
-      .filter((id) => !participants.has(id));
-
-    let matches = null;
-
-    for (let attempt = 0; attempt < 25; attempt += 1) {
-      matches = buildRoundMatches(
-        shuffle([...selectedMaleIds]),
-        shuffle([...selectedFemaleIds]),
-        false,
-        round
-      );
-      if (matches) break;
-    }
-
-    if (!matches) {
-      matches = buildRoundMatches(selectedMaleIds, selectedFemaleIds, true, round);
-    }
+    const teams = buildTeamsForRound(round);
+    const matches = pairMixedTeams(teams);
 
     if (!matches || !matches.length) break;
 
-    benched.forEach((id) => {
-      byeCounts.set(id, (byeCounts.get(id) || 0) + 1);
-      output.push({
-        round_number: round,
-        court_number: null,
-        court_label: null,
-        team_a_player_1_id: id,
-        team_a_player_2_id: null,
-        team_b_player_1_id: null,
-        team_b_player_2_id: null,
-        team_a_score: null,
-        team_b_score: null,
-        is_bye: true,
-        is_complete: false,
-      });
-    });
-
-    matches.forEach((match, index) => {
+    matches.slice(0, courts).forEach((match, index) => {
+      const courtNumber = index + 1;
       const [a1, a2] = match.teamA;
       const [b1, b2] = match.teamB;
 
-      partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
-      partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
-      mixedPartnerSets.get(a1)?.add(a2);
-      mixedPartnerSets.get(a2)?.add(a1);
-      mixedPartnerSets.get(b1)?.add(b2);
-      mixedPartnerSets.get(b2)?.add(b1);
-
-      const currentFoursomeKey = getFoursomeKey(a1, a2, b1, b2);
-      foursomeRounds.set(currentFoursomeKey, [
-        ...(foursomeRounds.get(currentFoursomeKey) || []),
-        round,
-      ]);
-
-      matchupCounts.set(
-        matchupKey(a1, a2, b1, b2),
-        getMatchupCount(a1, a2, b1, b2) + 1
-      );
-
-      [a1, a2, b1, b2].forEach((id) => {
-        playedCounts.set(id, (playedCounts.get(id) || 0) + 1);
-
-        const courtEntries = courtHistory.get(id) || [];
-        courtEntries.push(index + 1);
-        courtHistory.set(id, courtEntries);
-      });
-
-      const sameMatchPairs: Array<[string, string]> = [
-        [a1, a2],
-        [a1, b1],
-        [a1, b2],
-        [a2, b1],
-        [a2, b2],
-        [b1, b2],
-      ];
-
-      sameMatchPairs.forEach(([p1, p2]) => {
-        const p1History = recentMatchHistory.get(p1) || [];
-        const p2History = recentMatchHistory.get(p2) || [];
-
-        p1History.push(p2);
-        p2History.push(p1);
-
-        recentMatchHistory.set(p1, p1History.slice(-4));
-        recentMatchHistory.set(p2, p2History.slice(-4));
-      });
+      recordMixedMatch(match, courtNumber);
 
       output.push({
         round_number: round,
-        court_number: index + 1,
+        court_number: courtNumber,
         court_label: null,
         team_a_player_1_id: a1,
         team_a_player_2_id: a2,

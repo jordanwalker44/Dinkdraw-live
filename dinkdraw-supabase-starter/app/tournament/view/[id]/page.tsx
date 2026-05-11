@@ -416,6 +416,19 @@ export default function PublicTournamentViewPage({
     [matches, currentRound]
   );
 
+  const recentCompletedMatches = useMemo(() => {
+  return matches
+    .filter((m) => !m.is_bye && m.is_complete)
+    .sort((a, b) => {
+      if (b.round_number !== a.round_number) {
+        return b.round_number - a.round_number;
+      }
+
+      return (b.court_number ?? 0) - (a.court_number ?? 0);
+    })
+    .slice(0, 3);
+}, [matches]);
+
   const standings = useMemo(
     () => computeStandings(playerSlots, matches, !!isSingles, !!isBestOf3),
     [playerSlots, matches, isSingles, isBestOf3]
@@ -967,6 +980,100 @@ export default function PublicTournamentViewPage({
           );
         })}
     </div>
+
+    {recentCompletedMatches.length ? (
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 14,
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 900,
+            color: 'rgba(255,255,255,0.55)',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            marginBottom: 10,
+          }}
+        >
+          Recently Finished
+        </div>
+
+        <div style={{ display: 'grid', gap: 8 }}>
+          {recentCompletedMatches.map((match) => (
+            <div
+              key={`recent-${match.id}`}
+              className="list-item"
+              style={{
+                padding: 10,
+                background: 'rgba(34,197,94,0.06)',
+                borderColor: 'rgba(34,197,94,0.28)',
+              }}
+            >
+              <div
+                className="row-between"
+                style={{ marginBottom: 6 }}
+              >
+                <div
+                  style={{
+                    fontWeight: 800,
+                    fontSize: 13,
+                  }}
+                >
+                  {renderCourtLabel(match)}
+                </div>
+
+                <span className="tag green">
+                  FINAL
+                </span>
+              </div>
+
+              <div
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                  fontWeight: 700,
+                }}
+              >
+                {match.team_a_score !== null &&
+                match.team_b_score !== null &&
+                match.team_a_score > match.team_b_score
+                  ? `${renderTeam(
+                      match.team_a_player_1_id,
+                      match.team_a_player_2_id
+                    )} def. ${renderTeam(
+                      match.team_b_player_1_id,
+                      match.team_b_player_2_id
+                    )}`
+                  : `${renderTeam(
+                      match.team_b_player_1_id,
+                      match.team_b_player_2_id
+                    )} def. ${renderTeam(
+                      match.team_a_player_1_id,
+                      match.team_a_player_2_id
+                    )}`}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 12,
+                  color: '#FFCB05',
+                  fontWeight: 800,
+                }}
+              >
+                {isBestOf3
+                  ? `${getSeriesWins(match).aWins}-${getSeriesWins(match).bWins}`
+                  : `${match.team_a_score ?? '-'}-${match.team_b_score ?? '-'}`}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : null}
   </div>
 ) : null}
 

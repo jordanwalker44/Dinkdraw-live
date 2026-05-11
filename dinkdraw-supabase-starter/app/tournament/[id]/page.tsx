@@ -1242,7 +1242,8 @@ function buildMixedDoublesSchedule(
   teamA: [string, string],
   teamB: [string, string],
   allowRepeatPartners: boolean,
-  courtNumber: number
+  courtNumber: number,
+  round: number
   ) {
     const [a1, a2] = teamA;
     const [b1, b2] = teamB;
@@ -1365,7 +1366,8 @@ function buildMixedDoublesSchedule(
                 pairing.teamA,
                 pairing.teamB,
                 allowRepeatPartners,
-                courtNumber
+                courtNumber,
+                round
               );
 
               if (score === null) continue;

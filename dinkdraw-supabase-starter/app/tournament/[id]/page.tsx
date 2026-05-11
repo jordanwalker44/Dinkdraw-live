@@ -763,7 +763,7 @@ function buildOneDoublesRound(
   const attempts = participantCount <= 8 ? 300 : participantCount <= 16 ? 120 : 400;
 
   function tryWith(cooldown: number, opts: ScoringOpts): MatchResult[] | null {
-    if (participantCount >= 16) {
+    if (participantCount >= 12) {
       const circleResult = buildCirclePartnerDoublesRound(
         participants,
         courts,

@@ -4717,9 +4717,80 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   </div>
 
   {isLoading ? (
-    <div className="muted">Loading player spots...</div>
-  ) : (
-    <div className="grid">
+  <div className="muted">Loading player spots...</div>
+) : tournament?.format === 'doubles' &&
+  tournament?.doubles_mode === 'fixed' ? (
+  <div className="grid">
+    {Array.from({
+      length: Math.ceil(playerSlots.length / 2),
+    }).map((_, teamIndex) => {
+      const player1 = playerSlots[teamIndex * 2];
+      const player2 = playerSlots[teamIndex * 2 + 1];
+
+      if (!player1 || !player2) return null;
+
+      return (
+        <div
+          key={`team-${teamIndex}`}
+          className="list-item"
+        >
+          <div
+            style={{
+              textAlign: 'center',
+              fontWeight: 900,
+              marginBottom: 12,
+              color: '#FFCB05',
+              fontSize: 18,
+            }}
+          >
+            Team {teamIndex + 1}
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 12,
+            }}
+          >
+            {[player1, player2].map((slot) => (
+              <div key={slot.id}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    marginBottom: 6,
+                    opacity: 0.75,
+                  }}
+                >
+                  Player {slot.slot_number}
+                </div>
+
+                <input
+                  className="input"
+                  value={
+                    (newNames[slot.id] ?? '').trim() !== ''
+                      ? newNames[slot.id]
+                      : slot.display_name ?? ''
+                  }
+                  onChange={(e) =>
+                    setNewNames((prev) => ({
+                      ...prev,
+                      [slot.id]: e.target.value,
+                    }))
+                  }
+                  placeholder={`Player ${slot.slot_number}`}
+                  disabled={isLocked && !isOrganizer}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+  </div>
+) : (
+  <div className="grid">
       {playerSlots.map((slot) => {
         const isMine = slot.claimed_by_user_id === userId;
         const isClaimedBySomeone = !!slot.claimed_by_user_id;

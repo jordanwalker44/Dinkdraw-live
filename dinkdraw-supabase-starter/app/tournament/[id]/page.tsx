@@ -4753,37 +4753,90 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
               gap: 12,
             }}
           >
-            {[player1, player2].map((slot) => (
-              <div key={slot.id}>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 800,
-                    marginBottom: 6,
-                    opacity: 0.75,
-                  }}
-                >
-                  Player {slot.slot_number}
-                </div>
+            {[player1, player2].map((slot) => {
+  const isMine = slot.claimed_by_user_id === userId;
+  const isClaimedBySomeone = !!slot.claimed_by_user_id;
+  const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
+  const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 
-                <input
-                  className="input"
-                  value={
-                    (newNames[slot.id] ?? '').trim() !== ''
-                      ? newNames[slot.id]
-                      : slot.display_name ?? ''
-                  }
-                  onChange={(e) =>
-                    setNewNames((prev) => ({
-                      ...prev,
-                      [slot.id]: e.target.value,
-                    }))
-                  }
-                  placeholder={`Player ${slot.slot_number}`}
-                  disabled={isLocked && !isOrganizer}
-                />
-              </div>
-            ))}
+  return (
+    <div key={slot.id}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 800,
+          marginBottom: 6,
+          opacity: 0.75,
+        }}
+      >
+        Player {slot.slot_number}
+      </div>
+
+      <input
+        className="input"
+        value={
+          (newNames[slot.id] ?? '').trim() !== ''
+            ? newNames[slot.id]
+            : slot.display_name ?? ''
+        }
+        onChange={(e) =>
+          setNewNames((prev) => ({
+            ...prev,
+            [slot.id]: e.target.value,
+          }))
+        }
+        placeholder={`Player ${slot.slot_number}`}
+        disabled={!canEditName}
+      />
+
+      <div style={{ marginTop: 8 }}>
+        {isMine ? (
+          <span className="tag yours">Yours</span>
+        ) : isClaimedBySomeone ? (
+          <span className="tag">Claimed</span>
+        ) : isLocked ? (
+          <span className="tag">Locked</span>
+        ) : canClaim ? (
+          <button
+            type="button"
+            className="button primary"
+            style={{
+              width: '100%',
+              minHeight: 38,
+              padding: '8px 12px',
+              fontSize: 13,
+              fontWeight: 800,
+              borderRadius: 999,
+            }}
+            onClick={() => claimSlot(slot.id)}
+          >
+            Claim Spot
+          </button>
+        ) : (
+          <span className="tag">Open</span>
+        )}
+      </div>
+
+      {isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => clearPlayerSlot(slot.id)}
+          style={{
+            width: '100%',
+            marginTop: 8,
+            borderColor: 'rgba(255,80,80,0.35)',
+            background: 'rgba(255,80,80,0.10)',
+            color: '#ff9b9b',
+            fontWeight: 800,
+          }}
+        >
+          Clear
+        </button>
+      ) : null}
+    </div>
+  );
+})}
           </div>
         </div>
       );

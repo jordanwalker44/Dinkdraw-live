@@ -1131,6 +1131,11 @@ function buildMixedDoublesSchedule(
 
   const partnerCounts = new Map<string, number>();
   const matchupCounts = new Map<string, number>();
+    const mixedPartnerSets = new Map<string, Set<string>>(
+    activePlayers.map((player) => [player.id, new Set<string>()])
+  );
+
+  const foursomeRounds = new Map<string, number[]>();
   const playedCounts = new Map<string, number>(
     activePlayers.map((player) => [player.id, 0])
   );
@@ -1152,6 +1157,37 @@ function buildMixedDoublesSchedule(
 
   function getMatchupCount(a1: string, a2: string, b1: string, b2: string) {
     return matchupCounts.get(matchupKey(a1, a2, b1, b2)) || 0;
+  }
+
+    function getOppositeGenderPoolSize(id: string): number {
+    const player = activePlayers.find((p) => p.id === id);
+
+    if (player?.gender === 'male') return femalePlayers.length;
+    if (player?.gender === 'female') return malePlayers.length;
+
+    return 0;
+  }
+
+  function hasPartneredWithEveryone(id: string): boolean {
+    const partnerSet = mixedPartnerSets.get(id);
+
+    if (!partnerSet) return false;
+
+    return partnerSet.size >= Math.max(0, getOppositeGenderPoolSize(id) - 1);
+  }
+
+  function canRepeatMixedPartner(a: string, b: string): boolean {
+    return hasPartneredWithEveryone(a) && hasPartneredWithEveryone(b);
+  }
+
+  function getFoursomeKey(a1: string, a2: string, b1: string, b2: string): string {
+    return [a1, a2, b1, b2].sort().join('|');
+  }
+
+  function getFoursomeLastSeen(a1: string, a2: string, b1: string, b2: string): number {
+    const roundsSeen = foursomeRounds.get(getFoursomeKey(a1, a2, b1, b2)) || [];
+
+    return roundsSeen.length ? roundsSeen[roundsSeen.length - 1] : -999;
   }
 
   function chooseParticipantsForRound() {
@@ -1214,8 +1250,14 @@ function buildMixedDoublesSchedule(
     const partnerRepeatA = getPartnerCount(a1, a2);
     const partnerRepeatB = getPartnerCount(b1, b2);
 
-    if (!allowRepeatPartners && (partnerRepeatA > 0 || partnerRepeatB > 0)) {
-      return null;
+    if (!allowRepeatPartners) {
+      if (partnerRepeatA > 0 && !canRepeatMixedPartner(a1, a2)) {
+        return null;
+      }
+
+      if (partnerRepeatB > 0 && !canRepeatMixedPartner(b1, b2)) {
+        return null;
+      }
     }
 
     let penalty = 0;
@@ -1223,6 +1265,14 @@ function buildMixedDoublesSchedule(
     penalty += partnerRepeatA * 100000;
     penalty += partnerRepeatB * 100000;
     penalty += getMatchupCount(a1, a2, b1, b2) * 5000;
+        const lastFoursomeRound = getFoursomeLastSeen(a1, a2, b1, b2);
+
+    if (lastFoursomeRound > 0) {
+      const roundsSinceFoursome = Math.max(1, round - lastFoursomeRound);
+
+      penalty += Math.max(0, 8 - roundsSinceFoursome) * 25000;
+      penalty += 50000;
+    }
 
     penalty += (playedCounts.get(a1) || 0) * 10;
     penalty += (playedCounts.get(a2) || 0) * 10;
@@ -1398,6 +1448,16 @@ function buildMixedDoublesSchedule(
 
       partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
       partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
+      mixedPartnerSets.get(a1)?.add(a2);
+      mixedPartnerSets.get(a2)?.add(a1);
+      mixedPartnerSets.get(b1)?.add(b2);
+      mixedPartnerSets.get(b2)?.add(b1);
+
+      const currentFoursomeKey = getFoursomeKey(a1, a2, b1, b2);
+      foursomeRounds.set(currentFoursomeKey, [
+        ...(foursomeRounds.get(currentFoursomeKey) || []),
+        round,
+      ]);
 
       matchupCounts.set(
         matchupKey(a1, a2, b1, b2),

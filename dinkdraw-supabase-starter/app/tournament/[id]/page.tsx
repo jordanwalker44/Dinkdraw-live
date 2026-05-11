@@ -5003,6 +5003,8 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   </div>
 )}
 
+<?div>  
+
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>
   <div className="card-title">Tournament Controls</div>
   <div className="card-subtitle">

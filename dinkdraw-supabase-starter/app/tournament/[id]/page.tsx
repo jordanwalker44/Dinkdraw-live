@@ -1561,6 +1561,30 @@ function needsGame3(match: Match): boolean {
   return game1AWon !== game2AWon;
 }
 
+function clearGame3IfSeriesDecidedInTwo(match: Match): Match {
+  if (
+    match.game_1_a === null ||
+    match.game_1_b === null ||
+    match.game_2_a === null ||
+    match.game_2_b === null
+  ) {
+    return match;
+  }
+
+  const game1AWon = match.game_1_a > match.game_1_b;
+  const game2AWon = match.game_2_a > match.game_2_b;
+
+  if (game1AWon === game2AWon) {
+    return {
+      ...match,
+      game_3_a: null,
+      game_3_b: null,
+    };
+  }
+
+  return match;
+}
+
 function getSeriesScore(match: Match): { aScore: number; bScore: number } {
   let aTotal = 0;
   let bTotal = 0;
@@ -3601,11 +3625,15 @@ if (!canReportScores) {
     const currentMatch = matches.find((m) => m.id === matchId);
     if (!currentMatch) return;
 
-    const optimisticMatch: Match = {
+    const optimisticMatchWithSubmittedGame: Match = {
       ...currentMatch,
       [`game_${game}_a`]: aNum,
       [`game_${game}_b`]: bNum,
     };
+
+    const optimisticMatch = clearGame3IfSeriesDecidedInTwo(
+      optimisticMatchWithSubmittedGame
+    );
 
     const seriesNowComplete = isSeriesComplete(optimisticMatch);
 
@@ -3657,7 +3685,7 @@ if (!canReportScores) {
       setMessage(`Game ${game} submitted.`);
     }
 
-    const updateData: Record<string, number | boolean> = {
+    const updateData: Record<string, number | boolean | null> = {
       [`game_${game}_a`]: aNum,
       [`game_${game}_b`]: bNum,
     };
@@ -3667,6 +3695,11 @@ if (!canReportScores) {
       updateData.team_a_score = aScore;
       updateData.team_b_score = bScore;
       updateData.is_complete = true;
+
+      if (!needsGame3(optimisticMatch)) {
+        updateData.game_3_a = null;
+        updateData.game_3_b = null;
+      }
     }
 
     const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);

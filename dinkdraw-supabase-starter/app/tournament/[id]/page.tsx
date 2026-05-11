@@ -1326,7 +1326,7 @@ function buildMixedDoublesSchedule(
   function buildRoundMatches(
     selectedMaleIds: string[],
     selectedFemaleIds: string[],
-    allowRepeatPartners: boolean
+    allowRepeatPartners: boolean,
     round: number
   ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
     if (selectedMaleIds.length !== selectedFemaleIds.length) return null;

@@ -596,6 +596,156 @@ function greedyDoublesRound(
   return bestMatches;
 }
 
+function makeCircleDoublesPartnerPairs(
+  participants: string[],
+  round: number
+): Array<[string, string]> | null {
+  if (participants.length % 2 !== 0) return null;
+
+  const rotation = [...participants];
+  const cycleRound = (round - 1) % (participants.length - 1);
+
+  for (let i = 0; i < cycleRound; i += 1) {
+    const fixed = rotation[0];
+    const moved = rotation.pop();
+
+    if (!moved) return null;
+
+    rotation.splice(1, 0, moved);
+    rotation[0] = fixed;
+  }
+
+  const pairs: Array<[string, string]> = [];
+
+  for (let i = 0; i < rotation.length / 2; i += 1) {
+    pairs.push([rotation[i], rotation[rotation.length - 1 - i]]);
+  }
+
+  return pairs;
+}
+
+function buildCirclePartnerDoublesRound(
+  participants: string[],
+  courts: number,
+  round: number,
+  partners: PartnerTracker,
+  history: MatchHistory,
+  totalValid: (id: string) => number,
+  groupCooldown: number,
+  opts: ScoringOpts
+): MatchResult[] | null {
+  if (participants.length < 4 || participants.length % 4 !== 0) return null;
+
+  const partnerPairs = makeCircleDoublesPartnerPairs(participants, round);
+
+  if (!partnerPairs) return null;
+
+  type PartnerTeam = {
+    p1: string;
+    p2: string;
+  };
+
+  const teams: PartnerTeam[] = partnerPairs.map(([p1, p2]) => ({ p1, p2 }));
+
+  if (teams.length !== courts * 2) return null;
+
+  let bestMatches: MatchResult[] | null = null;
+  let bestPenalty = Infinity;
+  let searched = 0;
+  const searchLimit = participants.length <= 24 ? 20000 : 6000;
+
+  function search(
+    remainingTeams: PartnerTeam[],
+    currentMatches: MatchResult[],
+    currentPenalty: number
+  ): void {
+    if (searched >= searchLimit) return;
+
+    searched += 1;
+
+    if (remainingTeams.length === 0) {
+      if (currentPenalty < bestPenalty) {
+        bestPenalty = currentPenalty;
+        bestMatches = currentMatches;
+      }
+
+      return;
+    }
+
+    if (currentPenalty >= bestPenalty) return;
+
+    const firstTeam = remainingTeams[0];
+    const court = currentMatches.length + 1;
+
+    type TeamOption = {
+      index: number;
+      match: MatchResult;
+      score: number;
+    };
+
+    const options: TeamOption[] = [];
+
+    for (let i = 1; i < remainingTeams.length; i += 1) {
+      const secondTeam = remainingTeams[i];
+
+      const match: MatchResult =
+        (round + court) % 2 === 0
+          ? {
+              a1: secondTeam.p1,
+              a2: secondTeam.p2,
+              b1: firstTeam.p1,
+              b2: firstTeam.p2,
+            }
+          : {
+              a1: firstTeam.p1,
+              a2: firstTeam.p2,
+              b1: secondTeam.p1,
+              b2: secondTeam.p2,
+            };
+
+      const score = scoreDoublesMatch(
+        match.a1,
+        match.a2,
+        match.b1,
+        match.b2,
+        court,
+        round,
+        partners,
+        history,
+        totalValid,
+        groupCooldown,
+        opts
+      );
+
+      if (score !== null) {
+        options.push({
+          index: i,
+          match,
+          score,
+        });
+      }
+    }
+
+    options.sort((a, b) => a.score - b.score);
+
+    for (const option of options) {
+      const nextRemainingTeams = remainingTeams.filter(
+        (_, index) => index !== 0 && index !== option.index
+      );
+
+      search(
+        nextRemainingTeams,
+        [...currentMatches, option.match],
+        currentPenalty + option.score
+      );
+    }
+  }
+
+  search(teams, [], 0);
+
+  return bestMatches;
+}
+
 function buildOneDoublesRound(
   participants: string[],
   courts: number,
@@ -609,10 +759,25 @@ function buildOneDoublesRound(
 
   if (participantCount < 4 || participantCount % 4 !== 0) return null;
 
-  const useBacktrack = participantCount <= 16;
+  const useBacktrack = participantCount < 16;
   const attempts = participantCount <= 8 ? 300 : participantCount <= 16 ? 120 : 400;
 
   function tryWith(cooldown: number, opts: ScoringOpts): MatchResult[] | null {
+    if (participantCount >= 16) {
+      const circleResult = buildCirclePartnerDoublesRound(
+        participants,
+        courts,
+        round,
+        partners,
+        history,
+        totalValid,
+        cooldown,
+        opts
+      );
+
+      if (circleResult !== null) return circleResult;
+    }
+
     if (useBacktrack) {
       let bestMatches: MatchResult[] | null = null;
       let bestPenalty = Infinity;

@@ -33,7 +33,7 @@ type Tournament = {
   match_format: string;
   doubles_mode: string | null;
   court_labels: string[] | null;
-  allow_player_score_reporting: boolean | null;
+  allow__score_reporting: boolean | null;
   playoff_format: string | null;
   playoff_advance_count: number | null;
   playoff_seeding_style: string | null;
@@ -4717,10 +4717,84 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   </div>
 
   {isLoading ? (
-    <div className="muted">Loading player spots...</div>
-  ) : (
-    <div className="grid">
-      {playerSlots.map((slot) => {
+  <div className="muted">Loading player spots...</div>
+) : (
+  <div className="grid">
+    {tournament?.format === 'doubles' && tournament?.doubles_mode === 'fixed' ? (
+      <div style={{ display: 'grid', gap: 16 }}>
+        {Array.from({ length: Math.ceil(playerSlots.length / 2) }).map((_, teamIndex) => {
+          const player1 = playerSlots[teamIndex * 2];
+          const player2 = playerSlots[teamIndex * 2 + 1];
+
+          if (!player1 || !player2) return null;
+
+          return (
+            <div
+              key={`team-${teamIndex}`}
+              className="card"
+              style={{
+                padding: 12,
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 800,
+                  marginBottom: 10,
+                  color: '#FFCB05',
+                  letterSpacing: 0.5,
+                }}
+              >
+                Team {teamIndex + 1}
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: 10,
+                }}
+              >
+                {[player1, player2].map((slot) => (
+                  <div key={slot.id}>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        marginBottom: 6,
+                        opacity: 0.7,
+                      }}
+                    >
+                      Player {slot.slot_number}
+                    </div>
+
+                    <input
+                      className="input"
+                      value={
+                        (newNames[slot.id] ?? '').trim() !== ''
+                          ? newNames[slot.id]
+                          : slot.display_name ?? ''
+                      }
+                      onChange={(e) =>
+                        setNewNames((prev) => ({
+                          ...prev,
+                          [slot.id]: e.target.value,
+                        }))
+                      }
+                      placeholder={`Player ${slot.slot_number}`}
+                      disabled={isLocked && !isOrganizer}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      playerSlots.map((slot) => {
         const isMine = slot.claimed_by_user_id === userId;
         const isClaimedBySomeone = !!slot.claimed_by_user_id;
         const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
@@ -4730,200 +4804,204 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 
         return (
           <div
-  key={slot.id}
-  className="list-item"
-  onClick={() =>
-    setEditingSlot(editingSlot === slot.id ? null : slot.id)
-  }
- style={{
-  borderColor:
-    editingSlot === slot.id
-      ? 'rgba(255,203,5,0.7)'
-      : canClaim && isFirstOpenSlot
-      ? 'rgba(255,203,5,0.6)'
-      : isMine
-      ? 'rgba(255,203,5,0.45)'
-      : undefined,
+            key={slot.id}
+            className="list-item"
+            onClick={() =>
+              setEditingSlot(editingSlot === slot.id ? null : slot.id)
+            }
+            style={{
+              borderColor:
+                editingSlot === slot.id
+                  ? 'rgba(255,203,5,0.7)'
+                  : canClaim && isFirstOpenSlot
+                  ? 'rgba(255,203,5,0.6)'
+                  : isMine
+                  ? 'rgba(255,203,5,0.45)'
+                  : undefined,
 
-  boxShadow:
-    editingSlot === slot.id
-      ? '0 0 0 2px rgba(255,203,5,0.25), 0 8px 24px rgba(0,0,0,0.35)'
-      : canClaim && isFirstOpenSlot
-      ? '0 0 0 2px rgba(255,203,5,0.18), 0 6px 20px rgba(0,0,0,0.3)'
-      : isMine
-      ? '0 0 0 1px rgba(255,203,5,0.18) inset'
-      : undefined,
+              boxShadow:
+                editingSlot === slot.id
+                  ? '0 0 0 2px rgba(255,203,5,0.25), 0 8px 24px rgba(0,0,0,0.35)'
+                  : canClaim && isFirstOpenSlot
+                  ? '0 0 0 2px rgba(255,203,5,0.18), 0 6px 20px rgba(0,0,0,0.3)'
+                  : isMine
+                  ? '0 0 0 1px rgba(255,203,5,0.18) inset'
+                  : undefined,
 
-  background:
-    editingSlot === slot.id
-      ? 'rgba(255,255,255,0.06)'
-      : canClaim && isFirstOpenSlot
-      ? 'rgba(255,203,5,0.06)'
-      : undefined,
+              background:
+                editingSlot === slot.id
+                  ? 'rgba(255,255,255,0.06)'
+                  : canClaim && isFirstOpenSlot
+                  ? 'rgba(255,203,5,0.06)'
+                  : undefined,
 
-  cursor: 'pointer',
-  transition: 'all 0.2s ease',
-}}
->
-           <div
-  style={{
-    display: 'grid',
-    gridTemplateColumns: '90px 1fr 110px',
-    alignItems: 'center',
-    marginBottom: 10,
-    padding: '0 4px',
-  }}
->
-  <div style={{ fontWeight: 800 }}>
-    Player {slot.slot_number}
-  </div>
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '90px 1fr 110px',
+                alignItems: 'center',
+                marginBottom: 10,
+                padding: '0 4px',
+              }}
+            >
+              <div style={{ fontWeight: 800 }}>
+                Player {slot.slot_number}
+              </div>
 
-  <div
-  style={{
-    textAlign: 'center',
-    fontWeight: 600,
-    fontSize: 16,
-  }}
->
-  <div>{slot.display_name || 'Open'}</div>
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  fontSize: 16,
+                }}
+              >
+                <div>{slot.display_name || 'Open'}</div>
 
-  {canClaim && isFirstOpenSlot ? (
-    <div
-      style={{
-        marginTop: 3,
-        fontSize: 11,
-        fontWeight: 800,
-        color: '#ffcb05',
-        letterSpacing: '0.02em',
-      }}
-    >
-      Tap to Join
-    </div>
-  ) : null}
-</div>
+                {canClaim && isFirstOpenSlot ? (
+                  <div
+                    style={{
+                      marginTop: 3,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      color: '#ffcb05',
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    Tap to Join
+                  </div>
+                ) : null}
+              </div>
 
-  <div style={{ width: 110, display: 'flex', justifyContent: 'flex-end' }}>
-  {isMine ? (
-    <span className="tag yours">Yours</span>
-  ) : isClaimedBySomeone ? (
-    <span className="tag">Claimed</span>
-  ) : isLocked ? (
-    <span className="tag">Locked</span>
-  ) : canClaim && isFirstOpenSlot ? (
-    <button
-      type="button"
-      className={`button primary ${isFirstOpenSlot ? 'claim-pulse' : ''}`}
-       style={{
-        minHeight: 40,
-        padding: '8px 16px',
-        fontSize: 14,
-        fontWeight: 800,
-        borderRadius: 999,
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-        claimSlot(slot.id);
-      }}
-  >
-      Join Game
-    </button>
-  ) : (
-    <span className="tag">Open</span>
-  )}
-</div>
-</div>
-{isMine && !isLocked ? (
-  <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
-    Need to give up your spot? Ask the organizer to clear it.
-  </div>
-) : null}
-            
+              <div style={{ width: 110, display: 'flex', justifyContent: 'flex-end' }}>
+                {isMine ? (
+                  <span className="tag yours">Yours</span>
+                ) : isClaimedBySomeone ? (
+                  <span className="tag">Claimed</span>
+                ) : isLocked ? (
+                  <span className="tag">Locked</span>
+                ) : canClaim && isFirstOpenSlot ? (
+                  <button
+                    type="button"
+                    className={`button primary ${isFirstOpenSlot ? 'claim-pulse' : ''}`}
+                    style={{
+                      minHeight: 40,
+                      padding: '8px 16px',
+                      fontSize: 14,
+                      fontWeight: 800,
+                      borderRadius: 999,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      claimSlot(slot.id);
+                    }}
+                  >
+                    Join Game
+                  </button>
+                ) : (
+                  <span className="tag">Open</span>
+                )}
+              </div>
+            </div>
+
+            {isMine && !isLocked ? (
+              <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
+                Need to give up your spot? Ask the organizer to clear it.
+              </div>
+            ) : null}
+
             {editingSlot === slot.id ? (
-  <div
-    className="grid"
-    onClick={(e) => e.stopPropagation()}
-  >
-              <input
-                className="input"
-                value={
-  (newNames[slot.id] ?? '').trim() !== ''
-    ? newNames[slot.id]
-    : slot.display_name ?? ''
-}
-                onChange={(e) =>
-                  setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
-                }
-                placeholder={`Name for Player ${slot.slot_number}`}
-                disabled={!canEditName}
-              />
+              <div
+                className="grid"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  className="input"
+                  value={
+                    (newNames[slot.id] ?? '').trim() !== ''
+                      ? newNames[slot.id]
+                      : slot.display_name ?? ''
+                  }
+                  onChange={(e) =>
+                    setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
+                  }
+                  placeholder={`Name for Player ${slot.slot_number}`}
+                  disabled={!canEditName}
+                />
 
-              {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    gap: 8,
-                  }}
-                >
-                  <button
-                    type="button"
-                    className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
-                    onClick={() => updatePlayerGender(slot.id, 'male')}
-                    disabled={isLocked}
+                {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: 8,
+                    }}
                   >
-                    Male
-                  </button>
+                    <button
+                      type="button"
+                      className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
+                      onClick={() => updatePlayerGender(slot.id, 'male')}
+                      disabled={isLocked}
+                    >
+                      Male
+                    </button>
+                    <button
+                      type="button"
+                      className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
+                      onClick={() => updatePlayerGender(slot.id, 'female')}
+                      disabled={isLocked}
+                    >
+                      Female
+                    </button>
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={() => updatePlayerGender(slot.id, '')}
+                      disabled={isLocked}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : null}
+
+                {!isLocked && canClaim ? (
                   <button
-                    type="button"
-                    className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
-                    onClick={() => updatePlayerGender(slot.id, 'female')}
-                    disabled={isLocked}
+                    className="button primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      claimSlot(slot.id);
+                    }}
                   >
-                    Female
+                    Claim Spot
                   </button>
+                ) : null}
+
+                {isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={() => updatePlayerGender(slot.id, '')}
-                    disabled={isLocked}
+                    onClick={() => clearPlayerSlot(slot.id)}
+                    style={{
+                      borderColor: 'rgba(255,80,80,0.35)',
+                      background: 'rgba(255,80,80,0.10)',
+                      color: '#ff9b9b',
+                      fontWeight: 800,
+                    }}
                   >
-                    Clear
+                    Clear Player
                   </button>
-                </div>
-              ) : null}
-
-              {!isLocked && canClaim ? (
-                <button className="button primary" onClick={(e) => {
-                  e.stopPropagation();
-                  claimSlot(slot.id);
-              }}>
-                  Claim Spot
-                </button>
-              ) : null}
-
-              {isOrganizer && !isLocked && (slot.display_name || slot.claimed_by_user_id) ? (
-                <button
-                  type="button"
-                  className="button secondary"
-                  onClick={() => clearPlayerSlot(slot.id)}
-                  style={{
-                    borderColor: 'rgba(255,80,80,0.35)',
-                    background: 'rgba(255,80,80,0.10)',
-                    color: '#ff9b9b',
-                    fontWeight: 800,
-                  }}
-                >
-                  Clear Player
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      );
-    })}
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        );
+      })
+    )}
   </div>
 )}
- </div>
 
 <div className="card" style={{ marginTop: 16, marginBottom: 14 }}>
   <div className="card-title">Tournament Controls</div>

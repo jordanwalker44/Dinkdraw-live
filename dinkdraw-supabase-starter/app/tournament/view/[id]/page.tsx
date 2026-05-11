@@ -822,6 +822,154 @@ export default function PublicTournamentViewPage({
           </div>
         ) : null}
 
+         {isStarted ? (
+  <div
+    style={{
+      marginBottom: 16,
+      padding: 14,
+      borderRadius: 16,
+      background: 'rgba(255,255,255,0.035)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        gap: 10,
+        alignItems: 'center',
+        marginBottom: 12,
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 900,
+            color: '#FFCB05',
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+          }}
+        >
+          Live Courts
+        </div>
+
+        <div
+          style={{
+            fontSize: 13,
+            color: 'rgba(255,255,255,0.65)',
+            marginTop: 3,
+          }}
+        >
+          Round {currentRound} •{' '}
+          {
+            matches.filter(
+              (m) => m.round_number === currentRound && !m.is_bye && m.is_complete
+            ).length
+          }{' '}
+          of{' '}
+          {
+            matches.filter(
+              (m) => m.round_number === currentRound && !m.is_bye
+            ).length
+          }{' '}
+          complete
+        </div>
+      </div>
+
+      <span className={isLive ? 'tag green' : 'tag'}>
+        {isLive ? 'LIVE' : 'UPDATING'}
+      </span>
+    </div>
+
+    <div style={{ display: 'grid', gap: 10 }}>
+      {matches
+        .filter((m) => m.round_number === currentRound && !m.is_bye)
+        .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999))
+        .map((match) => {
+          const isCurrentMatch = !match.is_complete;
+          const series = isBestOf3 ? getSeriesWins(match) : null;
+          const seriesScore = isBestOf3 ? getSeriesScore(match) : null;
+
+          return (
+            <div
+              key={`live-court-${match.id}`}
+              className="list-item"
+              style={{
+                padding: 12,
+                borderColor: isCurrentMatch
+                  ? 'rgba(255,203,5,0.45)'
+                  : 'rgba(34,197,94,0.35)',
+                background: isCurrentMatch
+                  ? 'rgba(255,203,5,0.05)'
+                  : 'rgba(34,197,94,0.06)',
+              }}
+            >
+              <div className="row-between" style={{ marginBottom: 8, gap: 10 }}>
+                <div style={{ fontWeight: 900, fontSize: 18 }}>
+                  {renderCourtLabel(match)}
+                </div>
+
+                <span className={match.is_complete ? 'tag green' : 'tag'}>
+                  {match.is_complete ? 'COMPLETE' : 'LIVE'}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gap: 8 }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: 10,
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ fontWeight: 800 }}>
+                    {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                  </div>
+
+                  <div style={{ fontWeight: 900, color: '#FFCB05' }}>
+                    {isBestOf3
+                      ? `${series?.aWins ?? 0}`
+                      : match.team_a_score ?? '—'}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: 10,
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ fontWeight: 800 }}>
+                    {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+                  </div>
+
+                  <div style={{ fontWeight: 900, color: '#FFCB05' }}>
+                    {isBestOf3
+                      ? `${series?.bWins ?? 0}`
+                      : match.team_b_score ?? '—'}
+                  </div>
+                </div>
+              </div>
+
+              {isBestOf3 && seriesScore ? (
+                <div
+                  className="muted"
+                  style={{ marginTop: 8, fontSize: 12, textAlign: 'center' }}
+                >
+                  Total points: {seriesScore.aScore}-{seriesScore.bScore}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+    </div>
+  </div>
+) : null}
+
         <div className="card-title">Rounds</div>
         <div className="card-subtitle">
           {isCompleted

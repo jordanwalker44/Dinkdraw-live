@@ -918,21 +918,22 @@ export default function PublicTournamentViewPage({
                   : 'rgba(34,197,94,0.06)',
               }}
             >
-              <div
-  style={{
-    fontWeight: 900,
-    fontSize: 18,
-    color: '#FFCB05',
-    letterSpacing: '-0.01em',
-  }}
->
-  {renderCourtLabel(match)}
-</div>
+           <div className="row-between" style={{ marginBottom: 8, gap: 10 }}>
+  <div
+    style={{
+      fontWeight: 900,
+      fontSize: 18,
+      color: '#FFCB05',
+      letterSpacing: '-0.01em',
+    }}
+  >
+    {renderCourtLabel(match)}
+  </div>
 
-                <span className={match.is_complete ? 'tag green' : 'tag'}>
-                  {match.is_complete ? 'COMPLETE' : 'LIVE'}
-                </span>
-              </div>
+  <span className={match.is_complete ? 'tag green' : 'tag'}>
+    {match.is_complete ? 'COMPLETE' : 'LIVE'}
+  </span>
+</div>
 
               <div style={{ display: 'grid', gap: 8 }}>
                 <div

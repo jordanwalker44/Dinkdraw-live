@@ -918,10 +918,16 @@ export default function PublicTournamentViewPage({
                   : 'rgba(34,197,94,0.06)',
               }}
             >
-              <div className="row-between" style={{ marginBottom: 8, gap: 10 }}>
-                <div style={{ fontWeight: 900, fontSize: 18 }}>
-                  {renderCourtLabel(match)}
-                </div>
+              <div
+  style={{
+    fontWeight: 900,
+    fontSize: 18,
+    color: '#FFCB05',
+    letterSpacing: '-0.01em',
+  }}
+>
+  {renderCourtLabel(match)}
+</div>
 
                 <span className={match.is_complete ? 'tag green' : 'tag'}>
                   {match.is_complete ? 'COMPLETE' : 'LIVE'}
@@ -1018,13 +1024,15 @@ export default function PublicTournamentViewPage({
                 style={{ marginBottom: 6 }}
               >
                 <div
-                  style={{
-                    fontWeight: 800,
-                    fontSize: 13,
-                  }}
-                >
-                  {renderCourtLabel(match)}
-                </div>
+  style={{
+    fontWeight: 900,
+    fontSize: 13,
+    color: '#FFCB05',
+    letterSpacing: '-0.01em',
+  }}
+>
+  {renderCourtLabel(match)}
+</div>
 
                 <span className="tag green">
                   FINAL

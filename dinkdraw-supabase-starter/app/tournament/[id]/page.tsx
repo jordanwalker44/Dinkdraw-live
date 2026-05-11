@@ -1327,6 +1327,7 @@ function buildMixedDoublesSchedule(
     selectedMaleIds: string[],
     selectedFemaleIds: string[],
     allowRepeatPartners: boolean
+    round: number
   ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
     if (selectedMaleIds.length !== selectedFemaleIds.length) return null;
     if ((selectedMaleIds.length + selectedFemaleIds.length) % 4 !== 0) return null;
@@ -1416,13 +1417,14 @@ function buildMixedDoublesSchedule(
       matches = buildRoundMatches(
         shuffle([...selectedMaleIds]),
         shuffle([...selectedFemaleIds]),
-        false
+        false,
+        round
       );
       if (matches) break;
     }
 
     if (!matches) {
-      matches = buildRoundMatches(selectedMaleIds, selectedFemaleIds, true);
+      matches = buildRoundMatches(selectedMaleIds, selectedFemaleIds, true, round);
     }
 
     if (!matches || !matches.length) break;

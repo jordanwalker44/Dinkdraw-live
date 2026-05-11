@@ -1173,7 +1173,7 @@ function buildMixedDoublesSchedule(
 
     if (!partnerSet) return false;
 
-    return partnerSet.size >= Math.max(0, getOppositeGenderPoolSize(id) - 1);
+    return partnerSet.size >= getOppositeGenderPoolSize(id);
   }
 
   function canRepeatMixedPartner(a: string, b: string): boolean {
@@ -1323,6 +1323,131 @@ function buildMixedDoublesSchedule(
     return penalty;
   }
 
+    function buildStructuredMixedRound(
+    selectedMaleIds: string[],
+    selectedFemaleIds: string[],
+    allowRepeatPartners: boolean,
+    round: number
+  ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
+    if (selectedMaleIds.length !== selectedFemaleIds.length) return null;
+    if (selectedMaleIds.length < 8) return null;
+    if (selectedMaleIds.length % 2 !== 0) return null;
+
+    const playerCountPerGender = selectedMaleIds.length;
+    const femaleShift = (round - 1) % playerCountPerGender;
+
+    type MixedTeam = {
+      maleId: string;
+      femaleId: string;
+    };
+
+    const teams: MixedTeam[] = selectedMaleIds.map((maleId, index) => ({
+      maleId,
+      femaleId: selectedFemaleIds[(index + femaleShift) % playerCountPerGender],
+    }));
+
+    let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
+    let bestPenalty = Infinity;
+    let searched = 0;
+    const searchLimit = selectedMaleIds.length <= 10 ? 12000 : 6000;
+
+    function search(
+      remainingTeams: MixedTeam[],
+      current: Array<{ teamA: [string, string]; teamB: [string, string] }>,
+      currentPenalty: number
+    ): void {
+      if (searched >= searchLimit) return;
+
+      searched += 1;
+
+      if (remainingTeams.length === 0) {
+        if (currentPenalty < bestPenalty) {
+          bestPenalty = currentPenalty;
+          bestMatches = [...current];
+        }
+
+        return;
+      }
+
+      if (currentPenalty >= bestPenalty) return;
+
+      const firstTeam = remainingTeams[0];
+      const courtNumber = current.length + 1;
+
+      type Option = {
+        opponentIndex: number;
+        match: { teamA: [string, string]; teamB: [string, string] };
+        score: number;
+      };
+
+      const options: Option[] = [];
+
+      for (let i = 1; i < remainingTeams.length; i += 1) {
+        const secondTeam = remainingTeams[i];
+
+        const normalMatch = {
+          teamA: [firstTeam.maleId, firstTeam.femaleId] as [string, string],
+          teamB: [secondTeam.maleId, secondTeam.femaleId] as [string, string],
+        };
+
+        const flippedMatch = {
+          teamA: [secondTeam.maleId, secondTeam.femaleId] as [string, string],
+          teamB: [firstTeam.maleId, firstTeam.femaleId] as [string, string],
+        };
+
+        const normalScore = scoreMatch(
+          normalMatch.teamA,
+          normalMatch.teamB,
+          allowRepeatPartners,
+          courtNumber,
+          round
+        );
+
+        if (normalScore !== null) {
+          options.push({
+            opponentIndex: i,
+            match: normalMatch,
+            score: normalScore,
+          });
+        }
+
+        const flippedScore = scoreMatch(
+          flippedMatch.teamA,
+          flippedMatch.teamB,
+          allowRepeatPartners,
+          courtNumber,
+          round
+        );
+
+        if (flippedScore !== null) {
+          options.push({
+            opponentIndex: i,
+            match: flippedMatch,
+            score: flippedScore,
+          });
+        }
+      }
+
+      options.sort((a, b) => a.score - b.score);
+
+      for (const option of options.slice(0, 8)) {
+        const nextRemainingTeams = remainingTeams.filter(
+          (_, index) => index !== 0 && index !== option.opponentIndex
+        );
+
+        search(
+          nextRemainingTeams,
+          [...current, option.match],
+          currentPenalty + option.score
+        );
+      }
+    }
+
+    search(teams, [], 0);
+
+    return bestMatches;
+  }
+
   function buildRoundMatches(
     selectedMaleIds: string[],
     selectedFemaleIds: string[],
@@ -1331,6 +1456,14 @@ function buildMixedDoublesSchedule(
   ): Array<{ teamA: [string, string]; teamB: [string, string] }> | null {
     if (selectedMaleIds.length !== selectedFemaleIds.length) return null;
     if ((selectedMaleIds.length + selectedFemaleIds.length) % 4 !== 0) return null;
+    if (selectedMaleIds.length >= 8) {
+      return buildStructuredMixedRound(
+        selectedMaleIds,
+        selectedFemaleIds,
+        allowRepeatPartners,
+        round
+      );
+    }
 
     let bestMatches: Array<{ teamA: [string, string]; teamB: [string, string] }> | null = null;
     let bestPenalty = Infinity;

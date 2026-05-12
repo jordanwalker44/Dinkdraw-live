@@ -140,6 +140,9 @@ export default function CreateTournamentPage() {
   const playersPerCourt = format === 'singles' ? 2 : 4;
   const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / playersPerCourt));
   const isValidSetup = playerCount >= minPlayers;
+  const playoffsAllowed =
+  tournamentMode === 'round_robin' &&
+  (format === 'singles' || (format === 'doubles' && doublesMode === 'fixed'));
 
   useEffect(() => {
     async function loadUser() {
@@ -203,6 +206,12 @@ setFavoriteLocations(savedLocations || []);
     }
   }, [format]);
 
+  useEffect(() => {
+  if (!playoffsAllowed && playoffFormat !== 'none') {
+    setPlayoffFormat('none');
+  }
+}, [playoffsAllowed, playoffFormat]);
+
   async function handleCreate() {
   setMessage('');
 
@@ -265,9 +274,11 @@ setFavoriteLocations(savedLocations || []);
         tournament_mode: tournamentMode,
         court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
         allow_player_score_reporting: allowPlayerScoreReporting,
-        playoff_format: playoffFormat,
+        pplayoff_format: playoffsAllowed ? playoffFormat : 'none',
         playoff_advance_count:
-          playoffFormat === 'everyone'
+          !playoffsAllowed || playoffFormat === 'none'
+            ? null
+            : playoffFormat === 'everyone'
             ? playerCount
             : playoffFormat === 'top_4'
             ? 4
@@ -650,7 +661,7 @@ router.push(`/tournament/${tournament.id}`);
             </div>
           ) : null}
 
-{tournamentMode === 'round_robin' ? (
+{playoffsAllowed ? (
   <div>
     <label className="label">Playoff Bracket</label>
 

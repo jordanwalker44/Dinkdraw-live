@@ -4931,7 +4931,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         letterSpacing: '0.02em',
       }}
     >
-      Tap to Join
+      {slot.display_name ? `${slot.display_name}, claim your spot here` : 'Tap to Join'}
     </div>
   ) : null}
 </div>
@@ -4959,7 +4959,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         claimSlot(slot.id);
       }}
   >
-      Join Game
+      {slot.display_name ? 'Claim Spot' : 'Join Game'}
     </button>
   ) : (
     <span className="tag">Open</span>

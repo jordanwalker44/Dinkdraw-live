@@ -1861,6 +1861,11 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [showSharingTools, setShowSharingTools] = useState(false);
   
   const isSingles = tournament?.format === 'singles';
+  const playoffsAllowedForTournament =
+  tournament?.tournament_mode === 'round_robin' &&
+  (tournament?.format === 'singles' ||
+    (tournament?.format === 'doubles' && tournament?.doubles_mode === 'fixed'));
+  
   const isBestOf3 = tournament?.match_format === 'best_of_3';
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
@@ -2935,6 +2940,11 @@ if (!scheduleValidation.isValid) {
     setMessage('This tournament does not have playoffs enabled.');
     return;
   }
+
+    if (!playoffsAllowedForTournament) {
+  setMessage('Playoffs are only available for Singles and Fixed Partners tournaments.');
+  return;
+}
 
   if (!matches.length || !matches.every((match) => match.is_bye || match.is_complete)) {
     setMessage('Finish all round robin matches before generating playoffs.');
@@ -5466,7 +5476,8 @@ Sign in with this same email address to submit and edit scores.`;
   <>
 
     {(
-  isOrganizer &&
+isOrganizer &&
+  playoffsAllowedForTournament &&
   tournament?.playoff_format !== 'none' &&
   (isStarted || isCompleted) &&
   matches.length > 0 &&

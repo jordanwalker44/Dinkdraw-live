@@ -1573,13 +1573,15 @@ export default function PublicTournamentViewPage({
   >
                       <div
                         style={{
-                        fontWeight: 900,
-                        marginBottom: 6,
-                        fontSize: 15,
-                        letterSpacing: '-0.01em',
-                        ...getWinnerStyle('a', match),
+                          fontWeight: 900,
+                          fontSize: 15,
+                          letterSpacing: '-0.01em',
+                          display: 'flex',
+                          alignItems: 'center',
+                          minHeight: 32,
+                          ...getWinnerStyle('a', match),
                       }}
-                      >
+                    >
                         {renderTeam(
                           match.team_a_player_1_id,
                           match.team_a_player_2_id
@@ -1627,7 +1629,9 @@ export default function PublicTournamentViewPage({
                       <div
                         style={{
                         fontWeight: 900,
-                        marginBottom: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        minHeight: 32,
                         fontSize: 15,
                         letterSpacing: '-0.01em',
                         ...getWinnerStyle('b', match),

@@ -1545,8 +1545,6 @@ export default function PublicTournamentViewPage({
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: 10 }}>{renderStyledMatchLabel(match)}</div>
-
                   <div className="grid" style={{ marginBottom: 4 }}>
   <div
     className="list-item"
@@ -1589,14 +1587,14 @@ export default function PublicTournamentViewPage({
                       </div>
                       <div
                         style={{
-                          textAlign: 'center',
+                          textAlign: 'right',
                           fontSize: 32,
                           fontWeight: 900,
                           lineHeight: 1,
                           letterSpacing: '-0.03em',
                           color: '#ffffff',
-                        }}
-                      >
+                      }}
+                    >
                         {match.team_a_score ?? '-'}
                       </div>
                     </div>
@@ -1642,7 +1640,7 @@ export default function PublicTournamentViewPage({
                       </div>
                       <div
                         style={{
-                          textAlign: 'center',
+                          textAlign: 'right',
                           fontSize: 32,
                           fontWeight: 900,
                           lineHeight: 1,

@@ -1551,6 +1551,9 @@ export default function PublicTournamentViewPage({
     style={{
       padding: 12,
       borderRadius: 16,
+      display: 'grid',
+      gridTemplateColumns: '1fr auto',
+      alignItems: 'center',
       background:
         match.team_a_score !== null &&
         match.team_b_score !== null &&
@@ -1606,6 +1609,9 @@ export default function PublicTournamentViewPage({
   style={{
     padding: 12,
     borderRadius: 16,
+    display: 'grid',
+    gridTemplateColumns: '1fr auto',
+    alignItems: 'center',
     background:
       match.team_a_score !== null &&
       match.team_b_score !== null &&

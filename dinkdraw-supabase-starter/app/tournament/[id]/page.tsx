@@ -3500,7 +3500,6 @@ if (!scheduleValidation.isValid) {
               gB,
               index + 1
             ),
-            match_id: gameMatchId,
           }))
         );
 

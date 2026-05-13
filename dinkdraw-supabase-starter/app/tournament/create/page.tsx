@@ -274,7 +274,7 @@ setFavoriteLocations(savedLocations || []);
         tournament_mode: tournamentMode,
         court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
         allow_player_score_reporting: allowPlayerScoreReporting,
-        pplayoff_format: playoffsAllowed ? playoffFormat : 'none',
+        playoff_format: playoffsAllowed ? playoffFormat : 'none',
         playoff_advance_count:
           !playoffsAllowed || playoffFormat === 'none'
             ? null

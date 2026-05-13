@@ -57,6 +57,7 @@ export default function MyTournamentsPage() {
   const [joined, setJoined] = useState<Tournament[]>([]);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'organized' | 'joined'>('organized');
 
   useEffect(() => {
     async function load() {
@@ -253,93 +254,120 @@ export default function MyTournamentsPage() {
           <div className="muted">Loading tournaments...</div>
         </div>
       ) : (
-        <>
-          <div className="card">
-            <div className="card-title">Organized by me</div>
-            <div className="card-subtitle">Tournaments you created.</div>
+        <div className="card">
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      gap: 8,
+      marginBottom: 16,
+    }}
+  >
+    <button
+      type="button"
+      className={`button ${viewMode === 'organized' ? 'primary' : 'secondary'}`}
+      onClick={() => setViewMode('organized')}
+      style={{ minHeight: 44, fontWeight: 900 }}
+    >
+      Organized
+    </button>
 
-            {!organized.length ? (
-              <div className="muted">No organized tournaments yet.</div>
-            ) : (
-              <div className="grid">
-                {organized.map((tournament) => (
-                  <Link key={tournament.id} href={`/tournament/${tournament.id}`}>
-                    <div className="list-item" style={{ cursor: 'pointer' }}>
-                      <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
-                        <div>
-                          <div style={{ marginBottom: 4 }}>
-                            <strong>{tournament.title}</strong>
-                          </div>
-                          <div className="muted" style={{ marginBottom: 4 }}>
-                            Join code: {tournament.join_code}
-                          </div>
-                          <div className="muted" style={{ marginBottom: 4 }}>
-                            {eventSummary(tournament)}
-                          </div>
-                          <div className="muted">
-                            {formatCreatedAt(tournament.created_at)
-                              ? `Created ${formatCreatedAt(tournament.created_at)}`
-                              : ''}
-                          </div>
-                        </div>
+    <button
+      type="button"
+      className={`button ${viewMode === 'joined' ? 'primary' : 'secondary'}`}
+      onClick={() => setViewMode('joined')}
+      style={{ minHeight: 44, fontWeight: 900 }}
+    >
+      Joined
+    </button>
+  </div>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                          <span className="tag green">Organizer</span>
-                          <span className={statusTagClass(tournament.status)}>
-                            {statusLabel(tournament.status)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+  <div className="card-title">
+    {viewMode === 'organized' ? 'Organized by me' : 'Joined by me'}
+  </div>
+
+  <div className="card-subtitle">
+    {viewMode === 'organized'
+      ? 'Tournaments you created.'
+      : 'Tournaments where you claimed a spot.'}
+  </div>
+
+  {viewMode === 'organized' ? (
+    !organized.length ? (
+      <div className="muted">No organized tournaments yet.</div>
+    ) : (
+      <div className="grid">
+        {organized.map((tournament) => (
+          <Link key={tournament.id} href={`/tournament/${tournament.id}`}>
+            <div className="list-item" style={{ cursor: 'pointer' }}>
+              <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+                <div>
+                  <div style={{ marginBottom: 4 }}>
+                    <strong>{tournament.title}</strong>
+                  </div>
+                  <div className="muted" style={{ marginBottom: 4 }}>
+                    Join code: {tournament.join_code}
+                  </div>
+                  <div className="muted" style={{ marginBottom: 4 }}>
+                    {eventSummary(tournament)}
+                  </div>
+                  <div className="muted">
+                    {formatCreatedAt(tournament.created_at)
+                      ? `Created ${formatCreatedAt(tournament.created_at)}`
+                      : ''}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                  <span className="tag green">Organizer</span>
+                  <span className={statusTagClass(tournament.status)}>
+                    {statusLabel(tournament.status)}
+                  </span>
+                </div>
               </div>
-            )}
-          </div>
-
-          <div className="card">
-            <div className="card-title">Joined by me</div>
-            <div className="card-subtitle">Tournaments where you claimed a spot.</div>
-
-            {!joined.length ? (
-              <div className="muted">No joined tournaments yet.</div>
-            ) : (
-              <div className="grid">
-                {joined.map((tournament) => (
-                  <Link key={tournament.id} href={`/tournament/${tournament.id}`}>
-                    <div className="list-item" style={{ cursor: 'pointer' }}>
-                      <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
-                        <div>
-                          <div style={{ marginBottom: 4 }}>
-                            <strong>{tournament.title}</strong>
-                          </div>
-                          <div className="muted" style={{ marginBottom: 4 }}>
-                            Join code: {tournament.join_code}
-                          </div>
-                          <div className="muted" style={{ marginBottom: 4 }}>
-                            {eventSummary(tournament)}
-                          </div>
-                          <div className="muted">
-                            {formatCreatedAt(tournament.created_at)
-                              ? `Created ${formatCreatedAt(tournament.created_at)}`
-                              : ''}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                          <span className="tag green">Joined</span>
-                          <span className={statusTagClass(tournament.status)}>
-                            {statusLabel(tournament.status)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+            </div>
+          </Link>
+        ))}
+      </div>
+    )
+  ) : !joined.length ? (
+    <div className="muted">No joined tournaments yet.</div>
+  ) : (
+    <div className="grid">
+      {joined.map((tournament) => (
+        <Link key={tournament.id} href={`/tournament/${tournament.id}`}>
+          <div className="list-item" style={{ cursor: 'pointer' }}>
+            <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
+              <div>
+                <div style={{ marginBottom: 4 }}>
+                  <strong>{tournament.title}</strong>
+                </div>
+                <div className="muted" style={{ marginBottom: 4 }}>
+                  Join code: {tournament.join_code}
+                </div>
+                <div className="muted" style={{ marginBottom: 4 }}>
+                  {eventSummary(tournament)}
+                </div>
+                <div className="muted">
+                  {formatCreatedAt(tournament.created_at)
+                    ? `Created ${formatCreatedAt(tournament.created_at)}`
+                    : ''}
+                </div>
               </div>
-            )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                <span className="tag green">Joined</span>
+                <span className={statusTagClass(tournament.status)}>
+                  {statusLabel(tournament.status)}
+                </span>
+              </div>
+            </div>
           </div>
-        </>
+        </Link>
+      ))}
+    </div>
+  )}
+</div>
       )}
     </main>
   );

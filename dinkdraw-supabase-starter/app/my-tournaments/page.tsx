@@ -115,9 +115,7 @@ export default function MyTournamentsPage() {
       return;
     }
 
-    joinedTournaments = (joinedData || []).filter(
-      (t: Tournament) => t.organizer_user_id !== user.id
-    );
+    joinedTournaments = joinedData || [];
   }
 
   setOrganized(organizedData || []);
@@ -238,7 +236,7 @@ export default function MyTournamentsPage() {
       }}
     >
       <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-        Joined
+        Played
       </div>
       <div style={{ fontSize: 22, fontWeight: 900 }}>{joined.length}</div>
     </div>
@@ -278,18 +276,18 @@ export default function MyTournamentsPage() {
       onClick={() => setViewMode('joined')}
       style={{ minHeight: 44, fontWeight: 900 }}
     >
-      Joined
+      Played
     </button>
   </div>
 
   <div className="card-title">
-    {viewMode === 'organized' ? 'Organized by me' : 'Joined by me'}
+    {viewMode === 'organized' ? 'Organized by me' : 'Played by me'}
   </div>
 
   <div className="card-subtitle">
     {viewMode === 'organized'
       ? 'Tournaments you created.'
-      : 'Tournaments where you claimed a spot.'}
+      : 'Tournaments where you participated.'}
   </div>
 
   {viewMode === 'organized' ? (
@@ -331,7 +329,7 @@ export default function MyTournamentsPage() {
       </div>
     )
   ) : !joined.length ? (
-    <div className="muted">No joined tournaments yet.</div>
+    <div className="muted">No played tournaments yet.</div>
   ) : (
     <div className="grid">
       {joined.map((tournament) => (
@@ -356,7 +354,7 @@ export default function MyTournamentsPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                <span className="tag green">Joined</span>
+                <span className="tag green">Played</span>
                 <span className={statusTagClass(tournament.status)}>
                   {statusLabel(tournament.status)}
                 </span>

@@ -2359,6 +2359,16 @@ setScoreDrafts((prev) => {
     };
   }, [params.id, supabase, userId]);
 
+    useEffect(() => {
+    if (!params.id) return;
+
+    const interval = setInterval(() => {
+      loadTournamentData(userId);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [params.id, userId]);
+
   useEffect(() => {
     if (!roundsAvailable.length) return;
     setSelectedRound((prev) => {

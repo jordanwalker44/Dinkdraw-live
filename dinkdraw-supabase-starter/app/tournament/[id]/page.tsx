@@ -3446,13 +3446,15 @@ if (!scheduleValidation.isValid) {
       wins: number,
       losses: number,
       pointsFor: number,
-      pointsAgainst: number
+      pointsAgainst: number,
+      gameNumber: number
     ) {
       const isTie = wins === losses;
       return {
         user_id: currentUserId,
         tournament_id: tournament!.id,
         match_id: match.id,
+        game_number: gameNumber,
         round_number: match.round_number,
         played_at: playedAt,
         partner_user_id: partnerUserId,
@@ -3481,8 +3483,6 @@ if (!scheduleValidation.isValid) {
       games.forEach(([gA, gB], index) => {
         if (gA === null || gB === null) return;
 
-        const gameMatchId = `${match.id}-game-${index + 1}`;
-
         const aWins = gA > gB ? 1 : 0;
         const bWins = gB > gA ? 1 : 0;
 
@@ -3497,7 +3497,8 @@ if (!scheduleValidation.isValid) {
               aWins,
               bWins,
               gA,
-              gB
+              gB,
+              index + 1
             ),
             match_id: gameMatchId,
           }))
@@ -3514,7 +3515,8 @@ if (!scheduleValidation.isValid) {
               bWins,
               aWins,
               gB,
-              gA
+              gA,
+              index + 1
             ),
             match_id: gameMatchId,
           }))
@@ -3535,7 +3537,8 @@ if (!scheduleValidation.isValid) {
             aWins,
             bWins,
             aScore,
-            bScore
+            bScore,
+            1
           )
         )
       );
@@ -3551,7 +3554,8 @@ if (!scheduleValidation.isValid) {
             bWins,
             aWins,
             bScore,
-            aScore
+            aScore,
+            1
           )
         )
       );
@@ -3561,7 +3565,7 @@ if (!scheduleValidation.isValid) {
 
     const { error } = await supabase
       .from('player_match_stats')
-      .upsert(rows, { onConflict: 'match_id,user_id' });
+      .upsert(rows, { onConflict: 'match_id,user_id,game_number' });
 
     if (error) {
       setMessage(`Score submitted, but stats update failed: ${error.message}`);

@@ -3517,7 +3517,6 @@ if (!scheduleValidation.isValid) {
               gA,
               index + 1
             ),
-            match_id: gameMatchId,
           }))
         );
       });

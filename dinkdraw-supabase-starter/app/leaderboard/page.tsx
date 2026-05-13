@@ -14,7 +14,6 @@ import {
 type TimeFilter = 'lifetime' | '12m' | '6m' | '30d' | '7d';
 type FormatFilter = 'all' | 'singles' | 'doubles';
 type SortBy =
-  | 'elo'
   | 'wins'
   | 'winPct'
   | 'pointDiff'
@@ -31,7 +30,7 @@ export default function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('doubles');
   const [minMatches, setMinMatches] = useState(5);
-  const [sortBy, setSortBy] = useState<SortBy>('elo');
+  const [sortBy, setSortBy] = useState<SortBy>('wins');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -100,34 +99,32 @@ export default function LeaderboardPage() {
 
     return [...rows].sort((a, b) => {
       switch (sortBy) {
-        case 'elo':
-          return b.rating - a.rating;
-
+        
         case 'wins':
           if (b.wins !== a.wins) return b.wins - a.wins;
-          return b.rating - a.rating;
+          return b.pointDiff - a.pointDiff;
 
         case 'winPct':
           if (b.winPct !== a.winPct) return b.winPct - a.winPct;
-          return b.rating - a.rating;
+          return b.pointDiff - a.pointDiff;
 
         case 'pointDiff':
           if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-          return b.rating - a.rating;
+          return b.pointDiff - a.pointDiff;
 
         case 'pointsFor':
           if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-          return b.rating - a.rating;
+          return b.pointDiff - a.pointDiff;
 
         case 'matches':
           if (b.matches !== a.matches) return b.matches - a.matches;
-          return b.rating - a.rating;
+          return b.pointDiff - a.pointDiff;
 
         case 'name':
           return a.name.localeCompare(b.name);
 
         default:
-          return b.rating - a.rating;
+          return b.pointDiff - a.pointDiff;
       }
     });
   }, [filteredStats, profiles, minMatches, sortBy]);
@@ -135,7 +132,6 @@ export default function LeaderboardPage() {
   const summary = useMemo(
     () => ({
       players: leaderboard.length,
-      topRating: leaderboard[0]?.rating ?? 1000,
       topWinRate: leaderboard[0]?.winPct ?? 0,
     }),
     [leaderboard]
@@ -149,8 +145,6 @@ export default function LeaderboardPage() {
 
   function sortLabel(s: SortBy) {
     switch (s) {
-      case 'elo':
-        return 'Rating';
       case 'wins':
         return 'Wins';
       case 'winPct':
@@ -339,11 +333,6 @@ export default function LeaderboardPage() {
             sub={`${minMatches}+ matches`}
           />
           <SimpleStatCard
-            label="Top Rating"
-            value={summary.topRating}
-            sub="Current leader"
-          />
-          <SimpleStatCard
             label="Top Win Rate"
             value={`${summary.topWinRate}%`}
             sub="Current leader"
@@ -365,11 +354,6 @@ export default function LeaderboardPage() {
             gap: 8,
           }}
         >
-          <SortButton
-            active={sortBy === 'elo'}
-            label="ELO"
-            onClick={() => setSortBy('elo')}
-          />
           <SortButton
             active={sortBy === 'wins'}
             label="Wins"
@@ -442,7 +426,7 @@ export default function LeaderboardPage() {
             >
               <div style={{ textAlign: 'center' }}>#</div>
               <div>Player</div>
-              <div style={{ textAlign: 'center' }}>ELO</div>
+              <div style={{ textAlign: 'center' }}>Win %</div>
               <div style={{ textAlign: 'center' }}>W-L</div>
               <div style={{ textAlign: 'center' }}>Diff</div>
             </div>
@@ -531,7 +515,7 @@ transition: 'background 0.15s ease',
                         fontSize: 20,
                       }}
                     >
-                      {player.rating}
+                      {player.winPct}%
                     </div>
 
                     <div

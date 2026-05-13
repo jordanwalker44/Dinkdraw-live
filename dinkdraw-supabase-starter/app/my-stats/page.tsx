@@ -275,7 +275,8 @@ export default function MyStatsPage() {
     let tempWinStreak = 0;
 
     for (const row of ordered) {
-      const result: 'W' | 'L' | 'T' = row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
+      const result: 'W' | 'L' | 'T' =
+        row.wins > row.losses ? 'W' : row.losses > row.wins ? 'L' : 'T';
       if (currentType === null) {
         currentType = result;
         currentCount = 1;
@@ -287,7 +288,8 @@ export default function MyStatsPage() {
     }
 
     for (const row of ordered) {
-      const result: 'W' | 'L' | 'T' = row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T';
+      const result: 'W' | 'L' | 'T' =
+        row.wins > row.losses ? 'W' : row.losses > row.wins ? 'L' : 'T';
       if (result === 'W') {
         tempWinStreak += 1;
         bestWinStreak = Math.max(bestWinStreak, tempWinStreak);
@@ -296,10 +298,13 @@ export default function MyStatsPage() {
       }
     }
 
-    const recentForm = ordered
-      .slice(0, 5)
-      .map((row) => (row.wins > 0 ? 'W' : row.losses > 0 ? 'L' : 'T'))
-      .join(' ');
+        const expandedResults = ordered.flatMap((row) => [
+      ...Array(row.wins).fill('W'),
+      ...Array(row.losses).fill('L'),
+      ...Array(row.ties).fill('T'),
+    ]);
+
+    const recentForm = expandedResults.slice(0, 5).join(' ');
 
     return {
       currentStreakLabel: currentType && currentCount > 0 ? `${currentType}${currentCount}` : '-',
@@ -532,7 +537,7 @@ export default function MyStatsPage() {
                     <div className="row-between">
                       <div>
                         <div style={{ fontWeight: 800 }}>
-                          {match.wins === 1 ? 'Win' : match.losses === 1 ? 'Loss' : 'Tie'}
+                          {match.wins > match.losses ? 'Win' : match.losses > match.wins ? 'Loss' : 'Tie'}
                         </div>
                         <div className="muted">{new Date(match.played_at).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' })}</div>
                         <div className="muted" style={{ marginTop: 2 }}>

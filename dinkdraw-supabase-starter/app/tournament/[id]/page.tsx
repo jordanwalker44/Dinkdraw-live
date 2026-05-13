@@ -4860,6 +4860,16 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
         const firstOpenSlot = playerSlots.find((player) => !player.claimed_by_user_id);
         const isFirstOpenSlot = firstOpenSlot?.id === slot.id;
+        
+    const hasAssignedNames = playerSlots.some(
+  (p) => p.display_name?.trim()
+);
+
+const shouldShowClaimButton = canClaim && (
+  hasAssignedNames
+    ? !!slot.display_name
+    : isFirstOpenSlot
+);
         const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 
         return (
@@ -4921,7 +4931,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
 >
   <div>{slot.display_name || 'Open'}</div>
 
-  {canClaim && isFirstOpenSlot ? (
+  {shouldShowClaimButton ? (
     <div
       style={{
         marginTop: 3,
@@ -4943,7 +4953,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     <span className="tag">Claimed</span>
   ) : isLocked ? (
     <span className="tag">Locked</span>
-  ) : canClaim && isFirstOpenSlot ? (
+  ) : shouldShowClaimButton ? (
     <button
       type="button"
       className={`button primary ${isFirstOpenSlot ? 'claim-pulse' : ''}`}

@@ -4941,7 +4941,9 @@ const shouldShowClaimButton = canClaim && (
         letterSpacing: '0.02em',
       }}
     >
-      {slot.display_name ? `${slot.display_name}, claim your spot here` : 'Tap to Join'}
+      {slot.display_name
+  ? 'This spot is assigned to you'
+  : 'Tap to join this spot'}
     </div>
   ) : null}
 </div>

@@ -1914,20 +1914,45 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
     return Array.from(roundSet).sort((a, b) => a - b);
   }, [matches, tournament]);
 
-  const currentRound = useMemo(() => {
+    const currentRound = useMemo(() => {
     if (!matches.length) return roundsAvailable[0] || 1;
+
+    if (isCompleted) {
+      const lastCompletedRound = [...roundsAvailable]
+        .reverse()
+        .find((round) =>
+          matches.some(
+            (m) => m.round_number === round && !m.is_bye && m.is_complete
+          )
+        );
+
+      return lastCompletedRound || roundsAvailable[0] || 1;
+    }
+
     for (const round of roundsAvailable) {
       const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
       if (!roundMatches.length) continue;
       if (!roundMatches.every((m) => m.is_complete)) return round;
     }
-    return roundsAvailable[roundsAvailable.length - 1] || 1;
-  }, [matches, roundsAvailable]);
 
-  const finalRound = useMemo(
-    () => roundsAvailable[roundsAvailable.length - 1] || 1,
-    [roundsAvailable]
-  );
+    return roundsAvailable[roundsAvailable.length - 1] || 1;
+  }, [matches, roundsAvailable, isCompleted]);
+
+    const finalRound = useMemo(() => {
+    if (isCompleted) {
+      const lastCompletedRound = [...roundsAvailable]
+        .reverse()
+        .find((round) =>
+          matches.some(
+            (m) => m.round_number === round && !m.is_bye && m.is_complete
+          )
+        );
+
+      return lastCompletedRound || roundsAvailable[0] || 1;
+    }
+
+    return roundsAvailable[roundsAvailable.length - 1] || 1;
+  }, [matches, roundsAvailable, isCompleted]);
 
   const completedMatchCount = useMemo(
     () => matches.filter((m) => !m.is_bye && m.is_complete).length,
@@ -2026,10 +2051,21 @@ const hasAnyScores = matches.some(
     m.game_3_b !== null
 );
 
-  const roundStatusByRound = useMemo(() => {
-    const statusMap = new Map<number, 'current' | 'complete' | 'upcoming'>();
+    const roundStatusByRound = useMemo(() => {
+    const statusMap = new Map<number, 'current' | 'complete' | 'upcoming' | 'not_played'>();
+
     for (const round of roundsAvailable) {
       const roundMatches = matches.filter((m) => m.round_number === round && !m.is_bye);
+
+      if (isCompleted) {
+        if (roundMatches.length && roundMatches.every((m) => m.is_complete)) {
+          statusMap.set(round, 'complete');
+        } else {
+          statusMap.set(round, 'not_played');
+        }
+        continue;
+      }
+
       if (!roundMatches.length) {
         statusMap.set(
           round,
@@ -2037,13 +2073,15 @@ const hasAnyScores = matches.some(
         );
         continue;
       }
+
       if (roundMatches.every((m) => m.is_complete)) statusMap.set(round, 'complete');
       else if (round === currentRound) statusMap.set(round, 'current');
       else if (round < currentRound) statusMap.set(round, 'complete');
       else statusMap.set(round, 'upcoming');
     }
+
     return statusMap;
-  }, [matches, roundsAvailable, currentRound]);
+  }, [matches, roundsAvailable, currentRound, isCompleted]);
 
   const matchesForSelectedRound = useMemo(
     () => matches.filter((m) => m.round_number === selectedRound && !m.is_bye),
@@ -5699,7 +5737,13 @@ isOrganizer &&
                       marginBottom: 6,
                     }}
                   >
-                    {isCurrent ? 'LIVE' : 'ROUND'}
+                    {status === 'current'
+                    ? 'LIVE'
+                    : status === 'complete'
+                    ? 'FINAL'
+                    : status === 'not_played'
+                    ? 'NOT PLAYED'
+                    : 'ROUND'}
                   </div>
 
                   <div
@@ -6137,8 +6181,8 @@ isOrganizer &&
                         <span
                           className={match.is_complete ? 'tag green' : 'tag'}
                           style={!match.is_complete ? { fontWeight: 800 } : undefined}
-                        >
-                          {match.is_complete ? 'COMPLETE' : 'LIVE'}
+                      >
+                          {match.is_complete ? 'COMPLETE' : isCompleted ? 'NOT PLAYED' : 'LIVE'}
                         </span>
                       </div>
                     </div>

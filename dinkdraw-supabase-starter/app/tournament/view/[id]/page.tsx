@@ -330,8 +330,20 @@ export default function PublicTournamentViewPage({
     }));
 }, [playoffMatches]);
 
-    const currentRound = useMemo(() => {
+        const currentRound = useMemo(() => {
     if (!matches.length) return roundsAvailable[0] || 1;
+
+    if (tournament?.status === 'completed') {
+      const lastCompletedRound = [...roundsAvailable]
+        .reverse()
+        .find((round) =>
+          matches.some(
+            (m) => m.round_number === round && !m.is_bye && m.is_complete
+          )
+        );
+
+      return lastCompletedRound || roundsAvailable[roundsAvailable.length - 1] || 1;
+    }
 
     for (const round of roundsAvailable) {
       const roundMatches = matches.filter(
@@ -342,12 +354,23 @@ export default function PublicTournamentViewPage({
     }
 
     return roundsAvailable[roundsAvailable.length - 1] || 1;
-  }, [matches, roundsAvailable]);
+  }, [matches, roundsAvailable, tournament?.status]);
 
-  const finalRound = useMemo(
-    () => roundsAvailable[roundsAvailable.length - 1] || 1,
-    [roundsAvailable]
-  );
+    const finalRound = useMemo(() => {
+    if (tournament?.status === 'completed') {
+      const lastCompletedRound = [...roundsAvailable]
+        .reverse()
+        .find((round) =>
+          matches.some(
+            (m) => m.round_number === round && !m.is_bye && m.is_complete
+          )
+        );
+
+      return lastCompletedRound || roundsAvailable[roundsAvailable.length - 1] || 1;
+    }
+
+    return roundsAvailable[roundsAvailable.length - 1] || 1;
+  }, [matches, roundsAvailable, tournament?.status]);
 
   const completedMatchCount = useMemo(
     () => matches.filter((m) => !m.is_bye && m.is_complete).length,
@@ -550,6 +573,36 @@ export default function PublicTournamentViewPage({
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
+    function getFirstName(id: string | null) {
+    const fullName = renderPlayerName(id);
+    if (!fullName || fullName === '-') return 'Player';
+    return fullName.trim().split(/\s+/)[0] || fullName;
+  }
+
+  function getSeriesWinnerText(match: Match, aWins: number, bWins: number) {
+    if (!match.is_complete || aWins === bWins) {
+      return `Series wins: ${aWins}-${bWins}`;
+    }
+
+    const winnerNames =
+      aWins > bWins
+        ? isSingles
+          ? getFirstName(match.team_a_player_1_id)
+          : `${getFirstName(match.team_a_player_1_id)} & ${getFirstName(
+              match.team_a_player_2_id
+            )}`
+        : isSingles
+        ? getFirstName(match.team_b_player_1_id)
+        : `${getFirstName(match.team_b_player_1_id)} & ${getFirstName(
+            match.team_b_player_2_id
+          )}`;
+
+    const winnerWins = Math.max(aWins, bWins);
+    const loserWins = Math.min(aWins, bWins);
+
+    return `${winnerNames} win series ${winnerWins}-${loserWins}`;
+  }
+
   function renderStyledMatchLabel(match: Match) {
     return (
       <div
@@ -746,7 +799,7 @@ export default function PublicTournamentViewPage({
           color: '#FFCB05',
         }}
       >
-        Series wins: {aWins}-{bWins}
+        {getSeriesWinnerText(match, aWins, bWins)}
       </div>
     </div>
   );

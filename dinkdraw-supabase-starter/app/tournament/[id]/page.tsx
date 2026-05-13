@@ -3431,10 +3431,7 @@ if (!scheduleValidation.isValid) {
       };
     }
 
-    let aWins = 0;
-    let bWins = 0;
-    let aPoints = 0;
-    let bPoints = 0;
+        const rows = [];
 
     if (isBestOf3) {
       const games = [
@@ -3443,47 +3440,84 @@ if (!scheduleValidation.isValid) {
         [match.game_3_a, match.game_3_b],
       ] as const;
 
-      for (const [gA, gB] of games) {
-        if (gA === null || gB === null) continue;
+      games.forEach(([gA, gB], index) => {
+        if (gA === null || gB === null) return;
 
-        aPoints += gA;
-        bPoints += gB;
+        const gameMatchId = `${match.id}-game-${index + 1}`;
 
-        if (gA > gB) aWins += 1;
-        else if (gB > gA) bWins += 1;
-      }
+        const aWins = gA > gB ? 1 : 0;
+        const bWins = gB > gA ? 1 : 0;
+
+        rows.push(
+          ...teamAUsers.map((currentUserId) => ({
+            ...buildRow(
+              currentUserId,
+              isSingles
+                ? null
+                : teamAUsers.find((id) => id !== currentUserId) || null,
+              teamBUsers,
+              aWins,
+              bWins,
+              gA,
+              gB
+            ),
+            match_id: gameMatchId,
+          }))
+        );
+
+        rows.push(
+          ...teamBUsers.map((currentUserId) => ({
+            ...buildRow(
+              currentUserId,
+              isSingles
+                ? null
+                : teamBUsers.find((id) => id !== currentUserId) || null,
+              teamAUsers,
+              bWins,
+              aWins,
+              gB,
+              gA
+            ),
+            match_id: gameMatchId,
+          }))
+        );
+      });
     } else {
-      aPoints = aScore;
-      bPoints = bScore;
+      const aWins = aScore > bScore ? 1 : 0;
+      const bWins = bScore > aScore ? 1 : 0;
 
-      if (aScore > bScore) aWins = 1;
-      else if (bScore > aScore) bWins = 1;
+      rows.push(
+        ...teamAUsers.map((currentUserId) =>
+          buildRow(
+            currentUserId,
+            isSingles
+              ? null
+              : teamAUsers.find((id) => id !== currentUserId) || null,
+            teamBUsers,
+            aWins,
+            bWins,
+            aScore,
+            bScore
+          )
+        )
+      );
+
+      rows.push(
+        ...teamBUsers.map((currentUserId) =>
+          buildRow(
+            currentUserId,
+            isSingles
+              ? null
+              : teamBUsers.find((id) => id !== currentUserId) || null,
+            teamAUsers,
+            bWins,
+            aWins,
+            bScore,
+            aScore
+          )
+        )
+      );
     }
-
-    const rows = [
-      ...teamAUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          isSingles ? null : teamAUsers.find((id) => id !== currentUserId) || null,
-          teamBUsers,
-          aWins,
-          bWins,
-          aPoints,
-          bPoints
-        )
-      ),
-      ...teamBUsers.map((currentUserId) =>
-        buildRow(
-          currentUserId,
-          isSingles ? null : teamBUsers.find((id) => id !== currentUserId) || null,
-          teamAUsers,
-          bWins,
-          aWins,
-          bPoints,
-          aPoints
-        )
-      ),
-    ];
 
     if (!rows.length) return true;
 

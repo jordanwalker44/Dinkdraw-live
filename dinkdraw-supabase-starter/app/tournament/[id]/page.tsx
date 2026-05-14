@@ -2213,7 +2213,9 @@ const hasAnyScores = matches.some(
           LAST_TOURNAMENT_KEY,
           JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
         );
-      } catch {}
+      } catch (err) {
+  console.warn('Could not save last tournament shortcut:', err);
+}
     }
 
     if ((playersData || []).length > 0) {
@@ -3349,7 +3351,9 @@ if (!scheduleValidation.isValid) {
           LAST_TOURNAMENT_KEY,
           JSON.stringify({ id: newTournament.id, title: newTournament.title })
         );
-      } catch {}
+      } catch (err) {
+  console.warn('Could not save rematch tournament shortcut:', err);
+}
 
       window.location.href = `/tournament/${newTournament.id}`;
     } catch (err) {
@@ -3667,7 +3671,9 @@ if (matchesError) {
         const parsed = JSON.parse(saved);
         if (parsed.id === tournament.id) window.localStorage.removeItem(LAST_TOURNAMENT_KEY);
       }
-    } catch {}
+    } catch (err) {
+  console.warn('Could not clear last tournament shortcut:', err);
+}
     
     setIsDeletingTournament(false);
     router.push('/my-tournaments');

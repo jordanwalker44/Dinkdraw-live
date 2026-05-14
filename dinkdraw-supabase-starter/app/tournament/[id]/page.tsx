@@ -1,6 +1,6 @@
     'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
@@ -1148,6 +1148,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
+  const scoreSubmitLockRef = useRef(false);
+  const [submittingScoreId, setSubmittingScoreId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
   const [isRematching, setIsRematching] = useState(false);
@@ -2098,6 +2100,26 @@ if (generatedRounds.size < tournament.rounds) {
     router.push('/my-tournaments');
   }
 
+  async function runWithScoreSubmitLock(
+  scoreId: string,
+  action: () => Promise<void>
+) {
+  if (scoreSubmitLockRef.current) {
+    setMessage('A score is already being submitted. Please wait.');
+    return;
+  }
+
+  scoreSubmitLockRef.current = true;
+  setSubmittingScoreId(scoreId);
+
+  try {
+    await action();
+  } finally {
+    scoreSubmitLockRef.current = false;
+    setSubmittingScoreId(null);
+  }
+}  
+
   async function submitGame(matchId: string, game: 1 | 2 | 3) {
   if (isCompleted) {
     setMessage('Final results are locked.');
@@ -2626,9 +2648,17 @@ function renderBestOf3Match(match: Match) {
           />
         </div>
         {!game1Done && !seriesComplete && !isCompleted ? (
-          <button className="button primary" onClick={() => submitGame(match.id, 1)}>
-            Submit Game 1
-          </button>
+          <button
+  className="button primary"
+  onClick={() =>
+    runWithScoreSubmitLock(match.id, () => submitGame(match.id, 1))
+  }
+  disabled={submittingScoreId === match.id}
+>
+  {submittingScoreId === match.id
+    ? 'Submitting...'
+    : 'Submit Game 1'}
+</button>
         ) : (
           <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
             {match.game_1_a}-{match.game_1_b} —{' '}
@@ -2678,9 +2708,17 @@ function renderBestOf3Match(match: Match) {
           />
         </div>
         {game1Done && !game2Done && !seriesComplete && !isCompleted ? (
-          <button className="button primary" onClick={() => submitGame(match.id, 2)}>
-            Submit Game 2
-          </button>
+          <button
+  className="button primary"
+  onClick={() =>
+    runWithScoreSubmitLock(match.id, () => submitGame(match.id, 2))
+  }
+  disabled={submittingScoreId === match.id}
+>
+  {submittingScoreId === match.id
+    ? 'Submitting...'
+    : 'Submit Game 2'}
+</button>
         ) : game2Done ? (
           <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
             {match.game_2_a}-{match.game_2_b} —{' '}
@@ -2735,9 +2773,17 @@ function renderBestOf3Match(match: Match) {
             />
           </div>
           {match.game_3_a === null && !seriesComplete && !isCompleted ? (
-            <button className="button primary" onClick={() => submitGame(match.id, 3)}>
-              Submit Game 3
-            </button>
+            <button
+  className="button primary"
+  onClick={() =>
+    runWithScoreSubmitLock(match.id, () => submitGame(match.id, 3))
+  }
+  disabled={submittingScoreId === match.id}
+>
+  {submittingScoreId === match.id
+    ? 'Submitting...'
+    : 'Submit Game 3'}
+</button>
           ) : match.game_3_a !== null ? (
             <div className="muted" style={{ fontSize: 13, textAlign: 'center' }}>
               {match.game_3_a}-{match.game_3_b} —{' '}
@@ -3507,10 +3553,14 @@ function renderBestOf3Match(match: Match) {
               ) : (
                 <button
                   className="button primary"
-                  onClick={() => submitMatchScore(match.id)}
-                  disabled={!isOrganizer}
+                  onClick={() =>
+                      runWithScoreSubmitLock(match.id, () => submitMatchScore(match.id))
+                    }
+                  disabled={!isOrganizer || submittingScoreId === match.id}
                 >
-                  Submit Score
+                  {submittingScoreId === match.id
+                  ? 'Submitting...'
+                  : 'Submit Score'}
                 </button>
               )}
             </div>

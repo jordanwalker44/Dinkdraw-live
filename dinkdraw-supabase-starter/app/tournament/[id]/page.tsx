@@ -2402,14 +2402,14 @@ setScoreDrafts((prev) => {
   }, [params.id, supabase, userId]);
 
     useEffect(() => {
-    if (!params.id) return;
+  if (!params.id || isLive) return;
 
-    const interval = setInterval(() => {
-      loadTournamentData(userId);
-    }, 5000);
+  const interval = setInterval(() => {
+    loadTournamentData(userId);
+  }, 5000);
 
-    return () => clearInterval(interval);
-  }, [params.id, userId]);
+  return () => clearInterval(interval);
+}, [params.id, userId, isLive]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
@@ -1847,6 +1847,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   Record<string, { team_a_score: string; team_b_score: string }>
   >({});
   const [isSavingNames, setIsSavingNames] = useState(false);
+  const scoreSubmitLockRef = useRef(false);
+  const [submittingScoreId, setSubmittingScoreId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
   const [isDeletingTournament, setIsDeletingTournament] = useState(false);
@@ -3671,6 +3673,26 @@ if (matchesError) {
     router.push('/my-tournaments');
   }
 
+  async function runWithScoreSubmitLock(
+  scoreId: string,
+  action: () => Promise<void>
+) {
+  if (scoreSubmitLockRef.current) {
+    setMessage('A score is already being submitted. Please wait.');
+    return;
+  }
+
+  scoreSubmitLockRef.current = true;
+  setSubmittingScoreId(scoreId);
+
+  try {
+    await action();
+  } finally {
+    scoreSubmitLockRef.current = false;
+    setSubmittingScoreId(null);
+  }
+}
+
   async function submitGame(matchId: string, game: 1 | 2 | 3) {
    if (isCompleted) {
   setMessage('Final results are locked.');
@@ -4367,8 +4389,10 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
       {!gameDone && !seriesComplete && !isCompleted ? (
         <button
           className="button primary"
-          onClick={() => submitGame(match.id, gameNumber)}
-          disabled={!canReportScores}
+          onClick={() =>
+            runWithScoreSubmitLock(match.id, () => submitGame(match.id, gameNumber))
+          }
+          disabled={!canReportScores || submittingScoreId === match.id}
           style={{
             width: '100%',
             fontWeight: 900,
@@ -4377,7 +4401,11 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
             marginTop: 10,
           }}
         >
-          {canReportScores ? `Submit ${gameLabel}` : 'Scores Locked'}
+          {submittingScoreId === match.id
+            ? 'Submitting...'
+            : canReportScores
+            ? `Submit ${gameLabel}`
+            : 'Scores Locked'}
         </button>
       ) : hasBothScores ? (
         <div
@@ -6043,8 +6071,17 @@ isOrganizer &&
                 {!match.is_complete && !match.is_bye ? (
   <button
     className="button primary"
-    onClick={() => submitPlayoffScore(match.id)}
-    disabled={!isOrganizer || !match.team_a_player_1_id || !match.team_b_player_1_id}
+    onClick={() =>
+      runWithScoreSubmitLock(`playoff-${match.id}`, () =>
+        submitPlayoffScore(match.id)
+      )
+    }
+    disabled={
+      !isOrganizer ||
+      !match.team_a_player_1_id ||
+      !match.team_b_player_1_id ||
+      submittingScoreId === `playoff-${match.id}`
+    }
     style={{
       width: '100%',
       marginTop: 10,
@@ -6052,7 +6089,11 @@ isOrganizer &&
       padding: '12px 14px',
     }}
   >
-    {isOrganizer ? 'Submit Playoff Score' : 'Scores Locked'}
+    {submittingScoreId === `playoff-${match.id}`
+        ? 'Submitting...'
+        : isOrganizer
+        ? 'Submit Playoff Score'
+        : 'Scores Locked'}
   </button>
 ) : match.is_complete && !match.is_bye ? (
   <div
@@ -6394,8 +6435,10 @@ isOrganizer &&
   <button
     className="button primary"
     onMouseDown={(e) => e.preventDefault()}
-    onClick={() => submitMatchScore(match.id)}
-    disabled={!canReportScores}
+    onClick={() =>
+      runWithScoreSubmitLock(match.id, () => submitMatchScore(match.id))
+    }
+    disabled={!canReportScores || submittingScoreId === match.id}
     style={{
       width: '100%',
       fontWeight: 800,
@@ -6403,7 +6446,11 @@ isOrganizer &&
       padding: '14px 16px',
     }}
   >
-    {canReportScores ? 'Submit Score' : 'Scores Locked'}
+    {submittingScoreId === match.id
+      ? 'Submitting...'
+      : canReportScores
+      ? 'Submit Score'
+      : 'Scores Locked'}
   </button>
 )}
                   </div>

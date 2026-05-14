@@ -359,7 +359,15 @@ export default function AccountPage() {
                       : 'Delete My Account'}
                 </button>
               
-              <Link href="/privacy" className="button secondary">
+              <Link
+                href="/privacy"
+                className="button secondary"
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
                 Privacy Policy
               </Link>
             </div>

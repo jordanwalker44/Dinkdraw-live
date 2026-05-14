@@ -252,16 +252,23 @@ export default function AccountPage() {
 }
 
   async function handleSignOut() {
-    setMessage('');
-    setIsLoading(true);
+  setMessage('');
+  setIsLoading(true);
+
+  try {
     await supabase.auth.signOut();
-    setUserEmail('');
-    setProfileName('');
-    setName('');
-    setPassword('');
-    setMessage('You have been signed out.');
-    setIsLoading(false);
+  } catch (err) {
+    console.error('Sign out failed:', err);
   }
+
+  setUserEmail('');
+  setProfileName('');
+  setName('');
+  setPassword('');
+  setEmail('');
+  setMessage('You have been signed out.');
+  setIsLoading(false);
+}
 
   const initials = (profileName || userEmail || 'DD')
     .split(' ')

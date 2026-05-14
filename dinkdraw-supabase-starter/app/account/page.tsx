@@ -370,6 +370,17 @@ export default function AccountPage() {
             >
                 Privacy Policy
               </Link>
+              <Link
+                href="/support"
+                className="button secondary"
+                style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+        >
+                Support
+</Link>
             </div>
           </div>
         </>

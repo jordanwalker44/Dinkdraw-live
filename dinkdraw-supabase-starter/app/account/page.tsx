@@ -330,6 +330,14 @@ export default function AccountPage() {
                 {isSavingProfile ? 'Saving...' : 'Save Display Name'}
               </button>
 
+              <button
+  className="button secondary"
+  onClick={handleSignOut}
+  disabled={isLoading}
+>
+  {isLoading ? 'Signing Out...' : 'Sign Out'}
+</button>
+
                     <button
                       className="button secondary"
                       onClick={handleDeleteAccount}

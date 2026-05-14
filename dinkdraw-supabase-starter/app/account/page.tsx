@@ -358,6 +358,10 @@ export default function AccountPage() {
                       ? 'Deleting Account...'
                       : 'Delete My Account'}
                 </button>
+              
+              <Link href="/privacy" className="button secondary">
+                Privacy Policy
+              </Link>
             </div>
           </div>
         </>

@@ -10,6 +10,9 @@ export default function PrivacyPage() {
 
       <div className="card">
         <div className="card-title">Privacy Policy</div>
+        <div className="card-subtitle">
+          Last updated: May 2026
+        </div>
 
         <div className="grid" style={{ gap: 18 }}>
           <div>

@@ -21,6 +21,7 @@ export default function AccountPage() {
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -191,6 +192,65 @@ export default function AccountPage() {
     setIsSavingProfile(false);
   }
 
+  async function handleDeleteAccount() {
+  const confirmed = window.confirm(
+    'Delete your DinkDraw account permanently? This cannot be undone.'
+  );
+
+  if (!confirmed) return;
+
+  setMessage('');
+  setIsDeletingAccount(true);
+
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    const token = session?.access_token;
+
+    if (!token) {
+      setMessage('You must be signed in.');
+      setIsDeletingAccount(false);
+      return;
+    }
+
+    const response = await fetch(
+      'https://iboqlzgjkakvnhwezrgx.supabase.co/functions/v1/delete-account',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      setMessage(result.error || 'Failed to delete account.');
+      setIsDeletingAccount(false);
+      return;
+    }
+
+    await supabase.auth.signOut();
+
+    setUserEmail('');
+    setProfileName('');
+    setName('');
+    setPassword('');
+
+    setMessage('Your account has been permanently deleted.');
+  } catch (err) {
+    setMessage(
+      err instanceof Error ? err.message : 'Something went wrong.'
+    );
+  }
+
+  setIsDeletingAccount(false);
+}
+
   async function handleSignOut() {
     setMessage('');
     setIsLoading(true);
@@ -269,9 +329,20 @@ export default function AccountPage() {
               <button className="button primary" onClick={handleSaveDisplayName} disabled={isSavingProfile}>
                 {isSavingProfile ? 'Saving...' : 'Save Display Name'}
               </button>
-              <button className="button secondary" onClick={handleSignOut} disabled={isLoading}>
-                {isLoading ? 'Signing Out...' : 'Sign Out'}
-              </button>
+
+                    <button
+                      className="button secondary"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeletingAccount}
+                  style={{
+                      borderColor: 'rgba(255,80,80,.45)',
+                      color: '#ff8080',
+                  }}
+                >
+                      {isDeletingAccount
+                      ? 'Deleting Account...'
+                      : 'Delete My Account'}
+                </button>
             </div>
           </div>
         </>

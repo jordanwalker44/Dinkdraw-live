@@ -88,10 +88,38 @@ export function rankCreamOfTheCropStage(
   matches: Match[],
   startingRoundNumber: number
 ): CreamCourtRanking[] {
-  const activePlayers = stagePlayers.filter((p) => (p.display_name || '').trim() !== '');
+  const fallbackPlayers = stagePlayers.filter((p) => (p.display_name || '').trim() !== '');
 
-  if (activePlayers.length < 4) return [];
-  if (activePlayers.length % 4 !== 0) return [];
+if (fallbackPlayers.length < 4) return [];
+if (fallbackPlayers.length % 4 !== 0) return [];
+
+const playerById = new Map(fallbackPlayers.map((player) => [player.id, player]));
+
+const openingRoundMatches = matches
+  .filter(
+    (match) =>
+      !match.is_bye &&
+      match.round_number === startingRoundNumber
+  )
+  .sort((a, b) => a.court_number - b.court_number);
+
+const orderedPlayerIdsFromMatches = openingRoundMatches.flatMap((match) =>
+  [
+    match.team_a_player_1_id,
+    match.team_a_player_2_id,
+    match.team_b_player_1_id,
+    match.team_b_player_2_id,
+  ].filter(Boolean) as string[]
+);
+
+const playersFromMatches = orderedPlayerIdsFromMatches
+  .map((playerId) => playerById.get(playerId))
+  .filter(Boolean) as PlayerSlot[];
+
+const activePlayers =
+  playersFromMatches.length === fallbackPlayers.length
+    ? playersFromMatches
+    : fallbackPlayers;
 
   const relevantMatches = matches.filter(
     (match) =>

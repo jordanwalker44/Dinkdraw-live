@@ -241,22 +241,34 @@ export function buildNextCreamOfTheCropStagePlayers(
   );
 
   const sortedPlayers = projectedPlayers
-    .sort((a, b) => {
-      if (a.projectedCourtNumber !== b.projectedCourtNumber) {
-        return a.projectedCourtNumber - b.projectedCourtNumber;
-      }
+  .sort((a, b) => {
+    if (a.projectedCourtNumber !== b.projectedCourtNumber) {
+      return a.projectedCourtNumber - b.projectedCourtNumber;
+    }
 
-      if (a.currentCourtNumber !== b.currentCourtNumber) {
-        return a.currentCourtNumber - b.currentCourtNumber;
-      }
+    if (a.rank !== b.rank) {
+      return a.rank - b.rank;
+    }
 
-      if (a.rank !== b.rank) {
-        return a.rank - b.rank;
-      }
+    if (b.wins !== a.wins) {
+      return b.wins - a.wins;
+    }
 
-      return a.priorSeed - b.priorSeed;
-    })
-    .map((row) => row.player);
+    if (b.pointDiff !== a.pointDiff) {
+      return b.pointDiff - a.pointDiff;
+    }
+
+    if (b.pointsFor !== a.pointsFor) {
+      return b.pointsFor - a.pointsFor;
+    }
+
+    if (a.currentCourtNumber !== b.currentCourtNumber) {
+      return a.currentCourtNumber - b.currentCourtNumber;
+    }
+
+    return a.priorSeed - b.priorSeed;
+  })
+  .map((row) => row.player);
 
   return sortedPlayers;
 }

@@ -23,7 +23,7 @@ export default function SupportPage() {
             <div className="muted">
               For support questions, bug reports, or tournament issues, email:
               <br />
-              jordanwalker44@gmail.com
+              dinkdrawapp@gmail.com
             </div>
           </div>
 

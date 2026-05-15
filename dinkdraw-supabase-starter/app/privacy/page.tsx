@@ -79,7 +79,7 @@ export default function PrivacyPage() {
             <div className="muted">
               For support or privacy questions, contact:
               <br />
-              jordanwalker44@gmail.com
+              dinkdrawapp@gmail.com
             </div>
           </div>
 

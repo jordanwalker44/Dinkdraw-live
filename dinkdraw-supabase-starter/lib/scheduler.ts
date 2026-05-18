@@ -101,7 +101,7 @@ const openingRoundMatches = matches
       !match.is_bye &&
       match.round_number === startingRoundNumber
   )
-  .sort((a, b) => a.court_number - b.court_number);
+  .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999));
 
 const orderedPlayerIdsFromMatches = openingRoundMatches.flatMap((match) =>
   [

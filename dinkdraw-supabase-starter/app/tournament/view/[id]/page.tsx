@@ -658,12 +658,24 @@ function renderStyledMatchLabel(match: Match) {
     return team === 'a' ? match.team_a_score ?? '-' : match.team_b_score ?? '-';
   }
 
-  function renderBestOf3Match(match: Match) {
+    function renderBestOf3Match(match: Match) {
     const { aWins, bWins } = getSeriesWins(match);
     const isCurrentMatch =
       !isCompleted &&
       match.round_number === currentRound &&
       liveMatches.some((live) => live.id === match.id);
+
+    const teamA = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+    const teamB = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+
+    const teamAWon = match.is_complete && aWins > bWins;
+    const teamBWon = match.is_complete && bWins > aWins;
+
+    const games = [
+      { label: 'G1', a: match.game_1_a, b: match.game_1_b },
+      { label: 'G2', a: match.game_2_a, b: match.game_2_b },
+      { label: 'G3', a: match.game_3_a, b: match.game_3_b },
+    ].filter((game) => game.a !== null || game.b !== null);
 
     return (
       <div
@@ -678,7 +690,7 @@ function renderStyledMatchLabel(match: Match) {
             : undefined
         }
       >
-        <div className="row-between" style={{ marginBottom: 12 }}>
+        <div className="row-between" style={{ marginBottom: 14 }}>
           <strong>{renderCourtLabel(match)}</strong>
           <div
             style={{
@@ -690,50 +702,155 @@ function renderStyledMatchLabel(match: Match) {
             }}
           >
             {isCurrentMatch ? <span className="tag">Live</span> : null}
-            <span style={{ fontSize: 13, fontWeight: 800, color: '#FFCB05' }}>
-              {aWins}-{bWins}
-            </span>
             <span className={match.is_complete ? 'tag green' : 'tag'}>
               {match.is_complete ? 'Complete' : 'In Progress'}
             </span>
           </div>
         </div>
 
-        <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>
+        <div
+          style={{
+            border: '1px solid rgba(255,255,255,.12)',
+            borderRadius: 16,
+            overflow: 'hidden',
+            background: 'rgba(0,0,0,.14)',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, 1fr) repeat(${games.length}, 44px) 54px`,
+              gap: 0,
+              alignItems: 'center',
+              padding: '8px 10px',
+              borderBottom: '1px solid rgba(255,255,255,.08)',
+              color: 'rgba(255,255,255,.62)',
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: '.12em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <div>Team</div>
+            {games.map((game) => (
+              <div key={game.label} style={{ textAlign: 'center' }}>
+                {game.label}
+              </div>
+            ))}
+            <div style={{ textAlign: 'center' }}>Series</div>
+          </div>
 
-        <div className="grid" style={{ gap: 8 }}>
-          <div className="list-item" style={{ padding: 10 }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Game 1
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, 1fr) repeat(${games.length}, 44px) 54px`,
+              alignItems: 'center',
+              padding: '12px 10px',
+              borderBottom: '1px solid rgba(255,255,255,.08)',
+            }}
+          >
+            <div
+              style={{
+                minWidth: 0,
+                fontWeight: 900,
+                color: teamAWon ? '#FFCB05' : '#fff',
+                lineHeight: 1.2,
+              }}
+            >
+              {teamA}
             </div>
-            <div className="row-between">
-              <strong>{match.game_1_a ?? '-'}</strong>
-              <strong>{match.game_1_b ?? '-'}</strong>
+
+            {games.map((game) => (
+              <div
+                key={game.label}
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  color:
+                    game.a !== null && game.b !== null && game.a > game.b
+                      ? '#FFCB05'
+                      : '#fff',
+                }}
+              >
+                {game.a ?? '-'}
+              </div>
+            ))}
+
+            <div
+              style={{
+                textAlign: 'center',
+                fontWeight: 900,
+                fontSize: 18,
+                color: teamAWon ? '#FFCB05' : '#fff',
+              }}
+            >
+              {aWins}
             </div>
           </div>
 
-          <div className="list-item" style={{ padding: 10 }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Game 2
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, 1fr) repeat(${games.length}, 44px) 54px`,
+              alignItems: 'center',
+              padding: '12px 10px',
+            }}
+          >
+            <div
+              style={{
+                minWidth: 0,
+                fontWeight: 900,
+                color: teamBWon ? '#FFCB05' : '#fff',
+                lineHeight: 1.2,
+              }}
+            >
+              {teamB}
             </div>
-            <div className="row-between">
-              <strong>{match.game_2_a ?? '-'}</strong>
-              <strong>{match.game_2_b ?? '-'}</strong>
+
+            {games.map((game) => (
+              <div
+                key={game.label}
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  color:
+                    game.a !== null && game.b !== null && game.b > game.a
+                      ? '#FFCB05'
+                      : '#fff',
+                }}
+              >
+                {game.b ?? '-'}
+              </div>
+            ))}
+
+            <div
+              style={{
+                textAlign: 'center',
+                fontWeight: 900,
+                fontSize: 18,
+                color: teamBWon ? '#FFCB05' : '#fff',
+              }}
+            >
+              {bWins}
             </div>
           </div>
-
-          {match.game_3_a !== null || match.game_3_b !== null ? (
-            <div className="list-item" style={{ padding: 10 }}>
-              <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-                Game 3
-              </div>
-              <div className="row-between">
-                <strong>{match.game_3_a ?? '-'}</strong>
-                <strong>{match.game_3_b ?? '-'}</strong>
-              </div>
-            </div>
-          ) : null}
         </div>
+
+        {match.is_complete ? (
+          <div
+            style={{
+              marginTop: 10,
+              textAlign: 'center',
+              color: '#FFCB05',
+              fontWeight: 900,
+              fontSize: 14,
+            }}
+          >
+            {teamAWon ? teamA : teamB} win series {aWins}-{bWins}
+          </div>
+        ) : null}
       </div>
     );
   }

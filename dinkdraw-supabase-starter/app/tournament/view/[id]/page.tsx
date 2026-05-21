@@ -1261,6 +1261,7 @@ export default function PublicTournamentViewPage({
             marginTop: 12,
             marginBottom: 18,
             overflowX: 'auto',
+            paddingTop: 4,
             paddingBottom: 6,
             WebkitOverflowScrolling: 'touch',
 }}

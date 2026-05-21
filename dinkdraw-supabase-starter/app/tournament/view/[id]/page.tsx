@@ -673,137 +673,243 @@ export default function PublicTournamentViewPage({
     return 'ROUND';
   }
 
-  function renderBestOf3Match(match: Match) {
-  const { aWins, bWins } = getSeriesWins(match);
-  const isCurrentMatch =
-    !isCompleted &&
-    match.round_number === currentRound &&
-    liveMatchIds.has(match.id);
+    function renderBestOf3Match(match: Match) {
+    const { aWins, bWins } = getSeriesWins(match);
+    const isCurrentMatch =
+      !isCompleted &&
+      match.round_number === currentRound &&
+      liveMatchIds.has(match.id);
 
-  return (
-    <div
-      key={match.id}
-      className="list-item"
-      style={
-  isCurrentMatch
-    ? {
-        borderColor: 'rgba(255,203,5,.7)',
-        boxShadow:
-          '0 0 0 1px rgba(255,203,5,.35) inset, 0 0 20px rgba(255,203,5,0.15)',
-        background: 'rgba(255,203,5,0.03)',
-      }
-    : undefined
-}
-    >
+    const teamA = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+    const teamB = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+
+    const teamAWon = match.is_complete && aWins > bWins;
+    const teamBWon = match.is_complete && bWins > aWins;
+
+    const games = [
+      { label: 'G1', a: match.game_1_a, b: match.game_1_b },
+      { label: 'G2', a: match.game_2_a, b: match.game_2_b },
+      { label: 'G3', a: match.game_3_a, b: match.game_3_b },
+    ].filter((game) => game.a !== null || game.b !== null);
+
+    return (
       <div
-        className="row-between"
-        style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
+        key={match.id}
+        className="list-item"
+        style={
+          isCurrentMatch
+            ? {
+                borderColor: 'rgba(255,203,5,.7)',
+                boxShadow:
+                  '0 0 0 1px rgba(255,203,5,.35) inset, 0 0 20px rgba(255,203,5,0.15)',
+                background: 'rgba(255,203,5,0.03)',
+              }
+            : undefined
+        }
       >
-        <div>
-          <div
-            style={{
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.6)',
-              marginBottom: 4,
-            }}
-          >
-            Court
+        <div
+          className="row-between"
+          style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: 4,
+              }}
+            >
+              Court
+            </div>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 900,
+                lineHeight: 1.1,
+              }}
+            >
+              {renderCourtLabel(match)}
+            </div>
           </div>
+
           <div
             style={{
-              fontSize: 20,
-              fontWeight: 900,
-              lineHeight: 1.1,
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
             }}
           >
-            {renderCourtLabel(match)}
+            {isCurrentMatch ? (
+              <span
+                className="tag"
+                style={{
+                  background: 'rgba(255,203,5,0.14)',
+                  border: '1px solid rgba(255,203,5,0.35)',
+                  color: '#FFCB05',
+                  fontWeight: 800,
+                }}
+              >
+                LIVE
+              </span>
+            ) : null}
+
+            <span
+              className={match.is_complete ? 'tag green' : 'tag'}
+              style={!match.is_complete ? { fontWeight: 800 } : undefined}
+            >
+              {match.is_complete ? 'COMPLETE' : 'IN PROGRESS'}
+            </span>
           </div>
         </div>
 
         <div
           style={{
-            display: 'flex',
-            gap: 8,
-            flexWrap: 'wrap',
-            justifyContent: 'flex-end',
+            border: '1px solid rgba(255,255,255,.12)',
+            borderRadius: 16,
+            overflow: 'hidden',
+            background: 'rgba(0,0,0,.14)',
           }}
         >
-          {isCurrentMatch ? (
-            <span
-              className="tag"
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, 1fr) repeat(${games.length}, 44px) 54px`,
+              gap: 0,
+              alignItems: 'center',
+              padding: '8px 10px',
+              borderBottom: '1px solid rgba(255,255,255,.08)',
+              color: 'rgba(255,255,255,.62)',
+              fontSize: 11,
+              fontWeight: 900,
+              letterSpacing: '.12em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <div>Team</div>
+            {games.map((game) => (
+              <div key={game.label} style={{ textAlign: 'center' }}>
+                {game.label}
+              </div>
+            ))}
+            <div style={{ textAlign: 'center' }}>Series</div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, 1fr) repeat(${games.length}, 44px) 54px`,
+              alignItems: 'center',
+              padding: '12px 10px',
+              borderBottom: '1px solid rgba(255,255,255,.08)',
+            }}
+          >
+            <div
               style={{
-                background: 'rgba(255,203,5,0.14)',
-                border: '1px solid rgba(255,203,5,0.35)',
-                color: '#FFCB05',
-                fontWeight: 800,
+                minWidth: 0,
+                fontWeight: 900,
+                color: teamAWon ? '#FFCB05' : '#fff',
+                lineHeight: 1.2,
               }}
             >
-              LIVE
-            </span>
-          ) : null}
+              {teamA}
+            </div>
 
-          <span
-            className={match.is_complete ? 'tag green' : 'tag'}
-            style={!match.is_complete ? { fontWeight: 800 } : undefined}
+            {games.map((game) => (
+              <div
+                key={game.label}
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  color:
+                    game.a !== null && game.b !== null && game.a > game.b
+                      ? '#FFCB05'
+                      : '#fff',
+                }}
+              >
+                {game.a ?? '-'}
+              </div>
+            ))}
+
+            <div
+              style={{
+                textAlign: 'center',
+                fontWeight: 900,
+                fontSize: 18,
+                color: teamAWon ? '#FFCB05' : '#fff',
+              }}
+            >
+              {aWins}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: `minmax(0, 1fr) repeat(${games.length}, 44px) 54px`,
+              alignItems: 'center',
+              padding: '12px 10px',
+            }}
           >
-            {match.is_complete ? 'COMPLETE' : 'IN PROGRESS'}
-          </span>
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 12 }}>{renderStyledMatchLabel(match)}</div>
-
-      <div className="grid" style={{ gap: 8 }}>
-        <div className="list-item" style={{ padding: 10 }}>
-          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-            Game 1
-          </div>
-          <div className="row-between">
-            <strong>{match.game_1_a ?? '-'}</strong>
-            <strong>{match.game_1_b ?? '-'}</strong>
-          </div>
-        </div>
-
-        <div className="list-item" style={{ padding: 10 }}>
-          <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-            Game 2
-          </div>
-          <div className="row-between">
-            <strong>{match.game_2_a ?? '-'}</strong>
-            <strong>{match.game_2_b ?? '-'}</strong>
-          </div>
-        </div>
-
-        {match.game_3_a !== null || match.game_3_b !== null ? (
-          <div className="list-item" style={{ padding: 10 }}>
-            <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>
-              Game 3
+            <div
+              style={{
+                minWidth: 0,
+                fontWeight: 900,
+                color: teamBWon ? '#FFCB05' : '#fff',
+                lineHeight: 1.2,
+              }}
+            >
+              {teamB}
             </div>
-            <div className="row-between">
-              <strong>{match.game_3_a ?? '-'}</strong>
-              <strong>{match.game_3_b ?? '-'}</strong>
+
+            {games.map((game) => (
+              <div
+                key={game.label}
+                style={{
+                  textAlign: 'center',
+                  fontWeight: 900,
+                  fontSize: 18,
+                  color:
+                    game.a !== null && game.b !== null && game.b > game.a
+                      ? '#FFCB05'
+                      : '#fff',
+                }}
+              >
+                {game.b ?? '-'}
+              </div>
+            ))}
+
+            <div
+              style={{
+                textAlign: 'center',
+                fontWeight: 900,
+                fontSize: 18,
+                color: teamBWon ? '#FFCB05' : '#fff',
+              }}
+            >
+              {bWins}
             </div>
           </div>
-        ) : null}
-      </div>
+        </div>
 
-      <div
-        style={{
-          marginTop: 10,
-          textAlign: 'center',
-          fontSize: 13,
-          fontWeight: 800,
-          color: '#FFCB05',
-        }}
-      >
-        {getSeriesWinnerText(match, aWins, bWins)}
+        <div
+          style={{
+            marginTop: 10,
+            textAlign: 'center',
+            fontSize: 13,
+            fontWeight: 800,
+            color: '#FFCB05',
+          }}
+        >
+          {getSeriesWinnerText(match, aWins, bWins)}
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (isLoading) {
     return (

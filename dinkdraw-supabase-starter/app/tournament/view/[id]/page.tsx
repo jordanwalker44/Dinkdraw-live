@@ -290,6 +290,7 @@ export default function PublicTournamentViewPage({
   const [selectedRound, setSelectedRound] = useState(1);
   const [selectedPlayoffRound, setSelectedPlayoffRound] = useState<number | null>(null);
   const [isLive, setIsLive] = useState(false);
+    const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
 
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
@@ -562,6 +563,26 @@ export default function PublicTournamentViewPage({
       return prev;
     });
   }, [roundsAvailable, currentRound, finalRound, isCompleted]);
+
+      useEffect(() => {
+    const userAgent = window.navigator.userAgent;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(userAgent) ||
+      (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+
+    const isNativeApp =
+      new URLSearchParams(window.location.search).get('native_app') === '1';
+
+    const dismissed =
+      window.localStorage.getItem('dinkdraw-app-download-banner-dismissed') === 'true';
+
+    setShowAppDownloadBanner(isIOS && !isNativeApp && !dismissed);
+  }, []);
+
+  function dismissAppDownloadBanner() {
+    window.localStorage.setItem('dinkdraw-app-download-banner-dismissed', 'true');
+    setShowAppDownloadBanner(false);
+  }
 
   function renderPlayerName(id: string | null) {
     if (!id) return '-';
@@ -959,6 +980,64 @@ export default function PublicTournamentViewPage({
           </p>
         </div>
       </div>
+
+          {showAppDownloadBanner ? (
+        <div
+          className="card"
+          style={{
+            marginBottom: 14,
+            padding: 14,
+            borderColor: 'rgba(255,203,5,.24)',
+            background: 'rgba(255,203,5,.06)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>
+                Get the DinkDraw app
+              </div>
+              <div className="muted" style={{ fontSize: 13 }}>
+                For the best iPhone tournament experience, download DinkDraw from the App Store.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Dismiss app download message"
+              onClick={dismissAppDownloadBanner}
+              style={{
+                border: '1px solid rgba(255,255,255,.18)',
+                background: 'rgba(255,255,255,.06)',
+                color: '#fff',
+                borderRadius: 999,
+                width: 32,
+                height: 32,
+                fontWeight: 900,
+                flex: '0 0 auto',
+              }}
+            >
+              ×
+            </button>
+          </div>
+
+          <a
+            href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
+            target="_blank"
+            rel="noreferrer"
+            className="button primary"
+            style={{ marginTop: 12, width: '100%' }}
+          >
+            Download on the App Store
+          </a>
+        </div>
+      ) : null}
 
        <div className="card soft-enter" style={{ marginBottom: 14 }}>
         {isStarted && !isCompleted ? (

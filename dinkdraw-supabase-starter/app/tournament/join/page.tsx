@@ -259,7 +259,12 @@ function JoinTournamentFallback() {
 
 export default function JoinTournamentPage() {
   return (
-    <main className="page-shell">
+    <main
+  className="page-shell"
+  style={{
+    paddingTop: 90,
+  }}
+>
       <div className="hero" style={{ marginBottom: 8 }}>
   <div className="hero-inner" style={{ padding: '12px 14px' }}>l
           <h1 className="hero-title">Join Tournament</h1>

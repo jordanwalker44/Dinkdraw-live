@@ -225,9 +225,16 @@ export default function JoinTournamentPage() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 900, marginBottom: 2 }}>
-                  Get the DinkDraw iPhone app
-            </div>  
+            <div
+  style={{
+    fontWeight: 900,
+    textAlign: 'center',
+    marginBottom: 8,
+    fontSize: 15,
+  }}
+>
+  Get the DinkDraw iPhone app
+</div> 
             </div>
 
             <button
@@ -253,10 +260,10 @@ export default function JoinTournamentPage() {
   target="_blank"
   rel="noreferrer"
   style={{
-    display: 'flex',
-    justifyContent: 'center',
-    marginTop: 6,
-  }}
+  display: 'flex',
+  justifyContent: 'center',
+  marginTop: 0,
+}}
 >
   <img
     src="/app-store-badge.svg"

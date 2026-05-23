@@ -151,6 +151,68 @@ function JoinTournamentInner() {
         </button>
 
         {message ? <div className="notice">{message}</div> : null}
+                {showAppDownloadBanner ? (
+          <div
+            className="card"
+            style={{
+              marginTop: 14,
+              padding: 10,
+              borderColor: 'rgba(255,203,5,.24)',
+              background: 'rgba(255,203,5,.06)',
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Dismiss app download banner"
+              onClick={dismissAppDownloadBanner}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: 12,
+                border: '1px solid rgba(255,255,255,.18)',
+                background: 'rgba(255,255,255,.06)',
+                color: '#fff',
+                borderRadius: 999,
+                width: 30,
+                height: 30,
+                fontWeight: 900,
+              }}
+            >
+              ×
+            </button>
+
+            <div
+              style={{
+                fontWeight: 900,
+                textAlign: 'center',
+                marginBottom: 8,
+                fontSize: 15,
+              }}
+            >
+              Get the DinkDraw iPhone app
+            </div>
+
+            <a
+              href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <img
+                src="/app-store-badge.svg"
+                alt="Download on the App Store"
+                style={{
+                  height: 44,
+                  width: 'auto',
+                  display: 'block',
+                }}
+              />
+            </a>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -205,78 +267,6 @@ export default function JoinTournamentPage() {
           </p>
         </div>
       </div>
-
-          {showAppDownloadBanner ? (
-        <div
-          className="card"
-          style={{
-            marginBottom: 10,
-            padding: 10,
-            borderColor: 'rgba(255,203,5,.24)',
-            background: 'rgba(255,203,5,.06)',
-          }}
-        >
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto',
-              gap: 10,
-              alignItems: 'start',
-            }}
-          >
-            <div style={{ minWidth: 0 }}>
-            <div
-  style={{
-    fontWeight: 900,
-    textAlign: 'center',
-    marginBottom: 8,
-    fontSize: 15,
-  }}
->
-  Get the DinkDraw iPhone app
-</div> 
-            </div>
-
-            <button
-              type="button"
-              aria-label="Dismiss app download banner"
-              onClick={dismissAppDownloadBanner}
-              style={{
-                border: '1px solid rgba(255,255,255,.18)',
-                background: 'rgba(255,255,255,.06)',
-                color: '#fff',
-                borderRadius: 999,
-                width: 30,
-                height: 30,
-                fontWeight: 900,
-              }}
-            >
-              ×
-            </button>
-          </div>
-
-          <a
-  href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
-  target="_blank"
-  rel="noreferrer"
-  style={{
-  display: 'flex',
-  justifyContent: 'center',
-  marginTop: 0,
-}}
->
-  <img
-    src="/app-store-badge.svg"
-    alt="Download on the App Store"
-    style={{
-      height: 44,
-      width: 'auto',
-      display: 'block',
-    }}
-  />
-</a>
-        </div>
-      ) : null}
 
       <TopNav />
 

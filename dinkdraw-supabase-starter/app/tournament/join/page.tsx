@@ -165,8 +165,7 @@ function JoinTournamentFallback() {
 }
 
 export default function JoinTournamentPage() {
-
-      const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
+  const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
 
   useEffect(() => {
     const userAgent = window.navigator.userAgent;
@@ -195,6 +194,7 @@ export default function JoinTournamentPage() {
 
     setShowAppDownloadBanner(false);
   }
+
   return (
     <main className="page-shell">
       <div className="hero">
@@ -206,8 +206,6 @@ export default function JoinTournamentPage() {
         </div>
       </div>
 
-          </div>
-
       {showAppDownloadBanner ? (
         <div
           className="card"
@@ -218,17 +216,45 @@ export default function JoinTournamentPage() {
             background: 'rgba(255,203,5,.06)',
           }}
         >
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 900, marginBottom: 4 }}>
                 Get the DinkDraw app
               </div>
-              <div className="muted" style={{ fontSize: 13, lineHeight: 1.35 }}>
+
+              <div
+                className="muted"
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.35,
+                }}
+              >
                 For the best iPhone tournament experience, download DinkDraw from the App Store.
               </div>
             </div>
 
-            <button type="button" aria-label="Dismiss app download banner" onClick={dismissAppDownloadBanner}>
+            <button
+              type="button"
+              aria-label="Dismiss app download banner"
+              onClick={dismissAppDownloadBanner}
+              style={{
+                border: '1px solid rgba(255,255,255,.18)',
+                background: 'rgba(255,255,255,.06)',
+                color: '#fff',
+                borderRadius: 999,
+                width: 32,
+                height: 32,
+                fontWeight: 900,
+                flex: '0 0 auto',
+              }}
+            >
               ×
             </button>
           </div>
@@ -238,7 +264,10 @@ export default function JoinTournamentPage() {
             target="_blank"
             rel="noreferrer"
             className="button primary"
-            style={{ marginTop: 12, width: '100%' }}
+            style={{
+              marginTop: 12,
+              width: '100%',
+            }}
           >
             Download on the App Store
           </a>

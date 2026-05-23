@@ -210,8 +210,8 @@ export default function JoinTournamentPage() {
         <div
           className="card"
           style={{
-            marginBottom: 14,
-            padding: 12,
+            marginBottom: 10,
+            padding: 10,
             borderColor: 'rgba(255,203,5,.24)',
             background: 'rgba(255,203,5,.06)',
           }}
@@ -225,18 +225,9 @@ export default function JoinTournamentPage() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 900 }}>
+            <div style={{ fontWeight: 900, marginBottom: 2 }}>
                   Get the DinkDraw iPhone app
             </div>  
-              <div
-                className="muted"
-                style={{
-                  fontSize: 12,
-                  lineHeight: 1.3,
-                }}
-              >
-                Better iPhone experience for tournaments and live scoring.
-              </div>
             </div>
 
             <button
@@ -262,8 +253,9 @@ export default function JoinTournamentPage() {
   target="_blank"
   rel="noreferrer"
   style={{
-    display: 'inline-flex',
-    marginTop: 8,
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: 6,
   }}
 >
   <img

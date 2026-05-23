@@ -21,7 +21,7 @@ right: 0,
         style={{
           maxWidth: 720,
           margin: '0 auto',
-          padding: '20px 16px 10px 16px',
+          padding: '24px 16px 10px 16px',
         }}
       >
         <Link

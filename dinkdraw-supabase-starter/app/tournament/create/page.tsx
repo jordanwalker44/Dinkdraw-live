@@ -582,6 +582,28 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 )}
 
+{courtLabels.length > 0 ? (
+  <div>
+    <label className="label">Court Names</label>
+
+    <div className="grid" style={{ gap: 8 }}>
+      {courtLabels.map((label, index) => (
+        <input
+          key={index}
+          className="input"
+          value={label}
+          onChange={(e) => {
+            const nextLabels = [...courtLabels];
+            nextLabels[index] = e.target.value;
+            setCourtLabels(nextLabels);
+          }}
+          placeholder={`Court ${index + 1}`}
+        />
+      ))}
+    </div>
+  </div>
+) : null}
+
 {tournamentMode === 'round_robin' && (
   <div>
     <label className="label">Player Format</label>

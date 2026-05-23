@@ -260,8 +260,8 @@ function JoinTournamentFallback() {
 export default function JoinTournamentPage() {
   return (
     <main className="page-shell">
-      <div className="hero">
-        <div className="hero-inner">
+      <div className="hero" style={{ marginBottom: 8 }}>
+  <div className="hero-inner" style={{ padding: '12px 14px' }}>
           <h1 className="hero-title">Join Tournament</h1>
           <p className="hero-subtitle">
             Enter a join code from any phone and jump right into the event.

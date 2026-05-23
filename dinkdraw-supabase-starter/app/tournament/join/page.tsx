@@ -166,13 +166,6 @@ function JoinTournamentInner() {
           />
         </div>
 
-        <div className="list-item">
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Tip</div>
-          <div className="muted">
-            Codes ignore spaces and lowercase letters, so players can paste them in fast.
-          </div>
-        </div>
-
         <button className="button primary" onClick={handleJoin} disabled={!canJoin}>
           {isLoading ? 'Joining...' : 'Join Tournament'}
         </button>
@@ -266,7 +259,7 @@ export default function JoinTournamentPage() {
   }}
 >
       <div className="hero" style={{ marginBottom: 8 }}>
-  <div className="hero-inner" style={{ padding: '12px 14px' }}>l
+  <div className="hero-inner" style={{ padding: '12px 14px' }}>
           <h1 className="hero-title">Join Tournament</h1>
           <p className="hero-subtitle">
             Enter a join code from any phone and jump right into the event.

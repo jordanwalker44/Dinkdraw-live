@@ -206,37 +206,36 @@ export default function JoinTournamentPage() {
         </div>
       </div>
 
-      {showAppDownloadBanner ? (
+          {showAppDownloadBanner ? (
         <div
           className="card"
           style={{
             marginBottom: 14,
-            padding: 14,
+            padding: 12,
             borderColor: 'rgba(255,203,5,.24)',
             background: 'rgba(255,203,5,.06)',
           }}
         >
           <div
             style={{
-              display: 'flex',
-              gap: 12,
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: 'grid',
+              gridTemplateColumns: '1fr auto',
+              gap: 10,
+              alignItems: 'start',
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 900, marginBottom: 4 }}>
+              <div style={{ fontWeight: 900, marginBottom: 3 }}>
                 Get the DinkDraw app
               </div>
-
               <div
                 className="muted"
                 style={{
-                  fontSize: 13,
-                  lineHeight: 1.35,
+                  fontSize: 12,
+                  lineHeight: 1.3,
                 }}
               >
-                For the best iPhone tournament experience, download DinkDraw from the App Store.
+                Better iPhone experience for tournaments and live scoring.
               </div>
             </div>
 
@@ -249,10 +248,9 @@ export default function JoinTournamentPage() {
                 background: 'rgba(255,255,255,.06)',
                 color: '#fff',
                 borderRadius: 999,
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 fontWeight: 900,
-                flex: '0 0 auto',
               }}
             >
               ×
@@ -265,8 +263,11 @@ export default function JoinTournamentPage() {
             rel="noreferrer"
             className="button primary"
             style={{
-              marginTop: 12,
+              marginTop: 10,
               width: '100%',
+              minHeight: 44,
+              fontSize: 15,
+              padding: '10px 12px',
             }}
           >
             Download on the App Store

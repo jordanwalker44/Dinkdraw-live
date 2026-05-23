@@ -225,9 +225,9 @@ export default function JoinTournamentPage() {
             }}
           >
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 900, marginBottom: 3 }}>
-                Get the DinkDraw app
-              </div>
+            <div style={{ fontWeight: 900 }}>
+                  Get the DinkDraw iPhone app
+            </div>  
               <div
                 className="muted"
                 style={{
@@ -258,20 +258,24 @@ export default function JoinTournamentPage() {
           </div>
 
           <a
-            href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
-            target="_blank"
-            rel="noreferrer"
-            className="button primary"
-            style={{
-              marginTop: 10,
-              width: '100%',
-              minHeight: 44,
-              fontSize: 15,
-              padding: '10px 12px',
-            }}
-          >
-            Download on the App Store
-          </a>
+  href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
+  target="_blank"
+  rel="noreferrer"
+  style={{
+    display: 'inline-flex',
+    marginTop: 8,
+  }}
+>
+  <img
+    src="/app-store-badge.svg"
+    alt="Download on the App Store"
+    style={{
+      height: 44,
+      width: 'auto',
+      display: 'block',
+    }}
+  />
+</a>
         </div>
       ) : null}
 

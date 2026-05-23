@@ -30,7 +30,7 @@ export default function LeaderboardPage() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('doubles');
   const [minMatches, setMinMatches] = useState(5);
-  const [sortBy, setSortBy] = useState<SortBy>('wins');
+  const [sortBy, setSortBy] = useState<SortBy>('pointDiff');
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export default function LeaderboardPage() {
 
         case 'pointDiff':
           if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-          return b.pointDiff - a.pointDiff;
+          return b.winPct - a.winPct;
 
         case 'pointsFor':
           if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
@@ -158,7 +158,8 @@ export default function LeaderboardPage() {
       case 'name':
         return 'Name';
       default:
-        return 'Raturn';
+        default:
+        return 'Point Differential';
     }
   }
 
@@ -368,11 +369,6 @@ export default function LeaderboardPage() {
             active={sortBy === 'pointDiff'}
             label="Point Diff"
             onClick={() => setSortBy('pointDiff')}
-          />
-          <SortButton
-            active={sortBy === 'pointsFor'}
-            label="Points For"
-            onClick={() => setSortBy('pointsFor')}
           />
           <SortButton
             active={sortBy === 'matches'}

@@ -21,7 +21,7 @@ right: 0,
         style={{
           maxWidth: 720,
           margin: '0 auto',
-          padding: '54px 16px 12px 16px',
+          padding: '34px 16px 10px 16px',
         }}
       >
         <Link
@@ -38,8 +38,8 @@ right: 0,
             src="/dinkdraw-logo-transparent.png"
             alt="DinkDraw"
             style={{
-              width: 48,
-              height: 48,
+              width: 42,
+              height: 42,
               objectFit: 'contain',
               flexShrink: 0,
               background: 'transparent',

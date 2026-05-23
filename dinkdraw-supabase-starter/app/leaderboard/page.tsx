@@ -158,7 +158,6 @@ export default function LeaderboardPage() {
       case 'name':
         return 'Name';
       default:
-        default:
         return 'Point Differential';
     }
   }

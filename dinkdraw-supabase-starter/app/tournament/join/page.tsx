@@ -20,33 +20,7 @@ function JoinTournamentInner() {
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
   const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
 
-    useEffect(() => {
-    const userAgent = window.navigator.userAgent;
-
-    const isIOS =
-      /iPad|iPhone|iPod/.test(userAgent) ||
-      (window.navigator.platform === 'MacIntel' &&
-        window.navigator.maxTouchPoints > 1);
-
-    const isNativeApp =
-      new URLSearchParams(window.location.search).get('native_app') === '1';
-
-    const dismissed =
-      window.localStorage.getItem(
-        'dinkdraw-app-download-banner-dismissed'
-      ) === 'true';
-
-    setShowAppDownloadBanner(isIOS && !isNativeApp && !dismissed);
-  }, []);
-
-  function dismissAppDownloadBanner() {
-    window.localStorage.setItem(
-      'dinkdraw-app-download-banner-dismissed',
-      'true'
-    );
-
-    setShowAppDownloadBanner(false);
-  }  useEffect(() => {
+  useEffect(() => {
     const userAgent = window.navigator.userAgent;
 
     const isIOS =
@@ -73,7 +47,7 @@ function JoinTournamentInner() {
 
     setShowAppDownloadBanner(false);
   }
-  
+
   useEffect(() => {
     const codeFromUrl = searchParams.get('code') || '';
     if (codeFromUrl) {
@@ -124,7 +98,6 @@ function JoinTournamentInner() {
     router.push(`/tournament/${data.id}`);
   }
 
-  // Still checking auth
   if (isSignedIn === null) {
     return (
       <div className="card">
@@ -133,7 +106,6 @@ function JoinTournamentInner() {
     );
   }
 
-  // Not signed in — prompt to sign in
   if (!isSignedIn) {
     return (
       <div className="card">
@@ -206,7 +178,8 @@ function JoinTournamentInner() {
         </button>
 
         {message ? <div className="notice">{message}</div> : null}
-                {showAppDownloadBanner ? (
+
+        {showAppDownloadBanner ? (
           <div
             className="card"
             style={{
@@ -243,6 +216,8 @@ function JoinTournamentInner() {
                 textAlign: 'center',
                 marginBottom: 8,
                 fontSize: 15,
+                paddingRight: 32,
+                paddingLeft: 32,
               }}
             >
               Get the DinkDraw iPhone app

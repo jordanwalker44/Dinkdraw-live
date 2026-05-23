@@ -18,7 +18,62 @@ function JoinTournamentInner() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
+  const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
 
+    useEffect(() => {
+    const userAgent = window.navigator.userAgent;
+
+    const isIOS =
+      /iPad|iPhone|iPod/.test(userAgent) ||
+      (window.navigator.platform === 'MacIntel' &&
+        window.navigator.maxTouchPoints > 1);
+
+    const isNativeApp =
+      new URLSearchParams(window.location.search).get('native_app') === '1';
+
+    const dismissed =
+      window.localStorage.getItem(
+        'dinkdraw-app-download-banner-dismissed'
+      ) === 'true';
+
+    setShowAppDownloadBanner(isIOS && !isNativeApp && !dismissed);
+  }, []);
+
+  function dismissAppDownloadBanner() {
+    window.localStorage.setItem(
+      'dinkdraw-app-download-banner-dismissed',
+      'true'
+    );
+
+    setShowAppDownloadBanner(false);
+  }  useEffect(() => {
+    const userAgent = window.navigator.userAgent;
+
+    const isIOS =
+      /iPad|iPhone|iPod/.test(userAgent) ||
+      (window.navigator.platform === 'MacIntel' &&
+        window.navigator.maxTouchPoints > 1);
+
+    const isNativeApp =
+      new URLSearchParams(window.location.search).get('native_app') === '1';
+
+    const dismissed =
+      window.localStorage.getItem(
+        'dinkdraw-app-download-banner-dismissed'
+      ) === 'true';
+
+    setShowAppDownloadBanner(isIOS && !isNativeApp && !dismissed);
+  }, []);
+
+  function dismissAppDownloadBanner() {
+    window.localStorage.setItem(
+      'dinkdraw-app-download-banner-dismissed',
+      'true'
+    );
+
+    setShowAppDownloadBanner(false);
+  }
+  
   useEffect(() => {
     const codeFromUrl = searchParams.get('code') || '';
     if (codeFromUrl) {
@@ -155,6 +210,7 @@ function JoinTournamentInner() {
           <div
             className="card"
             style={{
+              position: 'relative',
               marginTop: 14,
               padding: 10,
               borderColor: 'rgba(255,203,5,.24)',

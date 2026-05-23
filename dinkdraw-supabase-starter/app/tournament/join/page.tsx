@@ -165,6 +165,36 @@ function JoinTournamentFallback() {
 }
 
 export default function JoinTournamentPage() {
+
+      const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
+
+  useEffect(() => {
+    const userAgent = window.navigator.userAgent;
+
+    const isIOS =
+      /iPad|iPhone|iPod/.test(userAgent) ||
+      (window.navigator.platform === 'MacIntel' &&
+        window.navigator.maxTouchPoints > 1);
+
+    const isNativeApp =
+      new URLSearchParams(window.location.search).get('native_app') === '1';
+
+    const dismissed =
+      window.localStorage.getItem(
+        'dinkdraw-app-download-banner-dismissed'
+      ) === 'true';
+
+    setShowAppDownloadBanner(isIOS && !isNativeApp && !dismissed);
+  }, []);
+
+  function dismissAppDownloadBanner() {
+    window.localStorage.setItem(
+      'dinkdraw-app-download-banner-dismissed',
+      'true'
+    );
+
+    setShowAppDownloadBanner(false);
+  }
   return (
     <main className="page-shell">
       <div className="hero">
@@ -175,6 +205,45 @@ export default function JoinTournamentPage() {
           </p>
         </div>
       </div>
+
+          </div>
+
+      {showAppDownloadBanner ? (
+        <div
+          className="card"
+          style={{
+            marginBottom: 14,
+            padding: 14,
+            borderColor: 'rgba(255,203,5,.24)',
+            background: 'rgba(255,203,5,.06)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>
+                Get the DinkDraw app
+              </div>
+              <div className="muted" style={{ fontSize: 13, lineHeight: 1.35 }}>
+                For the best iPhone tournament experience, download DinkDraw from the App Store.
+              </div>
+            </div>
+
+            <button type="button" aria-label="Dismiss app download banner" onClick={dismissAppDownloadBanner}>
+              ×
+            </button>
+          </div>
+
+          <a
+            href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
+            target="_blank"
+            rel="noreferrer"
+            className="button primary"
+            style={{ marginTop: 12, width: '100%' }}
+          >
+            Download on the App Store
+          </a>
+        </div>
+      ) : null}
 
       <TopNav />
 

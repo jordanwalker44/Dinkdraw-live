@@ -283,36 +283,6 @@ function JoinTournamentFallback() {
 }
 
 export default function JoinTournamentPage() {
-  const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
-
-  useEffect(() => {
-    const userAgent = window.navigator.userAgent;
-
-    const isIOS =
-      /iPad|iPhone|iPod/.test(userAgent) ||
-      (window.navigator.platform === 'MacIntel' &&
-        window.navigator.maxTouchPoints > 1);
-
-    const isNativeApp =
-      new URLSearchParams(window.location.search).get('native_app') === '1';
-
-    const dismissed =
-      window.localStorage.getItem(
-        'dinkdraw-app-download-banner-dismissed'
-      ) === 'true';
-
-    setShowAppDownloadBanner(isIOS && !isNativeApp && !dismissed);
-  }, []);
-
-  function dismissAppDownloadBanner() {
-    window.localStorage.setItem(
-      'dinkdraw-app-download-banner-dismissed',
-      'true'
-    );
-
-    setShowAppDownloadBanner(false);
-  }
-
   return (
     <main className="page-shell">
       <div className="hero">

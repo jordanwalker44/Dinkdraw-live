@@ -5601,45 +5601,41 @@ Sign in with this same email address to submit and edit scores.`;
                     {publicViewUrl}
                   </div>
 
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                      gap: 8,
-                    }}
-                  >
-                                        <button
-                      type="button"
-                      className="button primary"
-                      onClick={sharePublicLink}
-                    >
-                      📤 Share Link
-                    </button>
+                  <div style={{ display: 'grid', gap: 10 }}>
+  <button
+    type="button"
+    className="button primary"
+    onClick={sharePublicLink}
+  >
+    📤 Share Link
+  </button>
 
-                    <button
-                      type="button"
-                      className="button secondary"
-                      onClick={copyPublicLink}
-                    >
-                      🔗 Copy Link
-                    </button>
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: 10,
+    }}
+  >
+    <button
+      type="button"
+      className="button secondary"
+      onClick={copyPublicLink}
+    >
+      🔗 Copy Link
+    </button>
 
-                    <a
-                      href={publicViewUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="button primary"
-                      style={{
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      📺 Open Live View
-                    </a>
-                  </div>
-                </div>
+    <a
+      href={publicViewUrl}
+      target="_blank"
+      rel="noreferrer"
+      className="button secondary"
+      style={{ textDecoration: 'none' }}
+    >
+      📺 Open Live View
+    </a>
+  </div>
+</div>
               ) : null}
             </div>
           ) : null}

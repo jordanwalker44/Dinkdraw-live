@@ -21,7 +21,7 @@ right: 0,
         style={{
           maxWidth: 720,
           margin: '0 auto',
-          padding: '14px 16px 8px 16px',
+          padding: 'calc(env(safe-area-inset-top) + 14px) 16px 8px 16px',
         }}
       >
         <Link

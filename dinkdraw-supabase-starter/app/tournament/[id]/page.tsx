@@ -2498,6 +2498,28 @@ setScoreDrafts((prev) => {
     }
   }
 
+    async function sharePublicLink() {
+    try {
+      if (!publicViewUrl) return;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `${tournament?.title || 'DinkDraw Tournament'} Live View`,
+          text: `Follow ${tournament?.title || 'this tournament'} live on DinkDraw:`,
+          url: publicViewUrl,
+        });
+
+        setMessage('Share link opened.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(publicViewUrl);
+      setMessage('Public link copied.');
+    } catch {
+      setMessage('Could not share public link.');
+    }
+  }
+
   async function claimSlot(slotId: string) {
     setMessage('');
     const { data: authData } = await supabase.auth.getUser();
@@ -5506,7 +5528,7 @@ Sign in with this same email address to submit and edit scores.`;
             ) : null}
           </div>
 
-          {isOrganizer && publicViewUrl ? (
+          {(isOrganizer || !!claimedSlot) && publicViewUrl ? (
             <div className="card" style={{ marginBottom: 14 }}>
               <button
                 type="button"
@@ -5524,10 +5546,10 @@ Sign in with this same email address to submit and edit scores.`;
                 <div className="row-between" style={{ alignItems: 'center', gap: 12 }}>
                   <div>
                     <div className="card-title" style={{ marginBottom: 4 }}>
-                      Sharing & Public View
+                      Share Live Tournament
                     </div>
                     <div className="card-subtitle" style={{ marginBottom: 0 }}>
-                      QR code, public link, and spectator sharing tools
+                      Let friends and family follow along in real time
                     </div>
                   </div>
 
@@ -5586,12 +5608,20 @@ Sign in with this same email address to submit and edit scores.`;
                       gap: 8,
                     }}
                   >
+                                        <button
+                      type="button"
+                      className="button primary"
+                      onClick={sharePublicLink}
+                    >
+                      📤 Share Link
+                    </button>
+
                     <button
                       type="button"
                       className="button secondary"
                       onClick={copyPublicLink}
                     >
-                      Copy Public Link
+                      Copy Link
                     </button>
 
                     <a

@@ -967,8 +967,13 @@ export default function PublicTournamentViewPage({
   }
 
   return (
-    <main className="page-shell">
-           <div className="hero" style={{ marginBottom: 8 }}>
+  <main
+    className="page-shell"
+    style={{
+      paddingTop: 68,
+    }}
+  >
+    <div className="hero" style={{ marginBottom: 8 }}>
         <div
           className="hero-inner"
           style={{

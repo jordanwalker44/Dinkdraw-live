@@ -5413,13 +5413,27 @@ Sign in with this same email address to submit and edit scores.`;
                 <div className="label">Join Code</div>
                 <div className="row-between">
                   <strong style={{ letterSpacing: '0.08em' }}>{tournament?.join_code || '...'}</strong>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <span className={isLive ? 'tag green' : 'tag'}>
-                      {isLive ? 'Live' : 'Connecting'}
-                    </span>
-                    <span className="tag">{isSingles ? 'Singles' : 'Doubles'}</span>
-                    <span className="tag">{isBestOf3 ? 'Best of 3' : 'Single Game'}</span>
-                  </div>
+                  <div
+  style={{
+    display: 'flex',
+    gap: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  }}
+>
+  <span className={isLive ? 'tag green' : 'tag'}>
+    {isLive ? '🔴 Live' : 'Connecting'}
+  </span>
+
+  <span className="tag">
+    {isSingles ? '👤 Singles' : '👥 Doubles'}
+  </span>
+
+  <span className="tag">
+    {isBestOf3 ? '🏆 Best of 3' : '🎾 Single Game'}
+  </span>
+</div>
                 </div>
               </div>
 

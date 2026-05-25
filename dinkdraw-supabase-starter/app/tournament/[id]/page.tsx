@@ -5621,7 +5621,7 @@ Sign in with this same email address to submit and edit scores.`;
                       className="button secondary"
                       onClick={copyPublicLink}
                     >
-                      Copy Link
+                      🔗 Copy Link
                     </button>
 
                     <a
@@ -5636,7 +5636,7 @@ Sign in with this same email address to submit and edit scores.`;
                         justifyContent: 'center',
                       }}
                     >
-                      Open Public View
+                      📺 Open Live View
                     </a>
                   </div>
                 </div>

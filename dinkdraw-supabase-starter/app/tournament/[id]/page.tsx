@@ -5634,6 +5634,7 @@ Sign in with this same email address to submit and edit scores.`;
     >
       📺 Open Live View
     </a>
+</div>
   </div>
 </div>
               ) : null}

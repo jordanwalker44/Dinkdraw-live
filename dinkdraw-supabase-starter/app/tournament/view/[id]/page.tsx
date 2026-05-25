@@ -968,10 +968,21 @@ export default function PublicTournamentViewPage({
 
   return (
     <main className="page-shell">
-      <div className="hero" style={{ marginBottom: 12 }}>
-        <div className="hero-inner" style={{ paddingBottom: 18 }}>
-          <h1 className="hero-title">{tournament.title || 'Tournament'}</h1>
-          <p className="hero-subtitle">
+           <div className="hero" style={{ marginBottom: 8 }}>
+        <div
+          className="hero-inner"
+          style={{
+            padding: '10px 14px',
+            minHeight: 'auto',
+          }}
+        >
+          <h1
+            className="hero-title"
+            style={{ fontSize: 34, marginBottom: 6 }}
+          >
+            {tournament.title || 'Tournament'}
+          </h1>
+          <p className="hero-subtitle" style={{ fontSize: 18, lineHeight: 1.3 }}>
             {isCompleted
               ? 'Tournament complete'
               : isStarted
@@ -981,60 +992,68 @@ export default function PublicTournamentViewPage({
         </div>
       </div>
 
-          {showAppDownloadBanner ? (
+              {showAppDownloadBanner ? (
         <div
           className="card"
           style={{
-            marginBottom: 14,
-            padding: 14,
+            position: 'relative',
+            marginBottom: 10,
+            padding: 10,
             borderColor: 'rgba(255,203,5,.24)',
             background: 'rgba(255,203,5,.06)',
           }}
         >
-          <div
+          <button
+            type="button"
+            aria-label="Dismiss app download banner"
+            onClick={dismissAppDownloadBanner}
             style={{
-              display: 'flex',
-              gap: 12,
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              border: '1px solid rgba(255,255,255,.18)',
+              background: 'rgba(255,255,255,.06)',
+              color: '#fff',
+              borderRadius: 999,
+              width: 30,
+              height: 30,
+              fontWeight: 900,
             }}
           >
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 900, marginBottom: 4 }}>
-                Get the DinkDraw app
-              </div>
-              <div className="muted" style={{ fontSize: 13 }}>
-                For the best iPhone tournament experience, download DinkDraw from the App Store.
-              </div>
-            </div>
+            ×
+          </button>
 
-            <button
-              type="button"
-              aria-label="Dismiss app download message"
-              onClick={dismissAppDownloadBanner}
-              style={{
-                border: '1px solid rgba(255,255,255,.18)',
-                background: 'rgba(255,255,255,.06)',
-                color: '#fff',
-                borderRadius: 999,
-                width: 32,
-                height: 32,
-                fontWeight: 900,
-                flex: '0 0 auto',
-              }}
-            >
-              ×
-            </button>
+          <div
+            style={{
+              fontWeight: 900,
+              textAlign: 'center',
+              marginBottom: 8,
+              fontSize: 15,
+              paddingRight: 32,
+              paddingLeft: 32,
+            }}
+          >
+            Get the DinkDraw iPhone app
           </div>
 
           <a
             href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
             target="_blank"
             rel="noreferrer"
-            className="button primary"
-            style={{ marginTop: 12, width: '100%' }}
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+            }}
           >
-            Download on the App Store
+            <img
+              src="/app-store-badge.svg"
+              alt="Download on the App Store"
+              style={{
+                height: 44,
+                width: 'auto',
+                display: 'block',
+              }}
+            />
           </a>
         </div>
       ) : null}

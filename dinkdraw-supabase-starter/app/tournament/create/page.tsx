@@ -9,6 +9,8 @@ function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+const CREATE_TOURNAMENT_DRAFT_KEY = 'dinkdraw-create-tournament-draft';
+
 type FavoriteLocation = {
   id: string;
   name: string;
@@ -136,6 +138,34 @@ export default function CreateTournamentPage() {
   const [message, setMessage] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
+    function saveCreateTournamentDraft() {
+    window.localStorage.setItem(
+      CREATE_TOURNAMENT_DRAFT_KEY,
+      JSON.stringify({
+        format,
+        tournamentMode,
+        matchFormat,
+        doublesMode,
+        title,
+        organizerName,
+        eventDate,
+        eventTime,
+        location,
+        saveLocationForLater,
+        favoriteLocationName,
+        allowPlayerScoreReporting,
+        playoffFormat,
+        playoffAdvanceCount,
+        playoffSeedingStyle,
+        playerCount,
+        courts,
+        courtLabels,
+        rounds,
+        gamesTo,
+      })
+    );
+  }
+
   const minPlayers = format === 'singles' ? 3 : 4;
   const playersPerCourt = format === 'singles' ? 2 : 4;
   const maxCourtsAllowed = Math.max(1, Math.floor(playerCount / playersPerCourt));
@@ -144,6 +174,50 @@ export default function CreateTournamentPage() {
   tournamentMode === 'round_robin' &&
   (format === 'singles' || (format === 'doubles' && doublesMode === 'fixed'));
 
+    useEffect(() => {
+    const rawDraft = window.localStorage.getItem(CREATE_TOURNAMENT_DRAFT_KEY);
+    if (!rawDraft) return;
+
+    try {
+      const draft = JSON.parse(rawDraft);
+
+      if (draft.format) setFormat(draft.format);
+      if (draft.tournamentMode) setTournamentMode(draft.tournamentMode);
+      if (draft.matchFormat) setMatchFormat(draft.matchFormat);
+      if (draft.doublesMode) setDoublesMode(draft.doublesMode);
+      if (typeof draft.title === 'string') setTitle(draft.title);
+      if (typeof draft.organizerName === 'string') setOrganizerName(draft.organizerName);
+      if (typeof draft.eventDate === 'string') setEventDate(draft.eventDate);
+      if (typeof draft.eventTime === 'string') setEventTime(draft.eventTime);
+      if (typeof draft.location === 'string') setLocation(draft.location);
+      if (typeof draft.saveLocationForLater === 'boolean') {
+        setSaveLocationForLater(draft.saveLocationForLater);
+      }
+      if (typeof draft.favoriteLocationName === 'string') {
+        setFavoriteLocationName(draft.favoriteLocationName);
+      }
+      if (typeof draft.allowPlayerScoreReporting === 'boolean') {
+        setAllowPlayerScoreReporting(draft.allowPlayerScoreReporting);
+      }
+      if (draft.playoffFormat) setPlayoffFormat(draft.playoffFormat);
+      if (typeof draft.playoffAdvanceCount === 'number') {
+        setPlayoffAdvanceCount(draft.playoffAdvanceCount);
+      }
+      if (draft.playoffSeedingStyle) {
+        setPlayoffSeedingStyle(draft.playoffSeedingStyle);
+      }
+      if (typeof draft.playerCount === 'number') setPlayerCount(draft.playerCount);
+      if (typeof draft.courts === 'number') setCourts(draft.courts);
+      if (Array.isArray(draft.courtLabels)) setCourtLabels(draft.courtLabels);
+      if (typeof draft.rounds === 'number') setRounds(draft.rounds);
+      if (typeof draft.gamesTo === 'number') setGamesTo(draft.gamesTo);
+
+      setMessage('Your tournament setup was restored. Sign in is complete, so you can create it now.');
+    } catch {
+      window.localStorage.removeItem(CREATE_TOURNAMENT_DRAFT_KEY);
+    }
+  }, []);
+  
   useEffect(() => {
     async function loadUser() {
       const { data: authData } = await supabase.auth.getUser();
@@ -237,8 +311,9 @@ setFavoriteLocations(savedLocations || []);
     const user = authData.user;
 
     if (!user) {
-      setMessage('Sign in first.');
+      saveCreateTournamentDraft();
       setIsCreating(false);
+      router.push(`/account?redirect=${encodeURIComponent('/tournament/create')}`);
       return;
     }
 
@@ -314,6 +389,7 @@ if (saveLocationForLater && location.trim()) {
   });
 }
 
+window.localStorage.removeItem(CREATE_TOURNAMENT_DRAFT_KEY);
 router.push(`/tournament/${tournament.id}`);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Something went wrong.');

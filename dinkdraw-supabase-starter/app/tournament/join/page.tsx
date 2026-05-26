@@ -117,8 +117,11 @@ function JoinTournamentInner() {
           <button
             className="button primary"
             onClick={() => {
-              const codeParam = normalizedCode ? `?returnCode=${normalizedCode}` : '';
-              router.push(`/account${codeParam}`);
+                const redirectPath = normalizedCode
+                ? `/tournament/join?code=${normalizedCode}`
+                : '/tournament/join';
+
+              router.push(`/account?redirect=${encodeURIComponent(redirectPath)}`);
             }}
           >
             Sign In or Create Account

@@ -8,6 +8,19 @@ import { TopNav } from '../../components/TopNav';
 
 type AuthMode = 'signup' | 'signin';
 
+function getSafeRedirectPath() {
+  if (typeof window === 'undefined') return '/';
+
+  const params = new URLSearchParams(window.location.search);
+  const redirect = params.get('redirect');
+
+  if (!redirect) return '/';
+  if (!redirect.startsWith('/')) return '/';
+  if (redirect.startsWith('//')) return '/';
+
+  return redirect;
+}
+
 export default function AccountPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
@@ -106,7 +119,14 @@ export default function AccountPage() {
           setName(displayName);
         }
 
-        setUserEmail(email.trim());
+                setUserEmail(email.trim());
+
+        if (data.session?.user) {
+          router.push(getSafeRedirectPath());
+          setIsLoading(false);
+          return;
+        }
+
         setMessage('Account created. You can sign in now, or check your email if confirmation is required.');
         setMode('signin');
         setPassword('');
@@ -135,8 +155,8 @@ export default function AccountPage() {
       setName(resolvedName);
       setPassword('');
 
-      if (profile?.display_name?.trim()) {
-        router.push('/');
+            if (profile?.display_name?.trim()) {
+        router.push(getSafeRedirectPath());
       } else {
         setMessage('You are now signed in. Please set your display name below.');
       }
@@ -190,6 +210,11 @@ export default function AccountPage() {
     setName(nextName);
     setMessage('Display name saved.');
     setIsSavingProfile(false);
+
+    const redirectPath = getSafeRedirectPath();
+    if (redirectPath !== '/') {
+      router.push(redirectPath);
+    }
   }
 
   async function handleDeleteAccount() {

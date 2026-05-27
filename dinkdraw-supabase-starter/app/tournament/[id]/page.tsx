@@ -2429,14 +2429,17 @@ setScoreDrafts((prev) => {
 }, []);
 
     useEffect(() => {
-  if (!params.id || isLive) return;
+  if (!params.id) return;
+  if (tournament?.status === 'started' || tournament?.status === 'completed') return;
 
   const interval = setInterval(() => {
-    loadTournamentData(userId);
-  }, 5000);
+    if (document.visibilityState !== 'visible') return;
+
+    void loadTournamentData(userId);
+  }, 8000);
 
   return () => clearInterval(interval);
-}, [params.id, userId, isLive]);
+}, [params.id, userId, tournament?.status]);
 
   useEffect(() => {
     if (!roundsAvailable.length) return;

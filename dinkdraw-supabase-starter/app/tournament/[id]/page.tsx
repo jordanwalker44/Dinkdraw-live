@@ -2402,6 +2402,33 @@ setScoreDrafts((prev) => {
   }, [params.id, supabase, userId]);
 
     useEffect(() => {
+  async function handleVisibilityRefresh() {
+    if (document.visibilityState !== 'visible') return;
+
+    try {
+      await loadTournamentData();
+    } catch (err) {
+      console.error(
+        'Failed to refresh tournament after app resume',
+        err
+      );
+    }
+  }
+
+  document.addEventListener(
+    'visibilitychange',
+    handleVisibilityRefresh
+  );
+
+  return () => {
+    document.removeEventListener(
+      'visibilitychange',
+      handleVisibilityRefresh
+    );
+  };
+}, []);
+
+    useEffect(() => {
   if (!params.id || isLive) return;
 
   const interval = setInterval(() => {
@@ -2640,7 +2667,7 @@ async function unclaimMySpot(slotId: string) {
       return;
     }
 
-    await loadTournamentData(userId);
+    await loadTournamentData();
     setMessage('Player names saved.');
   } catch (err) {
     setMessage(err instanceof Error ? `Save failed: ${err.message}` : 'Save failed.');
@@ -4059,24 +4086,14 @@ if (!canReportScores) {
   setMessage('Submitting score...');
 setMatches(optimisticMatches);
 
-setScoreDrafts(() => {
-  const next: Record<string, ScoreDraft> = {};
-
-  for (const match of optimisticMatches) {
-    next[match.id] = {
-      team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),
-      team_b_score: match.team_b_score === null ? '' : String(match.team_b_score),
-      game_1_a: match.game_1_a === null ? '' : String(match.game_1_a),
-      game_1_b: match.game_1_b === null ? '' : String(match.game_1_b),
-      game_2_a: match.game_2_a === null ? '' : String(match.game_2_a),
-      game_2_b: match.game_2_b === null ? '' : String(match.game_2_b),
-      game_3_a: match.game_3_a === null ? '' : String(match.game_3_a),
-      game_3_b: match.game_3_b === null ? '' : String(match.game_3_b),
-    };
-  }
-
-  return next;
-});
+setScoreDrafts((prev) => ({
+  ...prev,
+  [matchId]: {
+    ...(prev[matchId] || {}),
+    team_a_score: String(aNum),
+    team_b_score: String(bNum),
+  },
+}));
 
 setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestOf3));
 

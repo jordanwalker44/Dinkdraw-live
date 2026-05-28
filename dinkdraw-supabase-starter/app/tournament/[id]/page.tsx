@@ -6247,65 +6247,72 @@ isOrganizer &&
                         : undefined
                     }
                   >
-                    <div className="row-between" style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}>
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            color: 'rgba(255,255,255,0.6)',
-                            marginBottom: 4,
-                          }}
-                        >
-                          Court
-                        </div>
+                    <div
+  className="row-between"
+  style={{
+    marginBottom: 8,
+    alignItems: 'center',
+    gap: 10,
+  }}
+>
+  <div
+    style={{
+      fontSize: 22,
+      fontWeight: 950,
+      lineHeight: 1.05,
+      color: '#FFCB05',
+    }}
+  >
+    {getCourtLabel(tournament, match.court_number) || '-'}
+  </div>
 
-                        <div
-                          style={{
-                            fontSize: 20,
-                            fontWeight: 900,
-                            lineHeight: 1.1,
-                          }}
-                        >
-                          {getCourtLabel(tournament, match.court_number) || '-'}
-                        </div>
-                      </div>
+  <div
+    style={{
+      display: 'flex',
+      gap: 8,
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+    }}
+  >
+    {isNextUp ? (
+      <span
+        className="tag"
+        style={{
+          background: 'rgba(255,203,5,0.14)',
+          border: '1px solid rgba(255,203,5,0.35)',
+          color: '#FFCB05',
+          fontWeight: 900,
+        }}
+      >
+        ⭐ Your Match
+      </span>
+    ) : null}
 
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        {isNextUp ? (
-                          <span
-                            className="tag"
-                            style={{
-                              background: 'rgba(255,203,5,0.14)',
-                              border: '1px solid rgba(255,203,5,0.35)',
-                              color: '#FFCB05',
-                              fontWeight: 800,
-                            }}
-                          >
-                            CURRENT
-                          </span>
-                        ) : null}
+    <span
+      className={match.is_complete ? 'tag green' : 'tag'}
+      style={!match.is_complete ? { fontWeight: 900 } : undefined}
+    >
+      {match.is_complete ? 'Final' : 'Live'}
+    </span>
+  </div>
+</div>
 
-                        <span
-                          className={match.is_complete ? 'tag green' : 'tag'}
-                          style={!match.is_complete ? { fontWeight: 800 } : undefined}
-                      >
-                          {match.is_complete ? 'COMPLETE' : isCompleted ? 'NOT PLAYED' : 'LIVE'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
+                    <div
+  style={{
+    display: 'grid',
+    gap: 6,
+    marginBottom: 8,
+  }}
+>
   <div
     style={{
       display: 'grid',
-      gridTemplateColumns: 'minmax(0, 1fr) 82px',
-      gap: 12,
+      gridTemplateColumns: 'minmax(0, 1fr) 74px',
+      gap: 10,
       alignItems: 'center',
-      padding: 12,
-      borderRadius: 16,
+      padding: '8px 10px 8px 12px',
+      borderRadius: 14,
       background: 'rgba(255,255,255,0.035)',
       border: '1px solid rgba(255,255,255,0.08)',
     }}
@@ -6314,8 +6321,8 @@ isOrganizer &&
       style={{
         minWidth: 0,
         fontWeight: 900,
-        fontSize: 17,
-        lineHeight: 1.25,
+        fontSize: 16,
+        lineHeight: 1.2,
         ...getWinnerStyle('a', match),
       }}
     >
@@ -6325,11 +6332,12 @@ isOrganizer &&
     <input
       className="input"
       style={{
-        height: 58,
+        height: 52,
         textAlign: 'center',
-        fontSize: 28,
-        fontWeight: 900,
-        padding: '8px 6px',
+        fontSize: 32,
+        fontWeight: 950,
+        padding: '6px 4px',
+        borderRadius: 14,
         opacity: match.is_complete ? 0.65 : 1,
         cursor: match.is_complete ? 'not-allowed' : 'text',
       }}
@@ -6353,11 +6361,11 @@ isOrganizer &&
   <div
     style={{
       display: 'grid',
-      gridTemplateColumns: 'minmax(0, 1fr) 82px',
-      gap: 12,
+      gridTemplateColumns: 'minmax(0, 1fr) 74px',
+      gap: 10,
       alignItems: 'center',
-      padding: 12,
-      borderRadius: 16,
+      padding: '8px 10px 8px 12px',
+      borderRadius: 14,
       background: 'rgba(255,255,255,0.035)',
       border: '1px solid rgba(255,255,255,0.08)',
     }}
@@ -6366,8 +6374,8 @@ isOrganizer &&
       style={{
         minWidth: 0,
         fontWeight: 900,
-        fontSize: 17,
-        lineHeight: 1.25,
+        fontSize: 16,
+        lineHeight: 1.2,
         ...getWinnerStyle('b', match),
       }}
     >
@@ -6377,11 +6385,12 @@ isOrganizer &&
     <input
       className="input"
       style={{
-        height: 58,
+        height: 52,
         textAlign: 'center',
-        fontSize: 28,
-        fontWeight: 900,
-        padding: '8px 6px',
+        fontSize: 32,
+        fontWeight: 950,
+        padding: '6px 4px',
+        borderRadius: 14,
         opacity: match.is_complete ? 0.65 : 1,
         cursor: match.is_complete ? 'not-allowed' : 'text',
       }}

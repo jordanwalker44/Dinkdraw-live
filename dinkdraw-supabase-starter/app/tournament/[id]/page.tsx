@@ -4266,6 +4266,25 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
+  function getShortPlayerName(id: string | null) {
+  const fullName = renderPlayerName(id);
+
+  if (!fullName || fullName === '-') return 'Player';
+
+  const parts = fullName.trim().split(/\s+/);
+
+  if (parts.length === 1) {
+    return parts[0];
+  }
+
+  return `${parts[0]} ${parts[1][0]}.`;
+}
+
+function renderShortTeam(a: string | null, b: string | null) {
+  if (isSingles) return getShortPlayerName(a);
+  return `${getShortPlayerName(a)} & ${getShortPlayerName(b)}`;
+}
+
   function getMatchElementId(matchId: string) {
     return `live-match-${matchId}`;
   }
@@ -4305,8 +4324,8 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   const game3Done = match.game_3_a !== null && match.game_3_b !== null;
   const showGame3 = game1Done && game2Done && needsGame3(match);
   const seriesComplete = match.is_complete;
-  const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
-  const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+  const teamAName = renderShortTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+  const teamBName = renderShortTeam(match.team_b_player_1_id, match.team_b_player_2_id);
 
   const isNextUp =
     !isCompleted &&

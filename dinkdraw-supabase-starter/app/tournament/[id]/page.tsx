@@ -4288,157 +4288,338 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
   }
 
   function renderBestOf3Match(match: Match) {
-    const draft = scoreDrafts[match.id] || {
-      team_a_score: '',
-      team_b_score: '',
-      game_1_a: '',
-      game_1_b: '',
-      game_2_a: '',
-      game_2_b: '',
-      game_3_a: '',
-      game_3_b: '',
-    };
+  const draft = scoreDrafts[match.id] || {
+    team_a_score: '',
+    team_b_score: '',
+    game_1_a: '',
+    game_1_b: '',
+    game_2_a: '',
+    game_2_b: '',
+    game_3_a: '',
+    game_3_b: '',
+  };
 
-    const { aWins, bWins } = getSeriesWins(match);
-    const game1Done = match.game_1_a !== null && match.game_1_b !== null;
-    const game2Done = match.game_2_a !== null && match.game_2_b !== null;
-    const showGame3 = game1Done && game2Done && needsGame3(match);
-    const seriesComplete = match.is_complete;
-    const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
-    const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
-    function renderGameScoreboard(
-  gameLabel: string,
-  aValue: string,
-  bValue: string,
-  aField: keyof ScoreDraft,
-  bField: keyof ScoreDraft,
-  gameNumber: 1 | 2 | 3,
-  gameDone: boolean,
-  gameDisabled: boolean
-) {
-  const aScoreNumber = Number(aValue);
-  const bScoreNumber = Number(bValue);
-  const hasBothScores = aValue !== '' && bValue !== '' && !Number.isNaN(aScoreNumber) && !Number.isNaN(bScoreNumber);
-  const aIsWinner = hasBothScores && aScoreNumber > bScoreNumber;
-  const bIsWinner = hasBothScores && bScoreNumber > aScoreNumber;
+  const { aWins, bWins } = getSeriesWins(match);
+  const game1Done = match.game_1_a !== null && match.game_1_b !== null;
+  const game2Done = match.game_2_a !== null && match.game_2_b !== null;
+  const game3Done = match.game_3_a !== null && match.game_3_b !== null;
+  const showGame3 = game1Done && game2Done && needsGame3(match);
+  const seriesComplete = match.is_complete;
+  const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+  const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+
+  const isNextUp =
+    !isCompleted &&
+    match.round_number === currentRound &&
+    nextUpMatch?.id === match.id;
+
+  const nextGameNumber: 1 | 2 | 3 | null = !game1Done
+    ? 1
+    : !game2Done
+    ? 2
+    : showGame3 && !game3Done
+    ? 3
+    : null;
+
+  const nextGameLabel =
+    nextGameNumber === 1
+      ? 'Game 1'
+      : nextGameNumber === 2
+      ? 'Game 2'
+      : nextGameNumber === 3
+      ? 'Game 3'
+      : '';
+
+  function getGameWinner(
+    aValue: string,
+    bValue: string
+  ): 'a' | 'b' | null {
+    const aScore = Number(aValue);
+    const bScore = Number(bValue);
+
+    if (aValue === '' || bValue === '') return null;
+    if (Number.isNaN(aScore) || Number.isNaN(bScore)) return null;
+    if (aScore > bScore) return 'a';
+    if (bScore > aScore) return 'b';
+    return null;
+  }
+
+  function renderScoreInput({
+    value,
+    field,
+    disabled,
+    isWinner,
+  }: {
+    value: string;
+    field: keyof ScoreDraft;
+    disabled: boolean;
+    isWinner: boolean;
+  }) {
+    return (
+      <input
+        className="input"
+        style={{
+          height: 48,
+          width: 52,
+          textAlign: 'center',
+          fontSize: 24,
+          fontWeight: 950,
+          padding: '6px 4px',
+          borderRadius: 14,
+          color: isWinner ? '#FFCB05' : '#fff',
+          borderColor: isWinner
+            ? 'rgba(255,203,5,0.55)'
+            : 'rgba(255,255,255,0.14)',
+          background: isWinner
+            ? 'rgba(255,203,5,0.10)'
+            : 'rgba(0,0,0,0.16)',
+          opacity: disabled ? 0.62 : 1,
+          cursor: disabled ? 'not-allowed' : 'text',
+        }}
+        type="number"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={value}
+        disabled={disabled}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setDraftScore(match.id, field, e.target.value)}
+        placeholder="0"
+      />
+    );
+  }
+
+  const game1Winner = getGameWinner(draft.game_1_a, draft.game_1_b);
+  const game2Winner = getGameWinner(draft.game_2_a, draft.game_2_b);
+  const game3Winner = getGameWinner(draft.game_3_a, draft.game_3_b);
 
   return (
     <div
+      id={getMatchElementId(match.id)}
+      key={match.id}
       className="list-item"
-      style={{
-        padding: 14,
-        borderRadius: 18,
-        marginBottom: 12,
-        background: 'rgba(255,255,255,0.035)',
-        border: gameDone
-          ? '1px solid rgba(255,203,5,0.22)'
-          : '1px solid rgba(255,255,255,0.08)',
-      }}
+      style={
+        isNextUp
+          ? {
+              borderColor: 'rgba(255,203,5,.55)',
+              boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
+            }
+          : undefined
+      }
     >
       <div
+        className="row-between"
         style={{
-          fontSize: 12,
-          fontWeight: 900,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: gameDone ? '#FFCB05' : 'rgba(255,255,255,0.62)',
+          marginBottom: 10,
+          alignItems: 'center',
+          gap: 10,
+        }}
+      >
+        <div
+          style={{
+            fontSize: 22,
+            fontWeight: 950,
+            lineHeight: 1.05,
+            color: '#FFCB05',
+          }}
+        >
+          {getCourtLabel(tournament, match.court_number) || '-'}
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+          }}
+        >
+          {isNextUp ? (
+            <span
+              className="tag"
+              style={{
+                background: 'rgba(255,203,5,0.14)',
+                border: '1px solid rgba(255,203,5,0.35)',
+                color: '#FFCB05',
+                fontWeight: 900,
+              }}
+            >
+              ⭐ Your Match
+            </span>
+          ) : null}
+
+          <span
+            className={match.is_complete ? 'tag green' : 'tag'}
+            style={!match.is_complete ? { fontWeight: 900 } : undefined}
+          >
+            {match.is_complete ? 'Final' : 'Live'}
+          </span>
+        </div>
+      </div>
+
+      <div
+        style={{
+          border: '1px solid rgba(255,255,255,0.10)',
+          borderRadius: 16,
+          overflow: 'hidden',
+          background: 'rgba(0,0,0,0.14)',
           marginBottom: 10,
         }}
       >
-        {gameLabel}
-      </div>
-
-      <div style={{ display: 'grid', gap: 8 }}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 88px',
-            gap: 10,
+            gridTemplateColumns: 'minmax(0, 1fr) 52px 52px 52px',
+            gap: 8,
             alignItems: 'center',
-            padding: 10,
-            borderRadius: 14,
-            background: aIsWinner ? 'rgba(255,203,5,0.10)' : 'rgba(0,0,0,0.14)',
-            border: aIsWinner ? '1px solid rgba(255,203,5,0.30)' : '1px solid rgba(255,255,255,0.06)',
+            padding: '8px 10px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.62)',
+            fontSize: 11,
+            fontWeight: 900,
+            letterSpacing: '.12em',
+            textTransform: 'uppercase',
           }}
         >
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.48)', marginBottom: 3 }}>
-              TEAM A
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, color: aIsWinner ? '#FFCB05' : '#fff' }}>
-              {teamAName}
-            </div>
-          </div>
-
-          <input
-  className="input"
-  style={{
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 900,
-    padding: '10px 6px',
-    opacity: match.is_complete ? 0.65 : 1,
-    cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}
-  type="number"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  value={aValue}
-  disabled={gameDisabled}
-  onFocus={(e) => e.currentTarget.select()}
-  onChange={(e) => setDraftScore(match.id, aField, e.target.value)}
-  placeholder="0"
-/>
+          <div>Team</div>
+          <div style={{ textAlign: 'center' }}>G1</div>
+          <div style={{ textAlign: 'center' }}>G2</div>
+          <div style={{ textAlign: 'center' }}>G3</div>
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1fr 88px',
-            gap: 10,
+            gridTemplateColumns: 'minmax(0, 1fr) 52px 52px 52px',
+            gap: 8,
             alignItems: 'center',
-            padding: 10,
-            borderRadius: 14,
-            background: bIsWinner ? 'rgba(255,203,5,0.10)' : 'rgba(0,0,0,0.14)',
-            border: bIsWinner ? '1px solid rgba(255,203,5,0.30)' : '1px solid rgba(255,255,255,0.06)',
+            padding: '10px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
           }}
         >
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.48)', marginBottom: 3 }}>
-              TEAM B
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 900, lineHeight: 1.2, color: bIsWinner ? '#FFCB05' : '#fff' }}>
-              {teamBName}
-            </div>
+          <div
+            style={{
+              minWidth: 0,
+              fontWeight: 900,
+              fontSize: 16,
+              lineHeight: 1.2,
+              color: seriesComplete && aWins > bWins ? '#FFCB05' : '#fff',
+            }}
+          >
+            {teamAName}
           </div>
 
-          <input
-  className="input"
-  style={{
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: 900,
-    padding: '10px 6px',
-    opacity: match.is_complete ? 0.65 : 1,
-    cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}
-  type="number"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  value={bValue}
-  disabled={gameDisabled}
-  onFocus={(e) => e.currentTarget.select()}
-  onChange={(e) => setDraftScore(match.id, bField, e.target.value)}
-  placeholder="0"
-/>
+          {renderScoreInput({
+            value: draft.game_1_a,
+            field: 'game_1_a',
+            disabled: game1Done || seriesComplete || isCompleted || !canReportScores,
+            isWinner: game1Winner === 'a',
+          })}
+
+          {renderScoreInput({
+            value: draft.game_2_a,
+            field: 'game_2_a',
+            disabled:
+              !game1Done ||
+              game2Done ||
+              seriesComplete ||
+              isCompleted ||
+              !canReportScores,
+            isWinner: game2Winner === 'a',
+          })}
+
+          {renderScoreInput({
+            value: draft.game_3_a,
+            field: 'game_3_a',
+            disabled:
+              !showGame3 ||
+              game3Done ||
+              seriesComplete ||
+              isCompleted ||
+              !canReportScores,
+            isWinner: game3Winner === 'a',
+          })}
+        </div>
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 52px 52px 52px',
+            gap: 8,
+            alignItems: 'center',
+            padding: '10px',
+          }}
+        >
+          <div
+            style={{
+              minWidth: 0,
+              fontWeight: 900,
+              fontSize: 16,
+              lineHeight: 1.2,
+              color: seriesComplete && bWins > aWins ? '#FFCB05' : '#fff',
+            }}
+          >
+            {teamBName}
+          </div>
+
+          {renderScoreInput({
+            value: draft.game_1_b,
+            field: 'game_1_b',
+            disabled: game1Done || seriesComplete || isCompleted || !canReportScores,
+            isWinner: game1Winner === 'b',
+          })}
+
+          {renderScoreInput({
+            value: draft.game_2_b,
+            field: 'game_2_b',
+            disabled:
+              !game1Done ||
+              game2Done ||
+              seriesComplete ||
+              isCompleted ||
+              !canReportScores,
+            isWinner: game2Winner === 'b',
+          })}
+
+          {renderScoreInput({
+            value: draft.game_3_b,
+            field: 'game_3_b',
+            disabled:
+              !showGame3 ||
+              game3Done ||
+              seriesComplete ||
+              isCompleted ||
+              !canReportScores,
+            isWinner: game3Winner === 'b',
+          })}
         </div>
       </div>
 
-      {!gameDone && !seriesComplete && !isCompleted ? (
+      <div
+        style={{
+          marginBottom: 10,
+          padding: '9px 10px',
+          borderRadius: 14,
+          background: 'rgba(255,203,5,0.07)',
+          border: '1px solid rgba(255,203,5,0.18)',
+          color: '#FFCB05',
+          fontWeight: 900,
+          textAlign: 'center',
+          fontSize: 13,
+        }}
+      >
+        {seriesComplete
+          ? `${aWins > bWins ? teamAName : teamBName} win series ${aWins}-${bWins}`
+          : `Series: ${aWins}-${bWins}`}
+      </div>
+
+      {!seriesComplete && nextGameNumber ? (
         <button
           className="button primary"
           onClick={() =>
-            runWithScoreSubmitLock(match.id, () => submitGame(match.id, gameNumber))
+            runWithScoreSubmitLock(match.id, () =>
+              submitGame(match.id, nextGameNumber)
+            )
           }
           disabled={!canReportScores || submittingScoreId === match.id}
           style={{
@@ -4446,282 +4627,37 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
             fontWeight: 900,
             fontSize: 16,
             padding: '14px 16px',
-            marginTop: 10,
           }}
         >
           {submittingScoreId === match.id
             ? 'Submitting...'
             : canReportScores
-            ? `Submit ${gameLabel}`
+            ? `Submit ${nextGameLabel}`
             : 'Scores Locked'}
         </button>
-      ) : hasBothScores ? (
-        <div
+      ) : null}
+
+      {seriesComplete && isOrganizer && !isCompleted ? (
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => reopenMatch(match.id)}
           style={{
-            marginTop: 10,
-            padding: '10px 12px',
-            borderRadius: 12,
-            background: 'rgba(255,203,5,0.08)',
-            border: '1px solid rgba(255,203,5,0.20)',
+            width: '100%',
             fontWeight: 900,
-            color: '#FFCB05',
-            textAlign: 'center',
+            fontSize: 16,
+            padding: '14px 16px',
+            borderColor: 'rgba(255,203,5,0.6)',
+            background: 'rgba(255,203,5,0.08)',
+            boxShadow: '0 0 0 1px rgba(255,203,5,0.2) inset',
           }}
         >
-          Winner: {aIsWinner ? teamAName : teamBName}
-        </div>
+          🔓 Reopen Match to Edit Scores
+        </button>
       ) : null}
     </div>
   );
 }
-    const isNextUp =
-      !isCompleted &&
-      match.round_number === currentRound &&
-      nextUpMatch?.id === match.id;
-
-    return (
-      <div
-        id={getMatchElementId(match.id)}
-        key={match.id}
-        className="list-item"
-        style={
-          isNextUp
-            ? {
-                borderColor: 'rgba(255,203,5,.55)',
-                boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-              }
-            : undefined
-        }
-      >
-        <div className="row-between" style={{ marginBottom: 12, alignItems: 'flex-start', gap: 10 }}>
-          <div>
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.6)',
-                marginBottom: 4,
-              }}
-            >
-              Court
-            </div>
-
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 900,
-                lineHeight: 1.1,
-              }}
-            >
-              {getCourtLabel(tournament, match.court_number) || '-'}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {isNextUp ? (
-              <span
-                className="tag"
-                style={{
-                  background: 'rgba(255,203,5,0.14)',
-                  border: '1px solid rgba(255,203,5,0.35)',
-                  color: '#FFCB05',
-                  fontWeight: 800,
-                }}
-              >
-                NEXT UP
-              </span>
-            ) : null}
-
-            <span
-  className={match.is_complete ? 'tag green' : 'tag'}
-  style={!match.is_complete ? { fontWeight: 800 } : undefined}
->
-  {match.is_complete ? 'COMPLETE' : 'LIVE'}
-</span>
-
-{canManageScores && match.is_complete && !isCompleted ? (
-  <button
-  type="button"
-  className="button secondary"
-  onClick={() => reopenMatch(match.id)}
-  style={{
-    width: '100%',
-    fontWeight: 900,
-    fontSize: 16,
-    padding: '14px 16px',
-    borderColor: 'rgba(255,203,5,0.6)',
-    background: 'rgba(255,203,5,0.08)',
-    boxShadow: '0 0 0 1px rgba(255,203,5,0.2) inset',
-  }}
->
-  🔓 Reopen Match to Edit Scores
-</button>
-) : null}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 12,
-              padding: 12,
-              ...getWinnerStyle('a', match),
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.6)',
-                marginBottom: 6,
-              }}
-            >
-              Team A
-            </div>
-
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                lineHeight: 1.25,
-                whiteSpace: 'pre-line',
-              }}
-            >
-              {teamAName}
-            </div>
-          </div>
-
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: 12,
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-              color: 'rgba(255,255,255,0.45)',
-            }}
-          >
-            VS
-          </div>
-
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 12,
-              padding: 12,
-              ...getWinnerStyle('b', match),
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                color: 'rgba(255,255,255,0.6)',
-                marginBottom: 6,
-              }}
-            >
-              Team B
-            </div>
-
-            <div
-              style={{
-                fontSize: 18,
-                fontWeight: 800,
-                lineHeight: 1.25,
-                whiteSpace: 'pre-line',
-              }}
-            >
-              {teamBName}
-            </div>
-          </div>
-        </div>
-
-        {renderGameScoreboard(
-  'Game 1',
-  draft.game_1_a,
-  draft.game_1_b,
-  'game_1_a',
-  'game_1_b',
-  1,
-  game1Done,
-  game1Done || seriesComplete || isCompleted
-)}
-
-{renderGameScoreboard(
-  'Game 2',
-  draft.game_2_a,
-  draft.game_2_b,
-  'game_2_a',
-  'game_2_b',
-  2,
-  game2Done,
-  !game1Done || game2Done || seriesComplete || isCompleted
-)}
-
-{showGame3 || (game1Done && game2Done && match.game_3_a !== null) ? (
-  renderGameScoreboard(
-    'Game 3',
-    draft.game_3_a,
-    draft.game_3_b,
-    'game_3_a',
-    'game_3_b',
-    3,
-    match.game_3_a !== null && match.game_3_b !== null,
-    match.game_3_a !== null || seriesComplete || isCompleted
-  )
-) : game1Done && game2Done && !seriesComplete ? (
-  <div
-    className="list-item"
-    style={{
-      padding: 12,
-      textAlign: 'center',
-      border: '1px solid rgba(255,203,5,0.25)',
-      background: 'rgba(255,203,5,0.08)',
-    }}
-  >
-    <div style={{ fontWeight: 900, color: '#FFCB05' }}>
-      {aWins > bWins ? teamAName : teamBName} wins the series 2-0!
-    </div>
-  </div>
-) : null}
-
-        {seriesComplete ? (
-  <div className="list-item" style={{ padding: 10, textAlign: 'center', marginTop: 8 }}>
-    <div style={{ fontWeight: 800, color: '#FFCB05', marginBottom: 10 }}>
-      {aWins > bWins ? teamAName : teamBName} wins {aWins}-{bWins}!
-    </div>
-
-    {isOrganizer && !isCompleted ? (
-      <button
-  type="button"
-  className="button secondary"
-  onClick={() => reopenMatch(match.id)}
-  style={{
-    width: '100%',
-    fontWeight: 900,
-    fontSize: 16,
-    padding: '14px 16px',
-    borderColor: 'rgba(255,203,5,0.6)',
-    background: 'rgba(255,203,5,0.08)',
-    boxShadow: '0 0 0 1px rgba(255,203,5,0.2) inset',
-  }}
->
-  🔓 Reopen Match to Edit Scores
-</button>
-    ) : null}
-  </div>
-) : null}
-      </div>
-    );
-  }
 
   return (
     <main className="page-shell">

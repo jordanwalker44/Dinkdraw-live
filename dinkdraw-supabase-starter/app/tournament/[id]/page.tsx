@@ -6298,138 +6298,110 @@ isOrganizer &&
                     </div>
 
                     <div style={{ display: 'grid', gap: 10, marginBottom: 12 }}>
-                      <div
-                        className="list-item"
-                        style={{
-                          padding: 12,
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          background: 'rgba(255,255,255,0.03)',
-                          borderRadius: 12,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            color: 'rgba(255,255,255,0.6)',
-                            marginBottom: 6,
-                          }}
-                        >
-                          Team A
-                        </div>
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 1fr) 82px',
+      gap: 12,
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 16,
+      background: 'rgba(255,255,255,0.035)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}
+  >
+    <div
+      style={{
+        minWidth: 0,
+        fontWeight: 900,
+        fontSize: 17,
+        lineHeight: 1.25,
+        ...getWinnerStyle('a', match),
+      }}
+    >
+      {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+    </div>
 
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 18,
-                            lineHeight: 1.25,
-                            marginBottom: 10,
-                            ...getWinnerStyle('a', match),
-                          }}
-                        >
-                          {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
-                        </div>
+    <input
+      className="input"
+      style={{
+        height: 58,
+        textAlign: 'center',
+        fontSize: 28,
+        fontWeight: 900,
+        padding: '8px 6px',
+        opacity: match.is_complete ? 0.65 : 1,
+        cursor: match.is_complete ? 'not-allowed' : 'text',
+      }}
+      type="number"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={
+        match.is_complete
+          ? match.team_a_score === null
+            ? ''
+            : String(match.team_a_score)
+          : draft.team_a_score
+      }
+      disabled={isCompleted || match.is_complete || !canReportScores}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
+      placeholder={canReportScores ? '0' : '-'}
+    />
+  </div>
 
-                        <input
-  className="input"
-  style={{
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: 800,
-    opacity: match.is_complete ? 0.65 : 1,
-    cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}
-  type="number"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  value={
-    match.is_complete
-      ? match.team_a_score === null
-        ? ''
-        : String(match.team_a_score)
-      : draft.team_a_score
-  }
-  disabled={isCompleted || match.is_complete || !canReportScores}
-  onFocus={(e) => e.currentTarget.select()}
-  onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
-  placeholder={canReportScores ? '0' : 'Scores locked'}
-/>
-                      </div>
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'minmax(0, 1fr) 82px',
+      gap: 12,
+      alignItems: 'center',
+      padding: 12,
+      borderRadius: 16,
+      background: 'rgba(255,255,255,0.035)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    }}
+  >
+    <div
+      style={{
+        minWidth: 0,
+        fontWeight: 900,
+        fontSize: 17,
+        lineHeight: 1.25,
+        ...getWinnerStyle('b', match),
+      }}
+    >
+      {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+    </div>
 
-                      <div
-                        style={{
-                          textAlign: 'center',
-                          fontSize: 12,
-                          fontWeight: 800,
-                          letterSpacing: '0.12em',
-                          color: 'rgba(255,255,255,0.45)',
-                        }}
-                      >
-                        VS
-                      </div>
-
-                      <div
-                        className="list-item"
-                        style={{
-                          padding: 12,
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          background: 'rgba(255,255,255,0.03)',
-                          borderRadius: 12,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
-                            color: 'rgba(255,255,255,0.6)',
-                            marginBottom: 6,
-                          }}
-                        >
-                          Team B
-                        </div>
-
-                        <div
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 18,
-                            lineHeight: 1.25,
-                            marginBottom: 10,
-                            ...getWinnerStyle('b', match),
-                          }}
-                        >
-                          {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
-                        </div>
-
-                        <input
-  className="input"
-  style={{
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: 800,
-    opacity: match.is_complete ? 0.65 : 1,
-    cursor: match.is_complete ? 'not-allowed' : 'text',
-  }}
-  type="number"
-  inputMode="numeric"
-  pattern="[0-9]*"
-  value={
-    match.is_complete
-      ? match.team_b_score === null
-        ? ''
-        : String(match.team_b_score)
-      : draft.team_b_score
-  }
-  disabled={isCompleted || match.is_complete || !canReportScores}
-  onFocus={(e) => e.currentTarget.select()}
-  onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
-  placeholder={canReportScores ? '0' : 'Scores locked'}
-/>
-                      </div>
-                    </div>
+    <input
+      className="input"
+      style={{
+        height: 58,
+        textAlign: 'center',
+        fontSize: 28,
+        fontWeight: 900,
+        padding: '8px 6px',
+        opacity: match.is_complete ? 0.65 : 1,
+        cursor: match.is_complete ? 'not-allowed' : 'text',
+      }}
+      type="number"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      value={
+        match.is_complete
+          ? match.team_b_score === null
+            ? ''
+            : String(match.team_b_score)
+          : draft.team_b_score
+      }
+      disabled={isCompleted || match.is_complete || !canReportScores}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
+      placeholder={canReportScores ? '0' : '-'}
+    />
+  </div>
+</div>
 
      {match.is_complete ? (
   canManageScores && !isCompleted ? (

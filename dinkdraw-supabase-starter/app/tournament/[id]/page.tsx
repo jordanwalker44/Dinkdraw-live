@@ -4323,7 +4323,9 @@ function renderShortTeam(a: string | null, b: string | null) {
   const game2Done = match.game_2_a !== null && match.game_2_b !== null;
   const game3Done = match.game_3_a !== null && match.game_3_b !== null;
   const showGame3 = game1Done && game2Done && needsGame3(match);
+  const shouldShowGame3Column = showGame3 || game3Done;
   const seriesComplete = match.is_complete;
+
   const teamAName = renderShortTeam(match.team_a_player_1_id, match.team_a_player_2_id);
   const teamBName = renderShortTeam(match.team_b_player_1_id, match.team_b_player_2_id);
 
@@ -4340,19 +4342,7 @@ function renderShortTeam(a: string | null, b: string | null) {
     ? 3
     : null;
 
-  const nextGameLabel =
-    nextGameNumber === 1
-      ? 'Game 1'
-      : nextGameNumber === 2
-      ? 'Game 2'
-      : nextGameNumber === 3
-      ? 'Game 3'
-      : '';
-
-  function getGameWinner(
-    aValue: string,
-    bValue: string
-  ): 'a' | 'b' | null {
+  function getGameWinner(aValue: string, bValue: string): 'a' | 'b' | null {
     const aScore = Number(aValue);
     const bScore = Number(bValue);
 
@@ -4362,6 +4352,34 @@ function renderShortTeam(a: string | null, b: string | null) {
     if (bScore > aScore) return 'b';
     return null;
   }
+
+  const game1Winner = getGameWinner(draft.game_1_a, draft.game_1_b);
+  const game2Winner = getGameWinner(draft.game_2_a, draft.game_2_b);
+  const game3Winner = getGameWinner(draft.game_3_a, draft.game_3_b);
+
+  function getSubmitLabel() {
+    if (nextGameNumber === 1) return 'Submit Game 1';
+
+    if (nextGameNumber === 2) {
+      if (
+        game1Winner &&
+        game2Winner &&
+        game1Winner === game2Winner
+      ) {
+        return 'Complete Match';
+      }
+
+      return 'Submit Game 2';
+    }
+
+    if (nextGameNumber === 3) return 'Complete Match';
+
+    return 'Scores Locked';
+  }
+
+  const gridColumns = shouldShowGame3Column
+    ? 'minmax(0, 1fr) 42px 42px 42px'
+    : 'minmax(0, 1fr) 42px 42px';
 
   function renderScoreInput({
     value,
@@ -4378,7 +4396,7 @@ function renderShortTeam(a: string | null, b: string | null) {
       <input
         className="input"
         style={{
-          height: 48,
+          height: 46,
           width: 42,
           textAlign: 'center',
           fontSize: 22,
@@ -4406,10 +4424,6 @@ function renderShortTeam(a: string | null, b: string | null) {
       />
     );
   }
-
-  const game1Winner = getGameWinner(draft.game_1_a, draft.game_1_b);
-  const game2Winner = getGameWinner(draft.game_2_a, draft.game_2_b);
-  const game3Winner = getGameWinner(draft.game_3_a, draft.game_3_b);
 
   return (
     <div
@@ -4488,7 +4502,7 @@ function renderShortTeam(a: string | null, b: string | null) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 42px 42px 42px',
+            gridTemplateColumns: gridColumns,
             gap: 8,
             alignItems: 'center',
             padding: '8px 10px',
@@ -4503,13 +4517,15 @@ function renderShortTeam(a: string | null, b: string | null) {
           <div>Team</div>
           <div style={{ textAlign: 'center' }}>G1</div>
           <div style={{ textAlign: 'center' }}>G2</div>
-          <div style={{ textAlign: 'center' }}>G3</div>
+          {shouldShowGame3Column ? (
+            <div style={{ textAlign: 'center' }}>G3</div>
+          ) : null}
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 42px 42px 42px',
+            gridTemplateColumns: gridColumns,
             gap: 8,
             alignItems: 'center',
             padding: '10px',
@@ -4547,23 +4563,25 @@ function renderShortTeam(a: string | null, b: string | null) {
             isWinner: game2Winner === 'a',
           })}
 
-          {renderScoreInput({
-            value: draft.game_3_a,
-            field: 'game_3_a',
-            disabled:
-              !showGame3 ||
-              game3Done ||
-              seriesComplete ||
-              isCompleted ||
-              !canReportScores,
-            isWinner: game3Winner === 'a',
-          })}
+          {shouldShowGame3Column ? (
+            renderScoreInput({
+              value: draft.game_3_a,
+              field: 'game_3_a',
+              disabled:
+                !showGame3 ||
+                game3Done ||
+                seriesComplete ||
+                isCompleted ||
+                !canReportScores,
+              isWinner: game3Winner === 'a',
+            })
+          ) : null}
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 42px 42px 42px',
+            gridTemplateColumns: gridColumns,
             gap: 8,
             alignItems: 'center',
             padding: '10px',
@@ -4600,17 +4618,19 @@ function renderShortTeam(a: string | null, b: string | null) {
             isWinner: game2Winner === 'b',
           })}
 
-          {renderScoreInput({
-            value: draft.game_3_b,
-            field: 'game_3_b',
-            disabled:
-              !showGame3 ||
-              game3Done ||
-              seriesComplete ||
-              isCompleted ||
-              !canReportScores,
-            isWinner: game3Winner === 'b',
-          })}
+          {shouldShowGame3Column ? (
+            renderScoreInput({
+              value: draft.game_3_b,
+              field: 'game_3_b',
+              disabled:
+                !showGame3 ||
+                game3Done ||
+                seriesComplete ||
+                isCompleted ||
+                !canReportScores,
+              isWinner: game3Winner === 'b',
+            })
+          ) : null}
         </div>
       </div>
 
@@ -4651,7 +4671,7 @@ function renderShortTeam(a: string | null, b: string | null) {
           {submittingScoreId === match.id
             ? 'Submitting...'
             : canReportScores
-            ? `Submit ${nextGameLabel}`
+            ? getSubmitLabel()
             : 'Scores Locked'}
         </button>
       ) : null}

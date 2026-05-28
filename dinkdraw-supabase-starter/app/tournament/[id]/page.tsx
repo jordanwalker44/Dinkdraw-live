@@ -4360,9 +4360,9 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         className="input"
         style={{
           height: 48,
-          width: 52,
+          width: 46,
           textAlign: 'center',
-          fontSize: 24,
+          fontSize: 22,
           fontWeight: 950,
           padding: '6px 4px',
           borderRadius: 14,
@@ -4469,7 +4469,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 52px 52px 52px',
+            gridTemplateColumns: 'minmax(180px, 1fr) 46px 46px 46px',
             gap: 8,
             alignItems: 'center',
             padding: '8px 10px',
@@ -4490,7 +4490,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 52px 52px 52px',
+            gridTemplateColumns: 'minmax(180px, 1fr) 46px 46px 46px',
             gap: 8,
             alignItems: 'center',
             padding: '10px',
@@ -4544,7 +4544,7 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 52px 52px 52px',
+            gridTemplateColumns: 'minmax(180px, 1fr) 46px 46px 46px',
             gap: 8,
             alignItems: 'center',
             padding: '10px',

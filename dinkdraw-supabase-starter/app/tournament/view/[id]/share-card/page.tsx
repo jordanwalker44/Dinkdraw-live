@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,12 @@ type StandingRow = {
 
 function diffText(value: number) {
   return value > 0 ? `+${value}` : String(value);
+}
+
+function shortName(name: string) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length <= 1) return name;
+  return `${parts[0]} ${parts[1][0]}.`;
 }
 
 function computeStandings(players: PlayerSlot[], matches: Match[]) {
@@ -81,7 +88,7 @@ function computeStandings(players: PlayerSlot[], matches: Match[]) {
   });
 }
 
-function PodiumSpot({
+function PodiumBlock({
   place,
   name,
   record,
@@ -100,31 +107,41 @@ function PodiumSpot({
     <div
       style={{
         flex: 1,
+        minWidth: 0,
         height,
-        borderRadius: 22,
+        borderRadius: 18,
         border: `2px solid ${color}`,
         background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.22))',
-        boxShadow: `0 0 28px ${color}44`,
+        boxShadow: `0 0 22px ${color}33`,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: 18,
+        padding: '12px 8px',
         textAlign: 'center',
       }}
     >
-      <div style={{ fontSize: 42, fontWeight: 950, color }}>{place}</div>
-      <div style={{ fontSize: 42, margin: '6px 0' }}>
+      <div style={{ fontSize: 34, fontWeight: 950, color }}>{place}</div>
+      <div style={{ fontSize: 28, marginTop: 2 }}>
         {place === '1' ? '🏆' : place === '2' ? '🥈' : '🥉'}
       </div>
-      <div style={{ fontSize: 24, fontWeight: 950, color: '#fff', lineHeight: 1.05 }}>
-        {name}
+      <div
+        style={{
+          fontSize: place === '1' ? 24 : 19,
+          fontWeight: 950,
+          color: '#fff',
+          lineHeight: 1.05,
+          marginTop: 8,
+          wordBreak: 'break-word',
+        }}
+      >
+        {shortName(name)}
       </div>
-      <div style={{ marginTop: 12, fontSize: 18, color: 'rgba(255,255,255,0.72)' }}>
-        {record} record
+      <div style={{ marginTop: 10, fontSize: 15, color: 'rgba(255,255,255,0.72)' }}>
+        {record}
       </div>
-      <div style={{ marginTop: 4, fontSize: 24, fontWeight: 950, color }}>
-        {diff} diff
+      <div style={{ marginTop: 2, fontSize: 22, fontWeight: 950, color }}>
+        {diff}
       </div>
     </div>
   );
@@ -173,130 +190,144 @@ export default async function ShareCardPage({
       style={{
         minHeight: '100vh',
         background: '#020b14',
-        padding: 20,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        padding: 14,
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
-      <section
-        style={{
-          width: '100%',
-          maxWidth: 920,
-          aspectRatio: '1 / 1',
-          borderRadius: 34,
-          padding: 34,
-          color: '#fff',
-          background:
-            'radial-gradient(circle at top, #123a5c 0%, #06182b 45%, #020b14 100%)',
-          border: '1px solid rgba(255,203,5,0.35)',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div style={{ textAlign: 'center', fontSize: 42, fontWeight: 950 }}>
-          Dink<span style={{ color: '#FFCB05' }}>Draw</span>
-        </div>
-
-        <div
+      <div style={{ maxWidth: 430, margin: '0 auto' }}>
+        <Link
+          href={`/tournament/view/${params.id}`}
           style={{
-            textAlign: 'center',
-            marginTop: 8,
-            fontSize: 18,
-            letterSpacing: 6,
-            color: 'rgba(255,255,255,0.72)',
+            color: '#FFCB05',
+            textDecoration: 'none',
+            fontWeight: 900,
+            display: 'inline-block',
+            marginBottom: 12,
           }}
         >
-          PICKLEBALL TOURNAMENT
-        </div>
+          ← Back to results
+        </Link>
 
-        <h1
+        <section
           style={{
-            textAlign: 'center',
-            fontSize: 58,
-            lineHeight: 1,
-            margin: '28px 0 8px',
-            fontWeight: 950,
+            width: '100%',
+            maxWidth: 420,
+            aspectRatio: '9 / 16',
+            minHeight: 760,
+            borderRadius: 28,
+            padding: 18,
+            color: '#fff',
+            background:
+              'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',
+            border: '1px solid rgba(255,203,5,0.35)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
+            overflow: 'hidden',
           }}
         >
-          FINAL <span style={{ color: '#FFCB05' }}>RESULTS</span>
-        </h1>
-
-        <div
-          style={{
-            textAlign: 'center',
-            fontSize: 24,
-            fontWeight: 800,
-            color: 'rgba(255,255,255,0.78)',
-            marginBottom: 32,
-          }}
-        >
-          {tournament.title}
-        </div>
-
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-end',
-            gap: 16,
-            flex: 1,
-          }}
-        >
-          {second ? (
-            <PodiumSpot
-              place="2"
-              name={second.name}
-              record={`${second.wins}-${second.losses}`}
-              diff={diffText(second.pointDiff)}
-              color="#C0C7D2"
-              height={280}
-            />
-          ) : null}
-
-          <PodiumSpot
-            place="1"
-            name={first.name}
-            record={`${first.wins}-${first.losses}`}
-            diff={diffText(first.pointDiff)}
-            color="#FFCB05"
-            height={360}
-          />
-
-          {third ? (
-            <PodiumSpot
-              place="3"
-              name={third.name}
-              record={`${third.wins}-${third.losses}`}
-              diff={diffText(third.pointDiff)}
-              color="#CD7F32"
-              height={250}
-            />
-          ) : null}
-        </div>
-
-        <div
-          style={{
-            marginTop: 28,
-            borderRadius: 20,
-            border: '1px solid rgba(255,203,5,0.45)',
-            padding: '16px 20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 16,
-            alignItems: 'center',
-            background: 'rgba(0,0,0,0.22)',
-          }}
-        >
-          <div style={{ fontSize: 20, fontWeight: 850 }}>
-            Create. Compete. Celebrate.
+          <div style={{ textAlign: 'center', fontSize: 34, fontWeight: 950 }}>
+            Dink<span style={{ color: '#FFCB05' }}>Draw</span>
           </div>
-          <div style={{ fontSize: 22, fontWeight: 950, color: '#FFCB05' }}>
-            DINKDRAW.APP
+
+          <div
+            style={{
+              textAlign: 'center',
+              marginTop: 4,
+              fontSize: 13,
+              letterSpacing: 4,
+              color: 'rgba(255,255,255,0.72)',
+            }}
+          >
+            PICKLEBALL TOURNAMENT
           </div>
-        </div>
-      </section>
+
+          <h1
+            style={{
+              textAlign: 'center',
+              fontSize: 42,
+              lineHeight: 0.95,
+              margin: '22px 0 8px',
+              fontWeight: 950,
+            }}
+          >
+            FINAL <span style={{ color: '#FFCB05' }}>RESULTS</span>
+          </h1>
+
+          <div
+            style={{
+              textAlign: 'center',
+              fontSize: 19,
+              fontWeight: 800,
+              color: 'rgba(255,255,255,0.78)',
+              marginBottom: 24,
+            }}
+          >
+            {tournament.title}
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: 8,
+            }}
+          >
+            {second ? (
+              <PodiumBlock
+                place="2"
+                name={second.name}
+                record={`${second.wins}-${second.losses}`}
+                diff={`${diffText(second.pointDiff)} diff`}
+                color="#C0C7D2"
+                height={220}
+              />
+            ) : null}
+
+            <PodiumBlock
+              place="1"
+              name={first.name}
+              record={`${first.wins}-${first.losses}`}
+              diff={`${diffText(first.pointDiff)} diff`}
+              color="#FFCB05"
+              height={285}
+            />
+
+            {third ? (
+              <PodiumBlock
+                place="3"
+                name={third.name}
+                record={`${third.wins}-${third.losses}`}
+                diff={`${diffText(third.pointDiff)} diff`}
+                color="#CD7F32"
+                height={200}
+              />
+            ) : null}
+          </div>
+
+          <div
+            style={{
+              marginTop: 24,
+              borderRadius: 18,
+              border: '1px solid rgba(255,203,5,0.45)',
+              padding: '14px 16px',
+              background: 'rgba(0,0,0,0.22)',
+            }}
+          >
+            <div style={{ fontSize: 20, fontWeight: 950 }}>
+              Create. Compete. Celebrate.
+            </div>
+            <div
+              style={{
+                marginTop: 6,
+                fontSize: 22,
+                fontWeight: 950,
+                color: '#FFCB05',
+              }}
+            >
+              DINKDRAW.APP
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

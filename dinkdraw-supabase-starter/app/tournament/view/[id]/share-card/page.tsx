@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { ShareResultsButton } from '../../../../../components/ShareResultsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -384,6 +385,11 @@ export default async function ShareCardPage({
 </div>
           </div>
         </section>
+        <ShareResultsButton
+  title={tournament.title || 'DinkDraw Tournament'}
+  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
+  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+/>
       </div>
     </main>
   );

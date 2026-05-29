@@ -1957,6 +1957,22 @@ export default function PublicTournamentViewPage({
             : 'Ranked by wins, then point differential, then points scored.'}
         </div>
 
+        {isCompleted ? (
+  <Link
+    href={`/tournament/view/${params.id}/share-card`}
+    className="button primary"
+    style={{
+      marginTop: 12,
+      marginBottom: 14,
+      textDecoration: 'none',
+      width: '100%',
+      fontWeight: 900,
+    }}
+  >
+    🏆 Share Results
+  </Link>
+) : null}
+
         {!standings.length ? (
           <div className="muted">Standings will appear once matches are scored.</div>
         ) : (

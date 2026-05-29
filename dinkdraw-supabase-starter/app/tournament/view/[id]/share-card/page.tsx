@@ -290,7 +290,7 @@ export default async function ShareCardPage({
           }}
         >
           <div style={{ fontSize: 20, fontWeight: 850 }}>
-            Manage. Compete. Celebrate.
+            Create. Compete. Celebrate.
           </div>
           <div style={{ fontSize: 22, fontWeight: 950, color: '#FFCB05' }}>
             DINKDRAW.APP

@@ -361,19 +361,27 @@ export default async function ShareCardPage({
               background: 'rgba(0,0,0,0.22)',
             }}
           >
-            <div style={{ fontSize: 20, fontWeight: 950 }}>
-              Create. Compete. Celebrate.
-            </div>
             <div
-              style={{
-                marginTop: 6,
-                fontSize: 22,
-                fontWeight: 950,
-                color: '#FFCB05',
-              }}
-            >
-              DINKDRAW.APP
-            </div>
+  style={{
+    fontSize: 20,
+    fontWeight: 950,
+    textAlign: 'center',
+  }}
+>
+  Create. Compete. Celebrate.
+</div>
+
+<div
+  style={{
+    marginTop: 6,
+    fontSize: 22,
+    fontWeight: 950,
+    color: '#FFCB05',
+    textAlign: 'center',
+  }}
+>
+  DINKDRAW.APP
+</div>
           </div>
         </section>
       </div>

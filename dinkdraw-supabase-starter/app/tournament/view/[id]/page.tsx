@@ -1961,64 +1961,7 @@ export default function PublicTournamentViewPage({
           <div className="muted">Standings will appear once matches are scored.</div>
         ) : (
           <div>
-            {standings[0] ? (
-              <div
-                className="list-item"
-                style={{
-                  marginBottom: 12,
-                  borderColor: 'rgba(255,203,5,.55)',
-                  boxShadow: '0 0 0 1px rgba(255,203,5,.25) inset',
-                }}
-              >
-                <div
-                  className="row-between"
-                  style={{ marginBottom: 8, flexWrap: 'wrap' }}
-                >
-                  <div style={{ fontWeight: 900, fontSize: 20 }}>
-                    🥇 {standings[0].name}
-                  </div>
-                  <span className="tag green">Leader</span>
-                </div>
-
-                <div className="muted" style={{ marginBottom: 10 }}>
-                  {standings[0].wins}-{standings[0].losses} record • Diff{' '}
-                  {standings[0].pointDiff > 0
-                    ? `+${standings[0].pointDiff}`
-                    : standings[0].pointDiff}
-                </div>
-
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                    gap: 8,
-                  }}
-                >
-                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-                    <div className="muted" style={{ fontSize: 12 }}>Played</div>
-                    <div style={{ fontWeight: 800 }}>{standings[0].played}</div>
-                  </div>
-                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-                    <div className="muted" style={{ fontSize: 12 }}>Wins</div>
-                    <div style={{ fontWeight: 800 }}>{standings[0].wins}</div>
-                  </div>
-                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-                    <div className="muted" style={{ fontSize: 12 }}>Losses</div>
-                    <div style={{ fontWeight: 800 }}>{standings[0].losses}</div>
-                  </div>
-                  <div className="list-item" style={{ padding: 10, textAlign: 'center' }}>
-                    <div className="muted" style={{ fontSize: 12 }}>Diff</div>
-                    <div style={{ fontWeight: 800 }}>
-                      {standings[0].pointDiff > 0
-                        ? `+${standings[0].pointDiff}`
-                        : standings[0].pointDiff}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <div
+           <div
               style={{
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 16,
@@ -2045,9 +1988,10 @@ export default function PublicTournamentViewPage({
                 <div style={{ textAlign: 'center' }}>Diff</div>
               </div>
 
-              {standings.slice(1).map((row, index, arr) => {
-                const place = index + 2;
-                const medal = place === 2 ? '🥈' : place === 3 ? '🥉' : '';
+              {standings.map((row, index, arr) => {
+                const place = index + 1;
+                const medal =
+                    place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 
                 return (
                   <div
@@ -2061,7 +2005,12 @@ export default function PublicTournamentViewPage({
                         index === arr.length - 1
                           ? 'none'
                           : '1px solid rgba(255,255,255,0.08)',
-                      background: place <= 3 ? 'rgba(255,203,5,0.04)' : 'transparent',
+                      background:
+                          place === 1
+                          ? 'linear-gradient(90deg, rgba(255,203,5,0.16), rgba(255,203,5,0.04))'
+                          : place <= 3
+                          ? 'rgba(255,203,5,0.04)'
+                          : 'transparent',
                     }}
                   >
                     <div style={{ textAlign: 'center', fontWeight: 900 }}>

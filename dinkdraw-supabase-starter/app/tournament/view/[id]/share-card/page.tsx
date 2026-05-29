@@ -264,44 +264,93 @@ export default async function ShareCardPage({
             {tournament.title}
           </div>
 
+          <div style={{ display: 'grid', gap: 12 }}>
+  {[
+    { place: '1', medal: '🥇', row: first, color: '#FFCB05' },
+    { place: '2', medal: '🥈', row: second, color: '#C0C7D2' },
+    { place: '3', medal: '🥉', row: third, color: '#CD7F32' },
+  ]
+    .filter((item) => item.row)
+    .map((item) => (
+      <div
+        key={item.place}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '54px minmax(0, 1fr) auto',
+          gap: 12,
+          alignItems: 'center',
+          padding: '14px 16px',
+          borderRadius: 18,
+          border: `1px solid ${item.color}`,
+          background:
+            item.place === '1'
+              ? 'linear-gradient(90deg, rgba(255,203,5,0.18), rgba(255,203,5,0.04))'
+              : 'rgba(255,255,255,0.055)',
+          boxShadow:
+            item.place === '1' ? '0 0 24px rgba(255,203,5,0.18)' : 'none',
+        }}
+      >
+        <div
+          style={{
+            fontSize: 30,
+            fontWeight: 950,
+            color: item.color,
+            textAlign: 'center',
+          }}
+        >
+          {item.medal}
+        </div>
+
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              gap: 8,
+              fontSize: item.place === '1' ? 26 : 23,
+              fontWeight: 950,
+              color: '#fff',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
             }}
           >
-            {second ? (
-              <PodiumBlock
-                place="2"
-                name={second.name}
-                record={`${second.wins}-${second.losses}`}
-                diff={`${diffText(second.pointDiff)} diff`}
-                color="#C0C7D2"
-                height={220}
-              />
-            ) : null}
-
-            <PodiumBlock
-              place="1"
-              name={first.name}
-              record={`${first.wins}-${first.losses}`}
-              diff={`${diffText(first.pointDiff)} diff`}
-              color="#FFCB05"
-              height={285}
-            />
-
-            {third ? (
-              <PodiumBlock
-                place="3"
-                name={third.name}
-                record={`${third.wins}-${third.losses}`}
-                diff={`${diffText(third.pointDiff)} diff`}
-                color="#CD7F32"
-                height={200}
-              />
-            ) : null}
+            {item.row!.name}
           </div>
+
+          <div
+            style={{
+              marginTop: 4,
+              fontSize: 16,
+              color: 'rgba(255,255,255,0.72)',
+              fontWeight: 750,
+            }}
+          >
+            {item.row!.wins}-{item.row!.losses} record
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontSize: item.place === '1' ? 30 : 26,
+            fontWeight: 950,
+            color: item.color,
+            textAlign: 'right',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {diffText(item.row!.pointDiff)}
+          <div
+            style={{
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.62)',
+              fontWeight: 800,
+              marginTop: 2,
+            }}
+          >
+            diff
+          </div>
+        </div>
+      </div>
+    ))}
+</div>
 
           <div
             style={{

@@ -178,7 +178,23 @@ function podiumCard({
         boxShadow: `0 0 36px ${accent}55`,
       }}
     >
-      <div style={{ fontSize: 62, marginBottom: 10 }}>{trophy}</div>
+      <div
+  style={{
+    width: 86,
+    height: 86,
+    borderRadius: 999,
+    background: accent,
+    color: '#06182b',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 42,
+    fontWeight: 950,
+    marginBottom: 14,
+  }}
+>
+  {place}
+</div>
       <div
         style={{
           fontSize: 42,

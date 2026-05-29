@@ -1958,19 +1958,24 @@ export default function PublicTournamentViewPage({
         </div>
 
         {isCompleted ? (
-  <Link
-    href={`/tournament/view/${params.id}/share-card`}
-    className="button primary"
-    style={{
-      marginTop: 12,
-      marginBottom: 14,
-      textDecoration: 'none',
-      width: '100%',
-      fontWeight: 900,
-    }}
-  >
-    🏆 Share Results
-  </Link>
+  <div style={{ margin: '16px 0 18px 0' }}>
+    <Link
+      href={`/tournament/view/${params.id}/share-card`}
+      className="button primary"
+      style={{
+        width: '100%',
+        minHeight: 52,
+        textDecoration: 'none',
+        fontWeight: 900,
+        fontSize: 17,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      🏆 Share Results
+    </Link>
+  </div>
 ) : null}
 
         {!standings.length ? (

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
 import { TopNav } from '../../../../components/TopNav';
+import { ShareResultsButton } from '../../../../components/ShareResultsButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -550,6 +551,12 @@ export default function TournamentResultsPage({
   <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 10 }}>
     {tournament?.title}
   </div>
+
+<ShareResultsButton
+  title={tournament?.title || 'DinkDraw Tournament'}
+  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
+  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+/>
 
   {winner ? (
     <div style={{ marginBottom: 10 }}>

@@ -524,13 +524,11 @@ export default function TournamentResultsPage({
             Copy Results Link
           </button>
 
-          <button
-            type="button"
-            className="button primary"
-            onClick={shareResultsLink}
-          >
-            Share Results
-          </button>
+          <ShareResultsButton
+  title={tournament?.title || 'DinkDraw Tournament'}
+  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
+  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+/>
         </div>
 
         {message ? <div className="notice">{message}</div> : null}
@@ -551,12 +549,6 @@ export default function TournamentResultsPage({
   <div style={{ fontSize: 20, fontWeight: 900, marginBottom: 10 }}>
     {tournament?.title}
   </div>
-
-<ShareResultsButton
-  title={tournament?.title || 'DinkDraw Tournament'}
-  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
-  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
-/>
 
   {winner ? (
     <div style={{ marginBottom: 10 }}>

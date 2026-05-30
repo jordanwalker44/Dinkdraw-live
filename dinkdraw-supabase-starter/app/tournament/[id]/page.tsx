@@ -6508,11 +6508,22 @@ isOrganizer &&
               : 'Ranked by wins, then point differential, then points scored.'}
           </div>
 
-          <ShareResultsButton
-  title={tournament?.title || 'DinkDraw Tournament'}
-  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
-  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
-/>
+          <Link
+  href={`/tournament/view/${params.id}/share-card`}
+  className="button primary"
+  style={{
+    width: '100%',
+    minHeight: 52,
+    textDecoration: 'none',
+    fontWeight: 900,
+    fontSize: 17,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}
+>
+  🏆 Share Results
+</Link>
 
           {isCompleted && tournamentWinner ? (
             <div

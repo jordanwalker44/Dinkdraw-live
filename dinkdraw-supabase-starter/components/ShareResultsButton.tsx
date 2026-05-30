@@ -41,7 +41,6 @@ export function ShareResultsButton({
       style={{
         width: '100%',
         minHeight: 52,
-        marginTop: 14,
         fontWeight: 900,
         fontSize: 17,
       }}

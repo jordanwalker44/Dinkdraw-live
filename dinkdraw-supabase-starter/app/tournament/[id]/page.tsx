@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
+import { ShareResultsButton } from '../../../components/ShareResultsButton';
 import {
   buildCreamOfTheCropStageSchedule,
   buildNextCreamOfTheCropStagePlayers
@@ -6506,6 +6507,12 @@ isOrganizer &&
               ? 'Tournament complete. Final results are locked.'
               : 'Ranked by wins, then point differential, then points scored.'}
           </div>
+
+          <ShareResultsButton
+  title={tournament?.title || 'DinkDraw Tournament'}
+  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
+  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+/>
 
           {isCompleted && tournamentWinner ? (
             <div

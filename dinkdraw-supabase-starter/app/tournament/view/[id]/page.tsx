@@ -1973,7 +1973,6 @@ export default function PublicTournamentViewPage({
         justifyContent: 'center',
       }}
     >
-      🏆 Share Results
     </Link>
   </div>
 ) : null}

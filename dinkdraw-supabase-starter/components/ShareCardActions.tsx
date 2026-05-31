@@ -68,10 +68,6 @@ export function ShareCardActions({
       <button className="button primary" type="button" onClick={shareImage}>
         📤 Share Image
       </button>
-
-      <button className="button secondary" type="button" onClick={saveImage}>
-        📸 Save Image
-      </button>
     </div>
   );
 }

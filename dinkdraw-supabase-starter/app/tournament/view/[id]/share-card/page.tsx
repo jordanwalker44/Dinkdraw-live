@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { ShareResultsButton } from '../../../../../components/ShareResultsButton';
 import { ShareCardActions } from '../../../../../components/ShareCardActions';
 
 export const dynamic = 'force-dynamic';
@@ -204,7 +203,8 @@ export default async function ShareCardPage({
             textDecoration: 'none',
             fontWeight: 900,
             display: 'inline-block',
-            marginBottom: 12,
+            marginBottom: 18,
+            fontSize: 16,
           }}
         >
           ← Back to results
@@ -388,11 +388,6 @@ export default async function ShareCardPage({
           </div>
         </section>
         <ShareCardActions title={tournament.title || 'DinkDraw Tournament'} />
-        <ShareResultsButton
-  title={tournament.title || 'DinkDraw Tournament'}
-  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
-  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
-/>
       </div>
     </main>
   );

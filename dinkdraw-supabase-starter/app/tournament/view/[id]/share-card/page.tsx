@@ -191,7 +191,7 @@ export default async function ShareCardPage({
       style={{
         minHeight: '100vh',
         background: '#020b14',
-        padding: 14,
+        padding: '96px 14px 24px',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >

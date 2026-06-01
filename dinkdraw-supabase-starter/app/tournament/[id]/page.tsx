@@ -6877,15 +6877,18 @@ isOrganizer &&
   Cream of the Crop Results
 </div>
 
-    style={{
-  marginTop: 12,
-  border: '1px solid rgba(255,203,5,0.6)',
-  background:
-    'linear-gradient(135deg, rgba(255,203,5,0.18), rgba(255,203,5,0.05))',
-  textAlign: 'center',
-  padding: '24px 20px',
-  boxShadow: '0 0 24px rgba(255,203,5,0.18)',
-}}
+    <div
+      className="list-item"
+      style={{
+        marginTop: 12,
+        border: '1px solid rgba(255,203,5,0.6)',
+        background:
+          'linear-gradient(135deg, rgba(255,203,5,0.18), rgba(255,203,5,0.05))',
+        textAlign: 'center',
+        padding: '24px 20px',
+        boxShadow: '0 0 24px rgba(255,203,5,0.18)',
+      }}
+    >
       <div
   style={{
     fontWeight: 900,

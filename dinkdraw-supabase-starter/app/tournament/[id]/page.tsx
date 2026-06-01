@@ -5334,7 +5334,10 @@ const shouldShowClaimButton = canClaim && (
     ? `Name for Seed ${slot.slot_number}`
     : `Name for Player ${slot.slot_number}`
 }
-                {(tournament?.ask_for_dupr_id || isOrganizer) ? (
+disabled={!canEditName}
+/>
+
+{(tournament?.ask_for_dupr_id || isOrganizer) ? (
   <input
     className="input"
     value={newDuprIds[slot.id] ?? slot.dupr_id ?? ''}
@@ -5348,8 +5351,6 @@ const shouldShowClaimButton = canClaim && (
     disabled={!canEditName}
   />
 ) : null}
-                disabled={!canEditName}
-              />
 
               {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
                 <div

@@ -53,6 +53,7 @@ type PlayerSlot = {
   display_name: string | null;
   claimed_by_user_id: string | null;
   gender: string | null;
+  dupr_id: string | null;
 };
 
 type Match = {

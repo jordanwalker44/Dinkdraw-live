@@ -4368,29 +4368,6 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
       type: 'text/csv;charset=utf-8;',
     });
 
-    const csvFile = new File([csvBlob], fileName, {
-      type: 'text/csv',
-    });
-
-    type ShareDataWithFiles = ShareData & { files?: File[] };
-
-    const shareData: ShareDataWithFiles = {
-      title: `${tournament.title} Results`,
-      text: 'DinkDraw tournament results CSV',
-      files: [csvFile],
-    };
-
-    const nav = navigator as Navigator & {
-      canShare?: (data: ShareDataWithFiles) => boolean;
-      share?: (data: ShareDataWithFiles) => Promise<void>;
-    };
-
-    if (typeof nav.canShare === 'function' && nav.canShare(shareData) && nav.share) {
-      await nav.share(shareData);
-      setMessage('CSV export opened.');
-      return;
-    }
-
     const url = URL.createObjectURL(csvBlob);
     const link = document.createElement('a');
 

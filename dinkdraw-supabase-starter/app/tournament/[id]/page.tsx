@@ -6680,9 +6680,12 @@ isOrganizer &&
         <div className="card">
           <div className="card-title">{isCompleted ? '🏆 Final Results' : 'Standings'}</div>
           <div className="card-subtitle">
-            {isCompleted
-              ? 'Tournament complete. Final results are locked.'
-             </div>
+  {tournament?.tournament_mode === 'cream_of_the_crop'
+    ? 'Ranked by final court, overall record, then initial seed.'
+    : isCompleted
+    ? 'Tournament complete. Final results are locked.'
+    : 'Ranked by wins, then point differential, then points scored.'}
+</div>
 
           <Link
   href={`/tournament/view/${params.id}/share-card`}

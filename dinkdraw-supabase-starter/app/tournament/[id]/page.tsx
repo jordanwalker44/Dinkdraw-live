@@ -6846,17 +6846,7 @@ isOrganizer &&
                   color: 'rgba(255,255,255,0.65)',
                 }}
               >
-                <div style={{ textAlign: 'center' }}>Place</div>
-                <div>Player</div>
-                <div style={{ textAlign: 'center' }}>
-                  {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
-                </div>
-              </div>
-
-              {tournament?.tournament_mode === 'cream_of_the_crop' && standings.length > 0 && (
+               {tournament?.tournament_mode === 'cream_of_the_crop' && standings.length > 0 && (
   <div
     className="card"
     style={{
@@ -6953,6 +6943,15 @@ isOrganizer &&
     )}
   </div>
 )}
+                <div style={{ textAlign: 'center' }}>Place</div>
+                <div>Player</div>
+                <div style={{ textAlign: 'center' }}>
+                  {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
+                </div>
+              </div>
 
               {standings.map((row, index) => {
                 const place = index + 1;

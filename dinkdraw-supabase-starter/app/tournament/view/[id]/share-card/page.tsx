@@ -191,7 +191,7 @@ export default async function ShareCardPage({
       style={{
         minHeight: '100vh',
         background: '#020b14',
-        padding: '96px 14px 24px',
+        padding: '0 14px 14px',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
@@ -200,9 +200,10 @@ export default async function ShareCardPage({
         <Link
   href={`/tournament/view/${params.id}`}
   style={{
-    display: 'inline-flex',
-    alignItems: 'center',
-    marginBottom: 8,
+    position: 'fixed',
+    top: '150px',
+    right: 16,
+    zIndex: 9999,
     color: '#FFCB05',
     fontSize: 15,
     fontWeight: 900,
@@ -217,12 +218,11 @@ export default async function ShareCardPage({
           style={{
             width: '100%',
             maxWidth: 420,
-            aspectRatio: '9 / 16',
-            height: 'calc(100vh - 210px)',
+            height: 'calc(100vh - 245px)',
             maxHeight: 620,
             minHeight: 0,
             borderRadius: 28,
-            padding: '104px 14px 14px',
+            padding: '0 14px 14px',
             color: '#fff',
             background:
               'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',

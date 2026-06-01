@@ -174,11 +174,6 @@ function computeStandings(
     ? Math.max(...completedMatches.map((match) => match.round_number))
     : 0;
 
-  const finalStageStartRound =
-    tournamentMode === 'cream_of_the_crop' && latestCompletedRound > 0
-      ? latestCompletedRound - ((latestCompletedRound - 1) % 3)
-      : 0;
-
   const latestMatchByPlayer = new Map<string, Match>();
 
   for (const match of completedMatches) {
@@ -299,35 +294,9 @@ const bIds = isSingles
         if (row) row.losses += 1;
       });
     }
-
-    if (
-      tournamentMode === 'cream_of_the_crop' &&
-      finalStageStartRound > 0 &&
-      match.round_number >= finalStageStartRound
-    ) {
-      if (aScore > bScore) {
-        aIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.finalCourtWins += 1;
-        });
-        bIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.finalCourtLosses += 1;
-        });
-      } else if (bScore > aScore) {
-        bIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.finalCourtWins += 1;
-        });
-        aIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.finalCourtLosses += 1;
-        });
-      }
-    }
   }
 
-  return Array.from(rows.values())
+    return Array.from(rows.values())
     .map((row) => {
       const latestMatch = latestMatchByPlayer.get(row.playerId);
 

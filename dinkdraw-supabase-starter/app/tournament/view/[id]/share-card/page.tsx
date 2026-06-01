@@ -222,7 +222,7 @@ export default async function ShareCardPage({
             maxHeight: 620,
             minHeight: 0,
             borderRadius: 28,
-            padding: 14,
+            padding: '104px 14px 14px',
             color: '#fff',
             background:
               'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',

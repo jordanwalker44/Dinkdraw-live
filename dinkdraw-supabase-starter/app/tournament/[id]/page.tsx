@@ -5650,15 +5650,6 @@ Sign in with this same email address to submit and edit scores.`;
 
                     <button
                       type="button"
-                      className="button secondary"
-                      onClick={exportResultsCsv}
-                      style={{ fontWeight: 800, fontSize: 16 }}
-                    >
-                      ⬇️ Export Results CSV
-                    </button>
-
-                    <button
-                      type="button"
                       className="button primary"
                       onClick={rematchTournament}
                       disabled={isRematching}
@@ -6681,6 +6672,23 @@ isOrganizer &&
 >
   🏆 Share Results
 </Link>
+
+     {isOrganizer && isCompleted ? (
+  <button
+    type="button"
+    className="button secondary"
+    onClick={exportResultsCsv}
+    style={{
+      width: '100%',
+      minHeight: 52,
+      marginTop: 10,
+      fontWeight: 900,
+      fontSize: 17,
+    }}
+  >
+    ⬇️ Export Results CSV
+  </button>
+) : null}     
 
           {isCompleted && tournamentWinner ? (
             <div

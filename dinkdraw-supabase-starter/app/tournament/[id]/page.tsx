@@ -4269,6 +4269,141 @@ setStandings(computeStandings(playerSlots, optimisticMatches, isSingles, isBestO
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
 
+    function formatCsvValue(value: string | number | null | undefined) {
+    const text = value === null || value === undefined ? '' : String(value);
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+
+  function makeCsvFileName(title: string | null | undefined) {
+    const safeTitle = (title || 'Tournament Results')
+      .replace(/[^a-z0-9]+/gi, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 60);
+
+    return `DinkDraw-${safeTitle || 'Tournament-Results'}.csv`;
+  }
+
+  async function exportResultsCsv() {
+    if (!tournament) return;
+
+    const completedMatches = matches
+      .filter((match) => match.is_complete && !match.is_bye)
+      .sort(
+        (a, b) =>
+          a.round_number - b.round_number ||
+          (a.court_number ?? 999) - (b.court_number ?? 999)
+      );
+
+    if (completedMatches.length === 0) {
+      setMessage('No completed matches available to export.');
+      return;
+    }
+
+    const headers = [
+      'Tournament',
+      'Date',
+      'Location',
+      'Tournament Mode',
+      'Format',
+      'Match Format',
+      'Round',
+      'Court',
+      'Team A Player 1',
+      'Team A Player 2',
+      'Team B Player 1',
+      'Team B Player 2',
+      'Team A Score',
+      'Team B Score',
+      'Game 1 A',
+      'Game 1 B',
+      'Game 2 A',
+      'Game 2 B',
+      'Game 3 A',
+      'Game 3 B',
+      'Winner',
+    ];
+
+    const rows = completedMatches.map((match) => {
+      const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
+      const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
+
+      const winner =
+        match.team_a_score === null || match.team_b_score === null
+          ? ''
+          : match.team_a_score > match.team_b_score
+          ? teamAName
+          : teamBName;
+
+      return [
+        tournament.title,
+        tournament.event_date || '',
+        tournament.location || '',
+        tournament.tournament_mode || '',
+        tournament.format,
+        tournament.match_format,
+        match.round_number,
+        match.court_label || match.court_number || '',
+        renderPlayerName(match.team_a_player_1_id),
+        isSingles ? '' : renderPlayerName(match.team_a_player_2_id),
+        renderPlayerName(match.team_b_player_1_id),
+        isSingles ? '' : renderPlayerName(match.team_b_player_2_id),
+        match.team_a_score ?? '',
+        match.team_b_score ?? '',
+        match.game_1_a ?? '',
+        match.game_1_b ?? '',
+        match.game_2_a ?? '',
+        match.game_2_b ?? '',
+        match.game_3_a ?? '',
+        match.game_3_b ?? '',
+        winner,
+      ];
+    });
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map(formatCsvValue).join(','))
+      .join('\n');
+
+    const fileName = makeCsvFileName(tournament.title);
+    const csvBlob = new Blob([`\uFEFF${csvContent}`], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
+    const csvFile = new File([csvBlob], fileName, {
+      type: 'text/csv',
+    });
+
+    type ShareDataWithFiles = ShareData & { files?: File[] };
+
+    const shareData: ShareDataWithFiles = {
+      title: `${tournament.title} Results`,
+      text: 'DinkDraw tournament results CSV',
+      files: [csvFile],
+    };
+
+    const nav = navigator as Navigator & {
+      canShare?: (data: ShareDataWithFiles) => boolean;
+      share?: (data: ShareDataWithFiles) => Promise<void>;
+    };
+
+    if (typeof nav.canShare === 'function' && nav.canShare(shareData) && nav.share) {
+      await nav.share(shareData);
+      setMessage('CSV export opened.');
+      return;
+    }
+
+    const url = URL.createObjectURL(csvBlob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+    setMessage('CSV exported.');
+  }
+
   function getShortPlayerName(id: string | null) {
   const fullName = renderPlayerName(id);
 
@@ -5502,15 +5637,35 @@ Sign in with this same email address to submit and edit scores.`;
                     {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
                   </button>
                 ) : null}
-                {isCompleted ? (
-                  <button
-                    type="button"
-                    className="button primary"
-                    onClick={() => router.push(`/tournament/${params.id}/results`)}
-                    style={{ fontWeight: 800, fontSize: 16 }}
-                  >
-                    🏆 View Results
-                  </button>
+                                {isCompleted ? (
+                  <>
+                    <button
+                      type="button"
+                      className="button primary"
+                      onClick={() => router.push(`/tournament/${params.id}/results`)}
+                      style={{ fontWeight: 800, fontSize: 16 }}
+                    >
+                      🏆 View Results
+                    </button>
+
+                    <button
+                      type="button"
+                      className="button secondary"
+                      onClick={exportResultsCsv}
+                      style={{ fontWeight: 800, fontSize: 16 }}
+                    >
+                      ⬇️ Export Results CSV
+                    </button>
+
+                    <button
+                      type="button"
+                      className="button primary"
+                      onClick={rematchTournament}
+                      disabled={isRematching}
+                    >
+                      {isRematching ? 'Creating Rematch...' : 'Rematch Tournament'}
+                    </button>
+                  </>
                 ) : null}
                 {!isCompleted && !hasAnyScores ? (
                   <button

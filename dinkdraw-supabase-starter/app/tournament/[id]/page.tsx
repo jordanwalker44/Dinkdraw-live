@@ -6673,7 +6673,7 @@ isOrganizer &&
   🏆 Share Results
 </Link>
 
-     {isOrganizer && isCompleted ? (
+     {canManageScores && isCompleted ? (
   <button
     type="button"
     className="button secondary"

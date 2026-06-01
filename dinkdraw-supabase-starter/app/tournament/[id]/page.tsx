@@ -1813,8 +1813,8 @@ function computeStandings(
         const bCourt = b.finalCourt ?? 999;
 
         if (aCourt !== bCourt) return aCourt - bCourt;
-        if (b.finalCourtWins !== a.finalCourtWins) return b.finalCourtWins - a.finalCourtWins;
-        if (a.finalCourtLosses !== b.finalCourtLosses) return a.finalCourtLosses - b.finalCourtLosses;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
         return a.initialRank - b.initialRank;
       }
 
@@ -6714,8 +6714,7 @@ isOrganizer &&
           <div className="card-subtitle">
             {isCompleted
               ? 'Tournament complete. Final results are locked.'
-              : 'Ranked by wins, then point differential, then points scored.'}
-          </div>
+             </div>
 
           <Link
   href={`/tournament/view/${params.id}/share-card`}

@@ -504,7 +504,9 @@ router.push(`/tournament/${tournament.id}`);
 
 <div className="muted" style={{ fontSize: 13, lineHeight: 1.55 }}>
   Pick the number of players. DinkDraw will automatically set doubles, courts,
-  9 rounds, and games to 11.
+9 rounds, and games to 11. After creating the tournament, enter players in
+seed order from strongest to weakest. Seed order determines starting courts
+and final placement tie-breakers.
 </div>
 
 <div

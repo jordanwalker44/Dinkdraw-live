@@ -218,7 +218,7 @@ export default async function ShareCardPage({
           style={{
             width: '100%',
             maxWidth: 420,
-            marginTop: 36,
+            marginTop: 72,
             height: 'calc(100vh - 223px)',
             maxHeight: 620,
             minHeight: 0,

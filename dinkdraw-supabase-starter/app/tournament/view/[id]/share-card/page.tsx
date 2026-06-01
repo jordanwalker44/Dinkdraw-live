@@ -202,7 +202,7 @@ export default async function ShareCardPage({
   style={{
     position: 'fixed',
     top: '110px',
-    right: 16,
+    right: 24,
     zIndex: 9999,
     color: '#FFCB05',
     fontSize: 15,
@@ -218,7 +218,7 @@ export default async function ShareCardPage({
           style={{
             width: '100%',
             maxWidth: 420,
-            height: 'calc(100vh - 205px)',
+            height: 'calc(100vh - 255px)',
             maxHeight: 620,
             minHeight: 0,
             borderRadius: 28,

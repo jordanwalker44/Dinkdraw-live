@@ -43,6 +43,7 @@ type Tournament = {
   playoff_status: string | null;
   champion_player_1_id: string | null;
   champion_player_2_id: string | null;
+  ask_for_dupr_id: boolean | null;
 };
 
 type PlayerSlot = {
@@ -71,6 +72,7 @@ type Match = {
   game_2_b: number | null;
   game_3_a: number | null;
   game_3_b: number | null;
+  dupr_id: string | null;
   is_bye: boolean;
   is_complete: boolean;
 };
@@ -1888,6 +1890,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [saveCoOrganizerForLater, setSaveCoOrganizerForLater] = useState(false);
   const [savedCoOrganizerName, setSavedCoOrganizerName] = useState('');
   const [newNames, setNewNames] = useState<Record<string, string>>({});
+  const [newDuprIds, setNewDuprIds] = useState<Record<string, string>>({});
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [playoffScoreDrafts, setPlayoffScoreDrafts] = useState<
@@ -2710,7 +2713,10 @@ async function unclaimMySpot(slotId: string) {
 
         return supabase
           .from('tournament_players')
-          .update({ display_name: nextName })
+          .update({
+          display_name: nextName,
+          dupr_id: (newDuprIds[slot.id] ?? slot.dupr_id ?? '').trim() || null,
+      })
           .eq('id', slot.id);
       })
       .filter(Boolean);
@@ -2749,6 +2755,7 @@ async function clearPlayerSlot(slotId: string) {
       display_name: '',
       claimed_by_user_id: null,
       gender: null,
+      dupr_id: null,
     })
     .eq('id', slotId);
 
@@ -4315,6 +4322,11 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     if (!id) return '-';
     return playersById[id]?.display_name || 'Player';
   }
+  
+  function renderPlayerDuprId(id: string | null) {
+  if (!id) return '';
+  return playersById[id]?.dupr_id || '';
+}
 
   function renderTeam(a: string | null, b: string | null) {
     if (isSingles) return renderPlayerName(a);
@@ -4361,9 +4373,13 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
       'Round',
       'Court',
       'Team A Player 1',
+      'Team A Player 1 DUPR ID',
       'Team A Player 2',
+      'Team A Player 2 DUPR ID',
       'Team B Player 1',
+      'Team B Player 1 DUPR ID',
       'Team B Player 2',
+      'Team B Player 2 DUPR ID',
       'Team A Score',
       'Team B Score',
       'Game 1 A',
@@ -4375,7 +4391,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
       'Winner',
     ];
 
-    const rows = completedMatches.map((match) => {
+      const rows = completedMatches.map((match) => {
       const teamAName = renderTeam(match.team_a_player_1_id, match.team_a_player_2_id);
       const teamBName = renderTeam(match.team_b_player_1_id, match.team_b_player_2_id);
 
@@ -4396,9 +4412,13 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
         match.round_number,
         match.court_label || match.court_number || '',
         renderPlayerName(match.team_a_player_1_id),
+        renderPlayerDuprId(match.team_a_player_1_id),
         isSingles ? '' : renderPlayerName(match.team_a_player_2_id),
+        isSingles ? '' : renderPlayerDuprId(match.team_a_player_2_id),
         renderPlayerName(match.team_b_player_1_id),
+        renderPlayerDuprId(match.team_b_player_1_id),
         isSingles ? '' : renderPlayerName(match.team_b_player_2_id),
+        isSingles ? '' : renderPlayerDuprId(match.team_b_player_2_id),
         match.team_a_score ?? '',
         match.team_b_score ?? '',
         match.game_1_a ?? '',
@@ -5314,6 +5334,20 @@ const shouldShowClaimButton = canClaim && (
     ? `Name for Seed ${slot.slot_number}`
     : `Name for Player ${slot.slot_number}`
 }
+                {(tournament?.ask_for_dupr_id || isOrganizer) ? (
+  <input
+    className="input"
+    value={newDuprIds[slot.id] ?? slot.dupr_id ?? ''}
+    onChange={(e) =>
+      setNewDuprIds((prev) => ({
+        ...prev,
+        [slot.id]: e.target.value,
+      }))
+    }
+    placeholder="DUPR ID optional"
+    disabled={!canEditName}
+  />
+) : null}
                 disabled={!canEditName}
               />
 

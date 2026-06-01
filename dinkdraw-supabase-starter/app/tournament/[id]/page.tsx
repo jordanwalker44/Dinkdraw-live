@@ -6865,25 +6865,54 @@ isOrganizer &&
       background: 'rgba(255,203,5,0.08)',
     }}
   >
-    <div className="card-title" style={{ color: '#FFCB05' }}>
-      Cream of the Crop Results
-    </div>
-
     <div
-      className="list-item"
-      style={{
-        marginTop: 12,
-        border: '1px solid rgba(255,203,5,0.45)',
-        background: 'rgba(255,203,5,0.12)',
-      }}
-    >
-      <div style={{ fontWeight: 900, color: '#FFCB05', marginBottom: 4 }}>
-        Cream of the Crop Champion
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 900 }}>
-        {standings[0].name}
-      </div>
-      <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+  className="card-title"
+  style={{
+    color: '#FFCB05',
+    textAlign: 'center',
+    fontSize: 32,
+    marginBottom: 20,
+  }}
+>
+  Cream of the Crop Results
+</div>
+
+    style={{
+  marginTop: 12,
+  border: '1px solid rgba(255,203,5,0.6)',
+  background:
+    'linear-gradient(135deg, rgba(255,203,5,0.18), rgba(255,203,5,0.05))',
+  textAlign: 'center',
+  padding: '24px 20px',
+  boxShadow: '0 0 24px rgba(255,203,5,0.18)',
+}}
+      <div
+  style={{
+    fontWeight: 900,
+    color: '#FFCB05',
+    marginBottom: 8,
+    fontSize: 24,
+  }}
+>
+  👑 Cream of the Crop Champion
+</div>
+      <div
+  style={{
+    fontSize: 40,
+    fontWeight: 900,
+    lineHeight: 1.1,
+    marginBottom: 8,
+  }}
+>
+  {standings[0].name}
+</div>
+      <div
+  className="muted"
+  style={{
+    fontSize: 16,
+    marginTop: 8,
+  }}
+>
         {standings[0].wins} wins • {standings[0].pointDiff >= 0 ? '+' : ''}
         {standings[0].pointDiff} point diff • {standings[0].pointsFor} points for
       </div>
@@ -6891,17 +6920,25 @@ isOrganizer &&
 
     {biggestClimber && biggestClimber.climb > 0 && (
       <div
-        className="list-item"
-        style={{
-          marginTop: 12,
-          border: '1px solid rgba(255,255,255,0.12)',
-          background: 'rgba(255,255,255,0.04)',
-        }}
-      >
+  className="list-item"
+  style={{
+    marginTop: 16,
+    border: '1px solid rgba(255,203,5,0.35)',
+    background: 'rgba(255,255,255,0.04)',
+    textAlign: 'center',
+    padding: '20px',
+  }}
+>
         <div style={{ fontWeight: 900, color: '#FFCB05', marginBottom: 4 }}>
-          Biggest Climber
+         📈 Biggest Climber
         </div>
-        <div style={{ fontSize: 16, fontWeight: 800 }}>
+        <div
+  style={{
+    fontSize: 28,
+    fontWeight: 900,
+    marginTop: 6,
+  }}
+>
           {biggestClimber.name} climbed {biggestClimber.climb} spots
         </div>
         <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>

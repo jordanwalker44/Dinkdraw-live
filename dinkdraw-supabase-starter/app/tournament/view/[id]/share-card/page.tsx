@@ -200,19 +200,13 @@ export default async function ShareCardPage({
         <Link
   href={`/tournament/view/${params.id}`}
   style={{
-    position: 'fixed',
-    top: 'calc(env(safe-area-inset-top) + 88px)',
-    left: 16,
-    zIndex: 9999,
-    background: 'rgba(2, 11, 20, 0.92)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    marginBottom: 8,
     color: '#FFCB05',
-    border: '1px solid rgba(255, 203, 5, 0.45)',
-    borderRadius: 999,
-    padding: '10px 14px',
     fontSize: 15,
     fontWeight: 900,
     textDecoration: 'none',
-    boxShadow: '0 8px 22px rgba(0,0,0,0.35)',
   }}
 >
   ← Back
@@ -224,9 +218,11 @@ export default async function ShareCardPage({
             width: '100%',
             maxWidth: 420,
             aspectRatio: '9 / 16',
-            minHeight: 760,
+            height: 'calc(100vh - 210px)',
+            maxHeight: 620,
+            minHeight: 0,
             borderRadius: 28,
-            padding: 18,
+            padding: 14,
             color: '#fff',
             background:
               'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',

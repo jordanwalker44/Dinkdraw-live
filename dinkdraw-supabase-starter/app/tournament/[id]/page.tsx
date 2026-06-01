@@ -6869,61 +6869,48 @@ isOrganizer &&
       Cream of the Crop Results
     </div>
 
+    <div
+      className="list-item"
+      style={{
+        marginTop: 12,
+        border: '1px solid rgba(255,203,5,0.45)',
+        background: 'rgba(255,203,5,0.12)',
+      }}
+    >
+      <div style={{ fontWeight: 900, color: '#FFCB05', marginBottom: 4 }}>
+        Cream of the Crop Champion
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 900 }}>
+        {standings[0].name}
+      </div>
+      <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+        {standings[0].wins} wins • {standings[0].pointDiff >= 0 ? '+' : ''}
+        {standings[0].pointDiff} point diff • {standings[0].pointsFor} points for
+      </div>
+    </div>
+
     {biggestClimber && biggestClimber.climb > 0 && (
-  <div
-    className="list-item"
-    style={{
-      marginTop: 12,
-      border: '1px solid rgba(255,203,5,0.35)',
-      background: 'rgba(255,203,5,0.10)',
-    }}
-  >
-    <div style={{ fontWeight: 900, color: '#FFCB05', marginBottom: 4 }}>
-      Biggest Climber
-    </div>
-    <div style={{ fontSize: 16, fontWeight: 800 }}>
-      🚀 {biggestClimber.name} climbed {biggestClimber.climb} spots
-    </div>
-    <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
-      Started #{biggestClimber.startingRank} → Finished #{biggestClimber.finalRank}
-    </div>
-  </div>
-)}
-
-    <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
-      {standings.slice(0, 3).map((row, index) => (
-        <div
-          key={row.playerId}
-          className="list-item"
-          style={{
-            border:
-              index === 0
-                ? '1px solid rgba(255,203,5,0.5)'
-                : '1px solid rgba(255,255,255,0.10)',
-            background:
-              index === 0
-                ? 'rgba(255,203,5,0.12)'
-                : 'rgba(255,255,255,0.04)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 28 }}>
-              {index === 0 ? '👑' : index === 1 ? '🥈' : '🥉'}
-            </div>
-
-            <div>
-              <div style={{ fontWeight: 900, fontSize: 18 }}>
-                {index + 1}. {row.name}
-              </div>
-              <div className="muted" style={{ fontSize: 13 }}>
-                {row.wins} wins • {row.pointDiff >= 0 ? '+' : ''}
-                {row.pointDiff} point diff • {row.pointsFor} points for
-              </div>
-            </div>
-          </div>
+      <div
+        className="list-item"
+        style={{
+          marginTop: 12,
+          border: '1px solid rgba(255,255,255,0.12)',
+          background: 'rgba(255,255,255,0.04)',
+        }}
+      >
+        <div style={{ fontWeight: 900, color: '#FFCB05', marginBottom: 4 }}>
+          Biggest Climber
         </div>
-      ))}
-    </div>
+        <div style={{ fontSize: 16, fontWeight: 800 }}>
+          {biggestClimber.name} climbed {biggestClimber.climb} spots
+        </div>
+        <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          Started #{biggestClimber.startingRank} → Finished #{biggestClimber.finalRank} •{' '}
+          {biggestClimber.pointDiff >= 0 ? '+' : ''}
+          {biggestClimber.pointDiff} point differential
+        </div>
+      </div>
+    )}
   </div>
 )}
 

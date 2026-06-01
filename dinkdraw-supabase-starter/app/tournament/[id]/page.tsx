@@ -4323,11 +4323,6 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     return playersById[id]?.display_name || 'Player';
   }
   
-  function renderPlayerDuprId(id: string | null) {
-  if (!id) return '';
-  return playersById[id]?.dupr_id || '';
-}
-
   function renderTeam(a: string | null, b: string | null) {
     if (isSingles) return renderPlayerName(a);
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
@@ -4453,6 +4448,11 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     setMessage('CSV exported.');
   }
 
+  function renderPlayerDuprId(id: string | null) {
+  if (!id) return '';
+  return playersById[id]?.dupr_id || '';
+  }
+  
   function getShortPlayerName(id: string | null) {
   const fullName = renderPlayerName(id);
 

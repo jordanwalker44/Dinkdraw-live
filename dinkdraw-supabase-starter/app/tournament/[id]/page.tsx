@@ -6829,34 +6829,7 @@ isOrganizer &&
                 background: 'rgba(255,255,255,0.03)',
               }}
             >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns:
-                    standingsView === 'leaderboard'
-                      ? '56px 1fr 62px 62px'
-                      : '56px 1fr 84px 62px',
-                  gap: 0,
-                  padding: '10px 8px',
-                  borderBottom: '1px solid rgba(255,255,255,0.08)',
-                  fontSize: 12,
-                  fontWeight: 800,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.65)',
-                }}
-              >
-
-<div style={{ textAlign: 'center' }}>Place</div>
-                <div>Player</div>
-                <div style={{ textAlign: 'center' }}>
-                  {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
-                </div>
-              </div>
-                
+                            
                {tournament?.tournament_mode === 'cream_of_the_crop' && standings.length > 0 && (
   <div
     className="card"
@@ -6954,6 +6927,34 @@ isOrganizer &&
     )}
   </div>
 )}
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    standingsView === 'leaderboard'
+                      ? '56px 1fr 62px 62px'
+                      : '56px 1fr 84px 62px',
+                  gap: 0,
+                  padding: '10px 8px',
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.65)',
+                }}
+              >
+
+<div style={{ textAlign: 'center' }}>Place</div>
+                <div>Player</div>
+                <div style={{ textAlign: 'center' }}>
+                  {standingsView === 'leaderboard' ? 'Diff' : 'Record'}
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  {standingsView === 'leaderboard' ? 'W-L' : 'PF'}
+                </div>
+              </div>
                 
               {standings.map((row, index) => {
                 const place = index + 1;

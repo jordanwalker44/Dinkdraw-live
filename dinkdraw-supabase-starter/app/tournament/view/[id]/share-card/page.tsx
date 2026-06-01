@@ -196,19 +196,27 @@ export default async function ShareCardPage({
       }}
     >
       <div style={{ maxWidth: 430, margin: '0 auto' }}>
+
         <Link
-          href={`/tournament/view/${params.id}`}
-          style={{
-            color: '#FFCB05',
-            textDecoration: 'none',
-            fontWeight: 900,
-            display: 'inline-block',
-            marginBottom: 18,
-            fontSize: 16,
-          }}
-        >
-          ← Back to results
-        </Link>
+  href={`/tournament/view/${params.id}`}
+  style={{
+    position: 'fixed',
+    top: 'calc(env(safe-area-inset-top) + 88px)',
+    left: 16,
+    zIndex: 9999,
+    background: 'rgba(2, 11, 20, 0.92)',
+    color: '#FFCB05',
+    border: '1px solid rgba(255, 203, 5, 0.45)',
+    borderRadius: 999,
+    padding: '10px 14px',
+    fontSize: 15,
+    fontWeight: 900,
+    textDecoration: 'none',
+    boxShadow: '0 8px 22px rgba(0,0,0,0.35)',
+  }}
+>
+  ← Back
+</Link>
 
         <section
           id="dinkdraw-share-card"

@@ -5017,7 +5017,7 @@ function renderShortTeam(a: string | null, b: string | null) {
 ) : null}
 
 <div className="card" style={{ marginBottom: 14 }}>
-  <<div className="card-title">
+  <div className="card-title">
   {tournament?.tournament_mode === 'cream_of_the_crop' ? 'Seeded Players' : 'Players'}
 </div>
   <div className="card-subtitle">

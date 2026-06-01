@@ -1653,12 +1653,12 @@ function computeStandings(
 
   for (const match of completedMatches) {
     const aIds = isSingles
-      ? [match.team_a_player_1_id]
-      : ([match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[]);
+  ? ([match.team_a_player_1_id].filter(Boolean) as string[])
+  : ([match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[]);
 
     const bIds = isSingles
-      ? [match.team_b_player_1_id]
-      : ([match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[]);
+  ? ([match.team_b_player_1_id].filter(Boolean) as string[])
+  : ([match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[]);
 
     for (const id of [...aIds, ...bIds]) {
       const currentLatest = latestMatchByPlayer.get(id);

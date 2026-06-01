@@ -5017,16 +5017,22 @@ function renderShortTeam(a: string | null, b: string | null) {
 ) : null}
 
 <div className="card" style={{ marginBottom: 14 }}>
-  <div className="card-title">Players</div>
+  <<div className="card-title">
+  {tournament?.tournament_mode === 'cream_of_the_crop' ? 'Seeded Players' : 'Players'}
+</div>
   <div className="card-subtitle">
-    {isCompleted
-      ? 'Tournament is complete. Player list is locked.'
-      : isStarted
-      ? 'Tournament has started. Player list is locked.'
-      : isSingles
-      ? 'Singles tournament — each player competes individually.'
-      : 'Players can claim a spot, or the organizer can type names manually.'}
-  </div>
+  {tournament?.tournament_mode === 'cream_of_the_crop'
+    ? isLocked
+      ? 'Seed order is locked. Final placement uses final court, overall record, then initial seed.'
+      : 'Organizer should enter players from strongest to weakest. Seed #1 starts highest and wins seed-based tie-breakers.'
+    : isCompleted
+    ? 'Tournament is complete. Player list is locked.'
+    : isStarted
+    ? 'Tournament has started. Player list is locked.'
+    : isSingles
+    ? 'Singles tournament — each player competes individually.'
+    : 'Players can claim a spot, or the organizer can type names manually.'}
+</div>
 
   {isLoading ? (
   <div className="muted">Loading player spots...</div>
@@ -5221,7 +5227,9 @@ const shouldShowClaimButton = canClaim && (
   }}
 >
   <div style={{ fontWeight: 800 }}>
-    Player {slot.slot_number}
+    {tournament?.tournament_mode === 'cream_of_the_crop'
+  ? `Seed ${slot.slot_number}`
+  : `Player ${slot.slot_number}`}
   </div>
 
   <div
@@ -5301,7 +5309,11 @@ const shouldShowClaimButton = canClaim && (
                 onChange={(e) =>
                   setNewNames((prev) => ({ ...prev, [slot.id]: e.target.value }))
                 }
-                placeholder={`Name for Player ${slot.slot_number}`}
+                placeholder={
+  tournament?.tournament_mode === 'cream_of_the_crop'
+    ? `Name for Seed ${slot.slot_number}`
+    : `Name for Player ${slot.slot_number}`
+}
                 disabled={!canEditName}
               />
 

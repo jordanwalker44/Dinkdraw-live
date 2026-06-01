@@ -26,6 +26,7 @@ type Tournament = {
   format: string;
   match_format: string;
   doubles_mode: string | null;
+  tournament_mode: string | null;
 };
 
 type PlayerSlot = {
@@ -66,6 +67,10 @@ type StandingRow = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
+  initialRank: number;
+  finalCourt: number | null;
+  finalCourtWins: number;
+  finalCourtLosses: number;
 };
 
 function getTournamentModeBadges(tournament: Tournament | null) {
@@ -132,11 +137,15 @@ function computeStandings(
   playerSlots: PlayerSlot[],
   matches: Match[],
   isSingles: boolean,
-  isBestOf3: boolean
+  isBestOf3: boolean,
+  tournamentMode?: string | null
 ): StandingRow[] {
   const rows = new Map<string, StandingRow>();
+  const playerInitialRanks = new Map<string, number>();
 
   for (const slot of playerSlots) {
+    playerInitialRanks.set(slot.id, slot.slot_number);
+
     rows.set(slot.id, {
       playerId: slot.id,
       name: slot.display_name || `Player ${slot.slot_number}`,
@@ -146,39 +155,111 @@ function computeStandings(
       pointsFor: 0,
       pointsAgainst: 0,
       pointDiff: 0,
+      initialRank: slot.slot_number,
+      finalCourt: null,
+      finalCourtWins: 0,
+      finalCourtLosses: 0,
     });
   }
 
-  for (const match of matches) {
-    if (
-      match.is_bye ||
-      !match.is_complete ||
-      match.team_a_player_1_id === null ||
-      match.team_b_player_1_id === null
-    ) {
-      continue;
-    }
+  const completedMatches = matches.filter(
+    (match) =>
+      !match.is_bye &&
+      match.is_complete &&
+      match.team_a_player_1_id !== null &&
+      match.team_b_player_1_id !== null
+  );
 
-    let aScore: number;
-    let bScore: number;
+  const latestCompletedRound = completedMatches.length
+    ? Math.max(...completedMatches.map((match) => match.round_number))
+    : 0;
 
-    if (isBestOf3) {
-      const series = getSeriesScore(match);
-      aScore = series.aScore;
-      bScore = series.bScore;
-    } else {
-      if (match.team_a_score === null || match.team_b_score === null) continue;
-      aScore = match.team_a_score;
-      bScore = match.team_b_score;
-    }
+  const finalStageStartRound =
+    tournamentMode === 'cream_of_the_crop' && latestCompletedRound > 0
+      ? latestCompletedRound - ((latestCompletedRound - 1) % 3)
+      : 0;
 
+  const latestMatchByPlayer = new Map<string, Match>();
+
+  for (const match of completedMatches) {
     const aIds = isSingles
       ? [match.team_a_player_1_id]
-      : [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
+      : ([match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[]);
 
     const bIds = isSingles
       ? [match.team_b_player_1_id]
-      : [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
+      : ([match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[]);
+
+    for (const id of [...aIds, ...bIds]) {
+      const currentLatest = latestMatchByPlayer.get(id);
+
+      if (
+        !currentLatest ||
+        match.round_number > currentLatest.round_number ||
+        (match.round_number === currentLatest.round_number &&
+          (match.court_number ?? 999) < (currentLatest.court_number ?? 999))
+      ) {
+        latestMatchByPlayer.set(id, match);
+      }
+    }
+
+    if (isBestOf3) {
+      const games = [
+        [match.game_1_a, match.game_1_b],
+        [match.game_2_a, match.game_2_b],
+        [match.game_3_a, match.game_3_b],
+      ] as const;
+
+      for (const [gA, gB] of games) {
+        if (gA === null || gB === null) continue;
+
+        for (const id of [...aIds, ...bIds]) {
+          const row = rows.get(id);
+          if (row) row.played += 1;
+        }
+
+        for (const id of aIds) {
+          const row = rows.get(id);
+          if (!row) continue;
+          row.pointsFor += gA;
+          row.pointsAgainst += gB;
+        }
+
+        for (const id of bIds) {
+          const row = rows.get(id);
+          if (!row) continue;
+          row.pointsFor += gB;
+          row.pointsAgainst += gA;
+        }
+
+        if (gA > gB) {
+          aIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.wins += 1;
+          });
+          bIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.losses += 1;
+          });
+        } else if (gB > gA) {
+          bIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.wins += 1;
+          });
+          aIds.forEach((id) => {
+            const row = rows.get(id);
+            if (row) row.losses += 1;
+          });
+        }
+      }
+
+      continue;
+    }
+
+    if (match.team_a_score === null || match.team_b_score === null) continue;
+
+    const aScore = match.team_a_score;
+    const bScore = match.team_b_score;
 
     for (const id of [...aIds, ...bIds]) {
       const row = rows.get(id);
@@ -199,57 +280,74 @@ function computeStandings(
       row.pointsAgainst += aScore;
     }
 
-    if (isBestOf3) {
-      const { aWins, bWins } = getSeriesWins(match);
+    if (aScore > bScore) {
+      aIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.wins += 1;
+      });
+      bIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.losses += 1;
+      });
+    } else if (bScore > aScore) {
+      bIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.wins += 1;
+      });
+      aIds.forEach((id) => {
+        const row = rows.get(id);
+        if (row) row.losses += 1;
+      });
+    }
 
-      if (aWins > bWins) {
-        aIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.wins += 1;
-        });
-        bIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.losses += 1;
-        });
-      } else if (bWins > aWins) {
-        bIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.wins += 1;
-        });
-        aIds.forEach((id) => {
-          const row = rows.get(id);
-          if (row) row.losses += 1;
-        });
-      }
-    } else {
+    if (
+      tournamentMode === 'cream_of_the_crop' &&
+      finalStageStartRound > 0 &&
+      match.round_number >= finalStageStartRound
+    ) {
       if (aScore > bScore) {
         aIds.forEach((id) => {
           const row = rows.get(id);
-          if (row) row.wins += 1;
+          if (row) row.finalCourtWins += 1;
         });
         bIds.forEach((id) => {
           const row = rows.get(id);
-          if (row) row.losses += 1;
+          if (row) row.finalCourtLosses += 1;
         });
       } else if (bScore > aScore) {
         bIds.forEach((id) => {
           const row = rows.get(id);
-          if (row) row.wins += 1;
+          if (row) row.finalCourtWins += 1;
         });
         aIds.forEach((id) => {
           const row = rows.get(id);
-          if (row) row.losses += 1;
+          if (row) row.finalCourtLosses += 1;
         });
       }
     }
   }
 
   return Array.from(rows.values())
-    .map((row) => ({
-      ...row,
-      pointDiff: row.pointsFor - row.pointsAgainst,
-    }))
+    .map((row) => {
+      const latestMatch = latestMatchByPlayer.get(row.playerId);
+
+      return {
+        ...row,
+        pointDiff: row.pointsFor - row.pointsAgainst,
+        finalCourt: latestMatch?.court_number ?? null,
+      };
+    })
     .sort((a, b) => {
+      if (tournamentMode === 'cream_of_the_crop') {
+        const aCourt = a.finalCourt ?? 999;
+        const bCourt = b.finalCourt ?? 999;
+
+        if (aCourt !== bCourt) return aCourt - bCourt;
+        if (b.finalCourtWins !== a.finalCourtWins) return b.finalCourtWins - a.finalCourtWins;
+        if (a.finalCourtLosses !== b.finalCourtLosses) return a.finalCourtLosses - b.finalCourtLosses;
+        return a.initialRank - b.initialRank;
+      }
+
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
       if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
@@ -295,9 +393,16 @@ export default function TournamentResultsPage({
   );
 
   const standings = useMemo(
-    () => computeStandings(playerSlots, matches, !!isSingles, !!isBestOf3),
-    [playerSlots, matches, isSingles, isBestOf3]
-  );
+  () =>
+    computeStandings(
+      playerSlots,
+      matches,
+      !!isSingles,
+      !!isBestOf3,
+      tournament?.tournament_mode
+    ),
+  [playerSlots, matches, isSingles, isBestOf3, tournament?.tournament_mode]
+);
 
   const winner = standings[0] || null;
 

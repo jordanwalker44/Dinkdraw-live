@@ -64,7 +64,7 @@ export function ShareCardActions({
   }
 
   return (
-    <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
+    <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
       <button className="button primary" type="button" onClick={shareImage}>
         📤 Share Image
       </button>

@@ -125,6 +125,7 @@ export default function CreateTournamentPage() {
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
   const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
+  const [askForDuprId, setAskForDuprId] = useState(false);
   const [playoffFormat, setPlayoffFormat] = useState<'none' | 'everyone' | 'top_4' | 'top_8' | 'top_16'>('none');
   const [playoffAdvanceCount, setPlayoffAdvanceCount] = useState(8);
   const [playoffSeedingStyle, setPlayoffSeedingStyle] = useState<'traditional' | 'simple'>('traditional');
@@ -349,6 +350,7 @@ setFavoriteLocations(savedLocations || []);
         tournament_mode: tournamentMode,
         court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
         allow_player_score_reporting: allowPlayerScoreReporting,
+        ask_for_dupr_id: askForDuprId,
         playoff_format: playoffsAllowed ? playoffFormat : 'none',
         playoff_advance_count:
           !playoffsAllowed || playoffFormat === 'none'
@@ -973,6 +975,43 @@ and final placement tie-breakers.
               </div>
             </div>
           </div>
+
+          <div
+  className="list-item"
+  style={{
+    padding: 12,
+    borderRadius: 16,
+    border: '1px solid rgba(255,203,5,0.18)',
+    background: 'rgba(255,203,5,0.05)',
+  }}
+>
+  <label className="label">DUPR</label>
+
+  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+    <input
+      type="checkbox"
+      checked={askForDuprId}
+      onChange={(e) => setAskForDuprId(e.target.checked)}
+      style={{ marginTop: 4 }}
+    />
+
+    <div>
+      <div style={{ fontWeight: 800 }}>
+        Ask players for DUPR ID during signup
+      </div>
+
+      <div
+        style={{
+          fontSize: 13,
+          opacity: 0.75,
+          marginTop: 4,
+        }}
+      >
+        Optional. DUPR IDs will be included in tournament CSV exports for manual DUPR submission.
+      </div>
+    </div>
+  </div>
+</div>
 
           <div className="card-title" style={{ marginTop: 14 }}>
             Review

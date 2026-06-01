@@ -201,7 +201,7 @@ export default async function ShareCardPage({
   href={`/tournament/view/${params.id}`}
   style={{
     position: 'fixed',
-    top: '150px',
+    top: '110px',
     right: 16,
     zIndex: 9999,
     color: '#FFCB05',
@@ -218,7 +218,7 @@ export default async function ShareCardPage({
           style={{
             width: '100%',
             maxWidth: 420,
-            height: 'calc(100vh - 245px)',
+            height: 'calc(100vh - 205px)',
             maxHeight: 620,
             minHeight: 0,
             borderRadius: 28,

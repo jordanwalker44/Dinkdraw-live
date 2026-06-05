@@ -136,7 +136,7 @@ function computeStandings(
   for (const slot of playerSlots) {
     rows.set(slot.id, {
       playerId: slot.id,
-      name: slot.display_name || `Player ${slot.slot_number}`,
+      name: slot.display_name || 'Open Spot',
       played: 0,
       wins: 0,
       losses: 0,

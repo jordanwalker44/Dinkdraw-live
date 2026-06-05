@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
+import { ShareResultsButton } from '../../../../../components/ShareResultsButton';
 import { ShareCardActions } from '../../../../../components/ShareCardActions';
 
 export const dynamic = 'force-dynamic';
@@ -191,23 +192,21 @@ export default async function ShareCardPage({
       style={{
         minHeight: '100vh',
         background: '#020b14',
-        padding: '0 14px 14px',
+        padding: 14,
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
       <div style={{ maxWidth: 430, margin: '0 auto' }}>
-
         <Link
   href={`/tournament/view/${params.id}`}
   style={{
-    position: 'fixed',
-    top: '110px',
-    right: 24,
-    zIndex: 9999,
+    display: 'block',
+    textAlign: 'right',
     color: '#FFCB05',
     fontSize: 15,
     fontWeight: 900,
     textDecoration: 'none',
+    margin: '16px 6px 10px',
   }}
 >
   ← Back
@@ -218,12 +217,10 @@ export default async function ShareCardPage({
           style={{
             width: '100%',
             maxWidth: 420,
-            marginTop: 144,
-            height: 'calc(100vh - 223px)',
-            maxHeight: 620,
-            minHeight: 0,
+            aspectRatio: '9 / 16',
+            minHeight: 760,
             borderRadius: 28,
-            padding: '0 14px 14px',
+            padding: 18,
             color: '#fff',
             background:
               'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',
@@ -392,7 +389,11 @@ export default async function ShareCardPage({
 </div>
           </div>
         </section>
-        <ShareCardActions title={tournament.title || 'DinkDraw Tournament'} />
+        <ShareResultsButton
+  title={tournament.title || 'DinkDraw Tournament'}
+  resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
+  shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+/>
       </div>
     </main>
   );

@@ -80,6 +80,7 @@ type PlayoffMatch = {
 
 type StandingRow = {
   playerId: string;
+  slotNumber: number;
   name: string;
   played: number;
   wins: number;
@@ -136,6 +137,7 @@ function computeStandings(
   for (const slot of playerSlots) {
     rows.set(slot.id, {
       playerId: slot.id,
+      slotNumber: slot.slot_number,
       name: slot.display_name || 'Open Spot',
       played: 0,
       wins: 0,
@@ -271,7 +273,7 @@ function computeStandings(
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
       if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-      return a.name.localeCompare(b.name);
+      return a.slotNumber - b.slotNumber;
     });
 }
 

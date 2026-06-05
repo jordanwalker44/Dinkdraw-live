@@ -359,7 +359,7 @@ export default async function ShareCardPage({
 
           <div
             style={{
-              marginTop: 18,
+              marginTop: 22,
               borderRadius: 18,
               border: '1px solid rgba(255,203,5,0.45)',
               padding: '14px 16px',

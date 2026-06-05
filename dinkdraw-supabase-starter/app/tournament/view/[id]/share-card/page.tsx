@@ -322,7 +322,7 @@ export default async function ShareCardPage({
 
           <div
             style={{
-              marginTop: 4,
+              marginTop: 8,
               fontSize: 16,
               color: 'rgba(255,255,255,0.72)',
               fontWeight: 750,
@@ -359,7 +359,7 @@ export default async function ShareCardPage({
 
           <div
             style={{
-              marginTop: 22,
+              marginTop: 16,
               borderRadius: 18,
               border: '1px solid rgba(255,203,5,0.45)',
               padding: '14px 16px',

@@ -2012,8 +2012,6 @@ export default function PublicTournamentViewPage({
 
               {standings.map((row, index, arr) => {
                 const place = index + 1;
-                const medal =
-                    place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : '';
 
                 return (
                   <div
@@ -2048,7 +2046,6 @@ export default function PublicTournamentViewPage({
                         paddingRight: 8,
                       }}
                     >
-                      {medal ? `${medal} ` : ''}
                       {row.name}
                     </div>
 

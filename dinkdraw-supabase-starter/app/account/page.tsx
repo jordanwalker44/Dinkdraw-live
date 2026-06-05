@@ -105,7 +105,16 @@ export default function AccountPage() {
           password,
         });
 
-        if (error) { setMessage(error.message); setIsLoading(false); return; }
+        if (error) {
+  const friendlyMessage =
+    error.message.toLowerCase().includes('invalid login credentials')
+      ? 'Incorrect email or password. Please try again.'
+      : error.message;
+
+  setMessage(friendlyMessage);
+  setIsLoading(false);
+  return;
+}
 
         if (data.user) {
           const displayName = name.trim() || email.trim().split('@')[0];

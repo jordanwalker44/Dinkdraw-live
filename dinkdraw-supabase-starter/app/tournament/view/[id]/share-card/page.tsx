@@ -217,8 +217,7 @@ export default async function ShareCardPage({
           style={{
             width: '100%',
             maxWidth: 420,
-            aspectRatio: '9 / 16',
-            minHeight: 0,
+            aspectRatio: 'auto',
             borderRadius: 28,
             padding: 16,
             color: '#fff',

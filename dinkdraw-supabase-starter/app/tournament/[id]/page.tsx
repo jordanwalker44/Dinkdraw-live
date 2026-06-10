@@ -4732,8 +4732,6 @@ function renderShortTeam(a: string | null, b: string | null) {
             disabled:
               !game1Done ||
               game2Done ||
-              seriesComplete ||
-              isCompleted ||
               !canReportScores,
             isWinner: game2Winner === 'a',
           })}
@@ -4745,8 +4743,6 @@ function renderShortTeam(a: string | null, b: string | null) {
               disabled:
                 !showGame3 ||
                 game3Done ||
-                seriesComplete ||
-                isCompleted ||
                 !canReportScores,
               isWinner: game3Winner === 'a',
             })
@@ -4787,8 +4783,6 @@ function renderShortTeam(a: string | null, b: string | null) {
             disabled:
               !game1Done ||
               game2Done ||
-              seriesComplete ||
-              isCompleted ||
               !canReportScores,
             isWinner: game2Winner === 'b',
           })}
@@ -4800,8 +4794,6 @@ function renderShortTeam(a: string | null, b: string | null) {
               disabled:
                 !showGame3 ||
                 game3Done ||
-                seriesComplete ||
-                isCompleted ||
                 !canReportScores,
               isWinner: game3Winner === 'b',
             })

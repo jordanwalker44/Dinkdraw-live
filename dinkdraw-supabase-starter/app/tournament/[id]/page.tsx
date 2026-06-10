@@ -3815,11 +3815,7 @@ if (matchesError) {
 }
 
   async function submitGame(matchId: string, game: 1 | 2 | 3) {
-   if (isCompleted) {
-  setMessage('Final results are locked.');
-  return;
-}
-
+   
   const lockedMatch = matches.find((m) => m.id === matchId);
   if (lockedMatch?.is_complete) {
     setMessage('This match is locked. Reopen it before editing.');
@@ -4095,11 +4091,7 @@ if (!canReportScores) {
   setMessage('🏆 Championship complete. Winner crowned!');
 }
   async function submitMatchScore(matchId: string) {
-  if (isCompleted) {
-    setMessage('Final results are locked.');
-    return;
-  }
-
+  
   const lockedMatch = matches.find((m) => m.id === matchId);
   if (lockedMatch?.is_complete) {
     setMessage('This match is locked. Reopen it before editing.');
@@ -6547,7 +6539,7 @@ isOrganizer &&
             : String(match.team_a_score)
           : draft.team_a_score
       }
-      disabled={isCompleted || match.is_complete || !canReportScores}
+      disabled={match.is_complete || !canReportScores}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
       placeholder={canReportScores ? '0' : '-'}
@@ -6600,7 +6592,7 @@ isOrganizer &&
             : String(match.team_b_score)
           : draft.team_b_score
       }
-      disabled={isCompleted || match.is_complete || !canReportScores}
+      disabled={match.is_complete || !canReportScores}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
       placeholder={canReportScores ? '0' : '-'}
@@ -6609,7 +6601,7 @@ isOrganizer &&
 </div>
 
      {match.is_complete ? (
-  canManageScores && !isCompleted ? (
+  canManageScores ? (
     <div>
       <button
   type="button"

@@ -4276,11 +4276,6 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     return;
   }
 
-  if (isCompleted) {
-    setMessage('Final results are locked.');
-    return;
-  }
-
   const match = matches.find((m) => m.id === matchId);
 
   if (!match) {
@@ -4735,7 +4730,7 @@ function renderShortTeam(a: string | null, b: string | null) {
           {renderScoreInput({
             value: draft.game_1_a,
             field: 'game_1_a',
-            disabled: game1Done || seriesComplete || isCompleted || !canReportScores,
+            disabled: game1Done || seriesComplete || !canReportScores,
             isWinner: game1Winner === 'a',
           })}
 
@@ -4790,7 +4785,7 @@ function renderShortTeam(a: string | null, b: string | null) {
           {renderScoreInput({
             value: draft.game_1_b,
             field: 'game_1_b',
-            disabled: game1Done || seriesComplete || isCompleted || !canReportScores,
+            disabled: game1Done || seriesComplete || !canReportScores,
             isWinner: game1Winner === 'b',
           })}
 
@@ -4864,7 +4859,7 @@ function renderShortTeam(a: string | null, b: string | null) {
         </button>
       ) : null}
 
-      {seriesComplete && isOrganizer && !isCompleted ? (
+      {seriesComplete && isOrganizer ? (
         <button
           type="button"
           className="button secondary"

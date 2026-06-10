@@ -3478,8 +3478,6 @@ if (!scheduleValidation.isValid) {
   }
 
   function setDraftScore(matchId: string, field: keyof ScoreDraft, value: string) {
-    if (isCompleted) return;
-
     const match = matches.find((m) => m.id === matchId);
     if (match?.is_complete) {
       setMessage('This match is locked. Reopen it before editing.');
@@ -3504,7 +3502,6 @@ if (!scheduleValidation.isValid) {
   }
 
   async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
-    if (isCompleted) return;
     if (!canReportScores) return;
     const match = matches.find((m) => m.id === matchId);
     if (match?.is_complete) return;

@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "B42RD9FVX9.com.dinkdraw.app",
+        "paths": [
+          "/tournament/*",
+          "/tournament/view/*"
+        ]
+      }
+    ]
+  }
+}

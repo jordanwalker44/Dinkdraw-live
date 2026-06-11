@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dinkdraw.app",
+      "sha256_cert_fingerprints": [
+        "2F:6A:CB:79:90:F1:00:DA:1B:C6:66:21:EA:5D:8A:D0:94:7C:6B:80:90:A3:A1:57:19:1E:DB:66:59:41:4C:35"
+      ]
+    }
+  }
+]

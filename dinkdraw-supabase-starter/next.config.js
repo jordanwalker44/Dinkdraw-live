@@ -12,4 +12,27 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {};
 
+nextConfig.headers = async () => {
+  return [
+    {
+      source: '/.well-known/apple-app-site-association',
+      headers: [
+        {
+          key: 'Content-Type',
+          value: 'application/json',
+        },
+      ],
+    },
+    {
+      source: '/.well-known/assetlinks.json',
+      headers: [
+        {
+          key: 'Content-Type',
+          value: 'application/json',
+        },
+      ],
+    },
+  ];
+};
+
 module.exports = withPWA(nextConfig);

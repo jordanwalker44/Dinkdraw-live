@@ -2315,11 +2315,49 @@ setScoreDrafts((prev) => {
   for (const match of safeMatches) {
     next[match.id] = {
       team_a_score:
-        prev[match.id]?.team_a_score !== undefined
-          ? prev[match.id].team_a_score
-          : match.team_a_score === null
-          ? ''
-          : String(match.team_a_score),
+        match.team_a_score !== null
+          ? String(match.team_a_score)
+          : prev[match.id]?.team_a_score ?? '',
+
+      team_b_score:
+        match.team_b_score !== null
+          ? String(match.team_b_score)
+          : prev[match.id]?.team_b_score ?? '',
+
+      game_1_a:
+        match.game_1_a !== null
+          ? String(match.game_1_a)
+          : prev[match.id]?.game_1_a ?? '',
+
+      game_1_b:
+        match.game_1_b !== null
+          ? String(match.game_1_b)
+          : prev[match.id]?.game_1_b ?? '',
+
+      game_2_a:
+        match.game_2_a !== null
+          ? String(match.game_2_a)
+          : prev[match.id]?.game_2_a ?? '',
+
+      game_2_b:
+        match.game_2_b !== null
+          ? String(match.game_2_b)
+          : prev[match.id]?.game_2_b ?? '',
+
+      game_3_a:
+        match.game_3_a !== null
+          ? String(match.game_3_a)
+          : prev[match.id]?.game_3_a ?? '',
+
+      game_3_b:
+        match.game_3_b !== null
+          ? String(match.game_3_b)
+          : prev[match.id]?.game_3_b ?? '',
+    };
+  }
+
+  return next;
+});
 
       team_b_score:
         prev[match.id]?.team_b_score !== undefined

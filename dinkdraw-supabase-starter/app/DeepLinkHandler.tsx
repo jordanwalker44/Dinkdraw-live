@@ -15,11 +15,13 @@ export default function DeepLinkHandler() {
   useEffect(() => {
     const appPlugin = window.Capacitor?.Plugins?.App;
 
-    if (!appPlugin?.addListener) return;
+    if (!appPlugin) return;
 
-    const listener = appPlugin.addListener('appUrlOpen', (event: { url: string }) => {
+    const handleUrl = (incomingUrl?: string) => {
+      if (!incomingUrl) return;
+
       try {
-        const url = new URL(event.url);
+        const url = new URL(incomingUrl);
 
         if (url.hostname !== 'dinkdraw.app') return;
 
@@ -31,6 +33,14 @@ export default function DeepLinkHandler() {
       } catch (error) {
         console.error('Deep link failed:', error);
       }
+    };
+
+    appPlugin.getLaunchUrl?.().then((result: { url?: string }) => {
+      handleUrl(result?.url);
+    });
+
+    const listener = appPlugin.addListener?.('appUrlOpen', (event: { url: string }) => {
+      handleUrl(event.url);
     });
 
     return () => {

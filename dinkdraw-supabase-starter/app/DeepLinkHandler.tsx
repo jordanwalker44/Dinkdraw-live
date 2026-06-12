@@ -1,31 +1,36 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 
 export default function DeepLinkHandler() {
   const router = useRouter();
+  const [lastUrl, setLastUrl] = useState<string>('No deep link seen yet');
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform()) {
+      setLastUrl('Not native platform');
+      return;
+    }
 
     const handleUrl = (incomingUrl?: string) => {
+      setLastUrl(incomingUrl || 'Empty URL received');
+
       if (!incomingUrl) return;
 
       try {
         const url = new URL(incomingUrl);
-
-        if (url.hostname !== 'dinkdraw.app') return;
-
         const path = `${url.pathname}${url.search}${url.hash}`;
 
-        if (path.startsWith('/tournament')) {
-          router.push(path);
+        if (url.hostname === 'dinkdraw.app' && path.startsWith('/tournament')) {
+          setTimeout(() => {
+            router.push(path);
+          }, 500);
         }
       } catch (error) {
-        console.error('Deep link failed:', error);
+        setLastUrl('Deep link error');
       }
     };
 
@@ -33,14 +38,27 @@ export default function DeepLinkHandler() {
       handleUrl(result?.url);
     });
 
-    const listener = App.addListener('appUrlOpen', (event) => {
+    App.addListener('appUrlOpen', (event) => {
       handleUrl(event.url);
     });
-
-    return () => {
-      listener.then((handle) => handle.remove());
-    };
   }, [router]);
 
-  return null;
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 80,
+        left: 12,
+        right: 12,
+        zIndex: 99999,
+        background: '#fff',
+        border: '2px solid red',
+        padding: 8,
+        fontSize: 12,
+        color: '#000',
+      }}
+    >
+      Deep link debug: {lastUrl}
+    </div>
+  );
 }

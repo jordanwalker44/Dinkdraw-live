@@ -2,20 +2,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-
-declare global {
-  interface Window {
-    Capacitor?: any;
-  }
-}
+import { App } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 export default function DeepLinkHandler() {
   const router = useRouter();
 
   useEffect(() => {
-    const appPlugin = window.Capacitor?.Plugins?.App;
-
-    if (!appPlugin) return;
+    if (!Capacitor.isNativePlatform()) return;
 
     const handleUrl = (incomingUrl?: string) => {
       if (!incomingUrl) return;
@@ -35,16 +29,16 @@ export default function DeepLinkHandler() {
       }
     };
 
-    appPlugin.getLaunchUrl?.().then((result: { url?: string }) => {
+    App.getLaunchUrl().then((result) => {
       handleUrl(result?.url);
     });
 
-    const listener = appPlugin.addListener?.('appUrlOpen', (event: { url: string }) => {
+    const listener = App.addListener('appUrlOpen', (event) => {
       handleUrl(event.url);
     });
 
     return () => {
-      listener?.remove?.();
+      listener.then((handle) => handle.remove());
     };
   }, [router]);
 

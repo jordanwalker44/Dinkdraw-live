@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { AuthRefresh } from '../components/AuthRefresh';
 import { AppChrome } from '../components/AppChrome';
+import DeepLinkHandler from './DeepLinkHandler';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',
@@ -43,6 +44,7 @@ export default function RootLayout({
       </head>
       <body>
         <AuthRefresh />
+        <DeepLinkHandler />
         <AppChrome>{children}</AppChrome>
       </body>
     </html>

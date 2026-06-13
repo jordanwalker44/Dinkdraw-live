@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { AuthRefresh } from '../components/AuthRefresh';
 import { InstallPrompt } from '../components/InstallPrompt';
+import DeepLinkHandler from '../components/DeepLinkHandler';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',
@@ -42,6 +43,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body>
+        <DeepLinkHandler />
         <AuthRefresh />
         <InstallPrompt />
         {children}

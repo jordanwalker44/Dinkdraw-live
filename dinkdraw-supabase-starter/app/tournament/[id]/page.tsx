@@ -2692,6 +2692,17 @@ async function unclaimMySpot(slotId: string) {
         const savedName = (slot.display_name ?? '').trim();
         const nextName = typedName || savedName;
 
+        const typedDuprId = (newDuprIds[slot.id] ?? slot.dupr_id ?? '').trim();
+        const savedDuprId = (slot.dupr_id ?? '').trim();
+        const nextDuprId = typedDuprId || null;
+
+        const nameChanged = nextName !== savedName;
+        const duprChanged = (nextDuprId ?? '') !== savedDuprId;
+
+        if (!nameChanged && !duprChanged) {
+          return null;
+        }
+
         if (slot.claimed_by_user_id && nextName === '') {
           return null;
         }
@@ -2699,12 +2710,18 @@ async function unclaimMySpot(slotId: string) {
         return supabase
           .from('tournament_players')
           .update({
-          display_name: nextName,
-          dupr_id: (newDuprIds[slot.id] ?? slot.dupr_id ?? '').trim() || null,
-      })
+            display_name: nextName,
+            dupr_id: nextDuprId,
+          })
           .eq('id', slot.id);
       })
       .filter(Boolean);
+
+    if (updates.length === 0) {
+      setMessage('No player name changes to save.');
+      setIsSavingNames(false);
+      return;
+    }
 
     const results = await Promise.all(updates);
 

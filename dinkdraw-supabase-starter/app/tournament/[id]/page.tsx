@@ -1899,6 +1899,17 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   >({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const scoreSubmitLockRef = useRef(false);
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+function scheduleTournamentRefresh(currentUserId?: string) {
+  if (refreshTimeoutRef.current) {
+    clearTimeout(refreshTimeoutRef.current);
+  }
+
+  refreshTimeoutRef.current = setTimeout(() => {
+    void loadTournamentData(currentUserId);
+  }, 400);
+}
   const [submittingScoreId, setSubmittingScoreId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
@@ -2395,8 +2406,8 @@ setScoreDrafts((prev) => {
           table: 'matches',
           filter: `tournament_id=eq.${params.id}`,
         },
-   async () => {
-  await loadTournamentData(userId);
+   () => {
+  scheduleTournamentRefresh(userId);
 }
 )
       .on(
@@ -2407,9 +2418,9 @@ setScoreDrafts((prev) => {
     table: 'playoff_matches',
     filter: `tournament_id=eq.${params.id}`,
   },
-  async () => {
-    await loadTournamentData(userId);
-  }
+  () => {
+  scheduleTournamentRefresh(userId);
+}
 )
       .on(
         'postgres_changes',
@@ -2419,9 +2430,9 @@ setScoreDrafts((prev) => {
           table: 'tournament_players',
           filter: `tournament_id=eq.${params.id}`,
         },
-        async () => {
-          await loadTournamentData();
-        }
+        () => {
+  scheduleTournamentRefresh(userId);
+}
       )
       .on(
         'postgres_changes',
@@ -2431,9 +2442,9 @@ setScoreDrafts((prev) => {
           table: 'tournaments',
           filter: `id=eq.${params.id}`,
         },
-        async () => {
-          await loadTournamentData();
-        }
+        () => {
+  scheduleTournamentRefresh(userId);
+}
       )
       .subscribe((status) => {
         setIsLive(status === 'SUBSCRIBED');

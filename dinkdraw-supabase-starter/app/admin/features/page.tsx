@@ -7,10 +7,47 @@ import { TopNav } from '../../../components/TopNav';
 export default function AdminFeaturesPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
+  const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
+  const [foundUserName, setFoundUserName] = useState('');
   const [organizationName, setOrganizationName] = useState('');
   const [message, setMessage] = useState('');
   const [isWorking, setIsWorking] = useState(false);
+
+  async function findUserByEmail() {
+  setMessage('');
+  setUserId('');
+  setFoundUserName('');
+
+  if (!email.trim()) {
+    setMessage('Enter an email address.');
+    return;
+  }
+
+  setIsWorking(true);
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('id, display_name, email')
+    .ilike('email', email.trim())
+    .maybeSingle();
+
+  setIsWorking(false);
+
+  if (error) {
+    setMessage(error.message);
+    return;
+  }
+
+  if (!profile) {
+    setMessage('No DinkDraw user found with that email. They need to create an account first.');
+    return;
+  }
+
+  setUserId(profile.id);
+  setFoundUserName(profile.display_name || profile.email || '');
+  setMessage(`Found user: ${profile.display_name || profile.email}`);
+}
 
   async function grantUserCream() {
     setMessage('');
@@ -115,14 +152,32 @@ export default function AdminFeaturesPage() {
 
         <div className="grid" style={{ gap: 14 }}>
           <div>
-            <label className="label">User ID</label>
-            <input
-              className="input"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              placeholder="Paste Supabase Auth user ID"
-            />
-          </div>
+  <label className="label">User email</label>
+  <input
+    className="input"
+    value={email}
+    onChange={(e) => setEmail(e.target.value)}
+    placeholder="tester@example.com"
+    autoCapitalize="none"
+    autoCorrect="off"
+  />
+
+  <button
+    type="button"
+    className="button secondary"
+    onClick={findUserByEmail}
+    disabled={isWorking || !email.trim()}
+    style={{ marginTop: 10 }}
+  >
+    Find User
+  </button>
+
+  {userId ? (
+    <div className="notice" style={{ marginTop: 10 }}>
+      Selected: {foundUserName || email}
+    </div>
+  ) : null}
+</div>
 
           <div>
             <label className="label">Organization name</label>

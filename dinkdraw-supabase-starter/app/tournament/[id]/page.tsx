@@ -2262,63 +2262,40 @@ const hasAnyScores = matches.some(
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
-    const [tournamentResult, playersResult] = await Promise.all([
-      supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-      supabase
-        .from('tournament_players')
-        .select('*')
-        .eq('tournament_id', params.id)
-        .order('slot_number', { ascending: true }),
-    ]);
+    const [
+  tournamentResult,
+  playersResult,
+  matchesResult,
+  playoffMatchesResult,
+] = await Promise.all([
+  supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
+  supabase
+    .from('tournament_players')
+    .select('*')
+    .eq('tournament_id', params.id)
+    .order('slot_number', { ascending: true }),
+  supabase
+    .from('matches')
+    .select('*')
+    .eq('tournament_id', params.id)
+    .order('round_number', { ascending: true })
+    .order('court_number', { ascending: true }),
+  supabase
+    .from('playoff_matches')
+    .select('*')
+    .eq('tournament_id', params.id)
+    .order('round_number', { ascending: true })
+    .order('match_number', { ascending: true }),
+]);
 
-    const tournamentData = tournamentResult.data;
-    const playersData = playersResult.data;
+const tournamentData = tournamentResult.data;
+const playersData = playersResult.data;
+const safeMatches = matchesResult.data || [];
 
-    setTournament(tournamentData || null);
-    setPlayerSlots(playersData || []);
-
-    if (tournamentData) {
-      try {
-        window.localStorage.setItem(
-          LAST_TOURNAMENT_KEY,
-          JSON.stringify({ id: tournamentData.id, title: tournamentData.title })
-        );
-      } catch (err) {
-  console.warn('Could not save last tournament shortcut:', err);
-}
-    }
-
-    if ((playersData || []).length > 0) {
-      setNewNames((prev) => {
-        const next = { ...prev };
-        for (const slot of playersData || []) {
-          if (typeof next[slot.id] !== 'string') {
-            next[slot.id] = slot.display_name || '';
-          }
-        }
-        return next;
-      });
-    }
-
-    if (currentUserId) setUserId(currentUserId);
-
-   const { data: matchesData } = await supabase
-  .from('matches')
-  .select('*')
-  .eq('tournament_id', params.id)
-  .order('round_number', { ascending: true })
-  .order('court_number', { ascending: true });
-
-const safeMatches = matchesData || [];
+setTournament(tournamentData || null);
+setPlayerSlots(playersData || []);
 setMatches(safeMatches);
-const { data: playoffMatchesData } = await supabase
-  .from('playoff_matches')
-  .select('*')
-  .eq('tournament_id', params.id)
-  .order('round_number', { ascending: true })
-  .order('match_number', { ascending: true });
-
-setPlayoffMatches(playoffMatchesData || []);
+setPlayoffMatches(playoffMatchesResult.data || []);
 
 setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};

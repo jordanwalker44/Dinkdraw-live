@@ -128,6 +128,8 @@ export default function CreateTournamentPage() {
   const [favoriteLocations, setFavoriteLocations] = useState<FavoriteLocation[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
+  const [canUseOrganizations, setCanUseOrganizations] = useState(false);
+  const [canUseCreamOfTheCrop, setCanUseCreamOfTheCrop] = useState(false);
   const [selectedFavoriteLocationId, setSelectedFavoriteLocationId] = useState('');
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
@@ -247,6 +249,28 @@ export default function CreateTournamentPage() {
       .order('name', { ascending: true });
 
     setFavoriteLocations(savedLocations || []);
+
+    const { data: entitlements } = await supabase
+      .from('feature_entitlements')
+      .select('feature_key, status')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    const entitlementKeys =
+      entitlements?.map((item) => item.feature_key) || [];
+
+    const organizationEnabled =
+      entitlementKeys.includes('organization_mode');
+
+    const creamEnabled =
+      entitlementKeys.includes('cream_of_the_crop');
+
+    setCanUseOrganizations(organizationEnabled);
+    setCanUseCreamOfTheCrop(creamEnabled);
+
+    if (!organizationEnabled) {
+      return;
+  }
 
     const { data: memberships } = await supabase
       .from('organization_members')
@@ -476,7 +500,7 @@ router.push(`/tournament/${tournament.id}`);
   </div>
 </div>
 
-{organizations.length > 0 ? (
+{canUseOrganizations && organizations.length > 0 ? (
   <div>
     <label className="label">Organization</label>
     <select
@@ -536,7 +560,10 @@ router.push(`/tournament/${tournament.id}`);
 
   <button
     type="button"
-    onClick={() => setTournamentMode('cream_of_the_crop')}
+    onClick={() => {
+      if (!canUseCreamOfTheCrop) return;
+      setTournamentMode('cream_of_the_crop');
+    }}
     style={{
       minHeight: 74,
       borderRadius: 18,
@@ -556,7 +583,8 @@ router.push(`/tournament/${tournament.id}`);
         tournamentMode === 'cream_of_the_crop'
           ? '0 12px 28px rgba(255,203,5,0.20)'
           : 'none',
-            cursor: 'pointer',
+            cursor: canUseCreamOfTheCrop ? 'pointer' : 'not-allowed',
+            opacity: canUseCreamOfTheCrop ? 1 : 0.45,
       textAlign: 'center',
     }}
   >

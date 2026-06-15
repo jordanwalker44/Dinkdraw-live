@@ -226,74 +226,77 @@ export default function CreateTournamentPage() {
     }
   }, []);
   
-  useEffect(() => {
-        async function loadUser() {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData.user;
-      if (!user) return;
+ useEffect(() => {
+  async function loadUser() {
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    if (!user) return;
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('id', user.id)
-        .maybeSingle();
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .maybeSingle();
 
-      const safeName = profile?.display_name || user.email?.split('@')[0] || 'Organizer';
-      setOrganizerName(safeName);
+    const safeName = profile?.display_name || user.email?.split('@')[0] || 'Organizer';
+    setOrganizerName(safeName);
 
-      const { data: savedLocations } = await supabase
-        .from('favorite_locations')
-        .select('id, name, location')
-        .order('name', { ascending: true });
+    const { data: savedLocations } = await supabase
+      .from('favorite_locations')
+      .select('id, name, location')
+      .order('name', { ascending: true });
 
-      setFavoriteLocations(savedLocations || []);
+    setFavoriteLocations(savedLocations || []);
 
-      const { data: memberships } = await supabase
-        .from('organization_members')
-        .select('organization_id, organizations(id, name)')
-        .eq('user_id', user.id);
+    const { data: memberships } = await supabase
+      .from('organization_members')
+      .select('organization_id, organizations(id, name)')
+      .eq('user_id', user.id);
 
-      const loadedOrganizations =
-        memberships
-          ?.map((membership: any) => membership.organizations)
-          .filter(Boolean) || [];
+    const loadedOrganizations =
+      memberships
+        ?.map((membership: any) => membership.organizations)
+        .filter(Boolean) || [];
 
-      if (loadedOrganizations.length > 0) {
-        setOrganizations(loadedOrganizations);
-        setSelectedOrganizationId(loadedOrganizations[0].id);
-        return;
-      }
-
-      const { data: newOrganization, error: organizationError } = await supabase
-        .from('organizations')
-        .insert({
-          name: `${safeName}'s Organization`,
-          created_by_user_id: user.id,
-        })
-        .select('id, name')
-        .single();
-
-      if (organizationError || !newOrganization) {
-        setMessage(organizationError?.message || 'Could not create organization.');
-        return;
-      }
-
-      const { error: membershipError } = await supabase
-        .from('organization_members')
-        .insert({
-          organization_id: newOrganization.id,
-          user_id: user.id,
-          role: 'owner',
-        });
-
-      if (membershipError) {
-        setMessage(membershipError.message);
-        return;
-      }
-
-      setOrganizations([newOrganization]);
-      setSelectedOrganizationId(newOrganization.id);
+    if (loadedOrganizations.length > 0) {
+      setOrganizations(loadedOrganizations);
+      setSelectedOrganizationId(loadedOrganizations[0].id);
+      return;
     }
+
+    const { data: newOrganization, error: organizationError } = await supabase
+      .from('organizations')
+      .insert({
+        name: `${safeName}'s Organization`,
+        created_by_user_id: user.id,
+      })
+      .select('id, name')
+      .single();
+
+    if (organizationError || !newOrganization) {
+      setMessage(organizationError?.message || 'Could not create organization.');
+      return;
+    }
+
+    const { error: membershipError } = await supabase
+      .from('organization_members')
+      .insert({
+        organization_id: newOrganization.id,
+        user_id: user.id,
+        role: 'owner',
+      });
+
+    if (membershipError) {
+      setMessage(membershipError.message);
+      return;
+    }
+
+    setOrganizations([newOrganization]);
+    setSelectedOrganizationId(newOrganization.id);
+  }
+
+  loadUser();
+}, [supabase]);
 
   useEffect(() => {
     if (courts > maxCourtsAllowed) {

@@ -2355,6 +2355,7 @@ setScoreDrafts((prev) => {
       const currentUserId = authData.user?.id ?? '';
       const currentUserEmail = authData.user?.email ?? '';
 
+      setUserId(currentUserId);
       setUserEmail(currentUserEmail);
       if (currentUserId) {
       const { data: savedAdmins } = await supabase

@@ -492,25 +492,8 @@ router.push(`/tournament/${tournament.id}`);
     </select>
   </div>
 ) : null}
-
-          {organizations.length > 0 ? (
-  <div>
-    <label className="label">Organization</label>
-    <select
-      className="input"
-      value={selectedOrganizationId}
-      onChange={(e) => setSelectedOrganizationId(e.target.value)}
-    >
-      {organizations.map((organization) => (
-        <option key={organization.id} value={organization.id}>
-          {organization.name}
-        </option>
-      ))}
-    </select>
-  </div>
-) : null}
-          
-           <div>
+              
+       <div>
   <label className="label">Tournament Mode</label>
 
   <div

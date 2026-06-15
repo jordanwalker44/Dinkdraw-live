@@ -2922,19 +2922,24 @@ if (existingFinalMatches.length > 0) {
     setMessage('');
     setIsStarting(true);
     try {
-      const updates = playerSlots
-  .map((slot) => {
-    const typedName = (newNames[slot.id] ?? '').trim();
-    const savedName = (slot.display_name ?? '').trim();
-    const nextName = typedName || savedName;
+      const updates = playerSlots.flatMap((slot) => {
+  const typedName = (newNames[slot.id] ?? '').trim();
+  const savedName = (slot.display_name ?? '').trim();
+  const nextName = typedName || savedName;
 
-    return supabase
+  if (nextName === savedName) {
+    return [];
+  }
+
+  return [
+    supabase
       .from('tournament_players')
       .update({ display_name: nextName })
-      .eq('id', slot.id);
-  });
+      .eq('id', slot.id),
+  ];
+});
 
-    const results = await Promise.all(updates);
+const results = updates.length > 0 ? await Promise.all(updates) : [];
 
     const failed = results.find((r) => r?.error);
     if (failed?.error) {

@@ -264,14 +264,21 @@ export default function CreateTournamentPage() {
       return;
     }
 
-    const { data: newOrganization, error: organizationError } = await supabase
-      .from('organizations')
-      .insert({
-        name: `${safeName}'s Organization`,
-        created_by_user_id: user.id,
-      })
-      .select('id, name')
-      .single();
+    if (!user.id) {
+  setMessage('You need to sign in before creating an organization.');
+  return;
+}
+
+const organizationPayload = {
+  name: `${safeName}'s Organization`,
+  created_by_user_id: user.id,
+};
+
+const { data: newOrganization, error: organizationError } = await supabase
+  .from('organizations')
+  .insert(organizationPayload)
+  .select('id, name')
+  .single();
 
     if (organizationError || !newOrganization) {
       setMessage(organizationError?.message || 'Could not create organization.');

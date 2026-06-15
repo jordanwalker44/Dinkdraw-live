@@ -2481,20 +2481,7 @@ setScoreDrafts((prev) => {
     );
   };
 }, []);
-
-    useEffect(() => {
-  if (!params.id) return;
-  if (tournament?.status === 'started' || tournament?.status === 'completed') return;
-
-  const interval = setInterval(() => {
-    if (document.visibilityState !== 'visible') return;
-
-    void loadTournamentData(userId);
-  }, 8000);
-
-  return () => clearInterval(interval);
-}, [params.id, userId, tournament?.status]);
-
+    
   useEffect(() => {
     if (!roundsAvailable.length) return;
     setSelectedRound((prev) => {

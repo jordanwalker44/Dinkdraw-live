@@ -37,9 +37,44 @@ export default function LeaderboardPage() {
     async function load() {
       setLoading(true);
 
-      const { data: statsData, error: statsError } = await supabase
-        .from('player_match_stats')
-        .select('*');
+      const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+if (!user) {
+  setStats([]);
+  setProfiles([]);
+  setLoading(false);
+  return;
+}
+
+const { data: myStatsData, error: myStatsError } = await supabase
+  .from('player_match_stats')
+  .select('tournament_id')
+  .eq('user_id', user.id);
+
+if (myStatsError) {
+  setStats([]);
+  setProfiles([]);
+  setLoading(false);
+  return;
+}
+
+const connectedTournamentIds = Array.from(
+  new Set((myStatsData || []).map((row) => row.tournament_id).filter(Boolean))
+);
+
+if (connectedTournamentIds.length === 0) {
+  setStats([]);
+  setProfiles([]);
+  setLoading(false);
+  return;
+}
+
+const { data: statsData, error: statsError } = await supabase
+  .from('player_match_stats')
+  .select('*')
+  .in('tournament_id', connectedTournamentIds);
 
       if (statsError) {
         setStats([]);

@@ -2440,6 +2440,17 @@ setScoreDrafts((prev) => {
     };
   }, [params.id, supabase, userId]);
 
+  // Polling fallback for players on web when realtime WebSocket drops
+useEffect(() => {
+  if (isLive) return;
+
+  const interval = setInterval(() => {
+    void loadTournamentData(userId);
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [isLive, userId]);
+
     useEffect(() => {
   async function handleVisibilityRefresh() {
     if (document.visibilityState !== 'visible') return;

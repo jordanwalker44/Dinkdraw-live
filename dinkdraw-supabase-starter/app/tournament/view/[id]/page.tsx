@@ -555,6 +555,17 @@ export default function PublicTournamentViewPage({
     };
   }, [params.id, supabase]);
 
+  // Polling fallback for spectators on web when realtime WebSocket drops
+useEffect(() => {
+  if (isLive) return;
+
+  const interval = setInterval(() => {
+    void loadTournamentData();
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [isLive]);
+
   useEffect(() => {
     if (!roundsAvailable.length) return;
 

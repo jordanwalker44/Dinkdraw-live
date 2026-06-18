@@ -2350,26 +2350,33 @@ setScoreDrafts((prev) => {
 
   useEffect(() => {
     async function load() {
-      setIsLoading(true);
-      const { data: authData } = await supabase.auth.getUser();
-      const currentUserId = authData.user?.id ?? '';
-      const currentUserEmail = authData.user?.email ?? '';
+  setIsLoading(true);
 
-      setUserId(currentUserId);
-      setUserEmail(currentUserEmail);
-      if (currentUserId) {
-      const { data: savedAdmins } = await supabase
-    .from('saved_co_organizers')
-    .select('id, name, email')
-    .eq('user_id', currentUserId)
-    .order('name', { ascending: true });
+  // Run auth AND tournament data at the same time instead of one after another
+  const [{ data: authData }] = await Promise.all([
+    supabase.auth.getUser(),
+    loadTournamentData(),
+  ]);
 
-  setSavedCoOrganizers(savedAdmins || []);
+  const currentUserId = authData.user?.id ?? '';
+  const currentUserEmail = authData.user?.email ?? '';
+  setUserId(currentUserId);
+  setUserEmail(currentUserEmail);
+
+  // Load co-organizers after auth resolves, but don't block the page on it
+  if (currentUserId) {
+    supabase
+      .from('saved_co_organizers')
+      .select('id, name, email')
+      .eq('user_id', currentUserId)
+      .order('name', { ascending: true })
+      .then(({ data: savedAdmins }) => {
+        setSavedCoOrganizers(savedAdmins || []);
+      });
+  }
+
+  setIsLoading(false);
 }
-
-      await loadTournamentData(currentUserId);
-      setIsLoading(false);
-    }
     load();
   }, [params.id, supabase]);
 

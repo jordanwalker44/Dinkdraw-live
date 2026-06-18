@@ -566,6 +566,23 @@ useEffect(() => {
   return () => clearInterval(interval);
 }, [isLive]);
 
+  // Refresh data when user returns to the tab after phone lock or backgrounding
+useEffect(() => {
+  async function handleVisibilityRefresh() {
+    if (document.visibilityState !== 'visible') return;
+    try {
+      await loadTournamentData();
+    } catch (err) {
+      console.error('Failed to refresh on visibility change', err);
+    }
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityRefresh);
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityRefresh);
+  };
+}, []);
+
   useEffect(() => {
     if (!roundsAvailable.length) return;
 

@@ -5314,7 +5314,8 @@ const shouldShowClaimButton = canClaim && (
 disabled={!canEditName}
 />
 
-{(tournament?.ask_for_dupr_id || isOrganizer) ? (
+{tournament?.ask_for_dupr_id ? (
+
   <input
     className="input"
     value={newDuprIds[slot.id] ?? slot.dupr_id ?? ''}

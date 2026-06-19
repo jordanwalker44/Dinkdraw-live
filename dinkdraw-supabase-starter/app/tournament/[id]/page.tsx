@@ -295,8 +295,8 @@ class PartnerTracker {
   canPartner(a: string, b: string, totalValid: (id: string) => number): boolean {
     if (this.timesPartnered(a, b) === 0) return true;
 
-    const aExhausted = this.distinctPartners(a) >= totalValid(a) - 1;
-    const bExhausted = this.distinctPartners(b) >= totalValid(b) - 1;
+    const aExhausted = this.distinctPartners(a) >= totalValid(a);
+    const bExhausted = this.distinctPartners(b) >= totalValid(b);
 
     return aExhausted && bExhausted;
   }

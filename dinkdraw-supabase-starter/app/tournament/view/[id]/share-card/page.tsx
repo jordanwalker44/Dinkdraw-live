@@ -220,7 +220,7 @@ export default async function ShareCardPage({
             maxWidth: 420,
             aspectRatio: 'auto',
             borderRadius: 28,
-            padding: '66px 16px 16px',
+            padding: '88px 16px 16px',
             color: '#fff',
             background:
               'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',

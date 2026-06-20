@@ -2908,7 +2908,12 @@ if (existingFinalMatches.length > 0) {
 }
 
   async function generateScheduleAndStart() {
-    if (!tournament) return;
+  if (!tournament) return;
+
+  if (!canManageScores) {
+    setMessage('Only the organizer or co-organizer can start this tournament.');
+    return;
+  }
 
     if (isScheduleLocked) {
       setMessage('Schedule is locked once the tournament has started.');

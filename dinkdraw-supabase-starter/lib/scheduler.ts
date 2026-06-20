@@ -225,6 +225,11 @@ function getProjectedCreamCourt(
   finishRank: number,
   courtCount: number
 ) {
+    if (courtCount === 2) {
+    if (finishRank === 1 || finishRank === 2) return 1;
+    return 2;
+  }
+  
   if (courtCount === 3) {
     if (currentCourtNumber === 1) {
       if (finishRank === 1 || finishRank === 2) return 1;

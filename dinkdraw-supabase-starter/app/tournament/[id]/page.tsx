@@ -1898,6 +1898,8 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   Record<string, { team_a_score: string; team_b_score: string }>
   >({});
   const [isSavingNames, setIsSavingNames] = useState(false);
+  const [editedTournamentTitle, setEditedTournamentTitle] = useState('');
+  const [isSavingTournamentTitle, setIsSavingTournamentTitle] = useState(false);
   const scoreSubmitLockRef = useRef(false);
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -2668,6 +2670,45 @@ async function unclaimMySpot(slotId: string) {
   setNewNames((prev) => ({ ...prev, [slotId]: '' }));
   await loadTournamentData(user.id);
   setMessage('You have given up your spot.');
+}
+
+  async function saveTournamentTitle() {
+  if (!isOrganizer || !tournament) {
+    setMessage('Only the organizer can rename this tournament.');
+    return;
+  }
+
+  const nextTitle = editedTournamentTitle.trim();
+
+  if (!nextTitle) {
+    setMessage('Tournament name cannot be blank.');
+    return;
+  }
+
+  if (nextTitle === tournament.title) {
+    setMessage('Tournament name is already up to date.');
+    return;
+  }
+
+  setIsSavingTournamentTitle(true);
+  setMessage('');
+
+  const { error } = await supabase
+    .from('tournaments')
+    .update({ title: nextTitle })
+    .eq('id', tournament.id)
+    .eq('organizer_user_id', userId);
+
+  if (error) {
+    setMessage(`Tournament name update failed: ${error.message}`);
+    setIsSavingTournamentTitle(false);
+    return;
+  }
+
+  setTournament((prev) => (prev ? { ...prev, title: nextTitle } : prev));
+  setEditedTournamentTitle('');
+  setMessage('Tournament name updated.');
+  setIsSavingTournamentTitle(false);
 }
 
  async function saveAllPlayerNames() {
@@ -5622,6 +5663,29 @@ Sign in with this same email address to submit and edit scores.`;
 
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Tournament Info</div>
+            {isOrganizer ? (
+  <div className="list-item" style={{ marginTop: 12, marginBottom: 14 }}>
+    <div className="label">Tournament Name</div>
+
+    <input
+      className="input"
+      value={editedTournamentTitle || tournament?.title || ''}
+      onChange={(e) => setEditedTournamentTitle(e.target.value)}
+      placeholder="Tournament name"
+      style={{ marginTop: 8 }}
+    />
+
+    <button
+      type="button"
+      className="button secondary"
+      onClick={saveTournamentTitle}
+      disabled={isSavingTournamentTitle}
+      style={{ width: '100%', marginTop: 10 }}
+    >
+      {isSavingTournamentTitle ? 'Saving...' : 'Save Tournament Name'}
+    </button>
+  </div>
+) : null}
             <div className="grid" style={{ marginBottom: 14 }}>
               <div className="list-item">
                 <div className="label">Join Code</div>

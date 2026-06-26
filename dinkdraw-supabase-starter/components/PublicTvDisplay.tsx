@@ -55,6 +55,10 @@ function formatDiff(value: number) {
   return String(value);
 }
 
+function renderScore(value: number | null) {
+  return value === null ? '—' : String(value);
+}
+
 function getStageLabel(currentRound: number) {
   if (currentRound <= 3) return 'Sort Stage';
   if (currentRound <= 6) return 'Sift Stage';
@@ -270,20 +274,44 @@ export default function PublicTvDisplay({
                   </div>
 
                   <div
-                    style={{
-                      alignSelf: 'end',
-                      fontSize: 'clamp(25px, 2.15vw, 45px)',
-                      lineHeight: 1.02,
-                      fontWeight: 950,
-                      letterSpacing: '-0.055em',
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
-                  </div>
+  style={{
+    alignSelf: 'end',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: 14,
+    alignItems: 'center',
+    fontSize: 'clamp(22px, 1.8vw, 34px)',
+    lineHeight: 1.02,
+    fontWeight: 950,
+    letterSpacing: '-0.055em',
+    overflow: 'hidden',
+  }}
+>
+  <div
+    style={{
+      minWidth: 0,
+      overflow: 'hidden',
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+    }}
+  >
+    {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+  </div>
+
+  <div
+    style={{
+      minWidth: 52,
+      textAlign: 'right',
+      fontSize: 'clamp(34px, 2.5vw, 52px)',
+      lineHeight: 1,
+      fontWeight: 950,
+      color: '#FFCB05',
+    }}
+  >
+    {renderScore(match.team_a_score)}
+  </div>
+</div>
 
                   <div
                     style={{
@@ -299,20 +327,44 @@ export default function PublicTvDisplay({
                   </div>
 
                   <div
-                    style={{
-                      alignSelf: 'start',
-                      fontSize: 'clamp(25px, 2.15vw, 45px)',
-                      lineHeight: 1.02,
-                      fontWeight: 950,
-                      letterSpacing: '-0.055em',
-                      overflow: 'hidden',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                    }}
-                  >
-                    {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
-                  </div>
+  style={{
+    alignSelf: 'start',
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) auto',
+    gap: 14,
+    alignItems: 'center',
+    fontSize: 'clamp(22px, 1.8vw, 34px)',
+    lineHeight: 1.02,
+    fontWeight: 950,
+    letterSpacing: '-0.055em',
+    overflow: 'hidden',
+  }}
+>
+  <div
+    style={{
+      minWidth: 0,
+      overflow: 'hidden',
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+    }}
+  >
+    {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+  </div>
+
+  <div
+    style={{
+      minWidth: 52,
+      textAlign: 'right',
+      fontSize: 'clamp(34px, 2.5vw, 52px)',
+      lineHeight: 1,
+      fontWeight: 950,
+      color: '#FFCB05',
+    }}
+  >
+    {renderScore(match.team_b_score)}
+  </div>
+</div>
                 </article>
               );
             })}

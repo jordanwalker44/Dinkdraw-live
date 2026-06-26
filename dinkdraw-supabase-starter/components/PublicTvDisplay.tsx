@@ -109,21 +109,23 @@ export default function PublicTvDisplay({
         background:
           'radial-gradient(circle at top left, rgba(255,203,5,0.16), transparent 34%), linear-gradient(135deg, #06111f 0%, #071827 45%, #030712 100%)',
         color: '#fff',
-        padding: 24,
+        padding: 16,
         boxSizing: 'border-box',
         fontFamily:
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
       <section
-        style={{
-          height: '100%',
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.72fr) minmax(360px, 0.9fr)',
-          gap: 22,
-          minHeight: 0,
-        }}
-      >
+  style={{
+    height: '100%',
+    width: '100%',
+    display: 'grid',
+    gridTemplateColumns: '66% 34%',
+    gap: 18,
+    minHeight: 0,
+    minWidth: 0,
+  }}
+>
         <div
           style={{
             display: 'grid',
@@ -209,7 +211,7 @@ export default function PublicTvDisplay({
               display: 'grid',
               gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
               gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
-              gap: 16,
+              gap: 10,
             }}
           >
             {currentMatches.map((match) => {

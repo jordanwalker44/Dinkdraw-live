@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import PublicTvDisplay from '../../../../components/PublicTvDisplay';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
 
 export const dynamic = 'force-dynamic';
@@ -279,8 +280,10 @@ function computeStandings(
 
 export default function PublicTournamentViewPage({
   params,
+  searchParams,
 }: {
   params: { id: string };
+  searchParams?: { tv?: string };
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -993,6 +996,22 @@ useEffect(() => {
           </Link>
         </div>
       </main>
+    );
+  }
+
+    const isTvMode = searchParams?.tv === '1';
+
+  if (isTvMode) {
+    return (
+      <PublicTvDisplay
+        tournament={tournament}
+        playerSlots={playerSlots}
+        matches={matches}
+        standings={standings}
+        currentRound={currentRound}
+        isSingles={!!isSingles}
+        isLive={isLive}
+      />
     );
   }
 

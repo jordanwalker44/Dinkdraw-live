@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import PublicTvDisplay from '../../../../components/PublicTvDisplay';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
@@ -280,12 +281,12 @@ function computeStandings(
 
 export default function PublicTournamentViewPage({
   params,
-  searchParams,
 }: {
   params: { id: string };
-  searchParams?: { tv?: string };
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const searchParams = useSearchParams();
+  const isTvMode = searchParams.get('tv') === '1';
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
@@ -998,8 +999,6 @@ useEffect(() => {
       </main>
     );
   }
-
-    const isTvMode = searchParams?.tv === '1';
 
   if (isTvMode) {
     return (

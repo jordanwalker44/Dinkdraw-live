@@ -24,6 +24,7 @@ type Match = {
 
 type StandingRow = {
   name: string;
+  slotNumber: number;
   wins: number;
   losses: number;
   pointDiff: number;
@@ -44,10 +45,11 @@ function computeStandings(players: PlayerSlot[], matches: Match[]) {
 
   for (const player of players) {
     rows.set(player.id, {
-      name: player.display_name || `Player ${player.slot_number}`,
-      wins: 0,
-      losses: 0,
-      pointDiff: 0,
+  name: player.display_name || `Player ${player.slot_number}`,
+  slotNumber: player.slot_number,
+  wins: 0,
+  losses: 0,
+  pointDiff: 0,
     });
   }
 
@@ -164,7 +166,7 @@ export default async function ShareCardPage({
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   const [tournamentResult, playersResult, matchesResult] = await Promise.all([
-    supabase.from('tournaments').select('id, title').eq('id', params.id).maybeSingle(),
+    supabase.from('tournaments').select('id, title, tournament_mode').eq('id', params.id).maybeSingle(),
     supabase
       .from('tournament_players')
       .select('id, slot_number, display_name')
@@ -180,8 +182,20 @@ export default async function ShareCardPage({
   );
 
   const first = standings[0];
-  const second = standings[1];
-  const third = standings[2];
+const second = standings[1];
+const third = standings[2];
+
+const isCreamOfTheCrop = tournament?.tournament_mode === 'cream_of_the_crop';
+
+const biggestClimber = isCreamOfTheCrop
+  ? standings
+      .map((row, index) => ({
+        ...row,
+        finishRank: index + 1,
+        climb: row.slotNumber - (index + 1),
+      }))
+      .sort((a, b) => b.climb - a.climb)[0]
+  : null;
 
   if (!tournament || !first) {
     return <main>Results not found.</main>;
@@ -270,91 +284,144 @@ export default async function ShareCardPage({
           </div>
 
           <div style={{ display: 'grid', gap: 12 }}>
-  {[
-    { place: '1', medal: '🥇', row: first, color: '#FFCB05' },
-    { place: '2', medal: '🥈', row: second, color: '#C0C7D2' },
-    { place: '3', medal: '🥉', row: third, color: '#CD7F32' },
-  ]
-    .filter((item) => item.row)
-    .map((item) => (
+  {isCreamOfTheCrop && biggestClimber ? (
+    <>
       <div
-        key={item.place}
         style={{
-          display: 'grid',
-          gridTemplateColumns: '54px minmax(0, 1fr) auto',
-          gap: 12,
-          alignItems: 'center',
-          padding: '14px 16px',
+          padding: '16px',
           borderRadius: 18,
-          border: `1px solid ${item.color}`,
-          background:
-            item.place === '1'
-              ? 'linear-gradient(90deg, rgba(255,203,5,0.18), rgba(255,203,5,0.04))'
-              : 'rgba(255,255,255,0.055)',
-          boxShadow:
-            item.place === '1' ? '0 0 24px rgba(255,203,5,0.18)' : 'none',
+          border: '1px solid #FFCB05',
+          background: 'linear-gradient(90deg, rgba(255,203,5,0.20), rgba(255,203,5,0.05))',
+          boxShadow: '0 0 24px rgba(255,203,5,0.18)',
+          textAlign: 'center',
         }}
       >
-        <div
-          style={{
-            fontSize: 30,
-            fontWeight: 950,
-            color: item.color,
-            textAlign: 'center',
-          }}
-        >
-          {item.medal}
+        <div style={{ fontSize: 15, fontWeight: 950, color: '#FFCB05' }}>
+          🏆 CHAMPION
         </div>
 
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: item.place === '1' ? 26 : 23,
-              fontWeight: 950,
-              color: '#fff',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {item.row!.name}
-          </div>
-
-          <div
-            style={{
-              marginTop: 8,
-              fontSize: 16,
-              color: 'rgba(255,255,255,0.72)',
-              fontWeight: 750,
-            }}
-          >
-            {item.row!.wins}-{item.row!.losses} record
-          </div>
+        <div style={{ marginTop: 8, fontSize: 30, fontWeight: 950 }}>
+          {first.name}
         </div>
 
-        <div
-          style={{
-            fontSize: item.place === '1' ? 30 : 26,
-            fontWeight: 950,
-            color: item.color,
-            textAlign: 'right',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {diffText(item.row!.pointDiff)}
-          <div
-            style={{
-              fontSize: 13,
-              color: 'rgba(255,255,255,0.62)',
-              fontWeight: 800,
-              marginTop: 2,
-            }}
-          >
-            diff
-          </div>
+        <div style={{ marginTop: 6, fontSize: 17, color: 'rgba(255,255,255,0.72)', fontWeight: 800 }}>
+          {first.wins}-{first.losses} record • {diffText(first.pointDiff)} diff
         </div>
       </div>
-    ))}
+
+      <div
+        style={{
+          padding: '16px',
+          borderRadius: 18,
+          border: '1px solid rgba(34,197,94,0.75)',
+          background: 'linear-gradient(90deg, rgba(34,197,94,0.16), rgba(255,255,255,0.04))',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 950, color: '#86EFAC' }}>
+          🚀 BIGGEST CLIMBER
+        </div>
+
+        <div style={{ marginTop: 8, fontSize: 28, fontWeight: 950 }}>
+          {biggestClimber.name}
+        </div>
+
+        <div style={{ marginTop: 6, fontSize: 17, color: 'rgba(255,255,255,0.72)', fontWeight: 800 }}>
+          Started #{biggestClimber.slotNumber} → Finished #{biggestClimber.finishRank}
+        </div>
+
+        <div style={{ marginTop: 4, fontSize: 24, color: '#86EFAC', fontWeight: 950 }}>
+          +{biggestClimber.climb} spots
+        </div>
+      </div>
+    </>
+  ) : (
+    [
+      { place: '1', medal: '🥇', row: first, color: '#FFCB05' },
+      { place: '2', medal: '🥈', row: second, color: '#C0C7D2' },
+      { place: '3', medal: '🥉', row: third, color: '#CD7F32' },
+    ]
+      .filter((item) => item.row)
+      .map((item) => (
+        <div
+          key={item.place}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '54px minmax(0, 1fr) auto',
+            gap: 12,
+            alignItems: 'center',
+            padding: '14px 16px',
+            borderRadius: 18,
+            border: `1px solid ${item.color}`,
+            background:
+              item.place === '1'
+                ? 'linear-gradient(90deg, rgba(255,203,5,0.18), rgba(255,203,5,0.04))'
+                : 'rgba(255,255,255,0.055)',
+            boxShadow:
+              item.place === '1' ? '0 0 24px rgba(255,203,5,0.18)' : 'none',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 30,
+              fontWeight: 950,
+              color: item.color,
+              textAlign: 'center',
+            }}
+          >
+            {item.medal}
+          </div>
+
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: item.place === '1' ? 26 : 23,
+                fontWeight: 950,
+                color: '#fff',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {item.row!.name}
+            </div>
+
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 16,
+                color: 'rgba(255,255,255,0.72)',
+                fontWeight: 750,
+              }}
+            >
+              {item.row!.wins}-{item.row!.losses} record
+            </div>
+          </div>
+
+          <div
+            style={{
+              fontSize: item.place === '1' ? 30 : 26,
+              fontWeight: 950,
+              color: item.color,
+              textAlign: 'right',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {diffText(item.row!.pointDiff)}
+            <div
+              style={{
+                fontSize: 13,
+                color: 'rgba(255,255,255,0.62)',
+                fontWeight: 800,
+                marginTop: 2,
+              }}
+            >
+              diff
+            </div>
+          </div>
+        </div>
+      ))
+  )}
 </div>
 
           <div

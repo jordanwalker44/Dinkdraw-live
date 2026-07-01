@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { AuthRefresh } from '../components/AuthRefresh';
 import { InstallPrompt } from '../components/InstallPrompt';
 import DeepLinkHandler from '../components/DeepLinkHandler';
+import PushNotificationHandler from '../components/PushNotificationHandler';
 
 export const metadata: Metadata = {
   title: 'DinkDraw',
@@ -46,6 +47,7 @@ export default function RootLayout({
         <DeepLinkHandler />
         <AuthRefresh />
         <InstallPrompt />
+        <PushNotificationHandler />
         {children}
       </body>
     </html>

@@ -164,6 +164,12 @@ function singlesMatchupKey(a: string, b: string) {
   return [a, b].sort().join(' vs ');
 }
 
+type SinglesMatchResult = {
+  a: string;
+  b: string;
+  court: number | null;
+};
+
 function shuffle<T>(array: T[]) {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i -= 1) {
@@ -199,70 +205,372 @@ function buildSinglesSchedule(players: PlayerSlot[], rounds: number, courts: num
 
   const ids = activePlayers.map((p) => p.id);
   const output: ScheduleRow[] = [];
+  const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const firstServerCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const courtCounts = new Map<string, Map<number, number>>();
+  const lastCourts = new Map<string, number | null>(ids.map((id) => [id, null]));
+  const opponentCounts = new Map<string, number>();
 
-  const hasBye = ids.length % 2 !== 0;
-  const rotationPlayers = hasBye ? [...ids, 'BYE'] : [...ids];
-
-  const playerCountForRotation = rotationPlayers.length;
-  const maxRounds = playerCountForRotation - 1;
+  const maxRounds = ids.length - 1;
   const roundsToGenerate = Math.min(rounds, maxRounds);
 
-  let rotating = [...rotationPlayers];
+  function singlesCourtCount(playerId: string, court: number) {
+    return courtCounts.get(playerId)?.get(court) ?? 0;
+  }
 
-  for (let round = 1; round <= roundsToGenerate; round += 1) {
-    let courtNumber = 1;
+  function recordSinglesCourt(playerId: string, court: number) {
+    const playerCourtCounts = courtCounts.get(playerId) || new Map<number, number>();
+    playerCourtCounts.set(court, (playerCourtCounts.get(court) ?? 0) + 1);
+    courtCounts.set(playerId, playerCourtCounts);
+    lastCourts.set(playerId, court);
+  }
 
-    for (let i = 0; i < playerCountForRotation / 2; i += 1) {
-      const playerA = rotating[i];
-      const playerB = rotating[playerCountForRotation - 1 - i];
+  function scoreSinglesCourt(match: SinglesMatchResult, court: number) {
+    let penalty = 0;
 
-      if (playerA === 'BYE' || playerB === 'BYE') {
-        const byePlayerId = playerA === 'BYE' ? playerB : playerA;
+    for (const playerId of [match.a, match.b]) {
+      if (lastCourts.get(playerId) === court) penalty += 1000000;
+      penalty += singlesCourtCount(playerId, court) * 1000;
+    }
 
-        output.push({
-          round_number: round,
-          court_number: null,
-          court_label: null,
-          team_a_player_1_id: byePlayerId,
-          team_a_player_2_id: null,
-          team_b_player_1_id: null,
-          team_b_player_2_id: null,
-          team_a_score: null,
-          team_b_score: null,
-          is_bye: true,
-          is_complete: false,
-        });
+    return penalty;
+  }
 
-        continue;
+  function assignSinglesCourts(matches: SinglesMatchResult[]) {
+    let bestAssignments: SinglesMatchResult[] | null = null;
+    let bestPenalty = Infinity;
+    const activeCourts = Math.min(courts, matches.length);
+
+    function search(
+      remainingMatches: SinglesMatchResult[],
+      availableCourts: number[],
+      currentAssignments: SinglesMatchResult[],
+      currentPenalty: number
+    ) {
+      if (currentPenalty >= bestPenalty) return;
+
+      if (!remainingMatches.length) {
+        bestAssignments = currentAssignments;
+        bestPenalty = currentPenalty;
+        return;
       }
 
-      if (courtNumber > courts) continue;
+      const [match, ...restMatches] = remainingMatches;
+
+      for (const court of availableCourts) {
+        const assignmentPenalty = scoreSinglesCourt(match, court);
+        search(
+          restMatches,
+          availableCourts.filter((availableCourt) => availableCourt !== court),
+          [...currentAssignments, { ...match, court }],
+          currentPenalty + assignmentPenalty
+        );
+      }
+    }
+
+    search(
+      matches.slice(0, activeCourts),
+      Array.from({ length: activeCourts }, (_, index) => index + 1),
+      [],
+      0
+    );
+
+    return (
+      bestAssignments ||
+      matches.slice(0, activeCourts).map((match, index) => ({
+        ...match,
+        court: index + 1,
+      }))
+    );
+  }
+
+  function orientSinglesServingSides(matches: SinglesMatchResult[]) {
+    let bestMatches: SinglesMatchResult[] | null = null;
+    let bestPenalty = Infinity;
+
+    function scoreOrientation(orientedMatches: SinglesMatchResult[]) {
+      const projectedCounts = new Map(firstServerCounts);
+
+      for (const match of orientedMatches) {
+        projectedCounts.set(match.a, (projectedCounts.get(match.a) ?? 0) + 1);
+      }
+
+      const values = Array.from(projectedCounts.values());
+      const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+      const variance = values.reduce(
+        (sum, value) => sum + Math.pow(value - average, 2),
+        0
+      );
+
+      return (Math.max(...values) - Math.min(...values)) * 100000 + variance;
+    }
+
+    function search(index: number, currentMatches: SinglesMatchResult[]) {
+      if (index >= matches.length) {
+        const penalty = scoreOrientation(currentMatches);
+
+        if (penalty < bestPenalty) {
+          bestPenalty = penalty;
+          bestMatches = currentMatches;
+        }
+
+        return;
+      }
+
+      const match = matches[index];
+      search(index + 1, [...currentMatches, match]);
+      search(index + 1, [
+        ...currentMatches,
+        {
+          ...match,
+          a: match.b,
+          b: match.a,
+        },
+      ]);
+    }
+
+    search(0, []);
+
+    return bestMatches || matches;
+  }
+
+  function balanceSinglesServingSidesInSchedule(rows: ScheduleRow[]) {
+    const greedyCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+    let balancedRows = rows.map((row) => {
+      if (row.is_bye || !row.team_a_player_1_id || !row.team_b_player_1_id) {
+        return row;
+      }
+
+      const teamACount = greedyCounts.get(row.team_a_player_1_id) ?? 0;
+      const teamBCount = greedyCounts.get(row.team_b_player_1_id) ?? 0;
+      const shouldFlip = teamACount > teamBCount;
+      const balancedRow = shouldFlip
+        ? {
+            ...row,
+            team_a_player_1_id: row.team_b_player_1_id,
+            team_b_player_1_id: row.team_a_player_1_id,
+        }
+        : row;
+      const firstServerId = balancedRow.team_a_player_1_id;
+
+      if (!firstServerId) return balancedRow;
+
+      greedyCounts.set(
+        firstServerId,
+        (greedyCounts.get(firstServerId) ?? 0) + 1
+      );
+
+      return balancedRow;
+    });
+
+    function scoreRows(candidateRows: ScheduleRow[]) {
+      const counts = new Map<string, number>(ids.map((id) => [id, 0]));
+
+      for (const row of candidateRows) {
+        if (row.is_bye || !row.team_a_player_1_id) continue;
+        counts.set(
+          row.team_a_player_1_id,
+          (counts.get(row.team_a_player_1_id) ?? 0) + 1
+        );
+      }
+
+      const values = Array.from(counts.values());
+      const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+      const variance = values.reduce(
+        (sum, value) => sum + Math.pow(value - average, 2),
+        0
+      );
+
+      return (Math.max(...values) - Math.min(...values)) * 100000 + variance;
+    }
+
+    let bestScore = scoreRows(balancedRows);
+    let improved = true;
+
+    while (improved) {
+      improved = false;
+
+      for (let index = 0; index < balancedRows.length; index += 1) {
+        const row = balancedRows[index];
+
+        if (row.is_bye || !row.team_a_player_1_id || !row.team_b_player_1_id) {
+          continue;
+        }
+
+        const flippedRows = balancedRows.map((candidate, candidateIndex) =>
+          candidateIndex === index
+            ? {
+                ...candidate,
+                team_a_player_1_id: row.team_b_player_1_id,
+                team_b_player_1_id: row.team_a_player_1_id,
+              }
+            : candidate
+        );
+        const flippedScore = scoreRows(flippedRows);
+
+        if (flippedScore < bestScore) {
+          balancedRows = flippedRows;
+          bestScore = flippedScore;
+          improved = true;
+        }
+      }
+    }
+
+    return balancedRows;
+  }
+
+  function chooseSinglesParticipants() {
+    const activePlayerCount = Math.min(courts * 2, ids.length);
+    const evenActivePlayerCount =
+      activePlayerCount % 2 === 0 ? activePlayerCount : activePlayerCount - 1;
+
+    return [...ids]
+      .sort((a, b) => {
+        const playedDifference = (playedCounts.get(a) ?? 0) - (playedCounts.get(b) ?? 0);
+        if (playedDifference !== 0) return playedDifference;
+
+        const byeDifference = (byeCounts.get(b) ?? 0) - (byeCounts.get(a) ?? 0);
+        if (byeDifference !== 0) return byeDifference;
+
+        return ids.indexOf(a) - ids.indexOf(b);
+      })
+      .slice(0, evenActivePlayerCount);
+  }
+
+  function pairSinglesParticipants(participantIds: string[]) {
+    let bestMatches: SinglesMatchResult[] | null = null;
+    let bestPenalty = Infinity;
+    let searched = 0;
+    const searchLimit = participantIds.length <= 14 ? 30000 : 10000;
+
+    function scorePair(a: string, b: string) {
+      return (opponentCounts.get(singlesMatchupKey(a, b)) ?? 0) * 1000000;
+    }
+
+    function search(
+      remainingIds: string[],
+      currentMatches: SinglesMatchResult[],
+      currentPenalty: number
+    ) {
+      if (searched >= searchLimit || currentPenalty >= bestPenalty) return;
+      searched += 1;
+
+      if (!remainingIds.length) {
+        const assignedMatches = assignSinglesCourts(currentMatches);
+        const courtPenalty = assignedMatches.reduce(
+          (sum, match) =>
+            match.court === null ? sum : sum + scoreSinglesCourt(match, match.court),
+          0
+        );
+        const totalPenalty = currentPenalty + courtPenalty;
+
+        if (totalPenalty < bestPenalty) {
+          bestMatches = currentMatches;
+          bestPenalty = totalPenalty;
+        }
+
+        return;
+      }
+
+      const first = remainingIds[0];
+      const options = remainingIds
+        .slice(1)
+        .map((opponentId) => ({
+          opponentId,
+          penalty: scorePair(first, opponentId),
+        }))
+        .sort((a, b) => {
+          if (a.penalty !== b.penalty) return a.penalty - b.penalty;
+          return (
+            (playedCounts.get(a.opponentId) ?? 0) -
+            (playedCounts.get(b.opponentId) ?? 0)
+          );
+        });
+
+      for (const option of options) {
+        const nextRemainingIds = remainingIds.filter(
+          (id) => id !== first && id !== option.opponentId
+        );
+
+        search(
+          nextRemainingIds,
+          [
+            ...currentMatches,
+            {
+              a: first,
+              b: option.opponentId,
+              court: null,
+            },
+          ],
+          currentPenalty + option.penalty
+        );
+      }
+    }
+
+    search(participantIds, [], 0);
+
+    return bestMatches;
+  }
+
+  for (let round = 1; round <= roundsToGenerate; round += 1) {
+    const participants = chooseSinglesParticipants();
+    const playingIds = new Set(participants);
+    const benchedIds = ids.filter((id) => !playingIds.has(id));
+
+    for (const byePlayerId of benchedIds) {
+      byeCounts.set(byePlayerId, (byeCounts.get(byePlayerId) ?? 0) + 1);
 
       output.push({
         round_number: round,
-        court_number: courtNumber,
+        court_number: null,
         court_label: null,
-        team_a_player_1_id: playerA,
+        team_a_player_1_id: byePlayerId,
         team_a_player_2_id: null,
-        team_b_player_1_id: playerB,
+        team_b_player_1_id: null,
+        team_b_player_2_id: null,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: true,
+        is_complete: false,
+      });
+    }
+
+    const matchesToPlay = pairSinglesParticipants(participants);
+    if (!matchesToPlay) break;
+
+    const assignedMatches = assignSinglesCourts(matchesToPlay);
+
+    for (const match of orientSinglesServingSides(assignedMatches)) {
+      if (match.court === null) continue;
+
+      playedCounts.set(match.a, (playedCounts.get(match.a) ?? 0) + 1);
+      playedCounts.set(match.b, (playedCounts.get(match.b) ?? 0) + 1);
+      firstServerCounts.set(match.a, (firstServerCounts.get(match.a) ?? 0) + 1);
+      opponentCounts.set(
+        singlesMatchupKey(match.a, match.b),
+        (opponentCounts.get(singlesMatchupKey(match.a, match.b)) ?? 0) + 1
+      );
+      recordSinglesCourt(match.a, match.court);
+      recordSinglesCourt(match.b, match.court);
+
+      output.push({
+        round_number: round,
+        court_number: match.court,
+        court_label: null,
+        team_a_player_1_id: match.a,
+        team_a_player_2_id: null,
+        team_b_player_1_id: match.b,
         team_b_player_2_id: null,
         team_a_score: null,
         team_b_score: null,
         is_bye: false,
         is_complete: false,
       });
-
-      courtNumber += 1;
     }
-
-    rotating = [
-      rotating[0],
-      rotating[rotating.length - 1],
-      ...rotating.slice(1, rotating.length - 1),
-    ];
   }
 
-  return output;
+  return balanceSinglesServingSidesInSchedule(output);
 }
 
 function groupKey(ids: string[]): string {

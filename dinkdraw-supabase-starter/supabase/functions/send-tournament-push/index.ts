@@ -234,6 +234,40 @@ function assignmentBody(match: Match, playersById: Map<string, PlayerSlot>, slot
   return `Round ${match.round_number}, ${courtLabel(match)}.${partnerText} Opponents: ${opponents || 'TBD'}.`;
 }
 
+function nextAssignmentBody(match: Match, playersById: Map<string, PlayerSlot>, slot: PlayerSlot) {
+  const isTeamA = match.team_a_player_1_id === slot.id || match.team_a_player_2_id === slot.id;
+  const partnerId = isTeamA
+    ? [match.team_a_player_1_id, match.team_a_player_2_id].find((id) => id && id !== slot.id)
+    : [match.team_b_player_1_id, match.team_b_player_2_id].find((id) => id && id !== slot.id);
+
+  const opponentIds = isTeamA
+    ? [match.team_b_player_1_id, match.team_b_player_2_id]
+    : [match.team_a_player_1_id, match.team_a_player_2_id];
+
+  const partnerLine = partnerId ? ` Partner: ${playerName(playersById.get(partnerId))}` : '';
+  const opponents = opponentIds
+    .filter((id): id is string => !!id)
+    .map((id) => playerName(playersById.get(id)))
+    .join(' & ');
+
+  return `Round ${match.round_number}, ${courtLabel(match)}.${partnerLine}\nOpponents: ${opponents || 'TBD'}`;
+}
+
+function nextMatchForSlot(matches: Match[], completedMatch: Match, slotId: string) {
+  return matches
+    .filter(
+      (match) =>
+        !match.is_bye &&
+        !match.is_complete &&
+        match.round_number > completedMatch.round_number &&
+        matchPlayerIds(match).includes(slotId),
+    )
+    .sort((a, b) => {
+      if (a.round_number !== b.round_number) return a.round_number - b.round_number;
+      return (a.court_number ?? 999) - (b.court_number ?? 999);
+    })[0];
+}
+
 function canManageTournament(tournament: Tournament, userId: string, userEmail: string | undefined) {
   if (tournament.organizer_user_id === userId) return true;
   if (!tournament.co_organizer_email || !userEmail) return false;
@@ -349,23 +383,31 @@ function buildMatchScoreNotifications(
 
   const teamA = teamName(playersById, match.team_a_player_1_id, match.team_a_player_2_id);
   const teamB = teamName(playersById, match.team_b_player_1_id, match.team_b_player_2_id);
-  const score = `${match.team_a_score ?? '-'}-${match.team_b_score ?? '-'}`;
-  const playerUserIds = uniqueUserIds(
-    matchPlayerIds(match).map((slotId) => playersById.get(slotId)?.claimed_by_user_id),
-  );
+  const score = `${match.team_a_score ?? '-'} - ${match.team_b_score ?? '-'}`;
+  const scoreLine = `Round ${match.round_number}: ${teamA} ${score} ${teamB}`;
+  const playerSlots = matchPlayerIds(match)
+    .map((slotId) => playersById.get(slotId))
+    .filter((slot): slot is PlayerSlot => !!slot?.claimed_by_user_id);
 
-  const notifications: Notification[] = playerUserIds.map((recipientId) => ({
-    userId: recipientId,
-    title: `${titleFor(tournament)} score`,
-    body: `Round ${match.round_number}: ${teamA} ${score} ${teamB}.`,
-    url: `/tournament/${tournament.id}`,
-  }));
+  const notifications: Notification[] = playerSlots.map((slot) => {
+    const nextMatch = nextMatchForSlot(matches, match, slot.id);
+    const nextLine = nextMatch
+      ? nextAssignmentBody(nextMatch, playersById, slot)
+      : 'Next match: open DinkDraw when the next round is ready.';
+
+    return {
+      userId: slot.claimed_by_user_id as string,
+      title: `${titleFor(tournament)} score`,
+      body: `${scoreLine}\n${nextLine}`,
+      url: `/tournament/${tournament.id}`,
+    };
+  });
 
   if (!canManage && tournament.organizer_user_id !== userId) {
     notifications.push({
       userId: tournament.organizer_user_id,
       title: `${titleFor(tournament)} score entered`,
-      body: `Round ${match.round_number}: ${teamA} ${score} ${teamB}.`,
+      body: `${scoreLine}.`,
       url: `/tournament/${tournament.id}`,
     });
   }

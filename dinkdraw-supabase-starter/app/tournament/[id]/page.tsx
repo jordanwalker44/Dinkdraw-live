@@ -8,6 +8,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 import { ShareResultsButton } from '../../../components/ShareResultsButton';
+import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import {
   buildCreamOfTheCropStageSchedule,
   buildNextCreamOfTheCropStagePlayers
@@ -2627,6 +2628,11 @@ useEffect(() => {
 
     setNewNames((prev) => ({ ...prev, [slotId]: claimedName }));
     await loadTournamentData(user.id);
+    void sendTournamentPushEvent(supabase, {
+      eventType: 'spot_claimed',
+      tournamentId: params.id,
+      slotId,
+    });
     setMessage('Spot claimed.');
   }
 
@@ -3132,6 +3138,10 @@ if (!scheduleValidation.isValid) {
       }
 
       await loadTournamentData(userId);
+      void sendTournamentPushEvent(supabase, {
+        eventType: 'tournament_started',
+        tournamentId: tournament.id,
+      });
       setActiveTab('rounds');
       setSelectedRound(1);
       setMessage('Tournament started.');
@@ -3760,6 +3770,10 @@ if (!scheduleValidation.isValid) {
       return false;
     }
     setTournament((prev) => (prev ? { ...prev, status: 'completed' } : prev));
+    void sendTournamentPushEvent(supabase, {
+      eventType: 'tournament_completed',
+      tournamentId: tournament.id,
+    });
     return true;
   }
 
@@ -3992,6 +4006,11 @@ if (!canReportScores) {
     if (seriesNowComplete) {
       const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
       await upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore);
+      void sendTournamentPushEvent(supabase, {
+        eventType: 'match_score_submitted',
+        tournamentId: tournament.id,
+        matchId,
+      });
 
       if (!nextRound) {
         const completed = await markTournamentCompleted();
@@ -4131,6 +4150,10 @@ if (!canReportScores) {
   }
 
   await loadTournamentData(userId);
+  void sendTournamentPushEvent(supabase, {
+    eventType: 'tournament_completed',
+    tournamentId: tournament.id,
+  });
   setMessage('🏆 Championship complete. Winner crowned!');
 }
   async function submitMatchScore(matchId: string) {
@@ -4238,6 +4261,14 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     : 'Score updated, but stats update failed.'
 );
     return;
+  }
+
+  if (tournament) {
+    void sendTournamentPushEvent(supabase, {
+      eventType: 'match_score_submitted',
+      tournamentId: tournament.id,
+      matchId,
+    });
   }
 
   if (!nextRound) {

@@ -335,6 +335,10 @@ class MatchHistory {
     return rounds?.length ? rounds[rounds.length - 1] : -999;
   }
 
+  groupTimes(ids: string[]): number {
+    return this.groupRounds.get(groupKey(ids))?.length ?? 0;
+  }
+
   lastCourt(id: string): number | null {
     const log = this.courtLog.get(id);
     return log?.length ? log[log.length - 1] : null;
@@ -428,6 +432,7 @@ function scoreDoublesMatch(
 
   penalty += partners.timesPartnered(a1, a2) * 500000;
   penalty += partners.timesPartnered(b1, b2) * 500000;
+  penalty += history.groupTimes([a1, a2, b1, b2]) * 200000;
 
   if (!opts.enforceConsecutive) {
     for (const [p, q] of allSharedPairs) {
@@ -778,7 +783,7 @@ function buildOneDoublesRound(
   if (participantCount < 4 || participantCount % 4 !== 0) return null;
 
   const useBacktrack = participantCount < 16;
-  const attempts = participantCount <= 8 ? 300 : participantCount <= 16 ? 120 : 400;
+  const attempts = participantCount <= 8 ? 500 : participantCount <= 16 ? 1000 : 400;
 
   function tryWith(cooldown: number, opts: ScoringOpts): MatchResult[] | null {
     if (participantCount >= 12) {
@@ -1382,6 +1387,8 @@ function buildMixedDoublesSchedule(
   const partnerCounts = new Map<string, number>();
   const mixedTeamOpponentCounts = new Map<string, number>();
   const foursomeCounts = new Map<string, number>();
+  const byeCounts = new Map<string, number>(activePlayers.map((player) => [player.id, 0]));
+  const playedCounts = new Map<string, number>(activePlayers.map((player) => [player.id, 0]));
   const firstTwosomeCounts = new Map<string, number>(
     activePlayers.map((player) => [player.id, 0])
   );
@@ -1423,7 +1430,7 @@ function buildMixedDoublesSchedule(
       (mixedTeamOpponentCounts.get(getMixedTeamOpponentKey(match.teamA, match.teamB)) || 0) *
       30000;
 
-    penalty += (foursomeCounts.get(getFoursomeKey(a1, a2, b1, b2)) || 0) * 75000;
+    penalty += (foursomeCounts.get(getFoursomeKey(a1, a2, b1, b2)) || 0) * 900000;
 
     for (const id of allPlayers) {
       const history = courtHistory.get(id) || [];
@@ -1458,12 +1465,40 @@ function buildMixedDoublesSchedule(
     return penalty;
   }
 
-  function buildTeamsForRound(round: number): MixedTeam[] {
-    const femaleShift = (round - 1) % femalePlayers.length;
+  function chooseMixedGenderParticipants(players: PlayerSlot[], maxCount: number) {
+    if (players.length <= maxCount) {
+      return {
+        participants: [...players],
+        benched: [],
+      };
+    }
 
-    return malePlayers.map((malePlayer, index) => ({
+    const sorted = [...players].sort((a, b) => {
+      const byeDifference = (byeCounts.get(b.id) ?? 0) - (byeCounts.get(a.id) ?? 0);
+      if (byeDifference !== 0) return byeDifference;
+
+      const playDifference = (playedCounts.get(a.id) ?? 0) - (playedCounts.get(b.id) ?? 0);
+      if (playDifference !== 0) return playDifference;
+
+      return a.slot_number - b.slot_number;
+    });
+
+    return {
+      participants: sorted.slice(0, maxCount),
+      benched: sorted.slice(maxCount),
+    };
+  }
+
+  function buildTeamsForRound(
+    round: number,
+    roundMalePlayers: PlayerSlot[],
+    roundFemalePlayers: PlayerSlot[]
+  ): MixedTeam[] {
+    const femaleShift = (round - 1) % roundFemalePlayers.length;
+
+    return roundMalePlayers.map((malePlayer, index) => ({
       maleId: malePlayer.id,
-      femaleId: femalePlayers[(index + femaleShift) % femalePlayers.length].id,
+      femaleId: roundFemalePlayers[(index + femaleShift) % roundFemalePlayers.length].id,
     }));
   }
 
@@ -1584,7 +1619,39 @@ function buildMixedDoublesSchedule(
   }
 
   for (let round = 1; round <= rounds; round += 1) {
-    const teams = buildTeamsForRound(round);
+    const maxPlayersPerGender = Math.max(
+      2,
+      Math.min(courts * 2, malePlayers.length, femalePlayers.length)
+    );
+    const evenPlayersPerGender =
+      maxPlayersPerGender % 2 === 0 ? maxPlayersPerGender : maxPlayersPerGender - 1;
+    const maleSelection = chooseMixedGenderParticipants(malePlayers, evenPlayersPerGender);
+    const femaleSelection = chooseMixedGenderParticipants(femalePlayers, evenPlayersPerGender);
+    const benchedPlayers = [...maleSelection.benched, ...femaleSelection.benched];
+
+    for (const player of benchedPlayers) {
+      byeCounts.set(player.id, (byeCounts.get(player.id) ?? 0) + 1);
+
+      output.push({
+        round_number: round,
+        court_number: null,
+        court_label: null,
+        team_a_player_1_id: player.id,
+        team_a_player_2_id: null,
+        team_b_player_1_id: null,
+        team_b_player_2_id: null,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: true,
+        is_complete: false,
+      });
+    }
+
+    const teams = buildTeamsForRound(
+      round,
+      maleSelection.participants,
+      femaleSelection.participants
+    );
     const matches = pairMixedTeams(teams);
 
     if (!matches || !matches.length) break;
@@ -1620,6 +1687,7 @@ function buildMixedDoublesSchedule(
       firstTwosomeCounts.set(a2, (firstTwosomeCounts.get(a2) ?? 0) + 1);
 
       for (const id of [a1, a2, b1, b2]) {
+        playedCounts.set(id, (playedCounts.get(id) ?? 0) + 1);
         recordCourtAssignment(courtCounts, id, court);
       }
 

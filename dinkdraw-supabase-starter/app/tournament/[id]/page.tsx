@@ -276,6 +276,10 @@ type MatchResult = {
   b2: string;
 };
 
+type AssignedMatchResult = MatchResult & {
+  court: number;
+};
+
 type ScoringOpts = {
   enforceGroupCooldown: boolean;
   enforceConsecutive: boolean;
@@ -660,6 +664,9 @@ function buildCirclePartnerDoublesRound(
 
   if (teams.length !== courts * 2) return null;
 
+  const teamOffset = (round - 1) % teams.length;
+  const orderedTeams = [...teams.slice(teamOffset), ...teams.slice(0, teamOffset)];
+
   let bestMatches: MatchResult[] | null = null;
   let bestPenalty = Infinity;
   let searched = 0;
@@ -752,7 +759,7 @@ function buildCirclePartnerDoublesRound(
     }
   }
 
-  search(teams, [], 0);
+  search(orderedTeams, [], 0);
 
   return bestMatches;
 }
@@ -899,6 +906,216 @@ function chooseDoublesParticipants(
   };
 }
 
+function courtCountForPlayer(
+  courtCounts: Map<string, Map<number, number>>,
+  playerId: string,
+  court: number
+) {
+  return courtCounts.get(playerId)?.get(court) ?? 0;
+}
+
+function scoreCourtAssignment(
+  match: MatchResult,
+  court: number,
+  history: MatchHistory,
+  courtCounts: Map<string, Map<number, number>>
+) {
+  const players = [match.a1, match.a2, match.b1, match.b2];
+  let penalty = 0;
+
+  for (const playerId of players) {
+    if (history.lastCourt(playerId) === court) penalty += 1000000;
+    penalty += courtCountForPlayer(courtCounts, playerId, court) * 1000;
+  }
+
+  return penalty;
+}
+
+function assignDoublesCourts(
+  matches: MatchResult[],
+  activeCourts: number,
+  history: MatchHistory,
+  courtCounts: Map<string, Map<number, number>>
+): AssignedMatchResult[] {
+  let bestAssignments: AssignedMatchResult[] | null = null;
+  let bestPenalty = Infinity;
+
+  function search(
+    remainingMatches: MatchResult[],
+    availableCourts: number[],
+    currentAssignments: AssignedMatchResult[],
+    currentPenalty: number
+  ) {
+    if (currentPenalty >= bestPenalty) return;
+
+    if (!remainingMatches.length) {
+      bestAssignments = currentAssignments;
+      bestPenalty = currentPenalty;
+      return;
+    }
+
+    const [match, ...restMatches] = remainingMatches;
+
+    for (const court of availableCourts) {
+      const assignmentPenalty = scoreCourtAssignment(match, court, history, courtCounts);
+      search(
+        restMatches,
+        availableCourts.filter((availableCourt) => availableCourt !== court),
+        [...currentAssignments, { ...match, court }],
+        currentPenalty + assignmentPenalty
+      );
+    }
+  }
+
+  search(
+    matches,
+    Array.from({ length: activeCourts }, (_, index) => index + 1),
+    [],
+    0
+  );
+
+  return bestAssignments || matches.map((match, index) => ({ ...match, court: index + 1 }));
+}
+
+function recordCourtAssignment(
+  courtCounts: Map<string, Map<number, number>>,
+  playerId: string,
+  court: number
+) {
+  const playerCourtCounts = courtCounts.get(playerId) || new Map<number, number>();
+  playerCourtCounts.set(court, (playerCourtCounts.get(court) ?? 0) + 1);
+  courtCounts.set(playerId, playerCourtCounts);
+}
+
+function scoreFirstTwosomeBalance(counts: Map<string, number>) {
+  const values = Array.from(counts.values());
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const variancePenalty = values.reduce(
+    (sum, value) => sum + Math.pow(value - average, 2),
+    0
+  );
+
+  return (max - min) * 100000 + variancePenalty;
+}
+
+function orientDoublesServingSides(
+  matches: AssignedMatchResult[],
+  firstTwosomeCounts: Map<string, number>
+): AssignedMatchResult[] {
+  let bestMatches: AssignedMatchResult[] | null = null;
+  let bestPenalty = Infinity;
+
+  function increment(counts: Map<string, number>, playerId: string) {
+    counts.set(playerId, (counts.get(playerId) ?? 0) + 1);
+  }
+
+  function search(
+    index: number,
+    currentMatches: AssignedMatchResult[],
+    currentCounts: Map<string, number>
+  ) {
+    if (index >= matches.length) {
+      const penalty = scoreFirstTwosomeBalance(currentCounts);
+
+      if (penalty < bestPenalty) {
+        bestPenalty = penalty;
+        bestMatches = currentMatches;
+      }
+
+      return;
+    }
+
+    const match = matches[index];
+
+    const normalCounts = new Map(currentCounts);
+    increment(normalCounts, match.a1);
+    increment(normalCounts, match.a2);
+    search(index + 1, [...currentMatches, match], normalCounts);
+
+    const flippedMatch = {
+      a1: match.b1,
+      a2: match.b2,
+      b1: match.a1,
+      b2: match.a2,
+      court: match.court,
+    };
+    const flippedCounts = new Map(currentCounts);
+    increment(flippedCounts, flippedMatch.a1);
+    increment(flippedCounts, flippedMatch.a2);
+    search(index + 1, [...currentMatches, flippedMatch], flippedCounts);
+  }
+
+  search(0, [], new Map(firstTwosomeCounts));
+
+  return bestMatches || matches;
+}
+
+function scoreFirstTwosomeSchedule(rows: ScheduleRow[], playerIds: string[]) {
+  const counts = new Map<string, number>(playerIds.map((id) => [id, 0]));
+
+  for (const row of rows) {
+    if (row.is_bye) continue;
+    if (row.team_a_player_1_id) {
+      counts.set(row.team_a_player_1_id, (counts.get(row.team_a_player_1_id) ?? 0) + 1);
+    }
+    if (row.team_a_player_2_id) {
+      counts.set(row.team_a_player_2_id, (counts.get(row.team_a_player_2_id) ?? 0) + 1);
+    }
+  }
+
+  return scoreFirstTwosomeBalance(counts);
+}
+
+function balanceDoublesServingSidesInSchedule(
+  rows: ScheduleRow[],
+  playerIds: string[]
+) {
+  let balancedRows = [...rows];
+  let bestScore = scoreFirstTwosomeSchedule(balancedRows, playerIds);
+  let improved = true;
+
+  while (improved) {
+    improved = false;
+
+    for (let index = 0; index < balancedRows.length; index += 1) {
+      const row = balancedRows[index];
+      if (
+        row.is_bye ||
+        !row.team_a_player_1_id ||
+        !row.team_a_player_2_id ||
+        !row.team_b_player_1_id ||
+        !row.team_b_player_2_id
+      ) {
+        continue;
+      }
+
+      const flippedRows = balancedRows.map((candidate, candidateIndex) =>
+        candidateIndex === index
+          ? {
+              ...candidate,
+              team_a_player_1_id: row.team_b_player_1_id,
+              team_a_player_2_id: row.team_b_player_2_id,
+              team_b_player_1_id: row.team_a_player_1_id,
+              team_b_player_2_id: row.team_a_player_2_id,
+            }
+          : candidate
+      );
+
+      const flippedScore = scoreFirstTwosomeSchedule(flippedRows, playerIds);
+
+      if (flippedScore < bestScore) {
+        balancedRows = flippedRows;
+        bestScore = flippedScore;
+        improved = true;
+      }
+    }
+  }
+
+  return balancedRows;
+}
+
 function buildDoublesSchedule(
   players: PlayerSlot[],
   rounds: number,
@@ -916,6 +1133,8 @@ function buildDoublesSchedule(
   const history = new MatchHistory();
   const byeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
   const playedCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const firstTwosomeCounts = new Map<string, number>(ids.map((id) => [id, 0]));
+  const courtCounts = new Map<string, Map<number, number>>();
   const output: ScheduleRow[] = [];
 
   for (let round = 1; round <= rounds; round += 1) {
@@ -961,15 +1180,25 @@ function buildDoublesSchedule(
       });
     }
 
-    matches.forEach(({ a1, a2, b1, b2 }, index) => {
-      const court = index + 1;
+    const assignedMatches = assignDoublesCourts(
+      matches,
+      activeCourts,
+      history,
+      courtCounts
+    );
+
+    orientDoublesServingSides(assignedMatches, firstTwosomeCounts).forEach((assignedMatch) => {
+      const { a1, a2, b1, b2, court } = assignedMatch;
 
       partners.record(a1, a2);
       partners.record(b1, b2);
       history.record(a1, a2, b1, b2, court, round);
+      firstTwosomeCounts.set(a1, (firstTwosomeCounts.get(a1) ?? 0) + 1);
+      firstTwosomeCounts.set(a2, (firstTwosomeCounts.get(a2) ?? 0) + 1);
 
       for (const id of [a1, a2, b1, b2]) {
         playedCounts.set(id, (playedCounts.get(id) ?? 0) + 1);
+        recordCourtAssignment(courtCounts, id, court);
       }
 
       output.push({
@@ -988,7 +1217,7 @@ function buildDoublesSchedule(
     });
   }
 
-  return output;
+  return balanceDoublesServingSidesInSchedule(output, ids);
 }
 
 function buildFixedPartnersSchedule(

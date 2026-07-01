@@ -917,7 +917,7 @@ function courtCountForPlayer(
 function scoreCourtAssignment(
   match: MatchResult,
   court: number,
-  history: MatchHistory,
+  history: { lastCourt(playerId: string): number | null },
   courtCounts: Map<string, Map<number, number>>
 ) {
   const players = [match.a1, match.a2, match.b1, match.b2];
@@ -934,7 +934,7 @@ function scoreCourtAssignment(
 function assignDoublesCourts(
   matches: MatchResult[],
   activeCourts: number,
-  history: MatchHistory,
+  history: { lastCourt(playerId: string): number | null },
   courtCounts: Map<string, Map<number, number>>
 ): AssignedMatchResult[] {
   let bestAssignments: AssignedMatchResult[] | null = null;
@@ -1382,6 +1382,10 @@ function buildMixedDoublesSchedule(
   const partnerCounts = new Map<string, number>();
   const mixedTeamOpponentCounts = new Map<string, number>();
   const foursomeCounts = new Map<string, number>();
+  const firstTwosomeCounts = new Map<string, number>(
+    activePlayers.map((player) => [player.id, 0])
+  );
+  const courtCounts = new Map<string, Map<number, number>>();
   const courtHistory = new Map<string, number[]>(
     activePlayers.map((player) => [player.id, []])
   );
@@ -1585,16 +1589,43 @@ function buildMixedDoublesSchedule(
 
     if (!matches || !matches.length) break;
 
-    matches.slice(0, courts).forEach((match, index) => {
-      const courtNumber = index + 1;
-      const [a1, a2] = match.teamA;
-      const [b1, b2] = match.teamB;
+    const assignedMatches = assignDoublesCourts(
+      matches.slice(0, courts).map((match) => ({
+        a1: match.teamA[0],
+        a2: match.teamA[1],
+        b1: match.teamB[0],
+        b2: match.teamB[1],
+      })),
+      Math.min(courts, matches.length),
+      {
+        lastCourt(id: string) {
+          const history = courtHistory.get(id) || [];
+          return history.length ? history[history.length - 1] : null;
+        },
+      },
+      courtCounts
+    );
 
-      recordMixedMatch(match, courtNumber);
+    orientDoublesServingSides(assignedMatches, firstTwosomeCounts).forEach((assignedMatch) => {
+      const { a1, a2, b1, b2, court } = assignedMatch;
+
+      recordMixedMatch(
+        {
+          teamA: [a1, a2],
+          teamB: [b1, b2],
+        },
+        court
+      );
+      firstTwosomeCounts.set(a1, (firstTwosomeCounts.get(a1) ?? 0) + 1);
+      firstTwosomeCounts.set(a2, (firstTwosomeCounts.get(a2) ?? 0) + 1);
+
+      for (const id of [a1, a2, b1, b2]) {
+        recordCourtAssignment(courtCounts, id, court);
+      }
 
       output.push({
         round_number: round,
-        court_number: courtNumber,
+        court_number: court,
         court_label: null,
         team_a_player_1_id: a1,
         team_a_player_2_id: a2,
@@ -1608,7 +1639,10 @@ function buildMixedDoublesSchedule(
     });
   }
 
-  return output;
+  return balanceDoublesServingSidesInSchedule(
+    output,
+    activePlayers.map((player) => player.id)
+  );
 }
 
 function validateScheduleRows(

@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { AuthRefresh } from '../components/AuthRefresh';
 import { AppChrome } from '../components/AppChrome';
+import PushNotificationHandler from '../components/PushNotificationHandler';
 import DeepLinkHandler from './DeepLinkHandler';
 
 export const metadata: Metadata = {
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body>
         <AuthRefresh />
         <DeepLinkHandler />
+        <PushNotificationHandler />
         <AppChrome>{children}</AppChrome>
       </body>
     </html>

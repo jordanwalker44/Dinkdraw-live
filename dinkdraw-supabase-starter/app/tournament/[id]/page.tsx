@@ -1259,13 +1259,11 @@ function buildFixedPartnersSchedule(
   if (teams.length < 2) return [];
 
   const output: ScheduleRow[] = [];
-  const teamASideCounts = new Map<string, number>();
-  const teamCourtHistory = new Map<string, number[]>();
-
-  for (const team of teams) {
-    teamASideCounts.set(team.id, 0);
-    teamCourtHistory.set(team.id, []);
-  }
+  const history = new MatchHistory();
+  const firstTwosomeCounts = new Map<string, number>(
+    activePlayers.map((player) => [player.id, 0])
+  );
+  const courtCounts = new Map<string, Map<number, number>>();
 
   const hasBye = teams.length % 2 !== 0;
   const rotationTeams: Array<FixedTeam | null> = hasBye ? [...teams, null] : [...teams];
@@ -1274,24 +1272,8 @@ function buildFixedPartnersSchedule(
   const requestedRounds = Math.max(0, rounds);
   const actualRounds = Math.min(requestedRounds, maxRoundsWithoutRepeats);
 
-  function getCourtPenalty(team: FixedTeam, courtNumber: number): number {
-    const history = teamCourtHistory.get(team.id) || [];
-    return history.slice(-2).filter((court) => court === courtNumber).length * 100;
-  }
-
-  function chooseSides(team1: FixedTeam, team2: FixedTeam): { teamA: FixedTeam; teamB: FixedTeam } {
-    const team1ACount = teamASideCounts.get(team1.id) || 0;
-    const team2ACount = teamASideCounts.get(team2.id) || 0;
-
-    if (team1ACount > team2ACount) {
-      return { teamA: team2, teamB: team1 };
-    }
-
-    return { teamA: team1, teamB: team2 };
-  }
-
   for (let round = 1; round <= actualRounds; round += 1) {
-    const roundPairs: Array<{ team1: FixedTeam; team2: FixedTeam; score: number }> = [];
+    const roundMatches: MatchResult[] = [];
 
     for (let i = 0; i < totalRotationSlots / 2; i += 1) {
       const team1 = rotationTeams[i];
@@ -1299,51 +1281,47 @@ function buildFixedPartnersSchedule(
 
       if (!team1 || !team2) continue;
 
-      const projectedCourt = roundPairs.length + 1;
-      const score =
-        getCourtPenalty(team1, projectedCourt) +
-        getCourtPenalty(team2, projectedCourt);
-
-      roundPairs.push({
-        team1,
-        team2,
-        score,
+      roundMatches.push({
+        a1: team1.player1Id,
+        a2: team1.player2Id,
+        b1: team2.player1Id,
+        b2: team2.player2Id,
       });
     }
 
-    roundPairs
-      .sort((a, b) => a.score - b.score)
-      .slice(0, courts)
-      .forEach(({ team1, team2 }, index) => {
-        const courtNumber = index + 1;
-        const { teamA, teamB } = chooseSides(team1, team2);
+    const activeCourts = Math.min(courts, roundMatches.length);
+    const assignedMatches = assignDoublesCourts(
+      roundMatches.slice(0, activeCourts),
+      activeCourts,
+      history,
+      courtCounts
+    );
 
-        output.push({
-          round_number: round,
-          court_number: courtNumber,
-          court_label: null,
-          team_a_player_1_id: teamA.player1Id,
-          team_a_player_2_id: teamA.player2Id,
-          team_b_player_1_id: teamB.player1Id,
-          team_b_player_2_id: teamB.player2Id,
-          team_a_score: null,
-          team_b_score: null,
-          is_bye: false,
-          is_complete: false,
-        });
+    orientDoublesServingSides(assignedMatches, firstTwosomeCounts).forEach((assignedMatch) => {
+      const { a1, a2, b1, b2, court } = assignedMatch;
 
-        teamASideCounts.set(teamA.id, (teamASideCounts.get(teamA.id) || 0) + 1);
+      history.record(a1, a2, b1, b2, court, round);
+      firstTwosomeCounts.set(a1, (firstTwosomeCounts.get(a1) ?? 0) + 1);
+      firstTwosomeCounts.set(a2, (firstTwosomeCounts.get(a2) ?? 0) + 1);
 
-        teamCourtHistory.set(teamA.id, [
-          ...(teamCourtHistory.get(teamA.id) || []),
-          courtNumber,
-        ]);
+      for (const id of [a1, a2, b1, b2]) {
+        recordCourtAssignment(courtCounts, id, court);
+      }
 
-        teamCourtHistory.set(teamB.id, [
-          ...(teamCourtHistory.get(teamB.id) || []),
-          courtNumber,
-        ]);
+      output.push({
+        round_number: round,
+        court_number: court,
+        court_label: null,
+        team_a_player_1_id: a1,
+        team_a_player_2_id: a2,
+        team_b_player_1_id: b1,
+        team_b_player_2_id: b2,
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: false,
+        is_complete: false,
       });
+    });
 
     const fixedTeam = rotationTeams[0];
     const rotatingTeams = rotationTeams.slice(1);
@@ -1354,7 +1332,10 @@ function buildFixedPartnersSchedule(
     }
   }
 
-  return output;
+  return balanceDoublesServingSidesInSchedule(
+    output,
+    activePlayers.map((player) => player.id)
+  );
 }
 
 function buildMixedDoublesSchedule(

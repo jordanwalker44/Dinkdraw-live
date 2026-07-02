@@ -59,11 +59,29 @@ type PushTokenRow = {
   user_id: string;
 };
 
+type NotificationCategory =
+  | 'spot_claimed'
+  | 'match_assignment'
+  | 'score_update'
+  | 'tournament_completed'
+  | 'reminder';
+
 type Notification = {
   userId: string;
   title: string;
   body: string;
   url: string;
+  category: NotificationCategory;
+};
+
+type PushPreferenceRow = {
+  user_id: string;
+  tournament_updates_enabled: boolean | null;
+  spot_claimed_enabled: boolean | null;
+  match_assignments_enabled: boolean | null;
+  score_updates_enabled: boolean | null;
+  tournament_completed_enabled: boolean | null;
+  reminders_enabled: boolean | null;
 };
 
 const corsHeaders = {
@@ -325,6 +343,7 @@ function buildSpotClaimedNotifications(
       title: titleFor(tournament),
       body: `${playerName(claimedSlot)} claimed a spot. ${claimedCount}/${tournament.player_count} have been claimed.`,
       url: `/tournament/${tournament.id}`,
+      category: 'spot_claimed',
     },
   ].filter((notification) => notification.userId !== userId);
 }
@@ -356,6 +375,7 @@ function buildTournamentStartedNotifications(
           ? assignmentBody(match, playersById, slot)
           : 'The tournament has started. Open DinkDraw for your first assignment.',
         url: `/tournament/${tournament.id}`,
+        category: 'match_assignment',
       };
     });
 }
@@ -400,6 +420,7 @@ function buildMatchScoreNotifications(
       title: `${titleFor(tournament)} score`,
       body: `${scoreLine}\n${nextLine}`,
       url: `/tournament/${tournament.id}`,
+      category: 'score_update',
     };
   });
 
@@ -409,6 +430,7 @@ function buildMatchScoreNotifications(
       title: `${titleFor(tournament)} score entered`,
       body: `${scoreLine}.`,
       url: `/tournament/${tournament.id}`,
+      category: 'score_update',
     });
   }
 
@@ -441,7 +463,40 @@ function buildTournamentCompletedNotifications(
     title: `${titleFor(tournament)} complete`,
     body: 'Final results are ready.',
     url: `/tournament/${tournament.id}/results`,
+    category: 'tournament_completed',
   }));
+}
+
+function isNotificationEnabled(
+  notification: Notification,
+  preferencesByUserId: Map<string, PushPreferenceRow>,
+) {
+  const preferences = preferencesByUserId.get(notification.userId);
+
+  if (!preferences) return true;
+  if (preferences.tournament_updates_enabled === false) return false;
+
+  if (notification.category === 'spot_claimed') {
+    return preferences.spot_claimed_enabled !== false;
+  }
+
+  if (notification.category === 'match_assignment') {
+    return preferences.match_assignments_enabled !== false;
+  }
+
+  if (notification.category === 'score_update') {
+    return preferences.score_updates_enabled !== false;
+  }
+
+  if (notification.category === 'tournament_completed') {
+    return preferences.tournament_completed_enabled !== false;
+  }
+
+  if (notification.category === 'reminder') {
+    return preferences.reminders_enabled !== false;
+  }
+
+  return true;
 }
 
 async function sendNotifications(adminClient: ReturnType<typeof createClient>, notifications: Notification[]) {
@@ -451,12 +506,39 @@ async function sendNotifications(adminClient: ReturnType<typeof createClient>, n
 
   if (!uniqueNotifications.length) return [];
 
+  const recipientUserIds = uniqueNotifications.map((notification) => notification.userId);
+
+  const { data: preferenceData, error: preferenceError } = await adminClient
+    .from('push_notification_preferences')
+    .select(
+      'user_id, tournament_updates_enabled, spot_claimed_enabled, match_assignments_enabled, score_updates_enabled, tournament_completed_enabled, reminders_enabled',
+    )
+    .in('user_id', recipientUserIds);
+
+  if (preferenceError) throw preferenceError;
+
+  const preferencesByUserId = new Map(
+    ((preferenceData || []) as PushPreferenceRow[]).map((row) => [row.user_id, row]),
+  );
+  const enabledNotifications = uniqueNotifications.filter((notification) =>
+    isNotificationEnabled(notification, preferencesByUserId),
+  );
+
+  if (!enabledNotifications.length) {
+    return uniqueNotifications.map((notification) => ({
+      userId: notification.userId,
+      sent: false,
+      skipped: true,
+      reason: 'Notification preference disabled',
+    }));
+  }
+
   const { data, error } = await adminClient
     .from('push_tokens')
     .select('user_id, token, platform')
     .in(
       'user_id',
-      uniqueNotifications.map((notification) => notification.userId),
+      enabledNotifications.map((notification) => notification.userId),
     )
     .eq('enabled', true)
     .eq('platform', 'ios')
@@ -465,8 +547,15 @@ async function sendNotifications(adminClient: ReturnType<typeof createClient>, n
   if (error) throw error;
 
   const tokens = (data || []) as PushTokenRow[];
-  const notificationByUserId = new Map(uniqueNotifications.map((notification) => [notification.userId, notification]));
-  const results = [];
+  const notificationByUserId = new Map(enabledNotifications.map((notification) => [notification.userId, notification]));
+  const results = uniqueNotifications
+    .filter((notification) => !notificationByUserId.has(notification.userId))
+    .map((notification) => ({
+      userId: notification.userId,
+      sent: false,
+      skipped: true,
+      reason: 'Notification preference disabled',
+    }));
 
   for (const row of tokens) {
     const notification = notificationByUserId.get(row.user_id);

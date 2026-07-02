@@ -8,6 +8,24 @@ import { TopNav } from '../../components/TopNav';
 
 type AuthMode = 'signup' | 'signin';
 
+type PushNotificationPreferences = {
+  tournament_updates_enabled: boolean;
+  spot_claimed_enabled: boolean;
+  match_assignments_enabled: boolean;
+  score_updates_enabled: boolean;
+  tournament_completed_enabled: boolean;
+  reminders_enabled: boolean;
+};
+
+const defaultPushPreferences: PushNotificationPreferences = {
+  tournament_updates_enabled: true,
+  spot_claimed_enabled: true,
+  match_assignments_enabled: true,
+  score_updates_enabled: true,
+  tournament_completed_enabled: true,
+  reminders_enabled: true,
+};
+
 function getSafeRedirectPath() {
   if (typeof window === 'undefined') return '/';
 
@@ -34,7 +52,9 @@ export default function AccountPage() {
   const [userEmail, setUserEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPushPreferences, setIsSavingPushPreferences] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [pushPreferences, setPushPreferences] = useState<PushNotificationPreferences>(defaultPushPreferences);
 
   useEffect(() => {
     async function loadUser() {
@@ -46,6 +66,7 @@ export default function AccountPage() {
 
       if (!user) {
         setProfileName('');
+        setPushPreferences(defaultPushPreferences);
         return;
       }
 
@@ -58,6 +79,7 @@ export default function AccountPage() {
       const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
+      await loadPushPreferences(user.id);
     }
 
     loadUser();
@@ -71,6 +93,7 @@ export default function AccountPage() {
       if (!user) {
         setProfileName('');
         setName('');
+        setPushPreferences(defaultPushPreferences);
         return;
       }
 
@@ -83,10 +106,37 @@ export default function AccountPage() {
       const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
+      await loadPushPreferences(user.id);
     });
 
     return () => { subscription.unsubscribe(); };
   }, [supabase]);
+
+  async function loadPushPreferences(userId: string) {
+    const { data, error } = await supabase
+      .from('push_notification_preferences')
+      .select(
+        'tournament_updates_enabled, spot_claimed_enabled, match_assignments_enabled, score_updates_enabled, tournament_completed_enabled, reminders_enabled'
+      )
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn('Could not load push notification preferences:', error.message);
+      setPushPreferences(defaultPushPreferences);
+      return;
+    }
+
+    if (!data) {
+      setPushPreferences(defaultPushPreferences);
+      return;
+    }
+
+    setPushPreferences({
+      ...defaultPushPreferences,
+      ...data,
+    });
+  }
 
   async function handleAuth() {
     setMessage('');
@@ -224,6 +274,45 @@ export default function AccountPage() {
     if (redirectPath !== '/') {
       router.push(redirectPath);
     }
+  }
+
+  async function handleSavePushPreferences() {
+    setMessage('');
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+
+    if (!user) {
+      setMessage('Sign in first.');
+      return;
+    }
+
+    setIsSavingPushPreferences(true);
+
+    const { error } = await supabase.from('push_notification_preferences').upsert({
+      user_id: user.id,
+      ...pushPreferences,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (error) {
+      setMessage(`Notification preferences failed: ${error.message}`);
+      setIsSavingPushPreferences(false);
+      return;
+    }
+
+    setMessage('Notification preferences saved.');
+    setIsSavingPushPreferences(false);
+  }
+
+  function updatePushPreference(
+    key: keyof PushNotificationPreferences,
+    value: boolean
+  ) {
+    setPushPreferences((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
   }
 
   async function handleDeleteAccount() {
@@ -370,51 +459,142 @@ export default function AccountPage() {
               <button className="button primary" onClick={handleSaveDisplayName} disabled={isSavingProfile}>
                 {isSavingProfile ? 'Saving...' : 'Save Display Name'}
               </button>
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Push Notifications</div>
+            <div className="card-subtitle">
+              Choose which tournament updates DinkDraw can send to your devices.
+            </div>
+            <div className="grid">
+              {[
+                {
+                  key: 'tournament_updates_enabled' as const,
+                  title: 'Tournament updates',
+                  subtitle: 'Master switch for all tournament push notifications.',
+                },
+                {
+                  key: 'spot_claimed_enabled' as const,
+                  title: 'Claimed spots',
+                  subtitle: 'Organizer alerts when players claim spots.',
+                },
+                {
+                  key: 'match_assignments_enabled' as const,
+                  title: 'Match assignments',
+                  subtitle: 'Court, partner, and opponent notifications.',
+                },
+                {
+                  key: 'score_updates_enabled' as const,
+                  title: 'Score updates',
+                  subtitle: 'Completed scores and next-match details.',
+                },
+                {
+                  key: 'tournament_completed_enabled' as const,
+                  title: 'Final results',
+                  subtitle: 'Tournament completed and results-ready notifications.',
+                },
+                {
+                  key: 'reminders_enabled' as const,
+                  title: 'Reminders',
+                  subtitle: 'Future 24-hour and 1-hour tournament reminders.',
+                },
+              ].map((item) => {
+                const checked = pushPreferences[item.key];
+                const disabled =
+                  item.key !== 'tournament_updates_enabled' &&
+                  !pushPreferences.tournament_updates_enabled;
+
+                return (
+                  <label
+                    key={item.key}
+                    className="list-item"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      opacity: disabled ? 0.62 : 1,
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <span>
+                      <span style={{ display: 'block', fontWeight: 800, marginBottom: 4 }}>
+                        {item.title}
+                      </span>
+                      <span className="muted">{item.subtitle}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={(event) => updatePushPreference(item.key, event.target.checked)}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        flex: '0 0 auto',
+                        accentColor: '#ffcb05',
+                      }}
+                    />
+                  </label>
+                );
+              })}
 
               <button
-  className="button secondary"
-  onClick={handleSignOut}
-  disabled={isLoading}
->
-  {isLoading ? 'Signing Out...' : 'Sign Out'}
-</button>
+                className="button primary"
+                onClick={handleSavePushPreferences}
+                disabled={isSavingPushPreferences}
+              >
+                {isSavingPushPreferences ? 'Saving...' : 'Save Notification Preferences'}
+              </button>
+            </div>
+          </div>
 
-                    <button
-                      className="button secondary"
-                      onClick={handleDeleteAccount}
-                      disabled={isDeletingAccount}
-                  style={{
-                      borderColor: 'rgba(255,80,80,.45)',
-                      color: '#ff8080',
-                  }}
-                >
-                      {isDeletingAccount
-                      ? 'Deleting Account...'
-                      : 'Delete My Account'}
-                </button>
-              
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Account</div>
+            <div className="grid">
+              <button
+                className="button secondary"
+                onClick={handleSignOut}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Signing Out...' : 'Sign Out'}
+              </button>
+
+              <button
+                className="button secondary"
+                onClick={handleDeleteAccount}
+                disabled={isDeletingAccount}
+                style={{
+                  borderColor: 'rgba(255,80,80,.45)',
+                  color: '#ff8080',
+                }}
+              >
+                {isDeletingAccount ? 'Deleting Account...' : 'Delete My Account'}
+              </button>
+
               <Link
                 href="/privacy"
                 className="button secondary"
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 Privacy Policy
               </Link>
               <Link
                 href="/support"
                 className="button secondary"
                 style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-        >
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 Support
-</Link>
+              </Link>
             </div>
           </div>
         </>

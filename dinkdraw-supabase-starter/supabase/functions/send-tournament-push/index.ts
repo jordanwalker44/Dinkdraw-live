@@ -268,6 +268,19 @@ function nextMatchForSlot(matches: Match[], completedMatch: Match, slotId: strin
     })[0];
 }
 
+function firstMatchForSlot(matches: Match[], slotId: string) {
+  return matches
+    .filter((match) => !match.is_bye && matchPlayerIds(match).includes(slotId))
+    .sort((a, b) => {
+      if (a.round_number !== b.round_number) return a.round_number - b.round_number;
+      return (a.court_number ?? 999) - (b.court_number ?? 999);
+    })[0];
+}
+
+function hasRemainingPlayableMatches(matches: Match[]) {
+  return matches.some((match) => !match.is_bye && !match.is_complete);
+}
+
 function canManageTournament(tournament: Tournament, userId: string, userEmail: string | undefined) {
   if (tournament.organizer_user_id === userId) return true;
   if (!tournament.co_organizer_email || !userEmail) return false;
@@ -323,7 +336,7 @@ function buildSpotClaimedNotifications(
     {
       userId: tournament.organizer_user_id,
       title: titleFor(tournament),
-      body: `${playerName(claimedSlot)} claimed a spot. ${claimedCount}/${tournament.player_count} have been claimed.`,
+      body: `${playerName(claimedSlot)} claimed a spot. ${claimedCount} of ${tournament.player_count} spots are claimed.`,
       url: `/tournament/${tournament.id}`,
     },
   ].filter((notification) => notification.userId !== userId);
@@ -348,13 +361,16 @@ function buildTournamentStartedNotifications(
     .filter((slot) => !!slot.claimed_by_user_id)
     .map((slot) => {
       const match = firstRoundMatches.find((item) => matchPlayerIds(item).includes(slot.id));
+      const firstMatch = match || firstMatchForSlot(matches, slot.id);
 
       return {
         userId: slot.claimed_by_user_id as string,
-        title: `${titleFor(tournament)} started`,
+        title: match ? 'Your first match is ready' : `${titleFor(tournament)} started`,
         body: match
           ? assignmentBody(match, playersById, slot)
-          : 'The tournament has started. Open DinkDraw for your first assignment.',
+          : firstMatch
+            ? `You are not scheduled in Round ${firstRound}. First match: ${assignmentBody(firstMatch, playersById, slot)}`
+            : 'The tournament has started. Open DinkDraw for your first assignment.',
         url: `/tournament/${tournament.id}`,
       };
     });
@@ -385,6 +401,7 @@ function buildMatchScoreNotifications(
   const teamB = teamName(playersById, match.team_b_player_1_id, match.team_b_player_2_id);
   const score = `${match.team_a_score ?? '-'} - ${match.team_b_score ?? '-'}`;
   const scoreLine = `Round ${match.round_number}: ${teamA} ${score} ${teamB}`;
+  const tournamentStillHasMatches = hasRemainingPlayableMatches(matches);
   const playerSlots = matchPlayerIds(match)
     .map((slotId) => playersById.get(slotId))
     .filter((slot): slot is PlayerSlot => !!slot?.claimed_by_user_id);
@@ -393,11 +410,13 @@ function buildMatchScoreNotifications(
     const nextMatch = nextMatchForSlot(matches, match, slot.id);
     const nextLine = nextMatch
       ? nextAssignmentBody(nextMatch, playersById, slot)
-      : 'Next match: open DinkDraw when the next round is ready.';
+      : tournamentStillHasMatches
+        ? 'You are done for now. Open DinkDraw when your next round is ready.'
+        : 'Tournament complete. Final results are ready.';
 
     return {
       userId: slot.claimed_by_user_id as string,
-      title: `${titleFor(tournament)} score`,
+      title: 'Score posted',
       body: `${scoreLine}\n${nextLine}`,
       url: `/tournament/${tournament.id}`,
     };
@@ -406,8 +425,8 @@ function buildMatchScoreNotifications(
   if (!canManage && tournament.organizer_user_id !== userId) {
     notifications.push({
       userId: tournament.organizer_user_id,
-      title: `${titleFor(tournament)} score entered`,
-      body: `${scoreLine}.`,
+      title: 'Score entered by player',
+      body: scoreLine,
       url: `/tournament/${tournament.id}`,
     });
   }
@@ -439,7 +458,7 @@ function buildTournamentCompletedNotifications(
   return recipients.map((recipientId) => ({
     userId: recipientId,
     title: `${titleFor(tournament)} complete`,
-    body: 'Final results are ready.',
+    body: 'Final results are ready. Tap to view standings.',
     url: `/tournament/${tournament.id}/results`,
   }));
 }

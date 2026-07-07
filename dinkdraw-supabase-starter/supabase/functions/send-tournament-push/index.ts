@@ -489,15 +489,26 @@ async function sendNotifications(adminClient: ReturnType<typeof createClient>, n
   if (error) throw error;
 
   const tokens = (data || []) as PushTokenRow[];
+  const latestTokenByUserId = new Map<string, PushTokenRow>();
+
+  for (const row of tokens) {
+    if (!latestTokenByUserId.has(row.user_id)) {
+      latestTokenByUserId.set(row.user_id, row);
+    }
+  }
+
+  const latestTokens = Array.from(latestTokenByUserId.values());
+
   console.log('send-tournament-push token lookup complete', {
     uniqueRecipientCount: uniqueNotifications.length,
     enabledIosTokenCount: tokens.length,
+    latestTokenCount: latestTokens.length,
   });
 
   const notificationByUserId = new Map(uniqueNotifications.map((notification) => [notification.userId, notification]));
   const results = [];
 
-  for (const row of tokens) {
+  for (const row of latestTokens) {
     const notification = notificationByUserId.get(row.user_id);
     if (!notification) continue;
 

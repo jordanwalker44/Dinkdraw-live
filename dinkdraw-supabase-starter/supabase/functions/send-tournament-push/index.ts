@@ -468,7 +468,12 @@ async function sendNotifications(adminClient: ReturnType<typeof createClient>, n
     new Map(notifications.map((notification) => [notification.userId, notification])).values(),
   );
 
-  if (!uniqueNotifications.length) return [];
+  if (!uniqueNotifications.length) {
+    console.log('send-tournament-push token lookup skipped', {
+      uniqueRecipientCount: 0,
+    });
+    return [];
+  }
 
   const { data, error } = await adminClient
     .from('push_tokens')
@@ -484,6 +489,11 @@ async function sendNotifications(adminClient: ReturnType<typeof createClient>, n
   if (error) throw error;
 
   const tokens = (data || []) as PushTokenRow[];
+  console.log('send-tournament-push token lookup complete', {
+    uniqueRecipientCount: uniqueNotifications.length,
+    enabledIosTokenCount: tokens.length,
+  });
+
   const notificationByUserId = new Map(uniqueNotifications.map((notification) => [notification.userId, notification]));
   const results = [];
 
@@ -495,6 +505,12 @@ async function sendNotifications(adminClient: ReturnType<typeof createClient>, n
       await sendApnsPush(row.token, notification);
       results.push({ userId: row.user_id, platform: row.platform, sent: true });
     } catch (error) {
+      console.error('send-tournament-push APNs send failed', {
+        userId: row.user_id,
+        platform: row.platform,
+        error: error instanceof Error ? error.message : 'Unknown send error',
+      });
+
       results.push({
         userId: row.user_id,
         platform: row.platform,
@@ -594,12 +610,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log('send-tournament-push request ready', {
+      eventType: event.eventType,
+      tournamentId: event.tournamentId,
+      requesterUserId: user.id,
+      requestedNotificationCount: notifications.length,
+      recipientUserIds: notifications.map((notification) => notification.userId),
+    });
+
     const results = await sendNotifications(adminClient, notifications);
+
+    console.log('send-tournament-push results', {
+      eventType: event.eventType,
+      tournamentId: event.tournamentId,
+      requestedNotificationCount: notifications.length,
+      sentCount: results.filter((result) => result.sent).length,
+      failedCount: results.filter((result) => !result.sent).length,
+      results,
+    });
 
     return new Response(JSON.stringify({ ok: true, requested: notifications.length, results }), {
       headers: { ...corsHeaders, 'content-type': 'application/json' },
     });
   } catch (error) {
+    console.error('send-tournament-push failed', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : 'Unknown error',

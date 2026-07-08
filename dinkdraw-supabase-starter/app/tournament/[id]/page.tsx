@@ -2915,6 +2915,17 @@ const tournamentData = tournamentResult.data;
 const playersData = playersResult.data;
 const safeMatches = matchesResult.data || [];
 
+const loadError =
+  tournamentResult.error ||
+  playersResult.error ||
+  matchesResult.error ||
+  playoffMatchesResult.error;
+
+if (loadError) {
+  console.error('Failed to refresh tournament data:', loadError);
+  return;
+}
+
 setTournament(tournamentData || null);
 setPlayerSlots(playersData || []);
 setMatches(safeMatches);
@@ -2924,46 +2935,23 @@ setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};
 
   for (const match of safeMatches) {
+    const previousDraft = prev[match.id];
+    const draftValue = (field: keyof ScoreDraft, databaseValue: number | null) => {
+      // Do not replace a score that someone is actively typing when polling or
+      // Realtime refreshes an incomplete match.
+      if (!match.is_complete && previousDraft) return previousDraft[field];
+      return databaseValue === null ? '' : String(databaseValue);
+    };
+
     next[match.id] = {
-      team_a_score:
-        match.team_a_score !== null
-          ? String(match.team_a_score)
-          : (prev[match.id]?.team_a_score ?? ''),
-
-      team_b_score:
-        match.team_b_score !== null
-          ? String(match.team_b_score)
-          : (prev[match.id]?.team_b_score ?? ''),
-
-      game_1_a:
-        match.game_1_a !== null
-          ? String(match.game_1_a)
-          : (prev[match.id]?.game_1_a ?? ''),
-
-      game_1_b:
-        match.game_1_b !== null
-          ? String(match.game_1_b)
-          : (prev[match.id]?.game_1_b ?? ''),
-
-      game_2_a:
-        match.game_2_a !== null
-          ? String(match.game_2_a)
-          : (prev[match.id]?.game_2_a ?? ''),
-
-      game_2_b:
-        match.game_2_b !== null
-          ? String(match.game_2_b)
-          : (prev[match.id]?.game_2_b ?? ''),
-
-      game_3_a:
-        match.game_3_a !== null
-          ? String(match.game_3_a)
-          : (prev[match.id]?.game_3_a ?? ''),
-
-      game_3_b:
-        match.game_3_b !== null
-          ? String(match.game_3_b)
-          : (prev[match.id]?.game_3_b ?? ''),
+      team_a_score: draftValue('team_a_score', match.team_a_score),
+      team_b_score: draftValue('team_b_score', match.team_b_score),
+      game_1_a: draftValue('game_1_a', match.game_1_a),
+      game_1_b: draftValue('game_1_b', match.game_1_b),
+      game_2_a: draftValue('game_2_a', match.game_2_a),
+      game_2_b: draftValue('game_2_b', match.game_2_b),
+      game_3_a: draftValue('game_3_a', match.game_3_a),
+      game_3_b: draftValue('game_3_b', match.game_3_b),
     };
   }
 
@@ -3063,16 +3051,15 @@ setScoreDrafts((prev) => {
     };
   }, [params.id, supabase, userId]);
 
-  // Polling fallback for players on web when realtime WebSocket drops
+  // Poll even while Realtime reports connected. Mobile WebViews can leave a
+  // WebSocket looking subscribed after an app sleeps or changes networks.
 useEffect(() => {
-  if (isLive) return;
-
   const interval = setInterval(() => {
     void loadTournamentData(userId);
   }, 5000);
 
   return () => clearInterval(interval);
-}, [isLive, userId]);
+}, [userId]);
 
     useEffect(() => {
   async function handleVisibilityRefresh() {
@@ -3100,6 +3087,28 @@ useEffect(() => {
     );
   };
 }, []);
+
+  useEffect(() => {
+    let removeAppStateListener: (() => Promise<void>) | undefined;
+
+    async function listenForNativeAppResume() {
+      try {
+        const { App } = await import('@capacitor/app');
+        const listener = await App.addListener('appStateChange', ({ isActive }) => {
+          if (isActive) void loadTournamentData(userId);
+        });
+        removeAppStateListener = () => listener.remove();
+      } catch (err) {
+        console.warn('Native app resume refresh is unavailable:', err);
+      }
+    }
+
+    void listenForNativeAppResume();
+
+    return () => {
+      void removeAppStateListener?.();
+    };
+  }, [userId]);
     
   useEffect(() => {
     if (!roundsAvailable.length) return;
@@ -4612,12 +4621,28 @@ if (!canReportScores) {
       }
     }
 
-    const { error } = await supabase.from('matches').update(updateData).eq('id', matchId);
+    const { data: savedMatch, error } = await supabase
+      .from('matches')
+      .update(updateData)
+      .eq('id', matchId)
+      .select('id, team_a_score, team_b_score, is_complete')
+      .maybeSingle();
 
-    if (error) {
+    if (
+      error ||
+      !savedMatch ||
+      (seriesNowComplete &&
+        (savedMatch.team_a_score !== finalOptimisticMatch.team_a_score ||
+          savedMatch.team_b_score !== finalOptimisticMatch.team_b_score ||
+          !savedMatch.is_complete))
+    ) {
       setMatches(previousMatches);
       setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
-      setMessage(`Submit failed: ${error.message}`);
+      setMessage(
+        error
+          ? `Submit failed: ${error.message}`
+          : 'Submit failed: the database did not save this game. Please check your connection and try again.'
+      );
       return;
     }
 
@@ -4855,19 +4880,31 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   const nextRound = getNextIncompleteRound(optimisticMatches);
 
-  const { error } = await supabase
+  const { data: savedMatch, error } = await supabase
     .from('matches')
     .update({
       team_a_score: aNum,
       team_b_score: bNum,
       is_complete: true,
     })
-    .eq('id', matchId);
+    .eq('id', matchId)
+    .select('id, team_a_score, team_b_score, is_complete')
+    .maybeSingle();
 
-  if (error) {
+  if (
+    error ||
+    !savedMatch ||
+    savedMatch.team_a_score !== aNum ||
+    savedMatch.team_b_score !== bNum ||
+    !savedMatch.is_complete
+  ) {
     setMatches(previousMatches);
     setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
-    setMessage(`Submit failed: ${error.message}`);
+    setMessage(
+      error
+        ? `Submit failed: ${error.message}`
+        : 'Submit failed: the database did not save this score. Please check your connection and try again.'
+    );
     return;
   }
 

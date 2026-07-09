@@ -31,6 +31,7 @@ type Tournament = {
   started_at: string | null;
   format: string;
   match_format: string;
+  tournament_mode: string | null;
   organization_id: string | null;
 };
 
@@ -96,6 +97,7 @@ type StandingRow = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
+  finalCourt: number | null;
 };
 
 function getSeriesWins(match: Match): { aWins: number; bWins: number } {
@@ -138,9 +140,11 @@ function computeStandings(
   playerSlots: PlayerSlot[],
   matches: Match[],
   isSingles: boolean,
-  isBestOf3: boolean
+  isBestOf3: boolean,
+  tournamentMode?: string | null
 ): StandingRow[] {
   const rows = new Map<string, StandingRow>();
+  const latestMatchByPlayer = new Map<string, Match>();
 
   for (const slot of playerSlots) {
     rows.set(slot.id, {
@@ -153,6 +157,7 @@ function computeStandings(
       pointsFor: 0,
       pointsAgainst: 0,
       pointDiff: 0,
+      finalCourt: null,
     });
   }
 
@@ -173,6 +178,19 @@ function computeStandings(
     const bIds = isSingles
       ? [match.team_b_player_1_id]
       : ([match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[]);
+
+    for (const id of [...aIds, ...bIds]) {
+      const currentLatest = latestMatchByPlayer.get(id);
+
+      if (
+        !currentLatest ||
+        match.round_number > currentLatest.round_number ||
+        (match.round_number === currentLatest.round_number &&
+          (match.court_number ?? 999) < (currentLatest.court_number ?? 999))
+      ) {
+        latestMatchByPlayer.set(id, match);
+      }
+    }
 
     if (isBestOf3) {
       const games = [
@@ -276,8 +294,19 @@ function computeStandings(
     .map((row) => ({
       ...row,
       pointDiff: row.pointsFor - row.pointsAgainst,
+      finalCourt: latestMatchByPlayer.get(row.playerId)?.court_number ?? null,
     }))
     .sort((a, b) => {
+      if (tournamentMode === 'cream_of_the_crop') {
+        const aCourt = a.finalCourt ?? 999;
+        const bCourt = b.finalCourt ?? 999;
+
+        if (aCourt !== bCourt) return aCourt - bCourt;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+        return a.slotNumber - b.slotNumber;
+      }
+
       if (b.wins !== a.wins) return b.wins - a.wins;
       if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
       if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
@@ -467,8 +496,15 @@ export default function PublicTournamentViewPage({
 }, [matches]);
 
   const standings = useMemo(
-    () => computeStandings(playerSlots, matches, !!isSingles, !!isBestOf3),
-    [playerSlots, matches, isSingles, isBestOf3]
+    () =>
+      computeStandings(
+        playerSlots,
+        matches,
+        !!isSingles,
+        !!isBestOf3,
+        tournament?.tournament_mode
+      ),
+    [playerSlots, matches, isSingles, isBestOf3, tournament?.tournament_mode]
   );
 
   const eventMeta = useMemo(
@@ -1022,6 +1058,7 @@ useEffect(() => {
         isSingles={!!isSingles}
         isLive={isLive}
         organizationBrand={organizationBrand}
+        tournamentMode={tournament.tournament_mode}
       />
     );
   }

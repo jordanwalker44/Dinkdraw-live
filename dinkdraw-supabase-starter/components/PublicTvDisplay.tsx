@@ -40,6 +40,7 @@ type StandingRow = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
+  finalCourt: number | null;
 };
 
 type PublicTvDisplayProps = {
@@ -51,6 +52,7 @@ type PublicTvDisplayProps = {
   isSingles: boolean;
   isLive: boolean;
   organizationBrand?: OrganizationBrand | null;
+  tournamentMode?: string | null;
 };
 
 function formatDiff(value: number) {
@@ -77,6 +79,7 @@ export default function PublicTvDisplay({
   isSingles,
   isLive,
   organizationBrand,
+  tournamentMode,
 }: PublicTvDisplayProps) {
   const playersById = Object.fromEntries(playerSlots.map((slot) => [slot.id, slot]));
 
@@ -100,7 +103,8 @@ export default function PublicTvDisplay({
 
   const completeThisRound = currentMatches.filter((match) => match.is_complete).length;
   const totalRounds = tournament.rounds || 9;
-  const topStandings = standings.slice(0, 12);
+  const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
+  const topStandings = standings.slice(0, isCreamOfTheCrop ? 14 : 12);
   const leader = topStandings[0];
 
   const biggestClimber = standings
@@ -182,59 +186,6 @@ export default function PublicTvDisplay({
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              {organizationBrand?.name ? (
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                    gap: 10,
-                    marginBottom: 10,
-                  }}
-                >
-                  {organizationBrand.logo_url ? (
-                    <img
-                      src={organizationBrand.logo_url}
-                      alt={`${organizationBrand.name} logo`}
-                      style={{
-                        width: 38,
-                        height: 38,
-                        objectFit: 'contain',
-                        borderRadius: 10,
-                        background: 'rgba(255,255,255,0.92)',
-                        padding: 4,
-                      }}
-                    />
-                  ) : null}
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 950,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        color: '#FFCB05',
-                      }}
-                    >
-                      Hosted by
-                    </div>
-                    <div
-                      style={{
-                        maxWidth: 280,
-                        fontSize: 18,
-                        lineHeight: 1.05,
-                        fontWeight: 950,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {organizationBrand.name}
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
               <div
                 style={{
                   display: 'inline-flex',
@@ -441,19 +392,54 @@ export default function PublicTvDisplay({
               borderRadius: 28,
               border: '1px solid rgba(255,255,255,0.12)',
               background: 'rgba(255,255,255,0.065)',
-              padding: 18,
+              padding: 16,
               boxShadow: '0 20px 60px rgba(0,0,0,0.26)',
             }}
           >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: organizationBrand?.name ? 'minmax(0, 1fr) auto' : '1fr',
+                gap: 14,
+                alignItems: 'start',
+              }}
+            >
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 950,
+                    letterSpacing: '0.18em',
+                    textTransform: 'uppercase',
+                    color: '#FFCB05',
+                    marginBottom: 6,
+                  }}
+                >
+                  DinkDraw TV
+                </div>
+                <div
+                  style={{
+                    fontSize: 'clamp(24px, 2vw, 38px)',
+                    lineHeight: 1,
+                    fontWeight: 950,
+                    letterSpacing: '-0.05em',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tournament.title || 'Tournament'}
+                </div>
+              </div>
+
             {organizationBrand?.name ? (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 12,
-                  marginBottom: 14,
-                  paddingBottom: 14,
-                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                  minWidth: 0,
+                  textAlign: 'right',
                 }}
               >
                 {organizationBrand.logo_url ? (
@@ -479,14 +465,14 @@ export default function PublicTvDisplay({
                       letterSpacing: '0.16em',
                       textTransform: 'uppercase',
                       color: '#FFCB05',
-                      marginBottom: 4,
+                      marginBottom: 3,
                     }}
                   >
                     Hosted by
                   </div>
                   <div
                     style={{
-                      fontSize: 'clamp(18px, 1.3vw, 28px)',
+                      fontSize: 'clamp(18px, 1.25vw, 26px)',
                       lineHeight: 1.05,
                       fontWeight: 950,
                       overflow: 'hidden',
@@ -499,31 +485,6 @@ export default function PublicTvDisplay({
                 </div>
               </div>
             ) : null}
-
-            <div
-              style={{
-                fontSize: 13,
-                fontWeight: 950,
-                letterSpacing: '0.18em',
-                textTransform: 'uppercase',
-                color: '#FFCB05',
-                marginBottom: 8,
-              }}
-            >
-              DinkDraw TV
-            </div>
-            <div
-              style={{
-                fontSize: 'clamp(26px, 2.2vw, 42px)',
-                lineHeight: 1,
-                fontWeight: 950,
-                letterSpacing: '-0.05em',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {tournament.title || 'Tournament'}
             </div>
           </div>
 
@@ -553,7 +514,7 @@ export default function PublicTvDisplay({
                   letterSpacing: '-0.05em',
                 }}
               >
-                Standings
+                {isCreamOfTheCrop ? 'Cream Standings' : 'Standings'}
               </div>
               <div
                 style={{
@@ -563,7 +524,7 @@ export default function PublicTvDisplay({
                   fontWeight: 800,
                 }}
               >
-                Wins • Point differential
+                {isCreamOfTheCrop ? 'Court ladder • Current record' : 'Wins • Point differential'}
               </div>
             </div>
 
@@ -571,7 +532,9 @@ export default function PublicTvDisplay({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '46px minmax(0, 1fr) 54px 62px',
+                  gridTemplateColumns: isCreamOfTheCrop
+                    ? '40px minmax(0, 1fr) 70px 64px'
+                    : '46px minmax(0, 1fr) 54px 62px',
                   gap: 8,
                   padding: '10px 14px',
                   color: 'rgba(255,255,255,0.52)',
@@ -583,8 +546,12 @@ export default function PublicTvDisplay({
               >
                 <div>#</div>
                 <div>Player</div>
-                <div style={{ textAlign: 'center' }}>W</div>
-                <div style={{ textAlign: 'right' }}>Diff</div>
+                <div style={{ textAlign: 'center' }}>
+                  {isCreamOfTheCrop ? 'Court' : 'W'}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  {isCreamOfTheCrop ? 'W-L' : 'Diff'}
+                </div>
               </div>
 
               {topStandings.map((row, index) => {
@@ -596,10 +563,12 @@ export default function PublicTvDisplay({
                     key={row.playerId}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '46px minmax(0, 1fr) 54px 62px',
+                      gridTemplateColumns: isCreamOfTheCrop
+                        ? '40px minmax(0, 1fr) 70px 64px'
+                        : '46px minmax(0, 1fr) 54px 62px',
                       gap: 8,
                       alignItems: 'center',
-                      padding: '9px 14px',
+                      padding: isCreamOfTheCrop ? '7px 14px' : '9px 14px',
                       borderTop: '1px solid rgba(255,255,255,0.075)',
                       background: isLeader
                         ? 'linear-gradient(90deg, rgba(255,203,5,0.22), rgba(255,203,5,0.04))'
@@ -610,7 +579,7 @@ export default function PublicTvDisplay({
                   >
                     <div
                       style={{
-                        fontSize: isLeader ? 25 : 20,
+                        fontSize: isLeader ? 23 : 18,
                         fontWeight: 950,
                         color: isLeader ? '#FFCB05' : 'rgba(255,255,255,0.82)',
                       }}
@@ -620,7 +589,7 @@ export default function PublicTvDisplay({
                     <div
                       style={{
                         minWidth: 0,
-                        fontSize: isLeader ? 24 : 20,
+                        fontSize: isLeader ? 22 : 18,
                         lineHeight: 1,
                         fontWeight: 950,
                         letterSpacing: '-0.04em',
@@ -634,21 +603,28 @@ export default function PublicTvDisplay({
                     <div
                       style={{
                         textAlign: 'center',
-                        fontSize: isLeader ? 24 : 20,
+                        fontSize: isLeader ? 22 : 18,
                         fontWeight: 950,
                       }}
                     >
-                      {row.wins}
+                      {isCreamOfTheCrop && row.finalCourt
+                        ? `Court ${row.finalCourt}`
+                        : row.wins}
                     </div>
                     <div
                       style={{
                         textAlign: 'right',
-                        fontSize: isLeader ? 24 : 20,
+                        fontSize: isLeader ? 22 : 18,
                         fontWeight: 950,
-                        color: row.pointDiff > 0 ? '#FFCB05' : 'rgba(255,255,255,0.86)',
+                        color:
+                          !isCreamOfTheCrop && row.pointDiff > 0
+                            ? '#FFCB05'
+                            : 'rgba(255,255,255,0.86)',
                       }}
                     >
-                      {formatDiff(row.pointDiff)}
+                      {isCreamOfTheCrop
+                        ? `${row.wins}-${row.losses}`
+                        : formatDiff(row.pointDiff)}
                     </div>
                   </div>
                 );

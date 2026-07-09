@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { ShareResultsButton } from '../../../../../components/ShareResultsButton';
+import { getOrganizationAccentColor } from '../../../../../components/OrganizationBrandBanner';
 
 
 export const dynamic = 'force-dynamic';
@@ -166,7 +167,11 @@ export default async function ShareCardPage({
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   const [tournamentResult, playersResult, matchesResult] = await Promise.all([
-    supabase.from('tournaments').select('id, title, tournament_mode').eq('id', params.id).maybeSingle(),
+    supabase
+      .from('tournaments')
+      .select('id, title, tournament_mode, organization_id')
+      .eq('id', params.id)
+      .maybeSingle(),
     supabase
       .from('tournament_players')
       .select('id, slot_number, display_name')
@@ -176,6 +181,15 @@ export default async function ShareCardPage({
   ]);
 
   const tournament = tournamentResult.data;
+  const organizationResult = tournament?.organization_id
+    ? await supabase
+        .from('organizations')
+        .select('id, name, logo_url, primary_color, accent_color')
+        .eq('id', tournament.organization_id)
+        .maybeSingle()
+    : null;
+  const organizationBrand = organizationResult?.data || null;
+  const organizationAccent = getOrganizationAccentColor(organizationBrand);
   const standings = computeStandings(
     (playersResult.data || []) as PlayerSlot[],
     (matchesResult.data || []) as Match[]
@@ -243,6 +257,54 @@ const biggestClimber = isCreamOfTheCrop
             overflow: 'hidden',
           }}
         >
+          {organizationBrand ? (
+            <div
+              style={{
+                textAlign: 'center',
+                marginTop: -68,
+                marginBottom: 18,
+              }}
+            >
+              {organizationBrand.logo_url ? (
+                <img
+                  src={organizationBrand.logo_url}
+                  alt={`${organizationBrand.name} logo`}
+                  style={{
+                    width: 72,
+                    height: 72,
+                    objectFit: 'contain',
+                    borderRadius: 18,
+                    background: 'rgba(255,255,255,0.94)',
+                    padding: 8,
+                    margin: '0 auto 10px',
+                  }}
+                />
+              ) : null}
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 950,
+                  letterSpacing: 2,
+                  color: organizationAccent,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Hosted by
+              </div>
+              <div
+                style={{
+                  marginTop: 4,
+                  fontSize: 24,
+                  lineHeight: 1.05,
+                  fontWeight: 950,
+                  color: '#fff',
+                }}
+              >
+                {organizationBrand.name}
+              </div>
+            </div>
+          ) : null}
+
           <div style={{ textAlign: 'center', fontSize: 34, fontWeight: 950 }}>
             Dink<span style={{ color: '#FFCB05' }}>Draw</span>
           </div>

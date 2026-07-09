@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
 import { TopNav } from '../../../../components/TopNav';
 import { ShareResultsButton } from '../../../../components/ShareResultsButton';
+import {
+  OrganizationBrandBanner,
+  type OrganizationBrand,
+} from '../../../../components/OrganizationBrandBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +31,7 @@ type Tournament = {
   match_format: string;
   doubles_mode: string | null;
   tournament_mode: string | null;
+  organization_id: string | null;
 };
 
 type PlayerSlot = {
@@ -332,6 +337,7 @@ export default function TournamentResultsPage({
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [organizationBrand, setOrganizationBrand] = useState<OrganizationBrand | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -418,9 +424,24 @@ export default function TournamentResultsPage({
       setMessage(tournamentResult.error.message);
     }
 
-    setTournament(tournamentResult.data || null);
+    const tournamentData = tournamentResult.data;
+
+    setTournament(tournamentData || null);
     setPlayerSlots(playersResult.data || []);
     setMatches(matchesResult.data || []);
+
+    if (tournamentData?.organization_id) {
+      const { data: brand } = await supabase
+        .from('organizations')
+        .select('id, name, logo_url, primary_color, accent_color')
+        .eq('id', tournamentData.organization_id)
+        .maybeSingle();
+
+      setOrganizationBrand(brand || null);
+    } else {
+      setOrganizationBrand(null);
+    }
+
     setIsLoading(false);
   }
 
@@ -478,6 +499,8 @@ export default function TournamentResultsPage({
 
   return (
     <main className="page-shell">
+      <OrganizationBrandBanner brand={organizationBrand} />
+
       <div className="hero">
         <div className="hero-inner">
           <h1 className="hero-title">{tournament?.title || 'Tournament Results'}</h1>

@@ -1,5 +1,7 @@
 'use client';
 
+import { type OrganizationBrand } from './OrganizationBrandBanner';
+
 type Tournament = {
   title: string;
   court_labels: string[] | null;
@@ -48,6 +50,7 @@ type PublicTvDisplayProps = {
   currentRound: number;
   isSingles: boolean;
   isLive: boolean;
+  organizationBrand?: OrganizationBrand | null;
 };
 
 function formatDiff(value: number) {
@@ -73,6 +76,7 @@ export default function PublicTvDisplay({
   currentRound,
   isSingles,
   isLive,
+  organizationBrand,
 }: PublicTvDisplayProps) {
   const playersById = Object.fromEntries(playerSlots.map((slot) => [slot.id, slot]));
 
@@ -178,6 +182,59 @@ export default function PublicTvDisplay({
             </div>
 
             <div style={{ textAlign: 'right' }}>
+              {organizationBrand?.name ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    gap: 10,
+                    marginBottom: 10,
+                  }}
+                >
+                  {organizationBrand.logo_url ? (
+                    <img
+                      src={organizationBrand.logo_url}
+                      alt={`${organizationBrand.name} logo`}
+                      style={{
+                        width: 38,
+                        height: 38,
+                        objectFit: 'contain',
+                        borderRadius: 10,
+                        background: 'rgba(255,255,255,0.92)',
+                        padding: 4,
+                      }}
+                    />
+                  ) : null}
+                  <div>
+                    <div
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 950,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: '#FFCB05',
+                      }}
+                    >
+                      Hosted by
+                    </div>
+                    <div
+                      style={{
+                        maxWidth: 280,
+                        fontSize: 18,
+                        lineHeight: 1.05,
+                        fontWeight: 950,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {organizationBrand.name}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <div
                 style={{
                   display: 'inline-flex',

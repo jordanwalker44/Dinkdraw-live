@@ -5,6 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import PublicTvDisplay from '../../../../components/PublicTvDisplay';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
+import {
+  OrganizationBrandBanner,
+  type OrganizationBrand,
+} from '../../../../components/OrganizationBrandBanner';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +30,7 @@ type Tournament = {
   started_at: string | null;
   format: string;
   match_format: string;
+  organization_id: string | null;
 };
 
 type PlayerSlot = {
@@ -289,6 +294,7 @@ export default function PublicTournamentViewPage({
   const isTvMode = searchParams.get('tv') === '1';
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [organizationBrand, setOrganizationBrand] = useState<OrganizationBrand | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [playoffMatches, setPlayoffMatches] = useState<PlayoffMatch[]>([]);
@@ -495,10 +501,24 @@ export default function PublicTournamentViewPage({
       .order('match_number', { ascending: true }),
   ]);
 
-    setTournament(tournamentResult.data || null);
+    const tournamentData = tournamentResult.data;
+
+    setTournament(tournamentData || null);
     setPlayerSlots(playersResult.data || []);
     setMatches(matchesResult.data || []);
     setPlayoffMatches(playoffMatchesResult.data || []);
+
+    if (tournamentData?.organization_id) {
+      const { data: brand } = await supabase
+        .from('organizations')
+        .select('id, name, logo_url, primary_color, accent_color')
+        .eq('id', tournamentData.organization_id)
+        .maybeSingle();
+
+      setOrganizationBrand(brand || null);
+    } else {
+      setOrganizationBrand(null);
+    }
   }
 
   useEffect(() => {
@@ -1010,6 +1030,7 @@ useEffect(() => {
         currentRound={currentRound}
         isSingles={!!isSingles}
         isLive={isLive}
+        organizationBrand={organizationBrand}
       />
     );
   }
@@ -1021,6 +1042,8 @@ useEffect(() => {
       paddingTop: 68,
     }}
   >
+    <OrganizationBrandBanner brand={organizationBrand} compact />
+
     <div className="hero" style={{ marginBottom: 8 }}>
         <div
           className="hero-inner"

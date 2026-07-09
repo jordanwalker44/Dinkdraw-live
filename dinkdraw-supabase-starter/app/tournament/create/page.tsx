@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
@@ -514,6 +515,20 @@ router.push(`/tournament/${tournament.id}`);
         </option>
       ))}
     </select>
+    {selectedOrganizationId ? (
+      <Link
+        href={`/organizations/${selectedOrganizationId}/branding`}
+        style={{
+          display: 'inline-flex',
+          marginTop: 8,
+          color: '#FFCB05',
+          fontSize: 13,
+          fontWeight: 900,
+        }}
+      >
+        Edit club branding
+      </Link>
+    ) : null}
   </div>
 ) : null}
               

@@ -8,6 +8,10 @@ import { QRCodeSVG } from 'qrcode.react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 import { ShareResultsButton } from '../../../components/ShareResultsButton';
+import {
+  OrganizationBrandBanner,
+  type OrganizationBrand,
+} from '../../../components/OrganizationBrandBanner';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import {
   buildCreamOfTheCropStageSchedule,
@@ -45,6 +49,7 @@ type Tournament = {
   champion_player_1_id: string | null;
   champion_player_2_id: string | null;
   ask_for_dupr_id: boolean | null;
+  organization_id: string | null;
 };
 
 type PlayerSlot = {
@@ -2493,6 +2498,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const router = useRouter();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [organizationBrand, setOrganizationBrand] = useState<OrganizationBrand | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [playoffMatches, setPlayoffMatches] = useState<PlayoffMatch[]>([]);
@@ -2930,6 +2936,18 @@ setTournament(tournamentData || null);
 setPlayerSlots(playersData || []);
 setMatches(safeMatches);
 setPlayoffMatches(playoffMatchesResult.data || []);
+
+if (tournamentData?.organization_id) {
+  const { data: brand } = await supabase
+    .from('organizations')
+    .select('id, name, logo_url, primary_color, accent_color')
+    .eq('id', tournamentData.organization_id)
+    .maybeSingle();
+
+  setOrganizationBrand(brand || null);
+} else {
+  setOrganizationBrand(null);
+}
 
 setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};
@@ -5599,6 +5617,8 @@ function renderShortTeam(a: string | null, b: string | null) {
   return (
     <main className="page-shell">
       <TopNav />
+
+      <OrganizationBrandBanner brand={organizationBrand} />
 
       {isStarted && yourMatch && (
   <div

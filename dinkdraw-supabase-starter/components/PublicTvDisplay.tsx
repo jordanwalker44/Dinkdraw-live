@@ -445,6 +445,61 @@ export default function PublicTvDisplay({
               boxShadow: '0 20px 60px rgba(0,0,0,0.26)',
             }}
           >
+            {organizationBrand?.name ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginBottom: 14,
+                  paddingBottom: 14,
+                  borderBottom: '1px solid rgba(255,255,255,0.1)',
+                }}
+              >
+                {organizationBrand.logo_url ? (
+                  <img
+                    src={organizationBrand.logo_url}
+                    alt={`${organizationBrand.name} logo`}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      objectFit: 'contain',
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.92)',
+                      padding: 5,
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : null}
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 950,
+                      letterSpacing: '0.16em',
+                      textTransform: 'uppercase',
+                      color: '#FFCB05',
+                      marginBottom: 4,
+                    }}
+                  >
+                    Hosted by
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 'clamp(18px, 1.3vw, 28px)',
+                      lineHeight: 1.05,
+                      fontWeight: 950,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {organizationBrand.name}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div
               style={{
                 fontSize: 13,

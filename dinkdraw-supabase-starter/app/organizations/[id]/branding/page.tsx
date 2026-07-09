@@ -11,6 +11,21 @@ import {
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
 
 const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+const LOGO_BUCKET = 'organization-logos';
+const MAX_LOGO_SIZE_BYTES = 3 * 1024 * 1024;
+
+function getLogoFileExtension(file: File) {
+  const nameExtension = file.name.split('.').pop()?.toLowerCase();
+  if (nameExtension && ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(nameExtension)) {
+    return nameExtension === 'jpg' ? 'jpeg' : nameExtension;
+  }
+
+  if (file.type === 'image/png') return 'png';
+  if (file.type === 'image/jpeg') return 'jpeg';
+  if (file.type === 'image/webp') return 'webp';
+  if (file.type === 'image/gif') return 'gif';
+  return 'png';
+}
 
 export default function OrganizationBrandingPage({
   params,
@@ -22,6 +37,7 @@ export default function OrganizationBrandingPage({
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [message, setMessage] = useState('');
   const [canEdit, setCanEdit] = useState(false);
   const [name, setName] = useState('');
@@ -133,6 +149,67 @@ export default function OrganizationBrandingPage({
     setMessage(error ? error.message : 'Branding saved.');
   }
 
+  async function uploadLogo(file: File | null) {
+    setMessage('');
+
+    if (!file) return;
+
+    if (!canEdit) {
+      setMessage('Only organization owners and admins can upload logos.');
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setMessage('Choose an image file for the logo.');
+      return;
+    }
+
+    if (file.size > MAX_LOGO_SIZE_BYTES) {
+      setMessage('Logo image must be smaller than 3 MB.');
+      return;
+    }
+
+    setIsUploadingLogo(true);
+
+    const extension = getLogoFileExtension(file);
+    const filePath = `${params.id}/logo-${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(LOGO_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: true,
+      });
+
+    if (uploadError) {
+      setIsUploadingLogo(false);
+      setMessage(uploadError.message);
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from(LOGO_BUCKET)
+      .getPublicUrl(filePath);
+
+    const publicUrl = publicUrlData.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from('organizations')
+      .update({ logo_url: publicUrl })
+      .eq('id', params.id);
+
+    setIsUploadingLogo(false);
+
+    if (updateError) {
+      setMessage(updateError.message);
+      return;
+    }
+
+    setLogoUrl(publicUrl);
+    setMessage('Logo uploaded and saved.');
+  }
+
   return (
     <main className="page-shell">
       <TopNav />
@@ -175,6 +252,40 @@ export default function OrganizationBrandingPage({
                 disabled={!canEdit}
                 placeholder="Your club name"
               />
+            </div>
+
+            <div
+              style={{
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 14,
+                padding: 12,
+                background: 'rgba(255,255,255,0.035)',
+              }}
+            >
+              <label className="label">Upload club logo</label>
+              <input
+                className="input"
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={(event) => {
+                  void uploadLogo(event.target.files?.[0] || null);
+                  event.currentTarget.value = '';
+                }}
+                disabled={!canEdit || isUploadingLogo}
+                style={{ padding: 12 }}
+              />
+              <div
+                style={{
+                  marginTop: 8,
+                  color: 'rgba(255,255,255,0.62)',
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                {isUploadingLogo
+                  ? 'Uploading logo...'
+                  : 'PNG, JPG, WEBP, or GIF. Keep it under 3 MB.'}
+              </div>
             </div>
 
             <div>

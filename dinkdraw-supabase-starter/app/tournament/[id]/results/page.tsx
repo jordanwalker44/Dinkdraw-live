@@ -9,6 +9,7 @@ import {
   OrganizationBrandBanner,
   type OrganizationBrand,
 } from '../../../../components/OrganizationBrandBanner';
+import { loadPublicOrganizationBrand } from '../../../../lib/organization-brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -430,17 +431,7 @@ export default function TournamentResultsPage({
     setPlayerSlots(playersResult.data || []);
     setMatches(matchesResult.data || []);
 
-    if (tournamentData?.organization_id) {
-      const { data: brand } = await supabase
-        .from('organizations')
-        .select('id, name, logo_url, primary_color, accent_color')
-        .eq('id', tournamentData.organization_id)
-        .maybeSingle();
-
-      setOrganizationBrand(brand || null);
-    } else {
-      setOrganizationBrand(null);
-    }
+    setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
 
     setIsLoading(false);
   }

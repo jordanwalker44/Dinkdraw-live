@@ -42,6 +42,7 @@ export default function OrganizationBrandingPage({
   const [canEdit, setCanEdit] = useState(false);
   const [name, setName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [showLogoUrlField, setShowLogoUrlField] = useState(false);
   const [primaryColor, setPrimaryColor] = useState('#00274C');
   const [accentColor, setAccentColor] = useState('#FFCB05');
 
@@ -288,18 +289,47 @@ export default function OrganizationBrandingPage({
               </div>
             </div>
 
-            <div>
-              <label className="label">Logo URL</label>
-              <input
-                className="input"
-                value={logoUrl}
-                onChange={(event) => setLogoUrl(event.target.value)}
+            {logoUrl ? (
+              <div
+                style={{
+                  border: '1px solid rgba(34,197,94,0.22)',
+                  borderRadius: 14,
+                  padding: 12,
+                  background: 'rgba(34,197,94,0.08)',
+                  color: 'rgba(255,255,255,0.82)',
+                  fontSize: 13,
+                  lineHeight: 1.4,
+                }}
+              >
+                Logo saved. Upload a new image above to replace it.
+              </div>
+            ) : null}
+
+            {!logoUrl ? (
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => setShowLogoUrlField((current) => !current)}
                 disabled={!canEdit}
-                placeholder="https://example.com/logo.png"
-                autoCapitalize="none"
-                autoCorrect="off"
-              />
-            </div>
+              >
+                {showLogoUrlField ? 'Hide Manual Logo URL' : 'Use Manual Logo URL'}
+              </button>
+            ) : null}
+
+            {showLogoUrlField ? (
+              <div>
+                <label className="label">Manual logo URL</label>
+                <input
+                  className="input"
+                  value={logoUrl}
+                  onChange={(event) => setLogoUrl(event.target.value)}
+                  disabled={!canEdit}
+                  placeholder="https://example.com/logo.png"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                />
+              </div>
+            ) : null}
 
             <div
               style={{

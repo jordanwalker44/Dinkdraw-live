@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
 import { ShareResultsButton } from '../../../../../components/ShareResultsButton';
 import { getOrganizationAccentColor } from '../../../../../components/OrganizationBrandBanner';
+import { loadPublicOrganizationBrand } from '../../../../../lib/organization-brand';
 
 
 export const dynamic = 'force-dynamic';
@@ -181,14 +182,10 @@ export default async function ShareCardPage({
   ]);
 
   const tournament = tournamentResult.data;
-  const organizationResult = tournament?.organization_id
-    ? await supabase
-        .from('organizations')
-        .select('id, name, logo_url, primary_color, accent_color')
-        .eq('id', tournament.organization_id)
-        .maybeSingle()
-    : null;
-  const organizationBrand = organizationResult?.data || null;
+  const organizationBrand = await loadPublicOrganizationBrand(
+    supabase,
+    tournament?.organization_id
+  );
   const organizationAccent = getOrganizationAccentColor(organizationBrand);
   const standings = computeStandings(
     (playersResult.data || []) as PlayerSlot[],

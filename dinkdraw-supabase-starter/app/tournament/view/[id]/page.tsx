@@ -9,6 +9,7 @@ import {
   OrganizationBrandBanner,
   type OrganizationBrand,
 } from '../../../../components/OrganizationBrandBanner';
+import { loadPublicOrganizationBrand } from '../../../../lib/organization-brand';
 
 export const dynamic = 'force-dynamic';
 
@@ -508,17 +509,7 @@ export default function PublicTournamentViewPage({
     setMatches(matchesResult.data || []);
     setPlayoffMatches(playoffMatchesResult.data || []);
 
-    if (tournamentData?.organization_id) {
-      const { data: brand } = await supabase
-        .from('organizations')
-        .select('id, name, logo_url, primary_color, accent_color')
-        .eq('id', tournamentData.organization_id)
-        .maybeSingle();
-
-      setOrganizationBrand(brand || null);
-    } else {
-      setOrganizationBrand(null);
-    }
+    setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
   }
 
   useEffect(() => {
@@ -1067,72 +1058,6 @@ useEffect(() => {
           </p>
         </div>
       </div>
-
-              {showAppDownloadBanner ? (
-        <div
-          className="card"
-          style={{
-            position: 'relative',
-            marginBottom: 10,
-            padding: 10,
-            borderColor: 'rgba(255,203,5,.24)',
-            background: 'rgba(255,203,5,.06)',
-          }}
-        >
-          <button
-            type="button"
-            aria-label="Dismiss app download banner"
-            onClick={dismissAppDownloadBanner}
-            style={{
-              position: 'absolute',
-              right: 12,
-              top: 12,
-              border: '1px solid rgba(255,255,255,.18)',
-              background: 'rgba(255,255,255,.06)',
-              color: '#fff',
-              borderRadius: 999,
-              width: 30,
-              height: 30,
-              fontWeight: 900,
-            }}
-          >
-            ×
-          </button>
-
-          <div
-            style={{
-              fontWeight: 900,
-              textAlign: 'center',
-              marginBottom: 8,
-              fontSize: 15,
-              paddingRight: 32,
-              paddingLeft: 32,
-            }}
-          >
-            Get the DinkDraw iPhone app
-          </div>
-
-          <a
-            href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              display: 'flex',
-              justifyContent: 'center',
-            }}
-          >
-            <img
-              src="/app-store-badge.svg"
-              alt="Download on the App Store"
-              style={{
-                height: 44,
-                width: 'auto',
-                display: 'block',
-              }}
-            />
-          </a>
-        </div>
-      ) : null}
 
        <div className="card soft-enter" style={{ marginBottom: 14 }}>
         {isStarted && !isCompleted ? (
@@ -2138,6 +2063,72 @@ useEffect(() => {
           </div>
         )}
       </div>
+
+      {showAppDownloadBanner ? (
+        <div
+          className="card"
+          style={{
+            position: 'relative',
+            marginTop: 14,
+            padding: 10,
+            borderColor: 'rgba(255,203,5,.24)',
+            background: 'rgba(255,203,5,.06)',
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Dismiss app download banner"
+            onClick={dismissAppDownloadBanner}
+            style={{
+              position: 'absolute',
+              right: 12,
+              top: 12,
+              border: '1px solid rgba(255,255,255,.18)',
+              background: 'rgba(255,255,255,.06)',
+              color: '#fff',
+              borderRadius: 999,
+              width: 30,
+              height: 30,
+              fontWeight: 900,
+            }}
+          >
+            ×
+          </button>
+
+          <div
+            style={{
+              fontWeight: 900,
+              textAlign: 'center',
+              marginBottom: 8,
+              fontSize: 15,
+              paddingRight: 32,
+              paddingLeft: 32,
+            }}
+          >
+            Get the DinkDraw iPhone app
+          </div>
+
+          <a
+            href="https://apps.apple.com/us/app/dinkdraw/id6762402213"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+            }}
+          >
+            <img
+              src="/app-store-badge.svg"
+              alt="Download on the App Store"
+              style={{
+                height: 44,
+                width: 'auto',
+                display: 'block',
+              }}
+            />
+          </a>
+        </div>
+      ) : null}
     </main>
   );
 }

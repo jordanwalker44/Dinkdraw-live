@@ -12,6 +12,7 @@ import {
   OrganizationBrandBanner,
   type OrganizationBrand,
 } from '../../../components/OrganizationBrandBanner';
+import { loadPublicOrganizationBrand } from '../../../lib/organization-brand';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import {
   buildCreamOfTheCropStageSchedule,
@@ -2937,17 +2938,7 @@ setPlayerSlots(playersData || []);
 setMatches(safeMatches);
 setPlayoffMatches(playoffMatchesResult.data || []);
 
-if (tournamentData?.organization_id) {
-  const { data: brand } = await supabase
-    .from('organizations')
-    .select('id, name, logo_url, primary_color, accent_color')
-    .eq('id', tournamentData.organization_id)
-    .maybeSingle();
-
-  setOrganizationBrand(brand || null);
-} else {
-  setOrganizationBrand(null);
-}
+setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
 
 setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};

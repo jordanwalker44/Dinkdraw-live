@@ -43,6 +43,7 @@ type Tournament = {
   doubles_mode: string | null;
   court_labels: string[] | null;
   allow_player_score_reporting: boolean | null;
+  allow_any_player_score_reporting: boolean | null;
   playoff_format: string | null;
   playoff_advance_count: number | null;
   playoff_seeding_style: string | null;
@@ -2528,6 +2529,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [editedTournamentTitle, setEditedTournamentTitle] = useState('');
   const [isSavingTournamentTitle, setIsSavingTournamentTitle] = useState(false);
+  const [isSavingScoreReporting, setIsSavingScoreReporting] = useState(false);
   const scoreSubmitLockRef = useRef(false);
   const pendingScoreSubmitIdsRef = useRef<Set<string>>(new Set());
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2857,7 +2859,7 @@ const hasAnyScores = matches.some(
       !!claimedSlot &&
       isStarted &&
       !isCompleted &&
-      isClaimedPlayerInMatch(match)
+      (!!tournament.allow_any_player_score_reporting || isClaimedPlayerInMatch(match))
     );
   }
 
@@ -2865,6 +2867,7 @@ const hasAnyScores = matches.some(
     if (canManageScores) return 'Scores Locked';
     if (!tournament?.allow_player_score_reporting) return 'Scores Locked';
     if (!claimedSlot) return 'Claim Your Spot to Score';
+    if (tournament.allow_any_player_score_reporting) return 'Scores Locked';
     if (!isClaimedPlayerInMatch(match)) return 'Only Players in This Match Can Score';
     return 'Scores Locked';
   }
@@ -3352,7 +3355,7 @@ async function unclaimMySpot(slotId: string) {
   setMessage('You have given up your spot.');
 }
 
-  async function saveTournamentTitle() {
+async function saveTournamentTitle() {
   if (!isOrganizer || !tournament) {
     setMessage('Only the organizer can rename this tournament.');
     return;
@@ -3389,6 +3392,52 @@ async function unclaimMySpot(slotId: string) {
   setEditedTournamentTitle('');
   setMessage('Tournament name updated.');
   setIsSavingTournamentTitle(false);
+}
+
+async function updateScoreReportingSettings({
+  allowOwnMatchScores,
+  allowAnyMatchScores,
+}: {
+  allowOwnMatchScores: boolean;
+  allowAnyMatchScores: boolean;
+}) {
+  if (!tournament || !isOrganizer) {
+    setMessage('Only the organizer can change score reporting settings.');
+    return;
+  }
+
+  const nextAllowAny = allowAnyMatchScores;
+  const nextAllowOwn = allowOwnMatchScores || nextAllowAny;
+
+  setIsSavingScoreReporting(true);
+  setMessage('');
+
+  const { error } = await supabase
+    .from('tournaments')
+    .update({
+      allow_player_score_reporting: nextAllowOwn,
+      allow_any_player_score_reporting: nextAllowAny,
+    })
+    .eq('id', tournament.id)
+    .eq('organizer_user_id', userId);
+
+  if (error) {
+    setMessage(`Score reporting update failed: ${error.message}`);
+    setIsSavingScoreReporting(false);
+    return;
+  }
+
+  setTournament((prev) =>
+    prev
+      ? {
+          ...prev,
+          allow_player_score_reporting: nextAllowOwn,
+          allow_any_player_score_reporting: nextAllowAny,
+        }
+      : prev
+  );
+  setMessage('Score reporting settings updated.');
+  setIsSavingScoreReporting(false);
 }
 
  async function saveAllPlayerNames() {
@@ -6210,6 +6259,87 @@ disabled={!canEditName}
             Schedule is locked after the tournament starts.
           </div>
         ) : null}
+
+        {isOrganizer ? (
+          <div className="card" style={{ marginTop: 14 }}>
+  <div className="card-title">Score Reporting</div>
+  <div className="card-subtitle">
+    Choose how much score entry help players can provide.
+  </div>
+
+  <label
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 10,
+      marginTop: 10,
+      fontSize: 13,
+      fontWeight: 700,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={!!tournament?.allow_player_score_reporting}
+      onChange={(e) =>
+        updateScoreReportingSettings({
+          allowOwnMatchScores: e.target.checked,
+          allowAnyMatchScores: e.target.checked
+            ? !!tournament?.allow_any_player_score_reporting
+            : false,
+        })
+      }
+      disabled={isSavingScoreReporting}
+      style={{ marginTop: 3 }}
+    />
+    <span>
+      <span style={{ display: 'block', fontWeight: 900 }}>
+        Allow players to submit their own match scores
+      </span>
+      <span className="muted" style={{ display: 'block', marginTop: 3 }}>
+        Players can score only matches they are playing in.
+      </span>
+    </span>
+  </label>
+
+  <label
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 10,
+      marginTop: 12,
+      fontSize: 13,
+      fontWeight: 700,
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={!!tournament?.allow_any_player_score_reporting}
+      onChange={(e) =>
+        updateScoreReportingSettings({
+          allowOwnMatchScores: true,
+          allowAnyMatchScores: e.target.checked,
+        })
+      }
+      disabled={isSavingScoreReporting}
+      style={{ marginTop: 3 }}
+    />
+    <span>
+      <span style={{ display: 'block', fontWeight: 900 }}>
+        Allow players to submit scores for any match
+      </span>
+      <span className="muted" style={{ display: 'block', marginTop: 3 }}>
+        Use this when you trust players to help enter scores from other courts.
+      </span>
+    </span>
+  </label>
+
+  {isSavingScoreReporting ? (
+    <div className="muted" style={{ marginTop: 8, fontSize: 13 }}>
+      Saving score reporting settings...
+    </div>
+  ) : null}
+</div>
+) : null}
 
         {isOrganizer ? (
           <div className="card" style={{ marginTop: 14 }}>

@@ -135,6 +135,7 @@ export default function CreateTournamentPage() {
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
   const [allowPlayerScoreReporting, setAllowPlayerScoreReporting] = useState(false);
+  const [allowAnyPlayerScoreReporting, setAllowAnyPlayerScoreReporting] = useState(false);
   const [askForDuprId, setAskForDuprId] = useState(false);
   const [playoffFormat, setPlayoffFormat] = useState<'none' | 'everyone' | 'top_4' | 'top_8' | 'top_16'>('none');
   const [playoffAdvanceCount, setPlayoffAdvanceCount] = useState(8);
@@ -165,6 +166,7 @@ export default function CreateTournamentPage() {
         saveLocationForLater,
         favoriteLocationName,
         allowPlayerScoreReporting,
+        allowAnyPlayerScoreReporting,
         playoffFormat,
         playoffAdvanceCount,
         playoffSeedingStyle,
@@ -209,6 +211,10 @@ export default function CreateTournamentPage() {
       }
       if (typeof draft.allowPlayerScoreReporting === 'boolean') {
         setAllowPlayerScoreReporting(draft.allowPlayerScoreReporting);
+      }
+      if (typeof draft.allowAnyPlayerScoreReporting === 'boolean') {
+        setAllowAnyPlayerScoreReporting(draft.allowAnyPlayerScoreReporting);
+        if (draft.allowAnyPlayerScoreReporting) setAllowPlayerScoreReporting(true);
       }
       if (draft.playoffFormat) setPlayoffFormat(draft.playoffFormat);
       if (typeof draft.playoffAdvanceCount === 'number') {
@@ -437,7 +443,8 @@ const { data: newOrganization, error: organizationError } = await supabase
         doubles_mode: doublesMode,
         tournament_mode: tournamentMode,
         court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
-        allow_player_score_reporting: allowPlayerScoreReporting,
+        allow_player_score_reporting: allowPlayerScoreReporting || allowAnyPlayerScoreReporting,
+        allow_any_player_score_reporting: allowAnyPlayerScoreReporting,
         ask_for_dupr_id: askForDuprId,
         playoff_format: playoffsAllowed ? playoffFormat : 'none',
         playoff_advance_count:
@@ -1087,13 +1094,42 @@ and final placement tie-breakers.
               <input
                 type="checkbox"
                 checked={allowPlayerScoreReporting}
-                onChange={(e) => setAllowPlayerScoreReporting(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setAllowPlayerScoreReporting(checked);
+                  if (!checked) setAllowAnyPlayerScoreReporting(false);
+                }}
                 style={{ marginTop: 4 }}
               />
 
               <div>
                 <div style={{ fontWeight: 800 }}>
-                  Allow players to submit scores
+                  Allow players to submit their own match scores
+                </div>
+                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                  Players can enter scores only for matches they are playing in.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginTop: 12 }}>
+              <input
+                type="checkbox"
+                checked={allowAnyPlayerScoreReporting}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setAllowAnyPlayerScoreReporting(checked);
+                  if (checked) setAllowPlayerScoreReporting(true);
+                }}
+                style={{ marginTop: 4 }}
+              />
+
+              <div>
+                <div style={{ fontWeight: 800 }}>
+                  Allow players to submit scores for any match
+                </div>
+                <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+                  Use this when you trust players to help enter scores from other courts.
                 </div>
               </div>
             </div>

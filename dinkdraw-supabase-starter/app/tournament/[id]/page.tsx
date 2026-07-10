@@ -2529,6 +2529,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [editedTournamentTitle, setEditedTournamentTitle] = useState('');
   const [isSavingTournamentTitle, setIsSavingTournamentTitle] = useState(false);
   const scoreSubmitLockRef = useRef(false);
+  const pendingScoreSubmitIdsRef = useRef<Set<string>>(new Set());
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 function scheduleTournamentRefresh(currentUserId?: string) {
@@ -2935,7 +2936,16 @@ if (loadError) {
 
 setTournament(tournamentData || null);
 setPlayerSlots(playersData || []);
-setMatches(safeMatches);
+setMatches((prev) => {
+  if (!pendingScoreSubmitIdsRef.current.size) return safeMatches;
+
+  const previousById = new Map(prev.map((match) => [match.id, match]));
+
+  return safeMatches.map((match) => {
+    if (!pendingScoreSubmitIdsRef.current.has(match.id)) return match;
+    return previousById.get(match.id) || match;
+  });
+});
 setPlayoffMatches(playoffMatchesResult.data || []);
 
 setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
@@ -4581,6 +4591,9 @@ if (!canReportScores) {
       m.id === matchId ? finalOptimisticMatch : m
     );
 
+    pendingScoreSubmitIdsRef.current.add(matchId);
+    setMatches(optimisticMatches);
+    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
     setMessage(`Submitting Game ${game}...`);
 
     const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
@@ -4630,31 +4643,26 @@ if (!canReportScores) {
       }
     }
 
-    const { data: savedMatch, error } = await supabase
+    const { error, count } = await supabase
       .from('matches')
-      .update(updateData)
-      .eq('id', matchId)
-      .select('id, team_a_score, team_b_score, is_complete')
-      .maybeSingle();
+      .update(updateData, { count: 'exact' })
+      .eq('id', matchId);
 
-    if (
-      error ||
-      !savedMatch ||
-      (seriesNowComplete &&
-        (savedMatch.team_a_score !== finalOptimisticMatch.team_a_score ||
-          savedMatch.team_b_score !== finalOptimisticMatch.team_b_score ||
-          !savedMatch.is_complete))
-    ) {
+    if (error || count === 0) {
+      pendingScoreSubmitIdsRef.current.delete(matchId);
       setMatches(previousMatches);
       setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
       setMessage(
         error
           ? `Submit failed: ${error.message}`
-          : 'Submit failed: the database did not save this game. Please check your connection and try again.'
+          : 'Submit failed: the database did not find this game. Please refresh and try again.'
       );
       return;
     }
 
+    pendingScoreSubmitIdsRef.current.delete(matchId);
+    setMatches(optimisticMatches);
+    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
     await loadTournamentData(userId);
 
     if (seriesNowComplete) {
@@ -4862,6 +4870,7 @@ if (!canReportScores) {
   );
 
   setMessage('Submitting score...');
+pendingScoreSubmitIdsRef.current.add(matchId);
 setMatches(optimisticMatches);
 
 setScoreDrafts((prev) => ({
@@ -4889,33 +4898,30 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   const nextRound = getNextIncompleteRound(optimisticMatches);
 
-  const { data: savedMatch, error } = await supabase
+  const { error, count } = await supabase
     .from('matches')
     .update({
       team_a_score: aNum,
       team_b_score: bNum,
       is_complete: true,
-    })
-    .eq('id', matchId)
-    .select('id, team_a_score, team_b_score, is_complete')
-    .maybeSingle();
+    }, { count: 'exact' })
+    .eq('id', matchId);
 
-  if (
-    error ||
-    !savedMatch ||
-    savedMatch.team_a_score !== aNum ||
-    savedMatch.team_b_score !== bNum ||
-    !savedMatch.is_complete
-  ) {
+  if (error || count === 0) {
+    pendingScoreSubmitIdsRef.current.delete(matchId);
     setMatches(previousMatches);
     setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
     setMessage(
       error
         ? `Submit failed: ${error.message}`
-        : 'Submit failed: the database did not save this score. Please check your connection and try again.'
+        : 'Submit failed: the database did not find this match. Please refresh and try again.'
     );
     return;
   }
+
+  pendingScoreSubmitIdsRef.current.delete(matchId);
+  setMatches(optimisticMatches);
+  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
 
   const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
 

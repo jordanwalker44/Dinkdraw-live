@@ -2839,9 +2839,35 @@ const hasAnyScores = matches.some(
 
   const canManageScores = isOrganizer || isCoOrganizer;
 
-  const canReportScores =
-  canManageScores ||
-  (!!tournament?.allow_player_score_reporting && !!claimedSlot && isStarted && !isCompleted);
+  function isClaimedPlayerInMatch(match: Match) {
+    if (!claimedSlot) return false;
+
+    return (
+      match.team_a_player_1_id === claimedSlot.id ||
+      match.team_a_player_2_id === claimedSlot.id ||
+      match.team_b_player_1_id === claimedSlot.id ||
+      match.team_b_player_2_id === claimedSlot.id
+    );
+  }
+
+  function canReportMatchScore(match: Match) {
+    if (canManageScores) return true;
+    return (
+      !!tournament?.allow_player_score_reporting &&
+      !!claimedSlot &&
+      isStarted &&
+      !isCompleted &&
+      isClaimedPlayerInMatch(match)
+    );
+  }
+
+  function getScoreLockedLabel(match: Match) {
+    if (canManageScores) return 'Scores Locked';
+    if (!tournament?.allow_player_score_reporting) return 'Scores Locked';
+    if (!claimedSlot) return 'Claim Your Spot to Score';
+    if (!isClaimedPlayerInMatch(match)) return 'Only Players in This Match Can Score';
+    return 'Scores Locked';
+  }
 
   useEffect(() => {
     if (!isOrganizer && isStarted) {
@@ -4206,8 +4232,8 @@ if (!scheduleValidation.isValid) {
   }
 
   async function saveScoreField(matchId: string, field: 'team_a_score' | 'team_b_score') {
-    if (!canReportScores) return;
     const match = matches.find((m) => m.id === matchId);
+    if (!match || !canReportMatchScore(match)) return;
     if (match?.is_complete) return;
     const draft = scoreDrafts[matchId];
     if (!draft) return;
@@ -4225,7 +4251,12 @@ if (!scheduleValidation.isValid) {
     setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, [field]: numeric } : m)));
   }
 
-  async function upsertPlayerMatchStats(match: Match, aScore: number, bScore: number) {
+  async function upsertPlayerMatchStats(
+    match: Match,
+    aScore: number,
+    bScore: number,
+    options: { silent?: boolean } = {}
+  ) {
     if (!tournament) return true;
 
     const { data: freshPlayers } = await supabase
@@ -4388,7 +4419,11 @@ if (!scheduleValidation.isValid) {
       .upsert(rows, { onConflict: 'match_id,user_id,game_number' });
 
     if (error) {
-      setMessage(`Score submitted, but stats update failed: ${error.message}`);
+      if (options.silent) {
+        console.warn('Score submitted, but stats update failed:', error);
+      } else {
+        setMessage(`Score submitted, but stats update failed: ${error.message}`);
+      }
       return false;
     }
 
@@ -4527,8 +4562,12 @@ if (matchesError) {
     return;
   }
 
-if (!canReportScores) {
-  setMessage('Scores are locked for this tournament.');
+if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
+  setMessage(
+    lockedMatch && !canManageScores && claimedSlot && !isClaimedPlayerInMatch(lockedMatch)
+      ? 'Only players in this match can submit this score.'
+      : 'Scores are locked for this tournament.'
+  );
   return;
 }
 
@@ -4667,12 +4706,14 @@ if (!canReportScores) {
 
     if (seriesNowComplete) {
       const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
-      await upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore);
-      void sendTournamentPushEvent(supabase, {
-        eventType: 'match_score_submitted',
-        tournamentId: tournament.id,
-        matchId,
-      });
+      void upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore, { silent: true });
+      if (tournament) {
+        void sendTournamentPushEvent(supabase, {
+          eventType: 'match_score_submitted',
+          tournamentId: tournament.id,
+          matchId,
+        });
+      }
 
       if (!nextRound) {
         const completed = await markTournamentCompleted();
@@ -4826,8 +4867,12 @@ if (!canReportScores) {
     return;
   }
 
-  if (!canReportScores) {
-    setMessage('Scores are locked for this tournament.');
+  if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
+    setMessage(
+      lockedMatch && !canManageScores && claimedSlot && !isClaimedPlayerInMatch(lockedMatch)
+        ? 'Only players in this match can submit this score.'
+        : 'Scores are locked for this tournament.'
+    );
     return;
   }
 
@@ -4923,15 +4968,11 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
   setMatches(optimisticMatches);
   setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
 
-  const statsSaved = await upsertPlayerMatchStats(completedMatch, aNum, bNum);
+  void upsertPlayerMatchStats(completedMatch, aNum, bNum, { silent: true });
 
   if (isEditingCompletedMatch) {
     await loadTournamentData(userId);
-    setMessage(
-  statsSaved
-    ? 'Score updated successfully.'
-    : 'Score updated, but stats update failed.'
-);
+    setMessage('Score updated successfully.');
     return;
   }
 
@@ -4956,11 +4997,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
       if (!finalComplete) {
         setSelectedRound(submittedRound);
         setActiveTab('rounds');
-        setMessage(
-          statsSaved
-            ? 'Stage complete. Generate the next Cream of the Crop round.'
-            : 'Stage complete. Generate the next Cream of the Crop round. Stats update failed.'
-        );
+        setMessage('Stage complete. Generate the next Cream of the Crop round.');
         return;
       }
 
@@ -4970,11 +5007,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
       setSelectedRound(finalRound);
       setActiveTab('standings');
 
-      setMessage(
-        statsSaved
-          ? 'Final Round complete. Tournament finished.'
-          : 'Final Round complete. Tournament finished, but stats update failed.'
-      );
+      setMessage('Final Round complete. Tournament finished.');
       return;
     }
 
@@ -4984,28 +5017,18 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     setSelectedRound(finalRound);
     setActiveTab('standings');
 
-    setMessage(
-      statsSaved
-        ? 'Score submitted. Tournament complete.'
-        : 'Score submitted. Tournament complete, but stats update failed.'
-    );
+    setMessage('Score submitted. Tournament complete.');
     return;
   }
 
   if (submittedRoundComplete && nextRound !== submittedRound) {
     setSelectedRound(nextRound);
     setActiveTab('rounds');
-    setMessage(
-      statsSaved
-        ? `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`
-        : `Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}. Stats update failed.`
-    );
+    setMessage(`Score submitted. Round ${submittedRound} complete. Advancing to Round ${nextRound}.`);
     return;
   }
 
-  setMessage(
-    statsSaved ? 'Score submitted.' : 'Score submitted, but stats update failed.'
-  );
+  setMessage('Score submitted.');
 }
 
   async function reopenMatch(matchId: string) {
@@ -5246,6 +5269,8 @@ function renderShortTeam(a: string | null, b: string | null) {
   const showGame3 = game1Done && game2Done && needsGame3(match);
   const shouldShowGame3Column = showGame3 || game3Done;
   const seriesComplete = match.is_complete;
+  const canReportThisMatch = canReportMatchScore(match);
+  const scoreLockedLabel = getScoreLockedLabel(match);
 
   const teamAName = renderShortTeam(match.team_a_player_1_id, match.team_a_player_2_id);
   const teamBName = renderShortTeam(match.team_b_player_1_id, match.team_b_player_2_id);
@@ -5468,7 +5493,7 @@ function renderShortTeam(a: string | null, b: string | null) {
           {renderScoreInput({
             value: draft.game_1_a,
             field: 'game_1_a',
-            disabled: game1Done || seriesComplete || !canReportScores,
+            disabled: game1Done || seriesComplete || !canReportThisMatch,
             isWinner: game1Winner === 'a',
           })}
 
@@ -5478,7 +5503,7 @@ function renderShortTeam(a: string | null, b: string | null) {
             disabled:
               !game1Done ||
               game2Done ||
-              !canReportScores,
+              !canReportThisMatch,
             isWinner: game2Winner === 'a',
           })}
 
@@ -5489,7 +5514,7 @@ function renderShortTeam(a: string | null, b: string | null) {
               disabled:
                 !showGame3 ||
                 game3Done ||
-                !canReportScores,
+                !canReportThisMatch,
               isWinner: game3Winner === 'a',
             })
           ) : null}
@@ -5519,7 +5544,7 @@ function renderShortTeam(a: string | null, b: string | null) {
           {renderScoreInput({
             value: draft.game_1_b,
             field: 'game_1_b',
-            disabled: game1Done || seriesComplete || !canReportScores,
+            disabled: game1Done || seriesComplete || !canReportThisMatch,
             isWinner: game1Winner === 'b',
           })}
 
@@ -5529,7 +5554,7 @@ function renderShortTeam(a: string | null, b: string | null) {
             disabled:
               !game1Done ||
               game2Done ||
-              !canReportScores,
+              !canReportThisMatch,
             isWinner: game2Winner === 'b',
           })}
 
@@ -5540,7 +5565,7 @@ function renderShortTeam(a: string | null, b: string | null) {
               disabled:
                 !showGame3 ||
                 game3Done ||
-                !canReportScores,
+                !canReportThisMatch,
               isWinner: game3Winner === 'b',
             })
           ) : null}
@@ -5573,7 +5598,7 @@ function renderShortTeam(a: string | null, b: string | null) {
               submitGame(match.id, nextGameNumber)
             )
           }
-          disabled={!canReportScores || submittingScoreId === match.id}
+          disabled={!canReportThisMatch || submittingScoreId === match.id}
           style={{
             width: '100%',
             fontWeight: 900,
@@ -5583,9 +5608,9 @@ function renderShortTeam(a: string | null, b: string | null) {
         >
           {submittingScoreId === match.id
             ? 'Submitting...'
-            : canReportScores
+            : canReportThisMatch
             ? getSubmitLabel()
-            : 'Scores Locked'}
+            : scoreLockedLabel}
         </button>
       ) : null}
 
@@ -7184,6 +7209,8 @@ isOrganizer &&
                   game_3_a: '',
                   game_3_b: '',
                 };
+                const canReportThisMatch = canReportMatchScore(match);
+                const scoreLockedLabel = getScoreLockedLabel(match);
 
                 return (
                   <div
@@ -7303,10 +7330,10 @@ isOrganizer &&
             : String(match.team_a_score)
           : draft.team_a_score
       }
-      disabled={match.is_complete || !canReportScores}
+      disabled={match.is_complete || !canReportThisMatch}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => setDraftScore(match.id, 'team_a_score', e.target.value)}
-      placeholder={canReportScores ? '0' : '-'}
+      placeholder={canReportThisMatch ? '0' : '-'}
     />
   </div>
 
@@ -7356,10 +7383,10 @@ isOrganizer &&
             : String(match.team_b_score)
           : draft.team_b_score
       }
-      disabled={match.is_complete || !canReportScores}
+      disabled={match.is_complete || !canReportThisMatch}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => setDraftScore(match.id, 'team_b_score', e.target.value)}
-      placeholder={canReportScores ? '0' : '-'}
+      placeholder={canReportThisMatch ? '0' : '-'}
     />
   </div>
 </div>
@@ -7438,7 +7465,7 @@ isOrganizer &&
     onClick={() =>
       runWithScoreSubmitLock(match.id, () => submitMatchScore(match.id))
     }
-    disabled={!canReportScores || submittingScoreId === match.id}
+    disabled={!canReportThisMatch || submittingScoreId === match.id}
     style={{
       width: '100%',
       fontWeight: 800,
@@ -7448,9 +7475,9 @@ isOrganizer &&
   >
     {submittingScoreId === match.id
       ? 'Submitting...'
-      : canReportScores
+      : canReportThisMatch
       ? 'Submit Score'
-      : 'Scores Locked'}
+      : scoreLockedLabel}
   </button>
 )}
                   </div>

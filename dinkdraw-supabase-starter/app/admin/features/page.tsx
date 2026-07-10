@@ -10,6 +10,11 @@ type OrganizationOption = {
   role: string | null;
 };
 
+function getRpcRow<T>(data: T | T[] | null): T | null {
+  if (Array.isArray(data)) return data[0] || null;
+  return data || null;
+}
+
 export default function AdminFeaturesPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
@@ -22,60 +27,6 @@ export default function AdminFeaturesPage() {
   const [renameOrganizationName, setRenameOrganizationName] = useState('');
   const [message, setMessage] = useState('');
   const [isWorking, setIsWorking] = useState(false);
-
-  async function ensureFeatureEntitlement({
-    userId,
-    organizationId,
-    featureKey,
-    notes,
-  }: {
-    userId?: string | null;
-    organizationId?: string | null;
-    featureKey: string;
-    notes: string;
-  }) {
-    let existingQuery = supabase
-      .from('feature_entitlements')
-      .select('id')
-      .eq('feature_key', featureKey)
-      .limit(1);
-
-    existingQuery = userId
-      ? existingQuery.eq('user_id', userId)
-      : existingQuery.is('user_id', null);
-
-    existingQuery = organizationId
-      ? existingQuery.eq('organization_id', organizationId)
-      : existingQuery.is('organization_id', null);
-
-    const { data: existingRows, error: lookupError } = await existingQuery;
-
-    if (lookupError) return lookupError;
-
-    const existing = existingRows?.[0];
-
-    if (existing?.id) {
-      const { error } = await supabase
-        .from('feature_entitlements')
-        .update({
-          status: 'active',
-          notes,
-        })
-        .eq('id', existing.id);
-
-      return error;
-    }
-
-    const { error } = await supabase.from('feature_entitlements').insert({
-      user_id: userId || null,
-      organization_id: organizationId || null,
-      feature_key: featureKey,
-      status: 'active',
-      notes,
-    });
-
-    return error;
-  }
 
   async function findUserByEmail() {
   setMessage('');
@@ -157,10 +108,11 @@ export default function AdminFeaturesPage() {
     setMessage('');
     setIsWorking(true);
 
-    const error = await ensureFeatureEntitlement({
-      userId: userId.trim(),
-      featureKey: 'cream_of_the_crop',
-      notes: 'Granted from admin page',
+    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
+      p_user_id: userId.trim(),
+      p_organization_id: null,
+      p_feature_key: 'cream_of_the_crop',
+      p_notes: 'Granted from admin page',
     });
 
     setIsWorking(false);
@@ -171,10 +123,11 @@ export default function AdminFeaturesPage() {
     setMessage('');
     setIsWorking(true);
 
-    const error = await ensureFeatureEntitlement({
-      userId: userId.trim(),
-      featureKey: 'organization_mode',
-      notes: 'Granted from admin page',
+    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
+      p_user_id: userId.trim(),
+      p_organization_id: null,
+      p_feature_key: 'organization_mode',
+      p_notes: 'Granted from admin page',
     });
 
     setIsWorking(false);
@@ -191,69 +144,17 @@ export default function AdminFeaturesPage() {
 
     setIsWorking(true);
 
-    const { data: organization, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
-        name: organizationName.trim(),
-        created_by_user_id: userId.trim(),
-      })
-      .select('id, name')
-      .single();
-
-    if (orgError || !organization) {
-      setIsWorking(false);
-      setMessage(orgError?.message || 'Could not create organization.');
-      return;
-    }
-
-    const { error: memberError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: organization.id,
-        user_id: userId.trim(),
-        role: 'owner',
-      });
-
-    if (memberError) {
-      setIsWorking(false);
-      setMessage(memberError.message);
-      return;
-    }
-
-    const organizationModeError = await ensureFeatureEntitlement({
-      userId: userId.trim(),
-      featureKey: 'organization_mode',
-      notes: `Granted from admin page for ${organization.name}`,
-    });
-
-    if (organizationModeError) {
-      setIsWorking(false);
-      setMessage(organizationModeError.message);
-      return;
-    }
-
-    const userCreamError = await ensureFeatureEntitlement({
-      userId: userId.trim(),
-      featureKey: 'cream_of_the_crop',
-      notes: `Granted from admin page for ${organization.name}`,
-    });
-
-    if (userCreamError) {
-      setIsWorking(false);
-      setMessage(userCreamError.message);
-      return;
-    }
-
-    const organizationCreamError = await ensureFeatureEntitlement({
-      organizationId: organization.id,
-      featureKey: 'cream_of_the_crop',
-      notes: 'Granted from admin page',
+    const { data, error } = await supabase.rpc('admin_create_organization_with_access', {
+      p_user_id: userId.trim(),
+      p_organization_name: organizationName.trim(),
     });
 
     setIsWorking(false);
 
-    if (organizationCreamError) {
-      setMessage(organizationCreamError.message);
+    const organization = getRpcRow<{ id: string; name: string }>(data);
+
+    if (error || !organization) {
+      setMessage(error?.message || 'Could not create organization.');
       return;
     }
 
@@ -277,14 +178,14 @@ export default function AdminFeaturesPage() {
 
     setIsWorking(true);
 
-    const { data: organization, error } = await supabase
-      .from('organizations')
-      .update({ name: renameOrganizationName.trim() })
-      .eq('id', selectedOrganizationId)
-      .select('id, name')
-      .single();
+    const { data, error } = await supabase.rpc('admin_rename_organization', {
+      p_organization_id: selectedOrganizationId,
+      p_organization_name: renameOrganizationName.trim(),
+    });
 
     setIsWorking(false);
+
+    const organization = getRpcRow<{ id: string; name: string }>(data);
 
     if (error || !organization) {
       setMessage(error?.message || 'Could not rename organization.');

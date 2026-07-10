@@ -70,6 +70,24 @@ function getStageLabel(currentRound: number) {
   return 'Final Stage';
 }
 
+function includesPlayer(match: Match, playerId: string) {
+  return (
+    match.team_a_player_1_id === playerId ||
+    match.team_a_player_2_id === playerId ||
+    match.team_b_player_1_id === playerId ||
+    match.team_b_player_2_id === playerId
+  );
+}
+
+function formatCourtValue(match: Match | undefined) {
+  if (!match) return '-';
+
+  const label = match.court_label?.trim();
+  if (label) return label.replace(/^court\s+/i, '');
+
+  return match.court_number === null ? '-' : String(match.court_number);
+}
+
 export default function PublicTvDisplay({
   tournament,
   playerSlots,
@@ -104,6 +122,11 @@ export default function PublicTvDisplay({
   const completeThisRound = currentMatches.filter((match) => match.is_complete).length;
   const totalRounds = tournament.rounds || 9;
   const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
+  const nextRound = currentRound + 1;
+  const nextRoundMatches = !isCreamOfTheCrop && nextRound <= totalRounds
+    ? matches.filter((match) => match.round_number === nextRound && !match.is_bye)
+    : [];
+  const showNextCourt = nextRoundMatches.length > 0;
   const topStandings = standings.slice(0, isCreamOfTheCrop ? 14 : 12);
   const leader = topStandings[0];
 
@@ -289,9 +312,9 @@ export default function PublicTvDisplay({
     gap: 14,
     alignItems: 'center',
     fontSize: 'clamp(18px, 1.45vw, 28px)',
-    lineHeight: 1.18,
+    lineHeight: 1.24,
     fontWeight: 950,
-    letterSpacing: '-0.055em',
+    letterSpacing: '-0.04em',
     overflow: 'hidden',
   }}
 >
@@ -302,6 +325,7 @@ export default function PublicTvDisplay({
       display: '-webkit-box',
       WebkitLineClamp: 2,
       WebkitBoxOrient: 'vertical',
+      paddingBottom: 4,
     }}
   >
     {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
@@ -342,9 +366,9 @@ export default function PublicTvDisplay({
     gap: 14,
     alignItems: 'center',
     fontSize: 'clamp(18px, 1.45vw, 28px)',
-    lineHeight: 1.18,
+    lineHeight: 1.24,
     fontWeight: 950,
-    letterSpacing: '-0.055em',
+    letterSpacing: '-0.04em',
     overflow: 'hidden',
   }}
 >
@@ -355,6 +379,7 @@ export default function PublicTvDisplay({
       display: '-webkit-box',
       WebkitLineClamp: 2,
       WebkitBoxOrient: 'vertical',
+      paddingBottom: 4,
     }}
   >
     {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
@@ -535,6 +560,8 @@ export default function PublicTvDisplay({
                   display: 'grid',
                   gridTemplateColumns: isCreamOfTheCrop
                     ? '40px minmax(0, 1fr) 54px 64px'
+                    : showNextCourt
+                    ? '42px minmax(0, 1fr) 54px 38px 62px'
                     : '46px minmax(0, 1fr) 54px 62px',
                   gap: 8,
                   padding: '10px 14px',
@@ -547,6 +574,7 @@ export default function PublicTvDisplay({
               >
                 <div>#</div>
                 <div>Player</div>
+                {showNextCourt ? <div style={{ textAlign: 'center' }}>Next</div> : null}
                 <div style={{ textAlign: 'center' }}>
                   {isCreamOfTheCrop ? 'Court' : 'W'}
                 </div>
@@ -558,6 +586,9 @@ export default function PublicTvDisplay({
               {topStandings.map((row, index) => {
                 const place = index + 1;
                 const isLeader = leader?.playerId === row.playerId;
+                const nextMatch = showNextCourt
+                  ? nextRoundMatches.find((match) => includesPlayer(match, row.playerId))
+                  : undefined;
 
                 return (
                   <div
@@ -566,6 +597,8 @@ export default function PublicTvDisplay({
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
                         ? '40px minmax(0, 1fr) 54px 64px'
+                        : showNextCourt
+                        ? '42px minmax(0, 1fr) 54px 38px 62px'
                         : '46px minmax(0, 1fr) 54px 62px',
                       gap: 8,
                       alignItems: 'center',
@@ -591,16 +624,28 @@ export default function PublicTvDisplay({
                       style={{
                         minWidth: 0,
                         fontSize: isLeader ? 22 : 18,
-                        lineHeight: 1,
+                        lineHeight: 1.18,
                         fontWeight: 950,
-                        letterSpacing: '-0.04em',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        paddingBottom: 2,
                       }}
                     >
                       {row.name}
                     </div>
+                    {showNextCourt ? (
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          fontSize: isLeader ? 20 : 17,
+                          fontWeight: 950,
+                          color: 'rgba(255,255,255,0.84)',
+                        }}
+                      >
+                        {formatCourtValue(nextMatch)}
+                      </div>
+                    ) : null}
                     <div
                       style={{
                         textAlign: 'center',

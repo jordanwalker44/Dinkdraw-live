@@ -550,7 +550,7 @@ export default function PublicTvDisplay({
                   fontWeight: 800,
                 }}
               >
-                {isCreamOfTheCrop ? 'Court ladder • Current record' : 'Wins • Point differential'}
+                {isCreamOfTheCrop ? 'Court ladder • Current record' : 'Record • Point differential'}
               </div>
             </div>
 
@@ -561,8 +561,8 @@ export default function PublicTvDisplay({
                   gridTemplateColumns: isCreamOfTheCrop
                     ? '40px minmax(0, 1fr) 54px 64px'
                     : showNextCourt
-                    ? '42px minmax(0, 1fr) 54px 38px 62px'
-                    : '46px minmax(0, 1fr) 54px 62px',
+                    ? '42px minmax(0, 1fr) 48px 58px 58px'
+                    : '46px minmax(0, 1fr) 58px 62px',
                   gap: 8,
                   padding: '10px 14px',
                   color: 'rgba(255,255,255,0.52)',
@@ -576,7 +576,7 @@ export default function PublicTvDisplay({
                 <div>Player</div>
                 {showNextCourt ? <div style={{ textAlign: 'center' }}>Next</div> : null}
                 <div style={{ textAlign: 'center' }}>
-                  {isCreamOfTheCrop ? 'Court' : 'W'}
+                  {isCreamOfTheCrop ? 'Court' : 'W-L'}
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   {isCreamOfTheCrop ? 'W-L' : 'Diff'}
@@ -598,8 +598,8 @@ export default function PublicTvDisplay({
                       gridTemplateColumns: isCreamOfTheCrop
                         ? '40px minmax(0, 1fr) 54px 64px'
                         : showNextCourt
-                        ? '42px minmax(0, 1fr) 54px 38px 62px'
-                        : '46px minmax(0, 1fr) 54px 62px',
+                        ? '42px minmax(0, 1fr) 48px 58px 58px'
+                        : '46px minmax(0, 1fr) 58px 62px',
                       gap: 8,
                       alignItems: 'center',
                       padding: isCreamOfTheCrop ? '7px 14px' : '9px 14px',
@@ -649,11 +649,11 @@ export default function PublicTvDisplay({
                     <div
                       style={{
                         textAlign: 'center',
-                        fontSize: isLeader ? 22 : 18,
+                      fontSize: isLeader ? 22 : 18,
                       fontWeight: 950,
                     }}
                   >
-                      {isCreamOfTheCrop ? row.finalCourt ?? '-' : row.wins}
+                      {isCreamOfTheCrop ? row.finalCourt ?? '-' : `${row.wins}-${row.losses}`}
                     </div>
                     <div
                       style={{

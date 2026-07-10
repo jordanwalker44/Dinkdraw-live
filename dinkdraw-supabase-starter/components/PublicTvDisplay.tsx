@@ -383,7 +383,9 @@ export default function PublicTvDisplay({
           style={{
             minHeight: 0,
             display: 'grid',
-            gridTemplateRows: 'auto minmax(0, 1fr) auto',
+            gridTemplateRows: isCreamOfTheCrop
+              ? 'auto minmax(0, 1fr) auto'
+              : 'auto minmax(0, 1fr)',
             gap: 16,
           }}
         >
@@ -629,89 +631,95 @@ export default function PublicTvDisplay({
             </div>
           </div>
 
-          <div
-            style={{
-              borderRadius: 28,
-              border: '1px solid rgba(255,255,255,0.12)',
-              background: 'rgba(255,255,255,0.065)',
-              padding: 18,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.26)',
-            }}
-          >
+          {isCreamOfTheCrop ? (
             <div
               style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 12,
-                alignItems: 'center',
-                marginBottom: 12,
+                borderRadius: 28,
+                border: '1px solid rgba(255,255,255,0.12)',
+                background: 'rgba(255,255,255,0.065)',
+                padding: 18,
+                boxShadow: '0 20px 60px rgba(0,0,0,0.26)',
               }}
             >
-              <div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  alignItems: 'center',
+                  marginBottom: 12,
+                }}
+              >
                 <div
                   style={{
-                    fontSize: 26,
-                    lineHeight: 1,
-                    fontWeight: 950,
-                    letterSpacing: '-0.05em',
+                    minWidth: 0,
                   }}
                 >
-                  {getStageLabel(currentRound)}
+                  <div
+                    style={{
+                      fontSize: 26,
+                      lineHeight: 1,
+                      fontWeight: 950,
+                      letterSpacing: '-0.05em',
+                    }}
+                  >
+                    {getStageLabel(currentRound)}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 5,
+                      color: 'rgba(255,255,255,0.58)',
+                      fontSize: 14,
+                      fontWeight: 850,
+                    }}
+                  >
+                    Round {currentRound} of {totalRounds}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    marginTop: 5,
-                    color: 'rgba(255,255,255,0.58)',
-                    fontSize: 14,
-                    fontWeight: 850,
-                  }}
-                >
-                  Round {currentRound} of {totalRounds}
-                </div>
+
+                {biggestClimber && biggestClimber.climb > 0 ? (
+                  <div
+                    style={{
+                      textAlign: 'right',
+                      color: '#FFCB05',
+                      fontWeight: 950,
+                      fontSize: 14,
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    Biggest Climber
+                    <br />
+                    {biggestClimber.name} +{biggestClimber.climb}
+                  </div>
+                ) : null}
               </div>
 
-              {biggestClimber && biggestClimber.climb > 0 ? (
-                <div
-                  style={{
-                    textAlign: 'right',
-                    color: '#FFCB05',
-                    fontWeight: 950,
-                    fontSize: 14,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  Biggest Climber
-                  <br />
-                  {biggestClimber.name} +{biggestClimber.climb}
-                </div>
-              ) : null}
-            </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {Array.from({ length: totalRounds }).map((_, index) => {
+                  const round = index + 1;
+                  const isDone = round < currentRound;
+                  const isCurrent = round === currentRound;
 
-            <div style={{ display: 'flex', gap: 8 }}>
-              {Array.from({ length: totalRounds }).map((_, index) => {
-                const round = index + 1;
-                const isDone = round < currentRound;
-                const isCurrent = round === currentRound;
-
-                return (
-                  <div
-                    key={round}
-                    style={{
-                      height: 14,
-                      flex: 1,
-                      borderRadius: 999,
-                      background: isCurrent
-                        ? '#FFCB05'
-                        : isDone
-                        ? 'rgba(255,203,5,0.55)'
-                        : 'rgba(255,255,255,0.16)',
-                      boxShadow: isCurrent ? '0 0 22px rgba(255,203,5,0.38)' : 'none',
-                    }}
-                  />
-                );
-              })}
+                  return (
+                    <div
+                      key={round}
+                      style={{
+                        height: 14,
+                        flex: 1,
+                        borderRadius: 999,
+                        background: isCurrent
+                          ? '#FFCB05'
+                          : isDone
+                          ? 'rgba(255,203,5,0.55)'
+                          : 'rgba(255,255,255,0.16)',
+                        boxShadow: isCurrent ? '0 0 22px rgba(255,203,5,0.38)' : 'none',
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : null}
         </aside>
       </section>
     </main>

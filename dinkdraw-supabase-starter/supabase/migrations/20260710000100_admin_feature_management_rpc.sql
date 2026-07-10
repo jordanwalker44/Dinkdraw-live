@@ -185,3 +185,5 @@ grant execute on function public.is_dinkdraw_admin() to authenticated;
 grant execute on function public.admin_ensure_feature_entitlement(uuid, uuid, text, text) to authenticated;
 grant execute on function public.admin_create_organization_with_access(uuid, text) to authenticated;
 grant execute on function public.admin_rename_organization(uuid, text) to authenticated;
+
+notify pgrst, 'reload schema';

@@ -259,7 +259,7 @@ const biggestClimber = isCreamOfTheCrop
               style={{
                 textAlign: 'center',
                 marginTop: -68,
-                marginBottom: 18,
+                marginBottom: 22,
               }}
             >
               {organizationBrand.logo_url ? (
@@ -279,7 +279,7 @@ const biggestClimber = isCreamOfTheCrop
               ) : null}
               <div
                 style={{
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: 950,
                   letterSpacing: 2,
                   color: organizationAccent,
@@ -290,26 +290,46 @@ const biggestClimber = isCreamOfTheCrop
               </div>
               <div
                 style={{
-                  marginTop: 4,
-                  fontSize: 24,
+                  marginTop: 6,
+                  fontSize: 34,
                   lineHeight: 1.05,
                   fontWeight: 950,
                   color: '#fff',
+                  letterSpacing: '-0.04em',
                 }}
               >
                 {organizationBrand.name}
               </div>
+              <div
+                style={{
+                  marginTop: 14,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '7px 12px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(0,0,0,0.16)',
+                  color: 'rgba(255,255,255,0.74)',
+                  fontSize: 12,
+                  fontWeight: 850,
+                  letterSpacing: '0.03em',
+                }}
+              >
+                Powered by <span style={{ color: '#fff' }}>Dink</span>
+                <span style={{ color: '#FFCB05', marginLeft: -6 }}>Draw</span>
+              </div>
             </div>
-          ) : null}
-
-          <div style={{ textAlign: 'center', fontSize: 34, fontWeight: 950 }}>
-            Dink<span style={{ color: '#FFCB05' }}>Draw</span>
-          </div>
+          ) : (
+            <div style={{ textAlign: 'center', fontSize: 34, fontWeight: 950 }}>
+              Dink<span style={{ color: '#FFCB05' }}>Draw</span>
+            </div>
+          )}
 
           <div
             style={{
               textAlign: 'center',
-              marginTop: 4,
+              marginTop: organizationBrand ? 0 : 4,
               fontSize: 13,
               letterSpacing: 4,
               color: 'rgba(255,255,255,0.72)',
@@ -487,25 +507,26 @@ const biggestClimber = isCreamOfTheCrop
             style={{
               marginTop: 16,
               borderRadius: 18,
-              border: '1px solid rgba(255,203,5,0.45)',
-              padding: '14px 16px',
-              background: 'rgba(0,0,0,0.22)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              padding: '13px 16px',
+              background: 'rgba(0,0,0,0.18)',
             }}
           >
             <div
   style={{
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: 950,
     textAlign: 'center',
+    color: 'rgba(255,255,255,0.86)',
   }}
 >
-  Create. Compete. Celebrate.
+  Results powered by DinkDraw
 </div>
 
 <div
   style={{
-    marginTop: 6,
-    fontSize: 22,
+    marginTop: 5,
+    fontSize: 18,
     fontWeight: 950,
     color: '#FFCB05',
     textAlign: 'center',

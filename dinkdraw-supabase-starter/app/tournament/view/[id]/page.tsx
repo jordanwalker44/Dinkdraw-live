@@ -1982,38 +1982,163 @@ useEffect(() => {
 
       <div className="card soft-enter">
         <div className="card-title">
-          {isCompleted ? '🏆 Final Results' : 'Standings'}
+          {isCompleted ? 'Final Results' : 'Standings'}
         </div>
         <div className="card-subtitle">
           {isCompleted
             ? 'Tournament complete. Final results are locked.'
+            : tournament.tournament_mode === 'cream_of_the_crop'
+            ? 'Ranked by court ladder, then current record.'
             : 'Ranked by wins, then point differential, then points scored.'}
         </div>
-
-        {isCompleted ? (
-  <div style={{ margin: '16px 0 18px 0' }}>
-    <Link
-      href={`/tournament/view/${params.id}/share-card`}
-      className="button primary"
-      style={{
-        width: '100%',
-        minHeight: 52,
-        textDecoration: 'none',
-        fontWeight: 900,
-        fontSize: 17,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-    </Link>
-  </div>
-) : null}
 
         {!standings.length ? (
           <div className="muted">Standings will appear once matches are scored.</div>
         ) : (
           <div>
+            {isCompleted ? (
+              <div
+                style={{
+                  margin: '16px 0 18px',
+                  display: 'grid',
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    borderRadius: 20,
+                    border: '1px solid rgba(255,203,5,0.28)',
+                    background:
+                      'radial-gradient(circle at top left, rgba(255,203,5,0.18), transparent 36%), rgba(255,255,255,0.045)',
+                    padding: 16,
+                    boxShadow: '0 18px 44px rgba(0,0,0,0.2)',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 950,
+                      letterSpacing: '0.16em',
+                      textTransform: 'uppercase',
+                      color: '#FFCB05',
+                      marginBottom: 8,
+                    }}
+                  >
+                    Champion
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 34,
+                      lineHeight: 1,
+                      fontWeight: 950,
+                      letterSpacing: '-0.05em',
+                    }}
+                  >
+                    {standings[0]?.name}
+                  </div>
+                  <div
+                    style={{
+                      marginTop: 10,
+                      fontSize: 16,
+                      fontWeight: 900,
+                      color: 'rgba(255,255,255,0.72)',
+                    }}
+                  >
+                    {tournament.tournament_mode === 'cream_of_the_crop'
+                      ? `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0} on Court ${
+                          standings[0]?.finalCourt ?? '-'
+                        }`
+                      : `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0} • ${
+                          (standings[0]?.pointDiff ?? 0) > 0
+                            ? `+${standings[0]?.pointDiff}`
+                            : standings[0]?.pointDiff ?? 0
+                        } diff`}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gap: 10,
+                  }}
+                >
+                  {standings.slice(0, 3).map((row, index) => (
+                    <div
+                      key={`podium-${row.playerId}`}
+                      style={{
+                        borderRadius: 16,
+                        border:
+                          index === 0
+                            ? '1px solid rgba(255,203,5,0.34)'
+                            : '1px solid rgba(255,255,255,0.1)',
+                        background:
+                          index === 0
+                            ? 'linear-gradient(180deg, rgba(255,203,5,0.13), rgba(255,255,255,0.045))'
+                            : 'rgba(255,255,255,0.04)',
+                        padding: 12,
+                        minWidth: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 950,
+                          color: index === 0 ? '#FFCB05' : 'rgba(255,255,255,0.58)',
+                          marginBottom: 8,
+                        }}
+                      >
+                        #{index + 1}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 17,
+                          lineHeight: 1.08,
+                          fontWeight: 950,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {row.name}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 7,
+                          color: '#FFCB05',
+                          fontSize: 14,
+                          fontWeight: 900,
+                        }}
+                      >
+                        {tournament.tournament_mode === 'cream_of_the_crop'
+                          ? `${row.wins}-${row.losses}`
+                          : `${row.wins}-${row.losses} • ${
+                              row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff
+                            }`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Link
+                  href={`/tournament/view/${params.id}/share-card`}
+                  className="button primary"
+                  style={{
+                    width: '100%',
+                    minHeight: 52,
+                    textDecoration: 'none',
+                    fontWeight: 900,
+                    fontSize: 17,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  View Share Card
+                </Link>
+              </div>
+            ) : null}
+
            <div
               style={{
                 border: '1px solid rgba(255,255,255,0.08)',

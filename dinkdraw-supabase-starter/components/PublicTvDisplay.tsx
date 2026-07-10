@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import { type OrganizationBrand } from './OrganizationBrandBanner';
 
 type Tournament = {
@@ -88,6 +89,16 @@ function formatCourtValue(match: Match | undefined) {
   return match.court_number === null ? '-' : String(match.court_number);
 }
 
+function chunkMatches(matches: Match[], pageSize: number) {
+  const pages: Match[][] = [];
+
+  for (let index = 0; index < matches.length; index += pageSize) {
+    pages.push(matches.slice(index, index + pageSize));
+  }
+
+  return pages.length ? pages : [[]];
+}
+
 export default function PublicTvDisplay({
   tournament,
   playerSlots,
@@ -115,20 +126,53 @@ export default function PublicTvDisplay({
     return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
   }
 
-  const currentMatches = matches
-    .filter((match) => match.round_number === currentRound && !match.is_bye)
-    .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999));
+  const currentMatches = useMemo(
+    () =>
+      matches
+        .filter((match) => match.round_number === currentRound && !match.is_bye)
+        .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999)),
+    [matches, currentRound]
+  );
 
   const completeThisRound = currentMatches.filter((match) => match.is_complete).length;
   const totalRounds = tournament.rounds || 9;
   const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
+  const playableMatches = useMemo(
+    () => matches.filter((match) => !match.is_bye),
+    [matches]
+  );
+  const allPlayableMatchesComplete =
+    playableMatches.length > 0 && playableMatches.every((match) => match.is_complete);
+  const isFinal = tournament.status === 'completed' || allPlayableMatchesComplete;
   const nextRound = currentRound + 1;
   const nextRoundMatches = !isCreamOfTheCrop && nextRound <= totalRounds
     ? matches.filter((match) => match.round_number === nextRound && !match.is_bye)
     : [];
-  const showNextCourt = nextRoundMatches.length > 0;
+  const showNextCourt = !isFinal && nextRoundMatches.length > 0;
   const topStandings = standings.slice(0, isCreamOfTheCrop ? 14 : 12);
   const leader = topStandings[0];
+  const runnerUp = topStandings[1];
+  const thirdPlace = topStandings[2];
+  const courtPages = useMemo(() => chunkMatches(currentMatches, 6), [currentMatches]);
+  const [courtPageIndex, setCourtPageIndex] = useState(0);
+  const visibleMatches = courtPages[courtPageIndex] || courtPages[0] || [];
+  const courtPageStart = courtPageIndex * 6 + 1;
+  const courtPageEnd = Math.min(courtPageStart + visibleMatches.length - 1, currentMatches.length);
+  const showCourtPager = !isFinal && courtPages.length > 1;
+
+  useEffect(() => {
+    setCourtPageIndex(0);
+  }, [currentRound, currentMatches.length]);
+
+  useEffect(() => {
+    if (isFinal || courtPages.length <= 1) return;
+
+    const interval = window.setInterval(() => {
+      setCourtPageIndex((current) => (current + 1) % courtPages.length);
+    }, 10000);
+
+    return () => window.clearInterval(interval);
+  }, [courtPages.length, isFinal]);
 
   const biggestClimber = standings
     .filter((row) => row.played > 0)
@@ -193,18 +237,18 @@ export default function PublicTvDisplay({
                   marginBottom: 6,
                 }}
               >
-                Now Playing
+                {isFinal ? 'Tournament Complete' : 'Now Playing'}
               </div>
               <div
                 style={{
-                  fontSize: 'clamp(46px, 5.2vw, 86px)',
+                  fontSize: isFinal ? 'clamp(42px, 4.9vw, 82px)' : 'clamp(46px, 5.2vw, 86px)',
                   lineHeight: 0.92,
                   fontWeight: 950,
                   letterSpacing: '-0.06em',
                   whiteSpace: 'nowrap',
                 }}
               >
-                Round {currentRound}
+                {isFinal ? 'Final Results' : `Round ${currentRound}`}
               </div>
             </div>
 
@@ -216,16 +260,24 @@ export default function PublicTvDisplay({
                   gap: 8,
                   padding: '9px 14px',
                   borderRadius: 999,
-                  background: isLive ? 'rgba(34,197,94,0.16)' : 'rgba(255,203,5,0.14)',
-                  border: isLive ? '1px solid rgba(34,197,94,0.42)' : '1px solid rgba(255,203,5,0.35)',
-                  color: isLive ? '#86EFAC' : '#FFCB05',
+                  background: isFinal
+                    ? 'rgba(255,203,5,0.16)'
+                    : isLive
+                    ? 'rgba(34,197,94,0.16)'
+                    : 'rgba(255,203,5,0.14)',
+                  border: isFinal
+                    ? '1px solid rgba(255,203,5,0.38)'
+                    : isLive
+                    ? '1px solid rgba(34,197,94,0.42)'
+                    : '1px solid rgba(255,203,5,0.35)',
+                  color: isFinal ? '#FFCB05' : isLive ? '#86EFAC' : '#FFCB05',
                   fontSize: 14,
                   fontWeight: 950,
                   letterSpacing: '0.12em',
                   textTransform: 'uppercase',
                 }}
               >
-                {isLive ? 'Live' : 'Updating'}
+                {isFinal ? 'Final' : isLive ? 'Live' : 'Updating'}
               </div>
               <div
                 style={{
@@ -235,7 +287,11 @@ export default function PublicTvDisplay({
                   color: 'rgba(255,255,255,0.74)',
                 }}
               >
-                {completeThisRound}/{currentMatches.length} complete
+                {isFinal
+                  ? `${playableMatches.filter((match) => match.is_complete).length}/${playableMatches.length} matches`
+                  : showCourtPager
+                  ? `Courts ${courtPageStart}-${courtPageEnd} of ${currentMatches.length}`
+                  : `${completeThisRound}/${currentMatches.length} complete`}
               </div>
             </div>
           </header>
@@ -244,12 +300,149 @@ export default function PublicTvDisplay({
             style={{
               minHeight: 0,
               display: 'grid',
-              gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-              gridTemplateRows: 'repeat(3, minmax(0, 1fr))',
+              gridTemplateColumns: isFinal ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
+              gridTemplateRows: isFinal ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0, 1fr))',
               gap: 10,
             }}
           >
-            {currentMatches.map((match) => {
+            {isFinal ? (
+              <article
+                style={{
+                  minHeight: 0,
+                  borderRadius: 30,
+                  border: '1px solid rgba(255,203,5,0.26)',
+                  background:
+                    'radial-gradient(circle at top left, rgba(255,203,5,0.2), transparent 34%), rgba(255,255,255,0.055)',
+                  boxShadow: '0 24px 70px rgba(0,0,0,0.3)',
+                  padding: '28px 32px',
+                  display: 'grid',
+                  gridTemplateRows: 'auto minmax(0, 1fr) auto',
+                  gap: 24,
+                  overflow: 'hidden',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 950,
+                      letterSpacing: '0.18em',
+                      textTransform: 'uppercase',
+                      color: '#FFCB05',
+                      marginBottom: 10,
+                    }}
+                  >
+                    Champion
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 'clamp(54px, 5.2vw, 92px)',
+                      lineHeight: 0.98,
+                      fontWeight: 950,
+                      letterSpacing: '-0.06em',
+                    }}
+                  >
+                    {leader?.name || 'Final standings'}
+                  </div>
+                  {leader ? (
+                    <div
+                      style={{
+                        marginTop: 14,
+                        fontSize: 28,
+                        fontWeight: 950,
+                        color: 'rgba(255,255,255,0.78)',
+                      }}
+                    >
+                      {isCreamOfTheCrop
+                        ? `${leader.wins}-${leader.losses} on Court ${leader.finalCourt ?? '-'}`
+                        : `${leader.wins}-${leader.losses} • ${formatDiff(leader.pointDiff)} diff`}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div
+                  style={{
+                    minHeight: 0,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                    gap: 16,
+                    alignItems: 'end',
+                  }}
+                >
+                  {[
+                    { label: '1st', row: leader, scale: 1 },
+                    { label: '2nd', row: runnerUp, scale: 0.88 },
+                    { label: '3rd', row: thirdPlace, scale: 0.78 },
+                  ].map((place) =>
+                    place.row ? (
+                      <div
+                        key={place.label}
+                        style={{
+                          minHeight: `${180 * place.scale}px`,
+                          borderRadius: 24,
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          background:
+                            place.label === '1st'
+                              ? 'linear-gradient(180deg, rgba(255,203,5,0.2), rgba(255,255,255,0.055))'
+                              : 'rgba(255,255,255,0.055)',
+                          padding: 18,
+                          display: 'grid',
+                          alignContent: 'space-between',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 950,
+                            color: place.label === '1st' ? '#FFCB05' : 'rgba(255,255,255,0.68)',
+                          }}
+                        >
+                          {place.label}
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 'clamp(26px, 2.2vw, 42px)',
+                              lineHeight: 1.02,
+                              fontWeight: 950,
+                              letterSpacing: '-0.05em',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {place.row.name}
+                          </div>
+                          <div
+                            style={{
+                              marginTop: 8,
+                              fontSize: 20,
+                              fontWeight: 950,
+                              color: '#FFCB05',
+                            }}
+                          >
+                            {isCreamOfTheCrop
+                              ? `${place.row.wins}-${place.row.losses}`
+                              : `${place.row.wins}-${place.row.losses} • ${formatDiff(place.row.pointDiff)}`}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 900,
+                    color: 'rgba(255,255,255,0.68)',
+                  }}
+                >
+                  Final standings are locked.
+                </div>
+              </article>
+            ) : (
+            visibleMatches.map((match) => {
               const isComplete = match.is_complete;
 
               return (
@@ -400,7 +593,8 @@ export default function PublicTvDisplay({
 </div>
                 </article>
               );
-            })}
+            })
+            )}
           </div>
         </div>
 

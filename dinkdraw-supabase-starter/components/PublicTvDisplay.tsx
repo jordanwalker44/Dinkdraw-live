@@ -399,9 +399,7 @@ export default function PublicTvDisplay({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: organizationBrand?.name ? 'minmax(0, 1fr) auto' : '1fr',
-                gap: 14,
-                alignItems: 'start',
+                gap: 12,
               }}
             >
               <div style={{ minWidth: 0 }}>
@@ -419,7 +417,7 @@ export default function PublicTvDisplay({
                 </div>
                 <div
                   style={{
-                    fontSize: 'clamp(24px, 2vw, 38px)',
+                    fontSize: 'clamp(28px, 2.2vw, 44px)',
                     lineHeight: 1,
                     fontWeight: 950,
                     letterSpacing: '-0.05em',
@@ -437,9 +435,10 @@ export default function PublicTvDisplay({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
+                  gap: 10,
                   minWidth: 0,
-                  textAlign: 'right',
+                  paddingTop: 10,
+                  borderTop: '1px solid rgba(255,255,255,0.1)',
                 }}
               >
                 {organizationBrand.logo_url ? (
@@ -447,8 +446,8 @@ export default function PublicTvDisplay({
                     src={organizationBrand.logo_url}
                     alt={`${organizationBrand.name} logo`}
                     style={{
-                      width: 48,
-                      height: 48,
+                      width: 42,
+                      height: 42,
                       objectFit: 'contain',
                       borderRadius: 12,
                       background: 'rgba(255,255,255,0.92)',
@@ -472,7 +471,7 @@ export default function PublicTvDisplay({
                   </div>
                   <div
                     style={{
-                      fontSize: 'clamp(18px, 1.25vw, 26px)',
+                      fontSize: 'clamp(18px, 1.2vw, 24px)',
                       lineHeight: 1.05,
                       fontWeight: 950,
                       overflow: 'hidden',
@@ -533,7 +532,7 @@ export default function PublicTvDisplay({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: isCreamOfTheCrop
-                    ? '40px minmax(0, 1fr) 70px 64px'
+                    ? '40px minmax(0, 1fr) 54px 64px'
                     : '46px minmax(0, 1fr) 54px 62px',
                   gap: 8,
                   padding: '10px 14px',
@@ -564,7 +563,7 @@ export default function PublicTvDisplay({
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
-                        ? '40px minmax(0, 1fr) 70px 64px'
+                        ? '40px minmax(0, 1fr) 54px 64px'
                         : '46px minmax(0, 1fr) 54px 62px',
                       gap: 8,
                       alignItems: 'center',
@@ -604,12 +603,10 @@ export default function PublicTvDisplay({
                       style={{
                         textAlign: 'center',
                         fontSize: isLeader ? 22 : 18,
-                        fontWeight: 950,
-                      }}
-                    >
-                      {isCreamOfTheCrop && row.finalCourt
-                        ? `Court ${row.finalCourt}`
-                        : row.wins}
+                      fontWeight: 950,
+                    }}
+                  >
+                      {isCreamOfTheCrop ? row.finalCourt ?? '-' : row.wins}
                     </div>
                     <div
                       style={{

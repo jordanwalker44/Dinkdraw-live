@@ -14,6 +14,8 @@ type PlayerSlot = {
 };
 
 type Match = {
+  round_number: number;
+  court_number: number | null;
   team_a_player_1_id: string | null;
   team_a_player_2_id: string | null;
   team_b_player_1_id: string | null;
@@ -30,6 +32,7 @@ type StandingRow = {
   wins: number;
   losses: number;
   pointDiff: number;
+  finalCourt: number | null;
 };
 
 function diffText(value: number) {
@@ -42,8 +45,13 @@ function shortName(name: string) {
   return `${parts[0]} ${parts[1][0]}.`;
 }
 
-function computeStandings(players: PlayerSlot[], matches: Match[]) {
+function computeStandings(
+  players: PlayerSlot[],
+  matches: Match[],
+  tournamentMode?: string | null
+) {
   const rows = new Map<string, StandingRow>();
+  const latestMatchByPlayer = new Map<string, Match>();
 
   for (const player of players) {
     rows.set(player.id, {
@@ -52,6 +60,7 @@ function computeStandings(players: PlayerSlot[], matches: Match[]) {
   wins: 0,
   losses: 0,
   pointDiff: 0,
+  finalCourt: null,
     });
   }
 
@@ -70,6 +79,19 @@ function computeStandings(players: PlayerSlot[], matches: Match[]) {
     const aIds = [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
     const bIds = [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
 
+    for (const id of [...aIds, ...bIds]) {
+      const currentLatest = latestMatchByPlayer.get(id);
+
+      if (
+        !currentLatest ||
+        match.round_number > currentLatest.round_number ||
+        (match.round_number === currentLatest.round_number &&
+          (match.court_number ?? 999) < (currentLatest.court_number ?? 999))
+      ) {
+        latestMatchByPlayer.set(id, match);
+      }
+    }
+
     for (const id of aIds) {
       const row = rows.get(id);
       if (!row) continue;
@@ -87,7 +109,22 @@ function computeStandings(players: PlayerSlot[], matches: Match[]) {
     }
   }
 
-  return Array.from(rows.values()).sort((a, b) => {
+  return Array.from(rows.entries())
+    .map(([playerId, row]) => ({
+      ...row,
+      finalCourt: latestMatchByPlayer.get(playerId)?.court_number ?? null,
+    }))
+    .sort((a, b) => {
+    if (tournamentMode === 'cream_of_the_crop') {
+      const aCourt = a.finalCourt ?? 999;
+      const bCourt = b.finalCourt ?? 999;
+
+      if (aCourt !== bCourt) return aCourt - bCourt;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      return a.slotNumber - b.slotNumber;
+    }
+
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
     return a.name.localeCompare(b.name);
@@ -189,7 +226,8 @@ export default async function ShareCardPage({
   const organizationAccent = getOrganizationAccentColor(organizationBrand);
   const standings = computeStandings(
     (playersResult.data || []) as PlayerSlot[],
-    (matchesResult.data || []) as Match[]
+    (matchesResult.data || []) as Match[],
+    tournament?.tournament_mode
   );
 
   const first = standings[0];
@@ -376,7 +414,7 @@ const biggestClimber = isCreamOfTheCrop
         }}
       >
         <div style={{ fontSize: 15, fontWeight: 950, color: '#FFCB05' }}>
-          🏆 CHAMPION
+          🏆 CREAM OF THE CROP CHAMPION
         </div>
 
         <div style={{ marginTop: 8, fontSize: 30, fontWeight: 950 }}>
@@ -384,34 +422,77 @@ const biggestClimber = isCreamOfTheCrop
         </div>
 
         <div style={{ marginTop: 6, fontSize: 17, color: 'rgba(255,255,255,0.72)', fontWeight: 800 }}>
-          {first.wins}-{first.losses} record • {diffText(first.pointDiff)} diff
+          {first.wins}-{first.losses} record • Final Court {first.finalCourt ?? '-'}
         </div>
       </div>
 
-      <div
-        style={{
-          padding: '16px',
-          borderRadius: 18,
-          border: '1px solid rgba(34,197,94,0.75)',
-          background: 'linear-gradient(90deg, rgba(34,197,94,0.16), rgba(255,255,255,0.04))',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ fontSize: 15, fontWeight: 950, color: '#86EFAC' }}>
-          🚀 BIGGEST CLIMBER
-        </div>
+      <div style={{ marginTop: 2, fontSize: 13, fontWeight: 950, letterSpacing: 2, color: 'rgba(255,255,255,0.58)', textAlign: 'center' }}>
+        FINAL TOP 3 • COURT LADDER
+      </div>
 
-        <div style={{ marginTop: 8, fontSize: 28, fontWeight: 950 }}>
-          {biggestClimber.name}
-        </div>
+      {[second, third].filter(Boolean).map((row, index) => {
+        const place = index + 2;
+        const color = place === 2 ? '#C0C7D2' : '#CD7F32';
 
-        <div style={{ marginTop: 6, fontSize: 17, color: 'rgba(255,255,255,0.72)', fontWeight: 800 }}>
-          Started #{biggestClimber.slotNumber} → Finished #{biggestClimber.finishRank}
-        </div>
+        return (
+          <div
+            key={place}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '52px minmax(0, 1fr) auto',
+              gap: 12,
+              alignItems: 'center',
+              padding: '13px 15px',
+              borderRadius: 18,
+              border: `1px solid ${color}99`,
+              background: 'rgba(255,255,255,0.055)',
+            }}
+          >
+            <div style={{ fontSize: 29, textAlign: 'center' }}>
+              {place === 2 ? '🥈' : '🥉'}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 22, fontWeight: 950, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {row!.name}
+              </div>
+              <div style={{ marginTop: 5, fontSize: 15, color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>
+                {row!.wins}-{row!.losses} record
+              </div>
+            </div>
+            <div style={{ textAlign: 'right', color, fontWeight: 950, fontSize: 17, whiteSpace: 'nowrap' }}>
+              Court {row!.finalCourt ?? '-'}
+            </div>
+          </div>
+        );
+      })}
 
-        <div style={{ marginTop: 4, fontSize: 24, color: '#86EFAC', fontWeight: 950 }}>
-          +{biggestClimber.climb} spots
+      {biggestClimber.climb > 0 ? (
+        <div
+          style={{
+            padding: '15px',
+            borderRadius: 18,
+            border: '1px solid rgba(34,197,94,0.75)',
+            background: 'linear-gradient(90deg, rgba(34,197,94,0.16), rgba(255,255,255,0.04))',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 950, color: '#86EFAC' }}>
+            🚀 BIGGEST CLIMBER
+          </div>
+          <div style={{ marginTop: 7, fontSize: 26, fontWeight: 950 }}>
+            {biggestClimber.name}
+          </div>
+          <div style={{ marginTop: 5, fontSize: 16, color: 'rgba(255,255,255,0.72)', fontWeight: 800 }}>
+            Started #{biggestClimber.slotNumber} → Finished #{biggestClimber.finishRank} • Court {biggestClimber.finalCourt ?? '-'}
+          </div>
+          <div style={{ marginTop: 3, fontSize: 22, color: '#86EFAC', fontWeight: 950 }}>
+            +{biggestClimber.climb} spots
+          </div>
         </div>
+      ) : null}
+
+      <div style={{ fontSize: 13, lineHeight: 1.35, color: 'rgba(255,255,255,0.58)', textAlign: 'center', fontWeight: 750 }}>
+        Final placement is based on court ladder position and record.
       </div>
     </>
   ) : (

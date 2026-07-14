@@ -255,7 +255,7 @@ const biggestClimber = isCreamOfTheCrop
       style={{
         minHeight: '100vh',
         background: '#020b14',
-        padding: 14,
+        padding: '150px 14px 14px',
         fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
       }}
     >
@@ -283,7 +283,7 @@ const biggestClimber = isCreamOfTheCrop
             maxWidth: 420,
             aspectRatio: 'auto',
             borderRadius: 28,
-            padding: '98px 16px 16px',
+            padding: '28px 16px 16px',
             color: '#fff',
             background:
               'radial-gradient(circle at top, #123a5c 0%, #06182b 48%, #020b14 100%)',
@@ -296,7 +296,6 @@ const biggestClimber = isCreamOfTheCrop
             <div
               style={{
                 textAlign: 'center',
-                marginTop: -68,
                 marginBottom: 22,
               }}
             >
@@ -425,46 +424,6 @@ const biggestClimber = isCreamOfTheCrop
           {first.wins}-{first.losses} record • Final Court {first.finalCourt ?? '-'}
         </div>
       </div>
-
-      <div style={{ marginTop: 2, fontSize: 13, fontWeight: 950, letterSpacing: 2, color: 'rgba(255,255,255,0.58)', textAlign: 'center' }}>
-        FINAL TOP 3 • COURT LADDER
-      </div>
-
-      {[second, third].filter(Boolean).map((row, index) => {
-        const place = index + 2;
-        const color = place === 2 ? '#C0C7D2' : '#CD7F32';
-
-        return (
-          <div
-            key={place}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '52px minmax(0, 1fr) auto',
-              gap: 12,
-              alignItems: 'center',
-              padding: '13px 15px',
-              borderRadius: 18,
-              border: `1px solid ${color}99`,
-              background: 'rgba(255,255,255,0.055)',
-            }}
-          >
-            <div style={{ fontSize: 29, textAlign: 'center' }}>
-              {place === 2 ? '🥈' : '🥉'}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 22, fontWeight: 950, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {row!.name}
-              </div>
-              <div style={{ marginTop: 5, fontSize: 15, color: 'rgba(255,255,255,0.7)', fontWeight: 800 }}>
-                {row!.wins}-{row!.losses} record
-              </div>
-            </div>
-            <div style={{ textAlign: 'right', color, fontWeight: 950, fontSize: 17, whiteSpace: 'nowrap' }}>
-              Court {row!.finalCourt ?? '-'}
-            </div>
-          </div>
-        );
-      })}
 
       {biggestClimber.climb > 0 ? (
         <div

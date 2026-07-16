@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
@@ -212,6 +213,14 @@ export default function AdminFeaturesPage() {
         <div className="card-subtitle">
           Internal tool for granting DinkDraw premium access.
         </div>
+
+        <Link
+          className="button secondary"
+          href="/admin/monitor"
+          style={{ display: 'inline-flex', marginBottom: 14, width: 'auto' }}
+        >
+          Open Tournament Monitor
+        </Link>
 
         <div className="grid" style={{ gap: 14 }}>
           <div>

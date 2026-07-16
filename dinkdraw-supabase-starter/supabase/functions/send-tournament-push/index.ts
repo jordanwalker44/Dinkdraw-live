@@ -24,11 +24,15 @@ type Tournament = {
   id: string;
   title: string | null;
   organizer_user_id: string;
+  organizer_name: string | null;
   co_organizer_email: string | null;
   player_count: number;
+  courts: number;
+  rounds: number;
   allow_player_score_reporting: boolean | null;
   status: string;
   format: string | null;
+  tournament_mode: string | null;
 };
 
 type PlayerSlot = {
@@ -66,10 +70,18 @@ type Notification = {
   url: string;
 };
 
+type ProfileRow = {
+  id: string;
+  email: string | null;
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const tournamentMonitorEmail =
+  Deno.env.get('TOURNAMENT_MONITOR_EMAIL')?.trim().toLowerCase() || 'jordanwalker44@gmail.com';
 
 function requiredEnv(name: string) {
   const value = Deno.env.get(name);
@@ -376,6 +388,50 @@ function buildTournamentStartedNotifications(
     });
 }
 
+function formatTournamentMode(tournament: Tournament) {
+  if (tournament.tournament_mode === 'cream_of_the_crop') return 'Cream of the Crop';
+  if (tournament.format === 'singles') return 'Singles';
+  return 'Round Robin';
+}
+
+async function buildTournamentMonitorStartedNotifications(
+  adminClient: ReturnType<typeof createClient>,
+  tournament: Tournament,
+  existingNotifications: Notification[],
+) {
+  if (!tournamentMonitorEmail) return [];
+
+  const { data, error } = await adminClient
+    .from('profiles')
+    .select('id, email')
+    .eq('email', tournamentMonitorEmail)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const monitorProfile = data as ProfileRow | null;
+  if (!monitorProfile?.id) {
+    console.log('send-tournament-push monitor skipped: profile not found', {
+      tournamentMonitorEmail,
+    });
+    return [];
+  }
+
+  if (monitorProfile.id === tournament.organizer_user_id) return [];
+  if (existingNotifications.some((notification) => notification.userId === monitorProfile.id)) return [];
+
+  const organizer = tournament.organizer_name?.trim() || 'Another organizer';
+
+  return [
+    {
+      userId: monitorProfile.id,
+      title: 'Tournament started',
+      body: `${titleFor(tournament)} by ${organizer}. ${tournament.player_count} players, ${tournament.courts} courts, ${tournament.rounds} rounds. ${formatTournamentMode(tournament)}.`,
+      url: `/tournament/${tournament.id}`,
+    },
+  ];
+}
+
 function buildMatchScoreNotifications(
   event: Extract<PushEvent, { eventType: 'match_score_submitted' }>,
   tournament: Tournament,
@@ -603,6 +659,10 @@ Deno.serve(async (req) => {
         user.id,
         user.email,
       );
+      notifications = [
+        ...notifications,
+        ...(await buildTournamentMonitorStartedNotifications(adminClient, tournament, notifications)),
+      ];
     } else if (event.eventType === 'match_score_submitted') {
       notifications = buildMatchScoreNotifications(
         event,

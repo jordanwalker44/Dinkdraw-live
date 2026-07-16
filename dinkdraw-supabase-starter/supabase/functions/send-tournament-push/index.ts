@@ -404,7 +404,7 @@ async function buildTournamentMonitorStartedNotifications(
   const { data, error } = await adminClient
     .from('profiles')
     .select('id, email')
-    .eq('email', tournamentMonitorEmail)
+    .ilike('email', tournamentMonitorEmail)
     .maybeSingle();
 
   if (error) throw error;
@@ -417,19 +417,36 @@ async function buildTournamentMonitorStartedNotifications(
     return [];
   }
 
-  if (monitorProfile.id === tournament.organizer_user_id) return [];
-  if (existingNotifications.some((notification) => notification.userId === monitorProfile.id)) return [];
+  if (monitorProfile.id === tournament.organizer_user_id) {
+    console.log('send-tournament-push monitor skipped: monitor is organizer', {
+      monitorUserId: monitorProfile.id,
+      tournamentId: tournament.id,
+    });
+    return [];
+  }
+
+  if (existingNotifications.some((notification) => notification.userId === monitorProfile.id)) {
+    console.log('send-tournament-push monitor skipped: monitor already receiving notification', {
+      monitorUserId: monitorProfile.id,
+      tournamentId: tournament.id,
+    });
+    return [];
+  }
 
   const organizer = tournament.organizer_name?.trim() || 'Another organizer';
+  const monitorNotification = {
+    userId: monitorProfile.id,
+    title: 'Tournament started',
+    body: `${titleFor(tournament)} by ${organizer}. ${tournament.player_count} players, ${tournament.courts} courts, ${tournament.rounds} rounds. ${formatTournamentMode(tournament)}.`,
+    url: `/tournament/${tournament.id}`,
+  };
 
-  return [
-    {
-      userId: monitorProfile.id,
-      title: 'Tournament started',
-      body: `${titleFor(tournament)} by ${organizer}. ${tournament.player_count} players, ${tournament.courts} courts, ${tournament.rounds} rounds. ${formatTournamentMode(tournament)}.`,
-      url: `/tournament/${tournament.id}`,
-    },
-  ];
+  console.log('send-tournament-push monitor notification added', {
+    monitorUserId: monitorProfile.id,
+    tournamentId: tournament.id,
+  });
+
+  return [monitorNotification];
 }
 
 function buildMatchScoreNotifications(

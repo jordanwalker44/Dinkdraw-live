@@ -191,16 +191,16 @@ export default function AdminMonitorPage() {
   }, []);
 
   return (
-    <main className="page-shell">
+    <main className="page-shell admin-monitor-shell">
       <TopNav />
 
-      <div className="card">
-        <div className="row-between" style={{ alignItems: 'flex-start', gap: 12 }}>
-          <div>
-            <div className="card-title" style={{ color: '#FFCB05' }}>
+      <div className="card admin-monitor-card">
+        <div className="admin-monitor-header">
+          <div className="admin-monitor-heading">
+            <div className="card-title admin-monitor-title" style={{ color: '#FFCB05' }}>
               Tournament Monitor
             </div>
-            <div className="card-subtitle">
+            <div className="card-subtitle admin-monitor-subtitle">
               Recent DinkDraw tournaments with quick links back into live and completed events.
             </div>
           </div>
@@ -210,7 +210,7 @@ export default function AdminMonitorPage() {
             className="button secondary"
             onClick={loadMonitor}
             disabled={isLoading}
-            style={{ width: 'auto', minWidth: 104 }}
+            style={{ width: 'auto' }}
           >
             Refresh
           </button>
@@ -226,9 +226,8 @@ export default function AdminMonitorPage() {
               tournaments.map((tournament) => (
                 <div
                   key={tournament.id}
-                  className="list-item"
+                  className="list-item admin-monitor-item"
                   style={{
-                    padding: 14,
                     borderColor:
                       tournament.status === 'started'
                         ? 'rgba(34,197,94,0.32)'
@@ -237,21 +236,12 @@ export default function AdminMonitorPage() {
                         : 'rgba(255,255,255,0.08)',
                   }}
                 >
-                  <div className="row-between" style={{ gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 20,
-                          lineHeight: 1.1,
-                          fontWeight: 950,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
+                  <div className="admin-monitor-item-header">
+                    <div className="admin-monitor-item-main">
+                      <div className="admin-monitor-item-title">
                         {tournament.title || 'Untitled Tournament'}
                       </div>
-                      <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+                      <div className="muted admin-monitor-meta">
                         {formatMode(tournament)} • {tournament.player_count} players • {tournament.courts} courts •{' '}
                         {tournament.rounds} rounds
                       </div>
@@ -263,6 +253,7 @@ export default function AdminMonitorPage() {
                   </div>
 
                   <div
+                    className="admin-monitor-details"
                     style={{
                       display: 'grid',
                       gap: 8,
@@ -290,14 +281,7 @@ export default function AdminMonitorPage() {
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                      gap: 8,
-                      marginTop: 14,
-                    }}
-                  >
+                  <div className="admin-monitor-actions">
                     <Link className="button secondary" href={`/tournament/${tournament.id}`}>
                       Open
                     </Link>

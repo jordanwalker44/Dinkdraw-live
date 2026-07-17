@@ -363,6 +363,120 @@ textarea.input:focus {
   border-color: rgba(255,203,5,0.35);
 }
 
+.admin-monitor-shell {
+  overflow-x: hidden;
+}
+
+.admin-monitor-card {
+  overflow: hidden;
+}
+
+.admin-monitor-header,
+.admin-monitor-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.admin-monitor-heading,
+.admin-monitor-item-main {
+  min-width: 0;
+}
+
+.admin-monitor-title {
+  line-height: 1.08;
+}
+
+.admin-monitor-subtitle {
+  max-width: 520px;
+  margin-bottom: 0;
+}
+
+.admin-monitor-item {
+  padding: 14px;
+  overflow: hidden;
+}
+
+.admin-monitor-item-title {
+  font-size: 20px;
+  line-height: 1.12;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.admin-monitor-meta {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.admin-monitor-details {
+  overflow-wrap: anywhere;
+}
+
+.admin-monitor-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.admin-monitor-actions .button {
+  min-height: 44px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .admin-monitor-card {
+    padding: 12px;
+  }
+
+  .admin-monitor-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-monitor-header > .button {
+    align-self: flex-start;
+    min-height: 42px;
+    min-width: 112px;
+    padding: 9px 14px;
+  }
+
+  .admin-monitor-title {
+    font-size: 24px;
+  }
+
+  .admin-monitor-subtitle {
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .admin-monitor-item {
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .admin-monitor-item-header {
+    gap: 8px;
+  }
+
+  .admin-monitor-item-title {
+    font-size: 19px;
+  }
+
+  .admin-monitor-details {
+    font-size: 13px !important;
+    line-height: 1.35;
+  }
+
+  .admin-monitor-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
 .action-button.blue {
   background: var(--accent);
   color: var(--accent-text);

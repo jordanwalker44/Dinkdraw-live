@@ -11,7 +11,9 @@ export function AppChrome({ children }: { children: ReactNode }) {
   const [isTvMode, setIsTvMode] = useState(false);
 
   const isPublicTournamentView = pathname?.startsWith('/tournament/view/');
-  const hideBottomNav = isPublicTournamentView;
+  const isHowToFlyer = pathname === '/how-to';
+  const hideBottomNav = isPublicTournamentView || isHowToFlyer;
+  const hideHeader = isTvMode || isHowToFlyer;
   const bodyBottomPadding = hideBottomNav ? (isTvMode ? 0 : 16) : 88;
 
   useEffect(() => {
@@ -25,7 +27,7 @@ export function AppChrome({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {!isTvMode ? <AppHeader /> : null}
+      {!hideHeader ? <AppHeader /> : null}
       <div style={{ paddingBottom: bodyBottomPadding }}>{children}</div>
       {!hideBottomNav ? <BottomNav /> : null}
     </>

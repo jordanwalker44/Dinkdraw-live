@@ -241,6 +241,58 @@ img {
   margin-bottom: 14px;
 }
 
+/* Training tracker */
+.training-page { max-width: 820px; }
+.training-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; }
+.training-heading h1 { margin:2px 0 4px; font-size:34px; letter-spacing:-.04em; }
+.training-heading p { margin:0; color:var(--muted); }
+.eyebrow { color:var(--accent); font-size:11px; font-weight:900; letter-spacing:.12em; }
+.training-notice { margin-bottom:14px; }
+.training-form-card { border-color:rgba(255,203,5,.32); margin-bottom:14px; }
+.icon-button { width:38px; height:38px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--text); font-size:24px; line-height:1; }
+.training-entry-list { display:grid; gap:12px; margin:14px 0 12px; }
+.training-entry { border:1px solid var(--line); border-left:4px solid #5bb8ff; border-radius:14px; padding:14px; background:rgba(0,0,0,.14); }
+.training-entry.play { border-left-color:#64d98b; }
+.training-segmented { display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; background:rgba(0,0,0,.2); border-radius:10px; margin:10px 0; }
+.training-segmented button { min-height:36px; border:0; border-radius:8px; background:transparent; color:var(--muted); font-weight:800; }
+.training-segmented button.active { background:rgba(255,255,255,.1); color:var(--text); }
+.text-button { border:0; background:transparent; color:#7bc6ff; font:inherit; font-weight:800; padding:6px 2px; }
+.text-button.danger { color:#ff8585; }
+.training-notes-label { margin-top:14px; }
+.training-textarea { min-height:86px; resize:vertical; }
+.training-save { width:100%; margin-top:12px; }
+.training-summary-grid { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:12px; margin-bottom:14px; }
+.training-summary-grid .card { margin-top:0; min-height:130px; display:flex; flex-direction:column; justify-content:center; }
+.training-total { background:linear-gradient(145deg, rgba(255,203,5,.18), rgba(255,255,255,.05)); }
+.training-total span,.summary-label { color:var(--muted); font-weight:700; font-size:13px; }
+.training-total strong { font-size:34px; line-height:1.1; margin:4px 0; }
+.training-total small { color:var(--muted); }
+.summary-number { display:block; font-size:25px; margin-top:8px; }
+.summary-label::before { content:''; display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; background:#5bb8ff; }
+.summary-label.play-dot::before { background:#64d98b; }
+.goal-progress { height:10px; overflow:hidden; border-radius:99px; background:rgba(255,255,255,.08); }
+.goal-progress span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg, var(--accent), #ffe37b); }
+.goal-copy { margin-top:7px; }
+.goal-controls { display:grid; grid-template-columns:2fr 1fr auto; gap:8px; margin-top:14px; }
+.tournament-reminder { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 0; border-top:1px solid var(--line); }
+.button.compact { min-height:38px; padding:8px 12px; }
+.training-empty { text-align:center; display:grid; justify-items:center; gap:8px; padding:28px 10px; color:var(--muted); }
+.training-empty strong { color:var(--text); font-size:18px; }
+.training-history { display:grid; gap:10px; }
+.training-history-item { border-top:1px solid var(--line); padding-top:14px; }
+.training-source { margin-left:8px; font-size:10px; }
+.training-entry-chips { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+.training-entry-chips span { padding:6px 9px; border-radius:99px; background:rgba(91,184,255,.12); color:#bfe3ff; font-size:12px; font-weight:700; }
+.training-entry-chips span.play { background:rgba(100,217,139,.12); color:#bdf3cf; }
+.training-session-note { margin:8px 0; color:var(--muted); font-size:13px; line-height:1.45; }
+@media (max-width: 620px) {
+  .training-heading { align-items:stretch; flex-direction:column; }
+  .training-summary-grid { grid-template-columns:1fr 1fr; }
+  .training-total { grid-column:1 / -1; }
+  .goal-controls { grid-template-columns:1fr; }
+  .tournament-reminder { align-items:flex-start; flex-direction:column; }
+}
+
 .grid {
   display: grid;
   gap: 12px;

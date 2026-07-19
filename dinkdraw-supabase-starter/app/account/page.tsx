@@ -328,6 +328,12 @@ export default function AccountPage() {
             View your wins, losses, and performance
           </div>
         </Link>
+        <Link href="/training" className="action-button blue">
+          <div className="action-title">Training</div>
+          <div className="action-subtitle">
+            Track drilling, play, goals, and progress
+          </div>
+        </Link>
       </div>
     </div>
           <div className="card" style={{ marginBottom: 14 }}>

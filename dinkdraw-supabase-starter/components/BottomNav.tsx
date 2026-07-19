@@ -145,7 +145,7 @@ export function BottomNav() {
     {
       label: 'Account',
       href: '/account',
-      match: (p) => p === '/account' || p === '/my-stats',
+      match: (p) => p === '/account' || p === '/my-stats' || p === '/training',
     },
   ];
 

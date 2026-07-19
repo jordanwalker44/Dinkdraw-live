@@ -97,8 +97,8 @@ const { data: statsData, error: statsError } = await supabase
       }
 
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, display_name, email')
+        .from('public_profiles')
+        .select('id, display_name')
         .in('id', userIds);
 
       if (profileError) {

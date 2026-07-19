@@ -19,7 +19,6 @@ export type EloStatRow = {
 export type EloProfile = {
   id: string;
   display_name: string | null;
-  email: string | null;
 };
 
 export type LeaderboardRow = {
@@ -239,7 +238,7 @@ export function buildLeaderboardRows(
       const winPct = row.matches ? Math.round((row.wins / row.matches) * 100) : 0;
       return {
         userId: row.userId,
-        name: profile?.display_name?.trim() || profile?.email?.split('@')[0] || 'Player',
+        name: profile?.display_name?.trim() || 'Player',
         matches: row.matches,
         wins: row.wins,
         losses: row.losses,

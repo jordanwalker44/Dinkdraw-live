@@ -120,7 +120,7 @@ export default function MyStatsPage() {
 
       const [profileRowsResult, playersResult, matchesResult, tournamentsResult, eventResultsResult] = await Promise.all([
         allUserIds.length > 0
-          ? supabase.from('profiles').select('id, display_name, email').in('id', allUserIds)
+          ? supabase.from('public_profiles').select('id, display_name').in('id', allUserIds)
           : Promise.resolve({ data: [] as EloProfile[] }),
         userTournamentIds.length > 0
           ? supabase.from('tournament_players').select('id, tournament_id, slot_number, claimed_by_user_id, display_name').in('tournament_id', userTournamentIds)
@@ -199,7 +199,7 @@ export default function MyStatsPage() {
 
   function displayNameFor(userId: string) {
     const profile = profilesById.get(userId);
-    return profile?.display_name?.trim() || profile?.email?.split('@')[0] || 'DinkDraw player';
+    return profile?.display_name?.trim() || 'DinkDraw player';
   }
 
   function buildPeopleSummary(

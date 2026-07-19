@@ -44,11 +44,11 @@ export default function AdminFeaturesPage() {
 
   setIsWorking(true);
 
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('id, display_name, email')
-    .ilike('email', email.trim())
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('admin_find_user_by_email', {
+    p_email: email.trim(),
+  });
+
+  const profile = getRpcRow<{ id: string; display_name: string | null; email: string }>(data);
 
   if (error) {
     setIsWorking(false);

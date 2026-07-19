@@ -129,7 +129,7 @@ export default function AdminMonitorPage() {
 
     const [profilesResult, playersResult, matchesResult] = await Promise.all([
       organizerIds.length
-        ? supabase.from('profiles').select('id, display_name, email').in('id', organizerIds)
+        ? supabase.rpc('admin_get_profiles_by_ids', { p_user_ids: organizerIds })
         : Promise.resolve({ data: [], error: null }),
       tournamentIds.length
         ? supabase

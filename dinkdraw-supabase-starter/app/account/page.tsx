@@ -100,9 +100,15 @@ export default function AccountPage() {
 
     try {
       if (mode === 'signup') {
+        const displayName = name.trim() || email.trim().split('@')[0];
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: {
+            data: {
+              display_name: displayName,
+            },
+          },
         });
 
         if (error) {
@@ -117,13 +123,6 @@ export default function AccountPage() {
 }
 
         if (data.user) {
-          const displayName = name.trim() || email.trim().split('@')[0];
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            display_name: displayName,
-            email: data.user.email,
-          });
-          await supabase.from('lifetime_stats').upsert({ user_id: data.user.id });
           setProfileName(displayName);
           setName(displayName);
         }

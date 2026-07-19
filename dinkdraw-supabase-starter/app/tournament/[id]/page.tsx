@@ -4300,185 +4300,6 @@ if (!scheduleValidation.isValid) {
     setMatches((prev) => prev.map((m) => (m.id === matchId ? { ...m, [field]: numeric } : m)));
   }
 
-  async function upsertPlayerMatchStats(
-    match: Match,
-    aScore: number,
-    bScore: number,
-    options: { silent?: boolean } = {}
-  ) {
-    if (!tournament) return true;
-
-    const { data: freshPlayers } = await supabase
-      .from('tournament_players')
-      .select('*')
-      .eq('tournament_id', tournament.id);
-
-    if (!freshPlayers) return true;
-
-    const freshPlayersById = Object.fromEntries(freshPlayers.map((p) => [p.id, p]));
-
-    const a1 = match.team_a_player_1_id ? freshPlayersById[match.team_a_player_1_id] : null;
-    const a2 = match.team_a_player_2_id ? freshPlayersById[match.team_a_player_2_id] : null;
-    const b1 = match.team_b_player_1_id ? freshPlayersById[match.team_b_player_1_id] : null;
-    const b2 = match.team_b_player_2_id ? freshPlayersById[match.team_b_player_2_id] : null;
-
-    const teamAUsers = isSingles
-      ? [a1]
-          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-          .map((s) => s.claimed_by_user_id as string)
-      : [a1, a2]
-          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-          .map((s) => s.claimed_by_user_id as string);
-
-    const teamBUsers = isSingles
-      ? [b1]
-          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-          .map((s) => s.claimed_by_user_id as string)
-      : [b1, b2]
-          .filter((s): s is PlayerSlot => !!s && !!s.claimed_by_user_id)
-          .map((s) => s.claimed_by_user_id as string);
-
-    const playedAt = new Date().toISOString();
-    const matchFormat = tournament.format || 'doubles';
-
-    function buildRow(
-      currentUserId: string,
-      partnerUserId: string | null,
-      opponentUserIds: string[],
-      wins: number,
-      losses: number,
-      pointsFor: number,
-      pointsAgainst: number,
-      gameNumber: number
-    ) {
-      const isTie = wins === losses;
-      return {
-        user_id: currentUserId,
-        tournament_id: tournament!.id,
-        match_id: match.id,
-        game_number: gameNumber,
-        round_number: match.round_number,
-        played_at: playedAt,
-        partner_user_id: partnerUserId,
-        opponent_1_user_id: opponentUserIds[0] || null,
-        opponent_2_user_id: opponentUserIds[1] || null,
-        result: isTie ? 'tie' : wins > losses ? 'win' : 'loss',
-        wins,
-        losses,
-        ties: isTie ? 1 : 0,
-        points_for: pointsFor,
-        points_against: pointsAgainst,
-        point_diff: pointsFor - pointsAgainst,
-        format: matchFormat,
-      };
-    }
-
-        const rows = [];
-
-    if (isBestOf3) {
-      const games = [
-        [match.game_1_a, match.game_1_b],
-        [match.game_2_a, match.game_2_b],
-        [match.game_3_a, match.game_3_b],
-      ] as const;
-
-      games.forEach(([gA, gB], index) => {
-        if (gA === null || gB === null) return;
-
-        const aWins = gA > gB ? 1 : 0;
-        const bWins = gB > gA ? 1 : 0;
-
-        rows.push(
-          ...teamAUsers.map((currentUserId) => ({
-            ...buildRow(
-              currentUserId,
-              isSingles
-                ? null
-                : teamAUsers.find((id) => id !== currentUserId) || null,
-              teamBUsers,
-              aWins,
-              bWins,
-              gA,
-              gB,
-              index + 1
-            ),
-          }))
-        );
-
-        rows.push(
-          ...teamBUsers.map((currentUserId) => ({
-            ...buildRow(
-              currentUserId,
-              isSingles
-                ? null
-                : teamBUsers.find((id) => id !== currentUserId) || null,
-              teamAUsers,
-              bWins,
-              aWins,
-              gB,
-              gA,
-              index + 1
-            ),
-          }))
-        );
-      });
-    } else {
-      const aWins = aScore > bScore ? 1 : 0;
-      const bWins = bScore > aScore ? 1 : 0;
-
-      rows.push(
-        ...teamAUsers.map((currentUserId) =>
-          buildRow(
-            currentUserId,
-            isSingles
-              ? null
-              : teamAUsers.find((id) => id !== currentUserId) || null,
-            teamBUsers,
-            aWins,
-            bWins,
-            aScore,
-            bScore,
-            1
-          )
-        )
-      );
-
-      rows.push(
-        ...teamBUsers.map((currentUserId) =>
-          buildRow(
-            currentUserId,
-            isSingles
-              ? null
-              : teamBUsers.find((id) => id !== currentUserId) || null,
-            teamAUsers,
-            bWins,
-            aWins,
-            bScore,
-            aScore,
-            1
-          )
-        )
-      );
-    }
-
-    if (!rows.length) return true;
-
-    const { error } = await supabase
-      .from('player_match_stats')
-      .upsert(rows, { onConflict: 'match_id,user_id,game_number' });
-
-    if (error) {
-      if (options.silent) {
-        console.warn('Score submitted, but stats update failed:', error);
-      } else {
-        setMessage(`Score submitted, but stats update failed: ${error.message}`);
-      }
-      return false;
-    }
-
-    return true;
-  }
-
   function getNextIncompleteRound(updatedMatches: Match[]) {
     const roundNumbers = Array.from(new Set(updatedMatches.map((m) => m.round_number))).sort(
       (a, b) => a - b
@@ -4754,8 +4575,6 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     await loadTournamentData(userId);
 
     if (seriesNowComplete) {
-      const { aScore, bScore } = getSeriesScore(finalOptimisticMatch);
-      void upsertPlayerMatchStats(finalOptimisticMatch, aScore, bScore, { silent: true });
       if (tournament) {
         void sendTournamentPushEvent(supabase, {
           eventType: 'match_score_submitted',
@@ -5016,8 +4835,6 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
   pendingScoreSubmitIdsRef.current.delete(matchId);
   setMatches(optimisticMatches);
   setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
-
-  void upsertPlayerMatchStats(completedMatch, aNum, bNum, { silent: true });
 
   if (isEditingCompletedMatch) {
     await loadTournamentData(userId);

@@ -1,6 +1,7 @@
 export type EloStatRow = {
   id: string;
   match_id: string;
+  game_number: number;
   played_at: string;
   user_id: string;
   partner_user_id: string | null;

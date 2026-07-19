@@ -28,6 +28,7 @@ type Tournament = {
   organizer_user_id: string;
   organizer_name: string | null;
   co_organizer_email: string | null;
+  co_organizer_user_id: string | null;
   event_date: string | null;
   event_time: string | null;
   location: string | null;
@@ -2507,7 +2508,6 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [standings, setStandings] = useState<StandingRow[]>([]);
   const [message, setMessage] = useState('');
   const [userId, setUserId] = useState('');
-  const [userEmail, setUserEmail] = useState('');
 
   function getTournamentLink(id: string) {
   if (typeof window !== 'undefined') {
@@ -2835,9 +2835,9 @@ const hasAnyScores = matches.some(
   const isOrganizer = tournament?.organizer_user_id === userId;
 
   const isCoOrganizer =
-  !!tournament?.co_organizer_email &&
-  !!userEmail &&
-  tournament.co_organizer_email.toLowerCase().trim() === userEmail.toLowerCase().trim();
+    !!tournament?.co_organizer_user_id &&
+    !!userId &&
+    tournament.co_organizer_user_id === userId;
 
   const canManageScores = isOrganizer || isCoOrganizer;
 
@@ -3018,9 +3018,7 @@ setScoreDrafts((prev) => {
   ]);
 
   const currentUserId = authData.user?.id ?? '';
-  const currentUserEmail = authData.user?.email ?? '';
   setUserId(currentUserId);
-  setUserEmail(currentUserEmail);
 
   // Load co-organizers after auth resolves, but don't block the page on it
   if (currentUserId) {

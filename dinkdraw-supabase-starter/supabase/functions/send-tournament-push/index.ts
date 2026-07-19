@@ -26,6 +26,7 @@ type Tournament = {
   organizer_user_id: string;
   organizer_name: string | null;
   co_organizer_email: string | null;
+  co_organizer_user_id: string | null;
   player_count: number;
   courts: number;
   rounds: number;
@@ -293,10 +294,9 @@ function hasRemainingPlayableMatches(matches: Match[]) {
   return matches.some((match) => !match.is_bye && !match.is_complete);
 }
 
-function canManageTournament(tournament: Tournament, userId: string, userEmail: string | undefined) {
+function canManageTournament(tournament: Tournament, userId: string) {
   if (tournament.organizer_user_id === userId) return true;
-  if (!tournament.co_organizer_email || !userEmail) return false;
-  return tournament.co_organizer_email.toLowerCase().trim() === userEmail.toLowerCase().trim();
+  return tournament.co_organizer_user_id === userId;
 }
 
 async function loadTournamentContext(adminClient: ReturnType<typeof createClient>, tournamentId: string) {
@@ -360,9 +360,8 @@ function buildTournamentStartedNotifications(
   matches: Match[],
   playersById: Map<string, PlayerSlot>,
   userId: string,
-  userEmail?: string,
 ) {
-  if (!canManageTournament(tournament, userId, userEmail)) {
+  if (!canManageTournament(tournament, userId)) {
     throw new Error('Only an organizer can send tournament start notifications');
   }
 
@@ -455,14 +454,13 @@ function buildMatchScoreNotifications(
   playersById: Map<string, PlayerSlot>,
   matches: Match[],
   userId: string,
-  userEmail?: string,
 ) {
   if (!event.matchId) throw new Error('Missing matchId');
 
   const match = matches.find((item) => item.id === event.matchId);
   if (!match || !match.is_complete) throw new Error('Completed match not found');
 
-  const canManage = canManageTournament(tournament, userId, userEmail);
+  const canManage = canManageTournament(tournament, userId);
   const canPlayerReport =
     !!tournament.allow_player_score_reporting && isUserInMatch(match, playersById, userId);
 
@@ -511,11 +509,10 @@ function buildTournamentCompletedNotifications(
   tournament: Tournament,
   players: PlayerSlot[],
   userId: string,
-  userEmail?: string,
 ) {
   const isPlayer = players.some((slot) => slot.claimed_by_user_id === userId);
 
-  if (!canManageTournament(tournament, userId, userEmail) && !isPlayer) {
+  if (!canManageTournament(tournament, userId) && !isPlayer) {
     throw new Error('You cannot send completion notifications for this tournament');
   }
 
@@ -674,7 +671,6 @@ Deno.serve(async (req) => {
         matches,
         playersById,
         user.id,
-        user.email,
       );
       notifications = [
         ...notifications,
@@ -687,10 +683,9 @@ Deno.serve(async (req) => {
         playersById,
         matches,
         user.id,
-        user.email,
       );
     } else if (event.eventType === 'tournament_completed') {
-      notifications = buildTournamentCompletedNotifications(tournament, players, user.id, user.email);
+      notifications = buildTournamentCompletedNotifications(tournament, players, user.id);
     } else {
       return new Response(JSON.stringify({ error: 'Unknown push event type' }), {
         status: 400,

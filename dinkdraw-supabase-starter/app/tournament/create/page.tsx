@@ -295,42 +295,9 @@ export default function CreateTournamentPage() {
       return;
     }
 
-    if (!user.id) {
-  setMessage('You need to sign in before creating an organization.');
-  return;
-}
-
-const organizationPayload = {
-  name: `${safeName}'s Organization`,
-  created_by_user_id: user.id,
-};
-
-const { data: newOrganization, error: organizationError } = await supabase
-  .from('organizations')
-  .insert(organizationPayload)
-  .select('id, name')
-  .single();
-
-    if (organizationError || !newOrganization) {
-      setMessage(organizationError?.message || 'Could not create organization.');
-      return;
-    }
-
-    const { error: membershipError } = await supabase
-      .from('organization_members')
-      .insert({
-        organization_id: newOrganization.id,
-        user_id: user.id,
-        role: 'owner',
-      });
-
-    if (membershipError) {
-      setMessage(membershipError.message);
-      return;
-    }
-
-    setOrganizations([newOrganization]);
-    setSelectedOrganizationId(newOrganization.id);
+    setMessage(
+      'Organization access is enabled, but no organization has been assigned to your account. Contact DinkDraw for access.'
+    );
   }
 
   loadUser();

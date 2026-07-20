@@ -18,6 +18,11 @@ type TournamentPushEvent =
   | {
       eventType: 'tournament_completed';
       tournamentId: string;
+    }
+  | {
+      eventType: 'announcement_posted';
+      tournamentId: string;
+      messageId: string;
     };
 
 export async function sendTournamentPushEvent(

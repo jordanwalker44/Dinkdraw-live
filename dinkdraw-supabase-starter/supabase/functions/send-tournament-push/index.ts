@@ -18,6 +18,11 @@ type PushEvent =
   | {
       eventType: 'tournament_completed';
       tournamentId: string;
+    }
+  | {
+      eventType: 'announcement_posted';
+      tournamentId: string;
+      messageId?: string;
     };
 
 type Tournament = {
@@ -74,6 +79,20 @@ type Notification = {
 type ProfileRow = {
   id: string;
   email: string | null;
+};
+
+type AnnouncementMessage = {
+  id: string;
+  room_id: string;
+  sender_user_id: string | null;
+  message_type: string;
+  body: string;
+};
+
+type RoomUserState = {
+  user_id: string;
+  is_muted: boolean;
+  push_enabled: boolean;
 };
 
 const corsHeaders = {
@@ -533,6 +552,94 @@ function buildTournamentCompletedNotifications(
   }));
 }
 
+function announcementPushBody(body: string) {
+  const compact = body.replace(/\s+/g, ' ').trim();
+  return compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
+}
+
+async function buildAnnouncementNotifications(
+  adminClient: ReturnType<typeof createClient>,
+  event: Extract<PushEvent, { eventType: 'announcement_posted' }>,
+  tournament: Tournament,
+  players: PlayerSlot[],
+  userId: string,
+) {
+  if (!canManageTournament(tournament, userId)) {
+    throw new Error('Only an organizer can send announcement notifications');
+  }
+
+  if (!event.messageId) throw new Error('Missing messageId');
+
+  const { data: room, error: roomError } = await adminClient
+    .from('tournament_rooms')
+    .select('id')
+    .eq('tournament_id', tournament.id)
+    .is('archived_at', null)
+    .maybeSingle();
+
+  if (roomError) throw roomError;
+  if (!room) throw new Error('Active tournament room not found');
+
+  const claimedAt = new Date().toISOString();
+  const { data: claimedMessage, error: claimError } = await adminClient
+    .from('tournament_room_messages')
+    .update({ push_claimed_at: claimedAt })
+    .eq('id', event.messageId)
+    .eq('room_id', room.id)
+    .eq('sender_user_id', userId)
+    .eq('message_type', 'announcement')
+    .is('push_claimed_at', null)
+    .select('id, room_id, sender_user_id, message_type, body')
+    .maybeSingle();
+
+  if (claimError) throw claimError;
+
+  if (!claimedMessage) {
+    console.log('send-tournament-push announcement skipped: invalid or already claimed', {
+      tournamentId: tournament.id,
+      messageId: event.messageId,
+      requesterUserId: userId,
+    });
+    return { notifications: [] as Notification[], claimedMessageId: null as string | null };
+  }
+
+  const message = claimedMessage as AnnouncementMessage;
+  const recipientIds = uniqueUserIds([
+    tournament.organizer_user_id,
+    tournament.co_organizer_user_id,
+    ...players.map((player) => player.claimed_by_user_id),
+  ]).filter((recipientId) => recipientId !== userId);
+
+  let stateRows: RoomUserState[] = [];
+  if (recipientIds.length) {
+    const { data, error } = await adminClient
+      .from('tournament_room_user_state')
+      .select('user_id, is_muted, push_enabled')
+      .eq('room_id', room.id)
+      .in('user_id', recipientIds);
+
+    if (error) throw error;
+    stateRows = (data || []) as RoomUserState[];
+  }
+
+  const optedOutUserIds = new Set(
+    stateRows
+      .filter((state) => state.is_muted || !state.push_enabled)
+      .map((state) => state.user_id),
+  );
+
+  const notifications = recipientIds
+    .filter((recipientId) => !optedOutUserIds.has(recipientId))
+    .map((recipientId) => ({
+      userId: recipientId,
+      title: `${titleFor(tournament)} announcement`,
+      body: announcementPushBody(message.body),
+      url: `/tournament/${tournament.id}/announcements`,
+    }));
+
+  return { notifications, claimedMessageId: message.id };
+}
+
 async function sendNotifications(adminClient: ReturnType<typeof createClient>, notifications: Notification[]) {
   const uniqueNotifications = Array.from(
     new Map(notifications.map((notification) => [notification.userId, notification])).values(),
@@ -661,6 +768,7 @@ Deno.serve(async (req) => {
     );
 
     let notifications: Notification[] = [];
+    let announcementMessageId: string | null = null;
 
     if (event.eventType === 'spot_claimed') {
       notifications = buildSpotClaimedNotifications(event, tournament, players, user.id);
@@ -686,6 +794,16 @@ Deno.serve(async (req) => {
       );
     } else if (event.eventType === 'tournament_completed') {
       notifications = buildTournamentCompletedNotifications(tournament, players, user.id);
+    } else if (event.eventType === 'announcement_posted') {
+      const announcementDelivery = await buildAnnouncementNotifications(
+        adminClient,
+        event,
+        tournament,
+        players,
+        user.id,
+      );
+      notifications = announcementDelivery.notifications;
+      announcementMessageId = announcementDelivery.claimedMessageId;
     } else {
       return new Response(JSON.stringify({ error: 'Unknown push event type' }), {
         status: 400,
@@ -702,6 +820,19 @@ Deno.serve(async (req) => {
     });
 
     const results = await sendNotifications(adminClient, notifications);
+
+    if (announcementMessageId) {
+      const { error: completionError } = await adminClient
+        .from('tournament_room_messages')
+        .update({
+          push_completed_at: new Date().toISOString(),
+          push_recipient_count: notifications.length,
+          push_sent_count: results.filter((result) => result.sent).length,
+        })
+        .eq('id', announcementMessageId);
+
+      if (completionError) throw completionError;
+    }
 
     console.log('send-tournament-push results', {
       eventType: event.eventType,

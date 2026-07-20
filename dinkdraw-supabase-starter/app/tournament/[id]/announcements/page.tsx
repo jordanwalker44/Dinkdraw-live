@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../../../../components/TopNav';
 import { getSupabaseBrowserClient } from '../../../../lib/supabase-browser';
+import { sendTournamentPushEvent } from '../../../../lib/tournament-push';
 
 type Room = {
   id: string;
@@ -174,7 +175,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     setIsPosting(true);
     setMessage('');
 
-    const { error } = await supabase.rpc('post_tournament_announcement', {
+    const { data, error } = await supabase.rpc('post_tournament_announcement', {
       p_room_id: room.id,
       p_body: draft.trim(),
     });
@@ -187,6 +188,14 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     }
 
     setDraft('');
+    const postedAnnouncement = Array.isArray(data) ? data[0] : data;
+    if (postedAnnouncement?.id) {
+      await sendTournamentPushEvent(supabase, {
+        eventType: 'announcement_posted',
+        tournamentId: params.id,
+        messageId: postedAnnouncement.id,
+      });
+    }
     await loadAnnouncements(room.id);
     await markRead(room.id, userId);
   }
@@ -342,4 +351,3 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     </main>
   );
 }
-

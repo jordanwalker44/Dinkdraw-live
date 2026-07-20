@@ -14,6 +14,7 @@ import {
 } from '../../../components/OrganizationBrandBanner';
 import { loadPublicOrganizationBrand } from '../../../lib/organization-brand';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
+import { TournamentAnnouncementsLink } from '../../../components/TournamentAnnouncementsLink';
 import {
   buildCreamOfTheCropStageSchedule,
   buildNextCreamOfTheCropStagePlayers
@@ -5610,6 +5611,12 @@ function renderShortTeam(a: string | null, b: string | null) {
 )}
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
+
+      <TournamentAnnouncementsLink
+        tournamentId={params.id}
+        userId={userId}
+        isEligible={isOrganizer || isCoOrganizer || !!claimedSlot}
+      />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 14 }}>
         <button

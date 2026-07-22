@@ -6,6 +6,12 @@ This project has a Supabase Edge Function:
 supabase/functions/send-test-push/index.ts
 ```
 
+League notifications use a separate function so tournament delivery remains isolated:
+
+```text
+supabase/functions/send-league-push/index.ts
+```
+
 It sends a test push to the signed-in user's latest iOS token in `public.push_tokens`.
 
 ## Required Supabase secrets
@@ -37,6 +43,7 @@ From this folder:
 
 ```bash
 npx supabase functions deploy send-test-push
+npx supabase functions deploy send-league-push
 ```
 
 ## Test

@@ -135,6 +135,24 @@ export default function AdminFeaturesPage() {
     setMessage(error ? error.message : 'Organization mode granted to user.');
   }
 
+  async function grantSelectedOrganizationLeagueMode() {
+    if (!selectedOrganizationId) {
+      setMessage('Choose an organization first.');
+      return;
+    }
+
+    setMessage('');
+    setIsWorking(true);
+    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
+      p_user_id: null,
+      p_organization_id: selectedOrganizationId,
+      p_feature_key: 'league_mode',
+      p_notes: 'League pilot access granted from admin page',
+    });
+    setIsWorking(false);
+    setMessage(error ? error.message : 'League access granted to the selected organization.');
+  }
+
   async function createOrganizationForUser() {
     setMessage('');
 
@@ -306,6 +324,15 @@ export default function AdminFeaturesPage() {
                     disabled={isWorking || !selectedOrganizationId || !renameOrganizationName.trim()}
                   >
                     Rename Selected Organization
+                  </button>
+
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={grantSelectedOrganizationLeagueMode}
+                    disabled={isWorking || !selectedOrganizationId}
+                  >
+                    Grant Premium League Access
                   </button>
                 </div>
               ) : (

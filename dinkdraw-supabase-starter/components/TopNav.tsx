@@ -117,6 +117,7 @@ export function TopNav() {
     { label: 'Home', href: '/' },
     { label: 'Create Tournament', href: '/tournament/create' },
     { label: 'Join Tournament', href: '/tournament/join' },
+    { label: 'Leagues', href: '/leagues' },
   ];
 
   const profileNav: NavItem[] = [

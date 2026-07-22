@@ -1438,6 +1438,157 @@ function balanceDoublesServingSidesInSchedule(
   return balancedRows;
 }
 
+function doublesRowPlayerIds(row: ScheduleRow) {
+  return [
+    row.team_a_player_1_id,
+    row.team_a_player_2_id,
+    row.team_b_player_1_id,
+    row.team_b_player_2_id,
+  ].filter(Boolean) as string[];
+}
+
+function scoreDoublesCourtSchedule(rows: ScheduleRow[], playerIds: string[]) {
+  const allCourts = Array.from(
+    new Set(
+      rows
+        .filter((row) => !row.is_bye && row.court_number !== null)
+        .map((row) => row.court_number as number)
+    )
+  ).sort((a, b) => a - b);
+
+  const lastCourt = new Map<string, number | null>(
+    playerIds.map((playerId) => [playerId, null])
+  );
+  const currentStreak = new Map<string, number>(
+    playerIds.map((playerId) => [playerId, 0])
+  );
+  const longestStreak = new Map<string, number>(
+    playerIds.map((playerId) => [playerId, 0])
+  );
+  const courtCounts = new Map<string, Map<number, number>>(
+    playerIds.map((playerId) => [playerId, new Map()])
+  );
+
+  const playableRows = [...rows]
+    .filter((row) => !row.is_bye && row.court_number !== null)
+    .sort(
+      (a, b) =>
+        a.round_number - b.round_number ||
+        (a.court_number ?? 999) - (b.court_number ?? 999)
+    );
+
+  for (const row of playableRows) {
+    const court = row.court_number as number;
+
+    for (const playerId of doublesRowPlayerIds(row)) {
+      const nextStreak =
+        lastCourt.get(playerId) === court
+          ? (currentStreak.get(playerId) ?? 0) + 1
+          : 1;
+
+      lastCourt.set(playerId, court);
+      currentStreak.set(playerId, nextStreak);
+      longestStreak.set(
+        playerId,
+        Math.max(longestStreak.get(playerId) ?? 0, nextStreak)
+      );
+
+      const playerCourtCounts = courtCounts.get(playerId) || new Map<number, number>();
+      playerCourtCounts.set(court, (playerCourtCounts.get(court) ?? 0) + 1);
+      courtCounts.set(playerId, playerCourtCounts);
+    }
+  }
+
+  let score = 0;
+
+  for (const playerId of playerIds) {
+    const longest = longestStreak.get(playerId) ?? 0;
+    const counts = courtCounts.get(playerId) || new Map<number, number>();
+    const values = allCourts.map((court) => counts.get(court) ?? 0);
+    const courtSpread = values.length
+      ? Math.max(...values) - Math.min(...values)
+      : 0;
+
+    score += Math.pow(longest, 4) * 100000;
+    score += courtSpread * 1000;
+  }
+
+  return score;
+}
+
+function balanceDoublesCourtsInSchedule(
+  rows: ScheduleRow[],
+  playerIds: string[]
+) {
+  let balancedRows = [...rows];
+  let bestScore = scoreDoublesCourtSchedule(balancedRows, playerIds);
+  let improved = true;
+
+  while (improved) {
+    improved = false;
+
+    const roundNumbers = Array.from(
+      new Set(
+        balancedRows
+          .filter((row) => !row.is_bye && row.court_number !== null)
+          .map((row) => row.round_number)
+      )
+    ).sort((a, b) => a - b);
+
+    for (const roundNumber of roundNumbers) {
+      const roundIndexes = balancedRows
+        .map((row, index) => ({ row, index }))
+        .filter(
+          ({ row }) =>
+            !row.is_bye &&
+            row.round_number === roundNumber &&
+            row.court_number !== null
+        )
+        .map(({ index }) => index);
+
+      if (roundIndexes.length <= 1) continue;
+
+      for (let left = 0; left < roundIndexes.length - 1; left += 1) {
+        for (let right = left + 1; right < roundIndexes.length; right += 1) {
+          const leftIndex = roundIndexes[left];
+          const rightIndex = roundIndexes[right];
+          const leftRow = balancedRows[leftIndex];
+          const rightRow = balancedRows[rightIndex];
+
+          const candidateRows = balancedRows.map((row, index) => {
+            if (index === leftIndex) {
+              return {
+                ...row,
+                court_number: rightRow.court_number,
+                court_label: null,
+              };
+            }
+
+            if (index === rightIndex) {
+              return {
+                ...row,
+                court_number: leftRow.court_number,
+                court_label: null,
+              };
+            }
+
+            return row;
+          });
+          const candidateScore = scoreDoublesCourtSchedule(candidateRows, playerIds);
+
+          if (candidateScore < bestScore) {
+            balancedRows = candidateRows;
+            bestScore = candidateScore;
+            improved = true;
+          }
+        }
+      }
+    }
+  }
+
+  return balancedRows;
+}
+
 function buildDoublesSchedule(
   players: PlayerSlot[],
   rounds: number,
@@ -1539,7 +1690,9 @@ function buildDoublesSchedule(
     });
   }
 
-  return balanceDoublesServingSidesInSchedule(output, ids);
+  const sideBalancedRows = balanceDoublesServingSidesInSchedule(output, ids);
+
+  return balanceDoublesCourtsInSchedule(sideBalancedRows, ids);
 }
 
 function buildFixedPartnersSchedule(
@@ -1649,8 +1802,13 @@ function buildFixedPartnersSchedule(
     }
   }
 
-  return balanceDoublesServingSidesInSchedule(
+  const sideBalancedRows = balanceDoublesServingSidesInSchedule(
     output,
+    activePlayers.map((player) => player.id)
+  );
+
+  return balanceDoublesCourtsInSchedule(
+    sideBalancedRows,
     activePlayers.map((player) => player.id)
   );
 }
@@ -2005,8 +2163,13 @@ function buildMixedDoublesSchedule(
     });
   }
 
-  return balanceDoublesServingSidesInSchedule(
+  const sideBalancedRows = balanceDoublesServingSidesInSchedule(
     output,
+    activePlayers.map((player) => player.id)
+  );
+
+  return balanceDoublesCourtsInSchedule(
+    sideBalancedRows,
     activePlayers.map((player) => player.id)
   );
 }

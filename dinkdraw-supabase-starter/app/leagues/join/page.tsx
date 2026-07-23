@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopNav } from '../../../components/TopNav';
 import { sendLeaguePushEvent } from '../../../lib/league-push';
@@ -13,6 +13,14 @@ export default function JoinLeaguePage() {
   const [position, setPosition] = useState(1);
   const [message, setMessage] = useState('');
   const [joining, setJoining] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const claimCode = searchParams.get('code');
+    const claimPosition = Number(searchParams.get('position'));
+    if (claimCode) setCode(claimCode.toUpperCase());
+    if (Number.isInteger(claimPosition) && claimPosition >= 1 && claimPosition <= 32) setPosition(claimPosition);
+  }, []);
 
   async function join() {
     setJoining(true); setMessage('');
@@ -31,7 +39,7 @@ export default function JoinLeaguePage() {
 
   return <main className="page-shell"><TopNav /><div className="card">
     <div className="card-title" style={{ color: '#FFCB05' }}>Join a League</div>
-    <div className="card-subtitle">Use the code and roster position provided by your league organizer.</div>
+    <div className="card-subtitle">Sign in with your own DinkDraw account, then claim the position your organizer assigned to you. This connects your league matches to your personal stats.</div>
     {message ? <div className="notice" style={{ marginTop: 14 }}>{message}</div> : null}
     <div className="grid" style={{ gap: 14, marginTop: 16 }}>
       <div><label className="label">League code</label><input className="input" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} /></div>

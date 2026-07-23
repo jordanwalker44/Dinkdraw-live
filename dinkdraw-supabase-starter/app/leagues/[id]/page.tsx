@@ -53,6 +53,7 @@ export default function LeaguePage() {
   const [substituteName, setSubstituteName] = useState('');
   const [substituteEmail, setSubstituteEmail] = useState('');
   const [startingSession, setStartingSession] = useState(false);
+  const [copiedPosition, setCopiedPosition] = useState<number | null>(null);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -120,6 +121,18 @@ export default function LeaguePage() {
     const member = membersById.get(id);
     return member?.display_name?.trim() || `Player ${member?.roster_position || '?'}`;
   };
+
+  async function copyClaimLink(rosterPosition: number | null) {
+    if (!league || !rosterPosition) return;
+    const claimUrl = `${window.location.origin}/leagues/join?code=${encodeURIComponent(league.join_code)}&position=${rosterPosition}`;
+    try {
+      await navigator.clipboard.writeText(claimUrl);
+      setCopiedPosition(rosterPosition);
+      window.setTimeout(() => setCopiedPosition((current) => current === rosterPosition ? null : current), 2000);
+    } catch {
+      window.prompt(`Copy this claim link for Player ${rosterPosition}:`, claimUrl);
+    }
+  }
 
   async function saveRoster() {
     setSaving(true);
@@ -240,14 +253,14 @@ export default function LeaguePage() {
       <TopNav />
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start' }}>
           <div>
             <div className="card-title" style={{ color: '#FFCB05' }}>{league.name}</div>
             <div className="card-subtitle">
               {league.organizations?.name} • Rotating Doubles • {league.regular_player_count} players
             </div>
           </div>
-          <span className="tag">{league.status === 'draft' ? 'Setup' : league.status}</span>
+          <span className="tag" style={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>{league.status === 'draft' ? 'Setting up' : league.status}</span>
         </div>
         <div className="notice" style={{ marginTop: 14 }}>
           <strong>League code: {league.join_code}</strong><br />
@@ -298,19 +311,37 @@ export default function LeaguePage() {
       <div className="grid two" style={{ alignItems: 'start' }}>
         <section className="card">
           <div className="card-title">Regular roster</div>
-          <div className="card-subtitle">These positions drive the season partnership rotation.</div>
+          <div className="card-subtitle">Enter each player’s name, save the roster, then send each player their claim link. They must sign in to DinkDraw and claim their position so matches count toward their stats.</div>
+          {isOrganizer && unclaimedRegulars.length ? (
+            <div className="notice" style={{ marginTop: 12 }}>
+              <strong>Player account setup: {members.length - unclaimedRegulars.length} of {members.length} claimed</strong><br />
+              Saving names does not connect DinkDraw accounts. Use the buttons below to send each player their personal claim link.
+            </div>
+          ) : null}
           <div className="grid" style={{ gap: 8, marginTop: 14 }}>
             {members.map((member) => (
-              <div key={member.id} style={{ display: 'grid', gridTemplateColumns: '34px 1fr', alignItems: 'center', gap: 8 }}>
+              <div key={member.id} style={{ display: 'grid', gridTemplateColumns: '34px minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
                 <strong style={{ textAlign: 'center', color: '#FFCB05' }}>{member.roster_position}</strong>
-                {isOrganizer ? (
-                  <input
-                    className="input"
-                    value={member.display_name || ''}
-                    placeholder={`Player ${member.roster_position}`}
-                    onChange={(event) => setMembers((current) => current.map((item) => item.id === member.id ? { ...item, display_name: event.target.value } : item))}
-                  />
-                ) : <div>{memberName(member.id)}</div>}
+                <div>
+                  {isOrganizer ? (
+                    <input
+                      className="input"
+                      value={member.display_name || ''}
+                      placeholder={`Player ${member.roster_position}`}
+                      onChange={(event) => setMembers((current) => current.map((item) => item.id === member.id ? { ...item, display_name: event.target.value } : item))}
+                    />
+                  ) : <div>{memberName(member.id)}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                    <span className={`tag ${member.user_id ? 'yours' : ''}`}>
+                      {member.user_id ? 'Claimed' : 'Waiting for player'}
+                    </span>
+                    {isOrganizer && !member.user_id ? (
+                      <button className="button secondary" type="button" style={{ width: 'auto', padding: '7px 10px' }} onClick={() => copyClaimLink(member.roster_position)}>
+                        {copiedPosition === member.roster_position ? 'Link copied' : 'Copy claim link'}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -357,7 +388,7 @@ export default function LeaguePage() {
             <>
             {!selectedSessionRow.tournament_id ? <div className={`notice`} style={{ marginTop: 14 }}>
               <strong>{sessionReady ? 'Ready to create the live tournament' : 'Session setup is incomplete'}</strong><br />
-              {unclaimedRegulars.length ? `${unclaimedRegulars.length} roster position(s) still need to be claimed. ` : ''}
+              {unclaimedRegulars.length ? `${unclaimedRegulars.length} player account${unclaimedRegulars.length === 1 ? '' : 's'} still need to claim their roster positions. Use the claim links in the Regular roster section. ` : ''}
               {unresolvedAttendance.length ? `${unresolvedAttendance.length} attendance item(s) need resolution.` : ''}
               {sessionReady ? 'All regular positions and substitute assignments are resolved.' : ''}
             </div> : null}

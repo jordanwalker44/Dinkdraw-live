@@ -153,7 +153,14 @@ export default function CreateLeaguePage() {
                   {[8, 10, 12, 14, 16, 18, 20].map((count) => <option key={count} value={count}>{count}</option>)}
                 </select>
               </div>
-              <div><label className="label">Weekly sessions</label><input className="input" type="number" min={1} max={52} value={sessionCount} onChange={(event) => setSessionCount(Number(event.target.value))} /></div>
+              <div>
+                <label className="label">Length of league</label>
+                <select className="input" value={sessionCount} onChange={(event) => setSessionCount(Number(event.target.value))}>
+                  {Array.from({ length: 52 }, (_, index) => index + 1).map((weeks) => (
+                    <option key={weeks} value={weeks}>{weeks} {weeks === 1 ? 'week' : 'weeks'}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="grid two">
               <div><label className="label">Courts required</label><input className="input" type="number" value={courts} readOnly /></div>

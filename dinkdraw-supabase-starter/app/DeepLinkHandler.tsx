@@ -23,7 +23,7 @@ export default function DeepLinkHandler() {
 
         const path = `${url.pathname}${url.search}${url.hash}`;
 
-        if (path.startsWith('/tournament')) {
+        if (path.startsWith('/tournament') || path.startsWith('/leagues')) {
   console.log('DEEPLINK DEBUG WEB: pushing path', path);
   router.push(path);
 }

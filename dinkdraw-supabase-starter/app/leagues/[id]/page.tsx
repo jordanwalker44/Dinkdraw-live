@@ -249,11 +249,11 @@ export default function LeaguePage() {
   if (!league) return <main className="page-shell"><TopNav /><div className="notice">{message}</div></main>;
 
   return (
-    <main className="page-shell">
+    <main className="page-shell league-page">
       <TopNav />
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start' }}>
+        <div className="league-detail-header">
           <div>
             <div className="card-title" style={{ color: '#FFCB05' }}>{league.name}</div>
             <div className="card-subtitle">
@@ -274,7 +274,7 @@ export default function LeaguePage() {
         <div className="card-title">Season standings</div>
         <div className="card-subtitle">Ranked by adjusted wins, then point differential. Only completed weekly sessions count.</div>
         <div style={{ overflowX: 'auto', marginTop: 14 }}>
-          <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
+          <table className="league-standings-table">
             <thead><tr style={{ textAlign: 'left', color: '#94a3b8' }}>
               <th style={{ padding: 8 }}>Rank</th><th style={{ padding: 8 }}>Player</th>
               <th style={{ padding: 8 }}>Adjusted wins</th><th style={{ padding: 8 }}>Point diff</th>
@@ -308,7 +308,7 @@ export default function LeaguePage() {
         </details>
       </section>
 
-      <div className="grid two" style={{ alignItems: 'start' }}>
+      <div className="grid two league-main-grid" style={{ alignItems: 'start' }}>
         <section className="card">
           <div className="card-title">Regular roster</div>
           <div className="card-subtitle">Enter each player’s name, save the roster, then send each player their claim link. They must sign in to DinkDraw and claim their position so matches count toward their stats.</div>
@@ -320,7 +320,7 @@ export default function LeaguePage() {
           ) : null}
           <div className="grid" style={{ gap: 8, marginTop: 14 }}>
             {members.map((member) => (
-              <div key={member.id} style={{ display: 'grid', gridTemplateColumns: '34px minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
+              <div key={member.id} className="league-roster-row">
                 <strong style={{ textAlign: 'center', color: '#FFCB05' }}>{member.roster_position}</strong>
                 <div>
                   {isOrganizer ? (
@@ -331,12 +331,12 @@ export default function LeaguePage() {
                       onChange={(event) => setMembers((current) => current.map((item) => item.id === member.id ? { ...item, display_name: event.target.value } : item))}
                     />
                   ) : <div>{memberName(member.id)}</div>}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                  <div className="league-roster-actions">
                     <span className={`tag ${member.user_id ? 'yours' : ''}`}>
                       {member.user_id ? 'Claimed' : 'Waiting for player'}
                     </span>
                     {isOrganizer && !member.user_id ? (
-                      <button className="button secondary" type="button" style={{ width: 'auto', padding: '7px 10px' }} onClick={() => copyClaimLink(member.roster_position)}>
+                      <button className="button secondary league-claim-button" type="button" onClick={() => copyClaimLink(member.roster_position)}>
                         {copiedPosition === member.roster_position ? 'Link copied' : 'Copy claim link'}
                       </button>
                     ) : null}

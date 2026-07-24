@@ -119,7 +119,7 @@ export default function CreateLeaguePage() {
   }
 
   return (
-    <main className="page-shell">
+    <main className="page-shell league-page league-create-page">
       <TopNav />
       <div className="card">
         <div className="card-title" style={{ color: '#FFCB05' }}>Create Rotating Doubles League</div>

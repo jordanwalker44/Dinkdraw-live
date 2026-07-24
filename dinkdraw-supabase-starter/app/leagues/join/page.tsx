@@ -37,7 +37,7 @@ export default function JoinLeaguePage() {
     router.push(`/leagues/${data}`);
   }
 
-  return <main className="page-shell"><TopNav /><div className="card">
+  return <main className="page-shell league-page"><TopNav /><div className="card">
     <div className="card-title" style={{ color: '#FFCB05' }}>Join a League</div>
     <div className="card-subtitle">Sign in with your own DinkDraw account, then claim the position your organizer assigned to you. This connects your league matches to your personal stats.</div>
     {message ? <div className="notice" style={{ marginTop: 14 }}>{message}</div> : null}

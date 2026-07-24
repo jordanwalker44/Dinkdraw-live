@@ -919,6 +919,128 @@ textarea.input:focus {
   color: #ffcb05;
 }
 
+/* Premium Leagues */
+.league-index-header,
+.league-detail-header,
+.league-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.league-index-actions,
+.league-roster-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.league-roster-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.league-claim-button {
+  width: auto;
+  padding: 7px 10px;
+}
+
+.league-standings-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+@media (min-width: 720px) {
+  .grid.two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .league-page {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .league-page .card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .league-detail-header,
+  .league-index-header,
+  .league-list-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .league-index-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .league-index-actions .button {
+    width: 100% !important;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .league-detail-header .tag,
+  .league-list-row .tag {
+    align-self: flex-start;
+  }
+
+  .league-page .card-title {
+    font-size: 19px;
+  }
+
+  .league-page > .card:first-of-type .card-title {
+    font-size: 24px;
+  }
+
+  .league-roster-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: start;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .league-roster-actions {
+    justify-content: flex-start;
+    align-items: stretch;
+  }
+
+  .league-claim-button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .league-standings-table {
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  .league-standings-table th,
+  .league-standings-table td {
+    padding: 7px 5px !important;
+  }
+
+  .league-standings-table th:nth-child(n + 5),
+  .league-standings-table td:nth-child(n + 5) {
+    display: none;
+  }
+
+  .league-page .notice {
+    overflow-wrap: anywhere;
+  }
+}
+
 .code-pill {
   display: inline-block;
   padding: 6px 10px;

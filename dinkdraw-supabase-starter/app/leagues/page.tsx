@@ -45,18 +45,18 @@ export default function LeaguesPage() {
   }, [supabase]);
 
   return (
-    <main className="page-shell">
+    <main className="page-shell league-page">
       <TopNav />
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+        <div className="league-index-header">
           <div>
             <div className="card-title" style={{ color: '#FFCB05' }}>Leagues</div>
             <div className="card-subtitle">
               Run a full rotating-doubles season where everyone partners with everyone.
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <div className="league-index-actions">
             <Link className="button secondary" href="/leagues/join" style={{ width: 'auto' }}>Join League</Link>
             <Link className="button primary" href="/leagues/create" style={{ width: 'auto' }}>Create League</Link>
           </div>
@@ -78,7 +78,7 @@ export default function LeaguesPage() {
       <div className="grid" style={{ gap: 12 }}>
         {leagues.map((league) => (
           <Link key={league.id} href={`/leagues/${league.id}`} className="card" style={{ textDecoration: 'none' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+            <div className="league-list-row">
               <div>
                 <div className="card-title">{league.name}</div>
                 <div className="card-subtitle">

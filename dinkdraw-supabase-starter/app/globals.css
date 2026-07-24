@@ -980,12 +980,27 @@ textarea.input:focus {
 .league-native-field input[type='date'],
 .league-native-field input[type='time'] {
   display: block;
+  height: 52px;
   width: 100%;
   max-width: 100%;
   min-width: 0;
   inline-size: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 52px;
   -webkit-appearance: none;
   appearance: none;
+}
+
+.league-native-field input[type='date']::-webkit-date-and-time-value,
+.league-native-field input[type='time']::-webkit-date-and-time-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  min-height: 52px;
+  line-height: 52px;
+  margin: 0;
 }
 
 .tournament-mode-grid {

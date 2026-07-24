@@ -311,11 +311,11 @@ export default function LeaguePage() {
       <div className="grid two league-main-grid" style={{ alignItems: 'start' }}>
         <section className="card">
           <div className="card-title">Regular roster</div>
-          <div className="card-subtitle">Enter each player’s name, save the roster, then send each player their claim link. They must sign in to DinkDraw and claim their position so matches count toward their stats.</div>
+          <div className="card-subtitle">Add the player names, save the roster, then send each player an invite link. Players sign in and claim their spot so League matches count toward their stats.</div>
           {isOrganizer && unclaimedRegulars.length ? (
             <div className="notice" style={{ marginTop: 12 }}>
               <strong>Player account setup: {members.length - unclaimedRegulars.length} of {members.length} claimed</strong><br />
-              Saving names does not connect DinkDraw accounts. Use the buttons below to send each player their personal claim link.
+              Saving a name does not connect an account. Send each player their invite link below.
             </div>
           ) : null}
           <div className="grid" style={{ gap: 8, marginTop: 14 }}>
@@ -333,11 +333,11 @@ export default function LeaguePage() {
                   ) : <div>{memberName(member.id)}</div>}
                   <div className="league-roster-actions">
                     <span className={`tag ${member.user_id ? 'yours' : ''}`}>
-                      {member.user_id ? 'Claimed' : 'Waiting for player'}
+                      {member.user_id ? 'Claimed' : 'Not claimed'}
                     </span>
                     {isOrganizer && !member.user_id ? (
                       <button className="button secondary league-claim-button" type="button" onClick={() => copyClaimLink(member.roster_position)}>
-                        {copiedPosition === member.roster_position ? 'Link copied' : 'Copy claim link'}
+                        {copiedPosition === member.roster_position ? 'Link copied' : 'Copy invite link'}
                       </button>
                     ) : null}
                   </div>

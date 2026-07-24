@@ -124,7 +124,7 @@ export default function LeaguePage() {
 
   async function copyClaimLink(rosterPosition: number | null) {
     if (!league || !rosterPosition) return;
-    const claimUrl = `${window.location.origin}/leagues/join?code=${encodeURIComponent(league.join_code)}&position=${rosterPosition}`;
+    const claimUrl = `${window.location.origin}/tournament/join?type=league&code=${encodeURIComponent(league.join_code)}&position=${rosterPosition}`;
     try {
       await navigator.clipboard.writeText(claimUrl);
       setCopiedPosition(rosterPosition);

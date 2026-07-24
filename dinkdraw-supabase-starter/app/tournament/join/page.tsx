@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
+import { sendLeaguePushEvent } from '../../../lib/league-push';
 
 function normalizeJoinCode(value: string) {
   return value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6);
@@ -15,6 +16,8 @@ function JoinTournamentInner() {
   const searchParams = useSearchParams();
 
   const [code, setCode] = useState('');
+  const [joinType, setJoinType] = useState<'tournament' | 'league'>('tournament');
+  const [rosterPosition, setRosterPosition] = useState(1);
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState<boolean | null>(null);
@@ -50,8 +53,14 @@ function JoinTournamentInner() {
 
   useEffect(() => {
     const codeFromUrl = searchParams.get('code') || '';
+    const requestedType = searchParams.get('type');
+    const requestedPosition = Number(searchParams.get('position'));
     if (codeFromUrl) {
       setCode(normalizeJoinCode(codeFromUrl));
+    }
+    if (requestedType === 'league') setJoinType('league');
+    if (Number.isInteger(requestedPosition) && requestedPosition >= 1 && requestedPosition <= 32) {
+      setRosterPosition(requestedPosition);
     }
 
     async function checkAuth() {
@@ -76,6 +85,24 @@ function JoinTournamentInner() {
     }
 
     setIsLoading(true);
+
+    if (joinType === 'league') {
+      const { data, error } = await supabase.rpc('claim_league_roster_spot', {
+        p_join_code: joinCode,
+        p_roster_position: rosterPosition,
+      });
+
+      setIsLoading(false);
+
+      if (error || !data) {
+        setMessage(error?.message || 'Could not claim that League roster position.');
+        return;
+      }
+
+      void sendLeaguePushEvent(supabase, { eventType: 'roster_claimed', leagueId: data });
+      router.push(`/leagues/${data}`);
+      return;
+    }
 
     const { data, error } = await supabase
       .from('tournaments')
@@ -117,8 +144,8 @@ function JoinTournamentInner() {
           <button
             className="button primary"
             onClick={() => {
-                const redirectPath = normalizedCode
-                ? `/tournament/join?code=${normalizedCode}`
+              const redirectPath = normalizedCode
+                ? `/tournament/join?code=${normalizedCode}${joinType === 'league' ? `&type=league&position=${rosterPosition}` : ''}`
                 : '/tournament/join';
 
               router.push(`/account?redirect=${encodeURIComponent(redirectPath)}`);
@@ -136,12 +163,28 @@ function JoinTournamentInner() {
 
   return (
     <div className="card">
-      <div className="card-title">Enter Join Code</div>
+      <div className="card-title">{joinType === 'league' ? 'Join a League' : 'Join a Tournament'}</div>
       <div className="card-subtitle">
-        Ask the organizer for the 6-character code.
+        Enter the 6-character code from the organizer.
       </div>
 
       <div className="grid">
+        <div className="join-type-grid">
+          <button
+            type="button"
+            className={`button ${joinType === 'tournament' ? 'primary' : 'secondary'}`}
+            onClick={() => { setJoinType('tournament'); setMessage(''); }}
+          >
+            Tournament
+          </button>
+          <button
+            type="button"
+            className={`button ${joinType === 'league' ? 'primary' : 'secondary'}`}
+            onClick={() => { setJoinType('league'); setMessage(''); }}
+          >
+            League
+          </button>
+        </div>
         <div>
           <label className="label">Join code</label>
           <input
@@ -169,8 +212,22 @@ function JoinTournamentInner() {
           />
         </div>
 
+        {joinType === 'league' ? (
+          <div>
+            <label className="label">Your roster position</label>
+            <input
+              className="input"
+              type="number"
+              min={1}
+              max={32}
+              value={rosterPosition}
+              onChange={(event) => setRosterPosition(Number(event.target.value))}
+            />
+          </div>
+        ) : null}
+
         <button className="button primary" onClick={handleJoin} disabled={!canJoin}>
-          {isLoading ? 'Joining...' : 'Join Tournament'}
+          {isLoading ? 'Joining...' : joinType === 'league' ? 'Claim League Spot' : 'Join Tournament'}
         </button>
 
         {message ? <div className="notice">{message}</div> : null}

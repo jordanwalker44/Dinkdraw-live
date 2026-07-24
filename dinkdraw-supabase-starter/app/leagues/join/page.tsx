@@ -18,7 +18,7 @@ export default function JoinLeaguePage() {
     const searchParams = new URLSearchParams(window.location.search);
     const claimCode = searchParams.get('code');
     const claimPosition = Number(searchParams.get('position'));
-    if (claimCode) setCode(claimCode.toUpperCase());
+    if (claimCode) setCode(claimCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6));
     if (Number.isInteger(claimPosition) && claimPosition >= 1 && claimPosition <= 32) setPosition(claimPosition);
   }, []);
 
@@ -42,7 +42,7 @@ export default function JoinLeaguePage() {
     <div className="card-subtitle">Sign in with your own DinkDraw account, then claim the position your organizer assigned to you. This connects your league matches to your personal stats.</div>
     {message ? <div className="notice" style={{ marginTop: 14 }}>{message}</div> : null}
     <div className="grid" style={{ gap: 14, marginTop: 16 }}>
-      <div><label className="label">League code</label><input className="input" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} /></div>
+      <div><label className="label">League code</label><input className="input" maxLength={6} value={code} onChange={(event) => setCode(event.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6))} /></div>
       <div><label className="label">Your roster position</label><input className="input" type="number" min={1} max={32} value={position} onChange={(event) => setPosition(Number(event.target.value))} /></div>
       <button className="button primary" type="button" onClick={join} disabled={joining || !code.trim()}>{joining ? 'Joining...' : 'Claim Roster Position'}</button>
     </div>

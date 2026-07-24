@@ -131,6 +131,7 @@ export default function CreateTournamentPage() {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
   const [canUseOrganizations, setCanUseOrganizations] = useState(false);
   const [canUseCreamOfTheCrop, setCanUseCreamOfTheCrop] = useState(false);
+  const [leagueEnabledOrganizationIds, setLeagueEnabledOrganizationIds] = useState<string[]>([]);
   const [selectedFavoriteLocationId, setSelectedFavoriteLocationId] = useState('');
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
@@ -281,7 +282,7 @@ export default function CreateTournamentPage() {
 
     const { data: memberships } = await supabase
       .from('organization_members')
-      .select('organization_id, organizations(id, name)')
+      .select('organization_id, role, organizations(id, name)')
       .eq('user_id', user.id);
 
     const loadedOrganizations =
@@ -290,8 +291,21 @@ export default function CreateTournamentPage() {
         .filter(Boolean) || [];
 
     if (loadedOrganizations.length > 0) {
+      const organizerOrganizationIds = (memberships || [])
+        .filter((membership: any) => ['owner', 'admin'].includes(membership.role))
+        .map((membership: any) => membership.organization_id);
+      const { data: leagueEntitlements } = organizerOrganizationIds.length
+        ? await supabase
+            .from('feature_entitlements')
+            .select('organization_id')
+            .in('organization_id', organizerOrganizationIds)
+            .eq('feature_key', 'league_mode')
+            .eq('status', 'active')
+        : { data: [] as { organization_id: string }[] };
+
       setOrganizations(loadedOrganizations);
       setSelectedOrganizationId(loadedOrganizations[0].id);
+      setLeagueEnabledOrganizationIds((leagueEntitlements || []).map((entitlement) => entitlement.organization_id));
       return;
     }
 
@@ -302,6 +316,10 @@ export default function CreateTournamentPage() {
 
   loadUser();
 }, [supabase]);
+
+  const canUsePremiumLeagues =
+    Boolean(selectedOrganizationId)
+    && leagueEnabledOrganizationIds.includes(selectedOrganizationId);
 
   useEffect(() => {
     if (courts > maxCourtsAllowed) {
@@ -509,13 +527,7 @@ router.push(`/tournament/${tournament.id}`);
        <div>
   <label className="label">Tournament Mode</label>
 
-  <div
-  style={{
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: 8,
-  }}
->
+  <div className="tournament-mode-grid">
   <button
     type="button"
     onClick={() => setTournamentMode('round_robin')}
@@ -582,6 +594,32 @@ router.push(`/tournament/${tournament.id}`);
     </div>
     <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
       Ladder-style progression
+    </div>
+  </button>
+
+  <button
+    type="button"
+    onClick={() => {
+      if (!canUsePremiumLeagues) return;
+      router.push(`/leagues/create?organizationId=${encodeURIComponent(selectedOrganizationId)}`);
+    }}
+    style={{
+      minHeight: 74,
+      borderRadius: 18,
+      padding: '14px 10px',
+      border: '1px solid rgba(255,255,255,0.12)',
+      background: 'rgba(255,255,255,0.05)',
+      color: '#ffffff',
+      fontWeight: 900,
+      fontSize: 15,
+      cursor: canUsePremiumLeagues ? 'pointer' : 'not-allowed',
+      opacity: canUsePremiumLeagues ? 1 : 0.45,
+      textAlign: 'center',
+    }}
+  >
+    <div style={{ fontSize: 15, fontWeight: 900 }}>Premium Leagues</div>
+    <div style={{ fontSize: 12, opacity: 0.75, marginTop: 2 }}>
+      Multi-week rotating doubles
     </div>
   </button>
 </div>

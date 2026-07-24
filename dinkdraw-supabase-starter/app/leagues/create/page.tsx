@@ -68,7 +68,9 @@ export default function CreateLeaguePage() {
         hasLeagueAccess: enabledIds.has(membership.organization_id),
       }));
       setOrganizations(loaded);
-      setOrganizationId(loaded.find((item) => item.hasLeagueAccess)?.id || loaded[0]?.id || '');
+      const requestedOrganizationId = new URLSearchParams(window.location.search).get('organizationId');
+      const requestedOrganization = loaded.find((item) => item.id === requestedOrganizationId && item.hasLeagueAccess);
+      setOrganizationId(requestedOrganization?.id || loaded.find((item) => item.hasLeagueAccess)?.id || loaded[0]?.id || '');
       setLoading(false);
     }
 

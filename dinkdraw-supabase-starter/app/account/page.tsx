@@ -35,7 +35,6 @@ export default function AccountPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [hasLeagueAccess, setHasLeagueAccess] = useState(false);
 
   useEffect(() => {
     async function loadUser() {
@@ -47,7 +46,6 @@ export default function AccountPage() {
 
       if (!user) {
         setProfileName('');
-        setHasLeagueAccess(false);
         return;
       }
 
@@ -61,31 +59,6 @@ export default function AccountPage() {
       setProfileName(resolvedName);
       setName(resolvedName);
 
-      const { data: accessibleLeagues } = await supabase
-        .from('leagues')
-        .select('id')
-        .limit(1);
-
-      if (accessibleLeagues?.length) {
-        setHasLeagueAccess(true);
-      } else {
-        const { data: memberships } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .in('role', ['owner', 'admin']);
-        const organizationIds = (memberships || []).map((membership) => membership.organization_id);
-        const { data: entitlements } = organizationIds.length
-          ? await supabase
-              .from('feature_entitlements')
-              .select('organization_id')
-              .in('organization_id', organizationIds)
-              .eq('feature_key', 'league_mode')
-              .eq('status', 'active')
-              .limit(1)
-          : { data: [] as { organization_id: string }[] };
-        setHasLeagueAccess(Boolean(entitlements?.length));
-      }
     }
 
     loadUser();
@@ -99,7 +72,6 @@ export default function AccountPage() {
       if (!user) {
         setProfileName('');
         setName('');
-        setHasLeagueAccess(false);
         return;
       }
 
@@ -362,14 +334,6 @@ export default function AccountPage() {
             Track drilling, play, goals, and progress
           </div>
         </Link>
-        {hasLeagueAccess ? (
-          <Link href="/leagues" className="action-button blue">
-            <div className="action-title">Premium Leagues</div>
-            <div className="action-subtitle">
-              View your league, roster, schedule, and standings
-            </div>
-          </Link>
-        ) : null}
       </div>
     </div>
           <div className="card" style={{ marginBottom: 14 }}>

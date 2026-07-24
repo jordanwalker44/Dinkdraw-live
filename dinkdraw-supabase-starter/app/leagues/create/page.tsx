@@ -144,8 +144,8 @@ export default function CreateLeaguePage() {
             </div>
             <div><label className="label">League name</label><input className="input" value={name} onChange={(event) => setName(event.target.value)} /></div>
             <div className="grid two">
-              <div><label className="label">First play date</label><input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
-              <div><label className="label">Start time</label><input className="input" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
+              <div className="league-native-field"><label className="label">First play date</label><input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
+              <div className="league-native-field"><label className="label">Start time</label><input className="input" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
             </div>
             <div><label className="label">Location</label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or court location" /></div>
             <div className="grid two">

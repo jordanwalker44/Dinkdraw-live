@@ -971,6 +971,23 @@ textarea.input:focus {
   max-width: 100%;
 }
 
+.league-native-field {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.league-native-field input[type='date'],
+.league-native-field input[type='time'] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  inline-size: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 .tournament-mode-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -991,6 +1008,10 @@ textarea.input:focus {
   .league-page {
     padding-left: 10px;
     padding-right: 10px;
+  }
+
+  .league-page .grid.two {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   .league-page .card {

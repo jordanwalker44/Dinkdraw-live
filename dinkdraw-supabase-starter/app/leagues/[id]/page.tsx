@@ -112,11 +112,12 @@ export default function LeaguePage() {
   const myRegularMember = members.find((member) => member.user_id === userId);
   const mySubstituteMember = substitutes.find((member) => member.user_id === userId);
   const unclaimedRegulars = members.filter((member) => !member.user_id);
+  const unnamedRegulars = members.filter((member) => !member.display_name?.trim());
   const unresolvedAttendance = selectedAttendance.filter((row) =>
     ['unsure', 'sub_needed', 'sub_invited', 'absent'].includes(row.attendance_status)
     || (row.attendance_status === 'sub_confirmed' && !row.organizer_confirmed_at)
   );
-  const sessionReady = unclaimedRegulars.length === 0 && unresolvedAttendance.length === 0;
+  const sessionReady = unnamedRegulars.length === 0 && unresolvedAttendance.length === 0;
   const memberName = (id: string) => {
     const member = membersById.get(id);
     return member?.display_name?.trim() || `Player ${member?.roster_position || '?'}`;
@@ -311,11 +312,11 @@ export default function LeaguePage() {
       <div className="grid two league-main-grid" style={{ alignItems: 'start' }}>
         <section className="card">
           <div className="card-title">Regular roster</div>
-          <div className="card-subtitle">Add the player names, save the roster, then send each player an invite link. Players sign in and claim their spot so League matches count toward their stats.</div>
+          <div className="card-subtitle">Add and save every player name. Linking a DinkDraw account is optional and adds personal stats, notifications, and self-service attendance.</div>
           {isOrganizer && unclaimedRegulars.length ? (
             <div className="notice" style={{ marginTop: 12 }}>
-              <strong>Player account setup: {members.length - unclaimedRegulars.length} of {members.length} claimed</strong><br />
-              Saving a name does not connect an account. Send each player their invite link below.
+              <strong>Optional account linking: {members.length - unclaimedRegulars.length} of {members.length} linked</strong><br />
+              You can start with names only. Send invite links whenever players want personal stats and notifications.
             </div>
           ) : null}
           <div className="grid" style={{ gap: 8, marginTop: 14 }}>
@@ -333,7 +334,7 @@ export default function LeaguePage() {
                   ) : <div>{memberName(member.id)}</div>}
                   <div className="league-roster-actions">
                     <span className={`tag ${member.user_id ? 'yours' : ''}`}>
-                      {member.user_id ? 'Claimed' : 'Not claimed'}
+                      {member.user_id ? 'Account linked' : 'Name only'}
                     </span>
                     {isOrganizer && !member.user_id ? (
                       <button className="button secondary league-claim-button" type="button" onClick={() => copyClaimLink(member.roster_position)}>
@@ -388,9 +389,9 @@ export default function LeaguePage() {
             <>
             {!selectedSessionRow.tournament_id ? <div className={`notice`} style={{ marginTop: 14 }}>
               <strong>{sessionReady ? 'Ready to create the live tournament' : 'Session setup is incomplete'}</strong><br />
-              {unclaimedRegulars.length ? `${unclaimedRegulars.length} player account${unclaimedRegulars.length === 1 ? '' : 's'} still need to claim their roster positions. Use the claim links in the Regular roster section. ` : ''}
+              {unnamedRegulars.length ? `${unnamedRegulars.length} roster position${unnamedRegulars.length === 1 ? '' : 's'} still need a player name. ` : ''}
               {unresolvedAttendance.length ? `${unresolvedAttendance.length} attendance item(s) need resolution.` : ''}
-              {sessionReady ? 'All regular positions and substitute assignments are resolved.' : ''}
+              {sessionReady ? `${unclaimedRegulars.length ? `${unclaimedRegulars.length} player account${unclaimedRegulars.length === 1 ? ' is' : 's are'} not linked, which is okay. ` : ''}All names and attendance items are ready.` : ''}
             </div> : null}
             <button className="button primary" type="button" onClick={startSelectedSession} disabled={startingSession || (!selectedSessionRow.tournament_id && !sessionReady)} style={{ marginTop: 14 }}>
               {startingSession ? 'Creating Tournament...' : selectedSessionRow.tournament_id ? 'Open Live Tournament' : `Create and Start Week ${selectedSession}`}

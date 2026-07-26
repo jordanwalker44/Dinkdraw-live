@@ -1,2 +1,5 @@
 [functions.send-test-push]
 verify_jwt = true
+
+[functions.send-tournament-reminders]
+verify_jwt = false

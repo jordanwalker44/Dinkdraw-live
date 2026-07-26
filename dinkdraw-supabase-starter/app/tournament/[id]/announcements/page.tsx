@@ -46,6 +46,8 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
   const [blockedUsers, setBlockedUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [restrictedUsers, setRestrictedUsers] = useState<Array<{ id: string; name: string }>>([]);
+  const [isPostingRestricted, setIsPostingRestricted] = useState(false);
   const [draft, setDraft] = useState('');
   const [conversationDraft, setConversationDraft] = useState('');
   const [isMuted, setIsMuted] = useState(false);
@@ -154,6 +156,41 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     );
   }, [supabase]);
 
+  const loadPostingRestrictions = useCallback(async (roomId: string, currentUserId: string) => {
+    const { data, error } = await supabase
+      .from('tournament_room_posting_restrictions')
+      .select('user_id')
+      .eq('room_id', roomId);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    const restrictedIds = (data || []).map((restriction) => restriction.user_id);
+    setIsPostingRestricted(restrictedIds.includes(currentUserId));
+
+    if (!restrictedIds.length) {
+      setRestrictedUsers([]);
+      return;
+    }
+
+    const { data: profiles } = await supabase
+      .from('public_profiles')
+      .select('id, display_name')
+      .in('id', restrictedIds);
+    const names = new Map(
+      (profiles || []).map((profile) => [
+        profile.id,
+        profile.display_name?.trim() || 'Player',
+      ])
+    );
+
+    setRestrictedUsers(
+      restrictedIds.map((id) => ({ id, name: names.get(id) || 'Player' }))
+    );
+  }, [supabase]);
+
   useEffect(() => {
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -212,6 +249,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
 
       await loadAnnouncements(loadedRoom.id);
       await loadBlockedUsers(currentUserId);
+      await loadPostingRestrictions(loadedRoom.id, currentUserId);
       await markRead(loadedRoom.id, currentUserId);
 
       channel = supabase
@@ -226,6 +264,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
           },
           async () => {
             await loadAnnouncements(loadedRoom.id);
+            await loadPostingRestrictions(loadedRoom.id, currentUserId);
             await markRead(loadedRoom.id, currentUserId);
           }
         )
@@ -253,7 +292,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [loadAnnouncements, loadBlockedUsers, markRead, params.id, supabase]);
+  }, [loadAnnouncements, loadBlockedUsers, loadPostingRestrictions, markRead, params.id, supabase]);
 
   async function postAnnouncement() {
     if (!room || !draft.trim()) return;
@@ -469,6 +508,37 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     setMessage('Player unblocked.');
   }
 
+  async function changePostingRestriction(targetUserId: string, restricted: boolean) {
+    if (!room || !isManager) return;
+
+    const name = profileNames[targetUserId] || 'this player';
+    const confirmed = window.confirm(
+      restricted
+        ? `Restrict ${name} from posting in this tournament conversation? They will still be able to read messages and official announcements.`
+        : `Allow ${name} to post in this tournament conversation again?`
+    );
+    if (!confirmed) return;
+
+    const { error } = await supabase.rpc('set_tournament_room_posting_restriction', {
+      p_room_id: room.id,
+      p_user_id: targetUserId,
+      p_restricted: restricted,
+      p_reason: restricted ? 'Restricted by a tournament organizer.' : null,
+    });
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    await loadPostingRestrictions(room.id, userId);
+    setMessage(
+      restricted
+        ? `${name} can still read this room but cannot post.`
+        : `${name} can post in this room again.`
+    );
+  }
+
   function senderLabel(announcement: Announcement) {
     if (announcement.sender_user_id === tournament?.organizer_user_id) return 'Organizer';
     if (announcement.sender_user_id === tournament?.co_organizer_user_id) return 'Co-organizer';
@@ -577,7 +647,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
             </div>
           ) : null}
 
-          {isConversationOpen ? (
+          {isConversationOpen && !isPostingRestricted ? (
             <div className="card conversation-composer">
               <label className="label" htmlFor="conversation-body">Message the group</label>
               <textarea
@@ -619,10 +689,34 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
                 </span>
               </label>
             </div>
+          ) : isConversationOpen && isPostingRestricted ? (
+            <div className="notice announcement-read-only">
+              You can read this conversation, but posting is currently unavailable.
+            </div>
           ) : isConversation ? (
             <div className="notice announcement-read-only">
               This conversation is now read-only. Previous messages remain available.
             </div>
+          ) : null}
+
+          {isManager && restrictedUsers.length > 0 ? (
+            <details className="card conversation-blocked">
+              <summary>Posting restrictions ({restrictedUsers.length})</summary>
+              <div className="conversation-blocked-list">
+                {restrictedUsers.map((restrictedUser) => (
+                  <div key={restrictedUser.id}>
+                    <span>{restrictedUser.name}</span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => changePostingRestriction(restrictedUser.id, false)}
+                    >
+                      Allow Posting
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </details>
           ) : null}
 
           {blockedUsers.length > 0 ? (
@@ -705,6 +799,31 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
                           Block
                         </button>
                       </>
+                    ) : null}
+                    {isManager &&
+                    announcement.message_type === 'message' &&
+                    !!announcement.sender_user_id &&
+                    announcement.sender_user_id !== tournament?.organizer_user_id &&
+                    announcement.sender_user_id !== tournament?.co_organizer_user_id &&
+                    announcement.sender_user_id !== userId ? (
+                      <button
+                        type="button"
+                        className="text-button danger"
+                        onClick={() =>
+                          changePostingRestriction(
+                            announcement.sender_user_id as string,
+                            !restrictedUsers.some(
+                              (restrictedUser) => restrictedUser.id === announcement.sender_user_id
+                            )
+                          )
+                        }
+                      >
+                        {restrictedUsers.some(
+                          (restrictedUser) => restrictedUser.id === announcement.sender_user_id
+                        )
+                          ? 'Allow Posting'
+                          : 'Restrict Posting'}
+                      </button>
                     ) : null}
                   </div>
                 </article>

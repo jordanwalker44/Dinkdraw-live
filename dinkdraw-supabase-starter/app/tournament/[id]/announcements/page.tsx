@@ -229,6 +229,19 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
             await markRead(loadedRoom.id, currentUserId);
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'tournament_rooms',
+            filter: `id=eq.${loadedRoom.id}`,
+          },
+          async () => {
+            await loadAnnouncements(loadedRoom.id);
+            await markRead(loadedRoom.id, currentUserId);
+          }
+        )
         .subscribe();
 
       if (!cancelled) setIsLoading(false);

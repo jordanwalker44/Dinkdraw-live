@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <div className="card">
         <div className="card-title">Privacy Policy</div>
         <div className="card-subtitle">
-          Last updated: May 2026
+          Last updated: July 2026
         </div>
 
         <div className="grid" style={{ gap: 18 }}>
@@ -23,7 +23,8 @@ export default function PrivacyPage() {
             <div className="muted">
               DinkDraw stores account information such as email addresses,
               display names, tournament participation, match scores,
-              and player statistics.
+              player statistics, tournament-room messages, mute and block
+              preferences, and reports submitted for moderation.
             </div>
           </div>
 
@@ -34,8 +35,21 @@ export default function PrivacyPage() {
 
             <div className="muted">
               Your information is used to operate tournaments,
-              standings, player stats, and account functionality
-              inside DinkDraw.
+              standings, player stats, private tournament rooms,
+              moderation, safety, and account functionality inside DinkDraw.
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>
+              Tournament Rooms and Moderation
+            </div>
+
+            <div className="muted">
+              Tournament-room messages are visible only to eligible organizers,
+              co-organizers, and players with claimed spots. Message reports
+              retain a copy of the reported content so it can be reviewed even
+              if the original message is removed.
             </div>
           </div>
 

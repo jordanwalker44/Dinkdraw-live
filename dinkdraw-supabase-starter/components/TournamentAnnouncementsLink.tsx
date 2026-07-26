@@ -13,6 +13,7 @@ type Props = {
 export function TournamentAnnouncementsLink({ tournamentId, userId, isEligible }: Props) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [roomId, setRoomId] = useState('');
+  const [postingMode, setPostingMode] = useState('announcements_only');
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -49,12 +50,13 @@ export function TournamentAnnouncementsLink({ tournamentId, userId, isEligible }
 
       const { data: room } = await supabase
         .from('tournament_rooms')
-        .select('id')
+        .select('id, posting_mode')
         .eq('tournament_id', tournamentId)
         .maybeSingle();
 
       if (cancelled || !room?.id) return;
       setRoomId(room.id);
+      setPostingMode(room.posting_mode || 'announcements_only');
       await refreshUnread(room.id);
 
       channel = supabase
@@ -86,13 +88,21 @@ export function TournamentAnnouncementsLink({ tournamentId, userId, isEligible }
 
   return (
     <Link className="announcement-link-card" href={`/tournament/${tournamentId}/announcements`}>
-      <span className="announcement-link-icon" aria-hidden="true">📣</span>
+      <span className="announcement-link-icon" aria-hidden="true">
+        {postingMode === 'conversation' ? '💬' : '📣'}
+      </span>
       <span className="announcement-link-copy">
-        <strong>Tournament Announcements</strong>
-        <small>Updates from the organizer</small>
+        <strong>
+          {postingMode === 'conversation' ? 'Tournament Conversation' : 'Tournament Announcements'}
+        </strong>
+        <small>
+          {postingMode === 'conversation'
+            ? 'Private group chat for claimed players'
+            : 'Updates from the organizer'}
+        </small>
       </span>
       {unreadCount > 0 ? (
-        <span className="announcement-unread-badge" aria-label={`${unreadCount} unread announcements`}>
+        <span className="announcement-unread-badge" aria-label={`${unreadCount} unread room updates`}>
           {unreadCount > 99 ? '99+' : unreadCount}
         </span>
       ) : (

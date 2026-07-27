@@ -45,6 +45,15 @@ type LocationUsageRow = {
   latest_tournament_at: string | null;
 };
 
+type StateUsageRow = {
+  code: string;
+  name: string;
+  tournamentCount: number;
+  participantUses: number;
+  claimedUses: number;
+  manualUses: number;
+};
+
 type MatchRow = {
   tournament_id: string;
   is_complete: boolean;
@@ -60,6 +69,81 @@ type MonitorTournament = TournamentRow & {
   completeMatchCount: number;
   playableMatchCount: number;
 };
+
+const US_STATES: Record<string, string> = {
+  AL: 'Alabama',
+  AK: 'Alaska',
+  AZ: 'Arizona',
+  AR: 'Arkansas',
+  CA: 'California',
+  CO: 'Colorado',
+  CT: 'Connecticut',
+  DE: 'Delaware',
+  FL: 'Florida',
+  GA: 'Georgia',
+  HI: 'Hawaii',
+  ID: 'Idaho',
+  IL: 'Illinois',
+  IN: 'Indiana',
+  IA: 'Iowa',
+  KS: 'Kansas',
+  KY: 'Kentucky',
+  LA: 'Louisiana',
+  ME: 'Maine',
+  MD: 'Maryland',
+  MA: 'Massachusetts',
+  MI: 'Michigan',
+  MN: 'Minnesota',
+  MS: 'Mississippi',
+  MO: 'Missouri',
+  MT: 'Montana',
+  NE: 'Nebraska',
+  NV: 'Nevada',
+  NH: 'New Hampshire',
+  NJ: 'New Jersey',
+  NM: 'New Mexico',
+  NY: 'New York',
+  NC: 'North Carolina',
+  ND: 'North Dakota',
+  OH: 'Ohio',
+  OK: 'Oklahoma',
+  OR: 'Oregon',
+  PA: 'Pennsylvania',
+  RI: 'Rhode Island',
+  SC: 'South Carolina',
+  SD: 'South Dakota',
+  TN: 'Tennessee',
+  TX: 'Texas',
+  UT: 'Utah',
+  VT: 'Vermont',
+  VA: 'Virginia',
+  WA: 'Washington',
+  WV: 'West Virginia',
+  WI: 'Wisconsin',
+  WY: 'Wyoming',
+  DC: 'District of Columbia',
+};
+
+function getUsState(location: string) {
+  const parts = location.split(',').map((part) => part.trim());
+
+  for (const part of parts) {
+    const abbreviationMatch = part.match(/^([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?$/);
+    if (abbreviationMatch && US_STATES[abbreviationMatch[1]]) {
+      return { code: abbreviationMatch[1], name: US_STATES[abbreviationMatch[1]] };
+    }
+
+    const normalizedPart = part.replace(/\s+\d{5}(?:-\d{4})?$/, '').toLowerCase();
+    const stateEntry = Object.entries(US_STATES).find(
+      ([, stateName]) => stateName.toLowerCase() === normalizedPart,
+    );
+    if (stateEntry) {
+      return { code: stateEntry[0], name: stateEntry[1] };
+    }
+  }
+
+  return null;
+}
 
 function formatStatus(status: string) {
   if (status === 'started') return 'Live';
@@ -98,6 +182,33 @@ export default function AdminMonitorPage() {
   const [message, setMessage] = useState('');
   const [tournaments, setTournaments] = useState<MonitorTournament[]>([]);
   const [locationUsage, setLocationUsage] = useState<LocationUsageRow[]>([]);
+  const stateUsage = useMemo(() => {
+    const totals = new Map<string, StateUsageRow>();
+
+    for (const locationRow of locationUsage) {
+      const state = getUsState(locationRow.location);
+      if (!state) continue;
+
+      const current = totals.get(state.code) || {
+        ...state,
+        tournamentCount: 0,
+        participantUses: 0,
+        claimedUses: 0,
+        manualUses: 0,
+      };
+
+      current.tournamentCount += locationRow.tournament_count;
+      current.participantUses += locationRow.participant_uses;
+      current.claimedUses += locationRow.claimed_uses;
+      current.manualUses += locationRow.manual_uses;
+      totals.set(state.code, current);
+    }
+
+    return Array.from(totals.values()).sort(
+      (left, right) =>
+        right.participantUses - left.participantUses || left.name.localeCompare(right.name),
+    );
+  }, [locationUsage]);
 
   async function loadMonitor() {
     setIsLoading(true);
@@ -255,6 +366,42 @@ export default function AdminMonitorPage() {
 
         {!isLoading && isAdmin ? (
           <div className="grid" style={{ gap: 12, marginTop: 16 }}>
+            <section className="admin-usage-section">
+              <div className="admin-usage-heading">
+                <h2>State Summary</h2>
+                <div className="muted">
+                  Participant uses from locations containing a recognized U.S. state.
+                </div>
+              </div>
+
+              {stateUsage.length ? (
+                <div className="admin-usage-grid">
+                  {stateUsage.map((row) => (
+                    <div className="list-item admin-usage-item" key={row.code}>
+                      <div className="admin-usage-location">
+                        {row.name} ({row.code})
+                      </div>
+                      <div className="admin-usage-total">
+                        {row.participantUses} participant {row.participantUses === 1 ? 'use' : 'uses'}
+                      </div>
+                      <div className="admin-usage-breakdown">
+                        <span>
+                          {row.tournamentCount}{' '}
+                          {row.tournamentCount === 1 ? 'tournament' : 'tournaments'}
+                        </span>
+                        <span>{row.claimedUses} claimed</span>
+                        <span>{row.manualUses} manual</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="muted">
+                  No U.S. states could be recognized in the saved locations yet.
+                </div>
+              )}
+            </section>
+
             <section className="admin-usage-section">
               <div className="admin-usage-heading">
                 <h2>Location Usage</h2>

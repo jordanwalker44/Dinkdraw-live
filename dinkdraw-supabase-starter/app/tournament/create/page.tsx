@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
+import { LocationAutocomplete } from '../../../components/LocationAutocomplete';
 
 function makeJoinCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -1031,16 +1032,14 @@ and final placement tie-breakers.
             ) : null}
 
             {!selectedFavoriteLocationId ? (
-            <input
-            className="input"
-            value={location}
-            onChange={(e) => {
-            setLocation(e.target.value);
-            setSelectedFavoriteLocationId('');
-          }}
-            placeholder="Courts, gym, park..."
-  />
-) : null}
+              <LocationAutocomplete
+                value={location}
+                onChange={(nextLocation) => {
+                  setLocation(nextLocation);
+                  setSelectedFavoriteLocationId('');
+                }}
+              />
+            ) : null}
           </div>
 
           <div className="card-title" style={{ marginTop: 14 }}>

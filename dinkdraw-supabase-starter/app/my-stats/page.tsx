@@ -126,7 +126,7 @@ export default function MyStatsPage() {
           ? supabase.from('tournament_players').select('id, tournament_id, slot_number, claimed_by_user_id, display_name').in('tournament_id', userTournamentIds)
           : Promise.resolve({ data: [] as TournamentPlayer[] }),
         userTournamentIds.length > 0
-          ? supabase.from('matches').select('id, tournament_id, round_number, court_number, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete').in('tournament_id', userTournamentIds).eq('is_complete', true)
+          ? supabase.from('matches').select('id, tournament_id, round_number, court_number, team_a_player_1_id, team_a_player_2_id, team_b_player_1_id, team_b_player_2_id, team_a_score, team_b_score, is_bye, is_complete').in('tournament_id', userTournamentIds)
           : Promise.resolve({ data: [] as MatchRow[] }),
         userTournamentIds.length > 0
           ? supabase.from('tournaments').select('id, title, event_date, started_at, format, tournament_mode, playoff_format, status').in('id', userTournamentIds)
@@ -161,13 +161,18 @@ export default function MyStatsPage() {
       grouped.get(row.match_id)!.push(row);
     }
 
-    return Array.from(grouped.entries()).map(([matchId, rows]): MatchSummary => {
+    const matchesById = new Map(allCompletedMatches.map((match) => [match.id, match]));
+
+    return Array.from(grouped.entries()).flatMap(([matchId, rows]): MatchSummary[] => {
+      const match = matchesById.get(matchId);
+      if (match && !match.is_complete) return [];
+
       const orderedRows = [...rows].sort((a, b) => (a.game_number ?? 1) - (b.game_number ?? 1));
       const first = orderedRows[0];
       const wins = orderedRows.reduce((sum, row) => sum + row.wins, 0);
       const losses = orderedRows.reduce((sum, row) => sum + row.losses, 0);
       const ties = orderedRows.reduce((sum, row) => sum + row.ties, 0);
-      return {
+      return [{
         matchId,
         tournamentId: first.tournament_id,
         playedAt: first.played_at,
@@ -183,9 +188,9 @@ export default function MyStatsPage() {
         pointsFor: orderedRows.reduce((sum, row) => sum + row.points_for, 0),
         pointsAgainst: orderedRows.reduce((sum, row) => sum + row.points_against, 0),
         result: wins > losses ? 'W' : losses > wins ? 'L' : 'T',
-      };
+      }];
     }).sort((a, b) => new Date(b.playedAt).getTime() - new Date(a.playedAt).getTime());
-  }, [filteredStats]);
+  }, [filteredStats, allCompletedMatches]);
 
   const activeMatchSummaries = useMemo(
     () => matchSummaries.filter((row) => formatTab === 'overall' || row.format === formatTab),
@@ -284,6 +289,8 @@ export default function MyStatsPage() {
     [filteredStats, formatTab]
   );
 
+  const activeGameStats = placementStats;
+
   const filteredTournamentIds = useMemo(
     () => Array.from(new Set(placementStats.map((r) => r.tournament_id).filter(Boolean))),
     [placementStats]
@@ -295,7 +302,7 @@ export default function MyStatsPage() {
   );
 
   const filteredCompletedMatches = useMemo(
-    () => allCompletedMatches.filter((r) => filteredTournamentIds.includes(r.tournament_id)),
+    () => allCompletedMatches.filter((r) => filteredTournamentIds.includes(r.tournament_id) && r.is_complete),
     [allCompletedMatches, filteredTournamentIds]
   );
 
@@ -321,9 +328,32 @@ export default function MyStatsPage() {
     };
   }
 
+  function calcGameAggregates(statRows: EloStatRow[]) {
+    let wins = 0, losses = 0, ties = 0, pointsFor = 0, pointsAgainst = 0;
+    const tournamentIds = new Set<string>();
+    for (const s of statRows) {
+      wins += s.wins;
+      losses += s.losses;
+      ties += s.ties;
+      pointsFor += s.points_for;
+      pointsAgainst += s.points_against;
+      if (s.tournament_id) tournamentIds.add(s.tournament_id);
+    }
+    const games = wins + losses + ties;
+    return {
+      wins, losses, ties, games,
+      winPct: games ? Math.round((wins / games) * 100) : 0,
+      pointsFor, pointsAgainst,
+      pointDiff: pointsFor - pointsAgainst,
+      avgPoints: games ? Math.round(pointsFor / games) : 0,
+      tournamentsPlayed: tournamentIds.size,
+    };
+  }
+
   const singlesAggregates = useMemo(() => calcAggregates(matchSummaries.filter((row) => row.format === 'singles')), [matchSummaries]);
   const doublesAggregates = useMemo(() => calcAggregates(matchSummaries.filter((row) => row.format === 'doubles')), [matchSummaries]);
   const overallAggregates = useMemo(() => calcAggregates(matchSummaries), [matchSummaries]);
+  const activeGameAggregates = useMemo(() => calcGameAggregates(activeGameStats), [activeGameStats]);
 
   const tournamentSummary = useMemo(() => {
     if (!userId) return { bestFinish: '-', podiums: 0, tournamentWins: 0, averageFinish: '-', placements: [] as Array<{ tournamentId: string; placement: number }> };
@@ -604,7 +634,7 @@ export default function MyStatsPage() {
         </div>
       </div>
 
-      {activeAggregates.matches === 0 && !loading ? (
+      {activeGameAggregates.games === 0 && activeAggregates.matches === 0 && !loading ? (
         <div className="card" style={{ marginBottom: 14 }}>
           <div className="card-title">No {formatTab === 'overall' ? '' : formatTab} stats yet</div>
           <div className="muted">
@@ -618,10 +648,20 @@ export default function MyStatsPage() {
       ) : (
         <>
           <div className="card" style={{ marginBottom: 14 }}>
-            <div className="card-title">Performance</div>
+            <div className="card-title">Game Performance</div>
             <div className="two-col">
-              <SimpleStatCard label="Win Rate" value={`${activeAggregates.winPct}%`} sub={`${activeAggregates.matches} matches`} />
-              <SimpleStatCard label="Wins" value={activeAggregates.wins} sub={`${activeAggregates.losses} losses`} />
+              <SimpleStatCard label="Game Win Rate" value={`${activeGameAggregates.winPct}%`} sub={`${activeGameAggregates.games} games`} />
+              <SimpleStatCard label="Game Wins" value={activeGameAggregates.wins} sub={`${activeGameAggregates.losses} losses`} />
+              <SimpleStatCard label="Points For" value={activeGameAggregates.pointsFor} sub={`Avg ${activeGameAggregates.avgPoints}/game`} />
+              <SimpleStatCard label="Point Diff" value={activeGameAggregates.pointDiff} sub="Total" />
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Partnership Performance</div>
+            <div className="two-col">
+              <SimpleStatCard label="Match Win Rate" value={`${activeAggregates.winPct}%`} sub={`${activeAggregates.matches} completed matches`} />
+              <SimpleStatCard label="Match Wins" value={activeAggregates.wins} sub={`${activeAggregates.losses} losses`} />
               <SimpleStatCard label="Points For" value={activeAggregates.pointsFor} sub={`Avg ${activeAggregates.avgPoints}/match`} />
               <SimpleStatCard label="Point Diff" value={activeAggregates.pointDiff} sub="Total" />
             </div>

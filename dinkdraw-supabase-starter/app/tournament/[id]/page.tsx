@@ -2356,6 +2356,14 @@ function isSeriesComplete(match: Match): boolean {
   return false;
 }
 
+function hasCompletedBestOf3Game(match: Match): boolean {
+  return (
+    (match.game_1_a !== null && match.game_1_b !== null) ||
+    (match.game_2_a !== null && match.game_2_b !== null) ||
+    (match.game_3_a !== null && match.game_3_b !== null)
+  );
+}
+
 function needsGame3(match: Match): boolean {
   if (match.game_1_a === null || match.game_1_b === null) return false;
   if (match.game_2_a === null || match.game_2_b === null) return false;
@@ -2431,7 +2439,7 @@ function computeStandings(
   const completedMatches = matches.filter(
     (match) =>
       !match.is_bye &&
-      match.is_complete &&
+      (isBestOf3 ? hasCompletedBestOf3Game(match) : match.is_complete) &&
       match.team_a_player_1_id !== null &&
       match.team_b_player_1_id !== null
   );

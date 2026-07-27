@@ -480,6 +480,61 @@ textarea.input:focus {
   text-align: center;
 }
 
+.admin-usage-section {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 8px;
+}
+
+.admin-usage-heading h2,
+.admin-monitor-section-title {
+  margin: 0;
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 950;
+}
+
+.admin-usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 10px;
+}
+
+.admin-usage-item {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border-color: rgba(255, 203, 5, 0.2);
+}
+
+.admin-usage-location {
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.admin-usage-total {
+  color: var(--accent);
+  font-size: 25px;
+  font-weight: 950;
+}
+
+.admin-usage-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+
+.admin-usage-latest {
+  font-size: 12px;
+}
+
+.admin-monitor-section-title {
+  margin-top: 8px;
+}
+
 @media (max-width: 520px) {
   .admin-monitor-card {
     padding: 12px;

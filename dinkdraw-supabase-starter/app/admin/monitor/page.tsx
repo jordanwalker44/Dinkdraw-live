@@ -17,6 +17,7 @@ type TournamentRow = {
   rounds: number;
   format: string | null;
   tournament_mode: string | null;
+  location: string | null;
   created_at: string | null;
   started_at: string | null;
   event_date: string | null;
@@ -31,6 +32,17 @@ type ProfileRow = {
 type PlayerRow = {
   tournament_id: string;
   claimed_by_user_id: string | null;
+  display_name: string | null;
+};
+
+type LocationUsageRow = {
+  location: string;
+  tournament_count: number;
+  participant_uses: number;
+  claimed_uses: number;
+  manual_uses: number;
+  distinct_claimed_accounts: number;
+  latest_tournament_at: string | null;
 };
 
 type MatchRow = {
@@ -42,6 +54,8 @@ type MatchRow = {
 type MonitorTournament = TournamentRow & {
   organizerEmail: string;
   organizerDisplayName: string;
+  participantUseCount: number;
+  manualCount: number;
   claimedCount: number;
   completeMatchCount: number;
   playableMatchCount: number;
@@ -83,6 +97,7 @@ export default function AdminMonitorPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState('');
   const [tournaments, setTournaments] = useState<MonitorTournament[]>([]);
+  const [locationUsage, setLocationUsage] = useState<LocationUsageRow[]>([]);
 
   async function loadMonitor() {
     setIsLoading(true);
@@ -92,6 +107,7 @@ export default function AdminMonitorPage() {
     if (!sessionData.session) {
       setIsAdmin(false);
       setTournaments([]);
+      setLocationUsage([]);
       setMessage('Sign in with your DinkDraw admin account to view tournament monitoring.');
       setIsLoading(false);
       return;
@@ -101,6 +117,7 @@ export default function AdminMonitorPage() {
     if (adminError || adminData !== true) {
       setIsAdmin(false);
       setTournaments([]);
+      setLocationUsage([]);
       setMessage(adminError?.message || 'This page is only available to DinkDraw admins.');
       setIsLoading(false);
       return;
@@ -108,22 +125,31 @@ export default function AdminMonitorPage() {
 
     setIsAdmin(true);
 
-    const { data: tournamentData, error: tournamentError } = await supabase
-      .from('tournaments')
-      .select(
-        'id, title, organizer_user_id, organizer_name, join_code, status, player_count, courts, rounds, format, tournament_mode, created_at, started_at, event_date',
-      )
-      .order('created_at', { ascending: false })
-      .limit(40);
+    const [tournamentsResult, locationUsageResult] = await Promise.all([
+      supabase
+        .from('tournaments')
+        .select(
+          'id, title, organizer_user_id, organizer_name, join_code, status, player_count, courts, rounds, format, tournament_mode, location, created_at, started_at, event_date',
+        )
+        .order('created_at', { ascending: false })
+        .limit(40),
+      supabase.rpc('admin_get_location_usage_report'),
+    ]);
 
-    if (tournamentError) {
-      setMessage(tournamentError.message);
+    if (tournamentsResult.error || locationUsageResult.error) {
+      setMessage(
+        tournamentsResult.error?.message ||
+          locationUsageResult.error?.message ||
+          'Could not load tournament reporting.',
+      );
       setTournaments([]);
+      setLocationUsage([]);
       setIsLoading(false);
       return;
     }
 
-    const rows = (tournamentData || []) as TournamentRow[];
+    const rows = (tournamentsResult.data || []) as TournamentRow[];
+    setLocationUsage((locationUsageResult.data || []) as LocationUsageRow[]);
     const tournamentIds = rows.map((tournament) => tournament.id);
     const organizerIds = Array.from(new Set(rows.map((tournament) => tournament.organizer_user_id)));
 
@@ -134,7 +160,7 @@ export default function AdminMonitorPage() {
       tournamentIds.length
         ? supabase
             .from('tournament_players')
-            .select('tournament_id, claimed_by_user_id')
+            .select('tournament_id, claimed_by_user_id, display_name')
             .in('tournament_id', tournamentIds)
         : Promise.resolve({ data: [], error: null }),
       tournamentIds.length
@@ -153,6 +179,7 @@ export default function AdminMonitorPage() {
           'Could not load tournament monitor.',
       );
       setTournaments([]);
+      setLocationUsage([]);
       setIsLoading(false);
       return;
     }
@@ -170,13 +197,19 @@ export default function AdminMonitorPage() {
         const tournamentMatches = matches.filter(
           (match) => match.tournament_id === tournament.id && !match.is_bye,
         );
+        const usedPlayers = tournamentPlayers.filter(
+          (player) => !!player.claimed_by_user_id || !!player.display_name?.trim(),
+        );
+        const claimedCount = usedPlayers.filter((player) => !!player.claimed_by_user_id).length;
 
         return {
           ...tournament,
           organizerEmail: profile?.email || '',
           organizerDisplayName:
             tournament.organizer_name || profile?.display_name || profile?.email || 'Unknown organizer',
-          claimedCount: tournamentPlayers.filter((player) => !!player.claimed_by_user_id).length,
+          participantUseCount: usedPlayers.length,
+          claimedCount,
+          manualCount: usedPlayers.length - claimedCount,
           playableMatchCount: tournamentMatches.length,
           completeMatchCount: tournamentMatches.filter((match) => match.is_complete).length,
         };
@@ -222,6 +255,44 @@ export default function AdminMonitorPage() {
 
         {!isLoading && isAdmin ? (
           <div className="grid" style={{ gap: 12, marginTop: 16 }}>
+            <section className="admin-usage-section">
+              <div className="admin-usage-heading">
+                <h2>Location Usage</h2>
+                <div className="muted">
+                  Filled roster spots by tournament location. Manual entries count as participant
+                  uses, but not as confirmed app accounts.
+                </div>
+              </div>
+
+              {locationUsage.length ? (
+                <div className="admin-usage-grid">
+                  {locationUsage.map((row) => (
+                    <div className="list-item admin-usage-item" key={row.location}>
+                      <div className="admin-usage-location">{row.location}</div>
+                      <div className="admin-usage-total">
+                        {row.participant_uses} participant {row.participant_uses === 1 ? 'use' : 'uses'}
+                      </div>
+                      <div className="admin-usage-breakdown">
+                        <span>
+                          {row.tournament_count}{' '}
+                          {row.tournament_count === 1 ? 'tournament' : 'tournaments'}
+                        </span>
+                        <span>{row.claimed_uses} claimed</span>
+                        <span>{row.manual_uses} manual</span>
+                        <span>{row.distinct_claimed_accounts} distinct accounts</span>
+                      </div>
+                      <div className="muted admin-usage-latest">
+                        Latest tournament: {formatDate(row.latest_tournament_at) || '-'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="muted">No filled tournament rosters found yet.</div>
+              )}
+            </section>
+
+            <div className="admin-monitor-section-title">Recent Tournaments</div>
             {tournaments.length ? (
               tournaments.map((tournament) => (
                 <div
@@ -266,7 +337,11 @@ export default function AdminMonitorPage() {
                       {tournament.organizerEmail ? ` • ${tournament.organizerEmail}` : ''}
                     </div>
                     <div>
-                      <strong>Players:</strong> {tournament.claimedCount}/{tournament.player_count} claimed
+                      <strong>Location:</strong> {tournament.location || 'No location entered'}
+                    </div>
+                    <div>
+                      <strong>Participant uses:</strong> {tournament.participantUseCount}
+                      {' • '}{tournament.claimedCount} claimed • {tournament.manualCount} manual
                     </div>
                     <div>
                       <strong>Matches:</strong> {tournament.completeMatchCount}/{tournament.playableMatchCount || 0}{' '}

@@ -261,6 +261,18 @@ img {
 .training-notes-label { margin-top:14px; }
 .training-textarea { min-height:86px; resize:vertical; }
 .training-save { width:100%; margin-top:12px; }
+.training-partner-picker { margin-top:14px; padding:14px; border:1px solid var(--line); border-radius:14px; background:rgba(0,0,0,.12); }
+.training-partner-picker .card-subtitle { margin-bottom:10px; }
+.training-partner-chips { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+.training-partner-chips span { display:inline-flex; align-items:center; gap:7px; padding:7px 8px 7px 11px; border-radius:99px; background:rgba(255,203,5,.14); color:#ffe889; font-size:13px; font-weight:800; }
+.training-partner-chips button { width:22px; height:22px; padding:0; border:0; border-radius:50%; background:rgba(0,0,0,.24); color:inherit; font-size:16px; }
+.training-partner-results { display:grid; margin-top:6px; border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--panel); }
+.training-partner-results button { display:flex; justify-content:space-between; gap:12px; padding:12px; border:0; border-bottom:1px solid var(--line); background:transparent; color:var(--text); text-align:left; font:inherit; font-weight:750; }
+.training-partner-results button:last-child { border-bottom:0; }
+.training-partner-results span { color:var(--accent); }
+.training-search-empty { padding-top:9px; font-size:13px; }
+.training-invitation { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
+.training-invitation .muted { max-width:520px; margin-top:4px; font-size:13px; line-height:1.4; }
 .training-summary-grid { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:12px; margin-bottom:14px; }
 .training-summary-grid .card { margin-top:0; min-height:130px; display:flex; flex-direction:column; justify-content:center; }
 .training-total { background:linear-gradient(145deg, rgba(255,203,5,.18), rgba(255,255,255,.05)); }
@@ -291,6 +303,7 @@ img {
   .training-total { grid-column:1 / -1; }
   .goal-controls { grid-template-columns:1fr; }
   .tournament-reminder { align-items:flex-start; flex-direction:column; }
+  .training-invitation { align-items:flex-start; flex-direction:column; }
 }
 
 .grid {

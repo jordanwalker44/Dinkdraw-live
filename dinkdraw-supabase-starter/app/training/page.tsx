@@ -11,6 +11,17 @@ type SavedEntry = { id: string; entry_type: EntryType; duration_minutes: number;
 type Session = { id: string; activity_date: string; notes: string | null; source: 'manual' | 'dinkdraw_tournament'; tournament_id: string | null; training_entries: SavedEntry[] };
 type Goal = { goal_type: 'total_minutes' | 'drill_minutes' | 'play_minutes' | 'active_days'; target: number };
 type Tournament = { id: string; title: string; event_date: string | null; format: string };
+type PlayerProfile = { id: string; display_name: string | null; email: string | null };
+type InvitationSnapshot = Omit<SavedEntry, 'id'>;
+type TrainingInvitation = {
+  id: string;
+  source_session_id: string;
+  sender_id: string;
+  recipient_id: string;
+  activity_date: string;
+  entry_snapshot: InvitationSnapshot[];
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+};
 
 const FOCUS_AREAS = ['Serves', 'Returns', 'Drops', 'Drives', 'Resets', 'Dinks', 'Volleys', 'Speedups & counters', 'Defense', 'Footwork', 'Strategy', 'Conditioning', 'Other'];
 const PLAY_TYPES = ['Open play', 'Practice games', 'Tournament', 'League', 'Ladder', 'Club event', 'Lesson / coached play', 'Other'];
@@ -30,6 +41,14 @@ function formatMinutes(minutes: number) {
 }
 function displayDate(value: string) {
   return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+function invitationSummary(entries: InvitationSnapshot[]) {
+  return entries.map((entry) => {
+    const name = entry.entry_type === 'drill'
+      ? entry.custom_name || entry.focus_area
+      : `${entry.play_type}${entry.play_format ? ` · ${entry.play_format}` : ''}`;
+    return `${name} ${formatMinutes(entry.duration_minutes)}`;
+  }).join(', ');
 }
 function weekStart(date = new Date()) {
   const result = new Date(date); const day = result.getDay();
@@ -54,6 +73,12 @@ export default function TrainingPage() {
   const [message, setMessage] = useState('');
   const [goalType, setGoalType] = useState<Goal['goal_type']>('total_minutes');
   const [goalTarget, setGoalTarget] = useState('180');
+  const [invitations, setInvitations] = useState<TrainingInvitation[]>([]);
+  const [invitationNames, setInvitationNames] = useState<Record<string, string>>({});
+  const [partnerSearch, setPartnerSearch] = useState('');
+  const [partnerResults, setPartnerResults] = useState<PlayerProfile[]>([]);
+  const [selectedPartners, setSelectedPartners] = useState<PlayerProfile[]>([]);
+  const [acceptingInvitationId, setAcceptingInvitationId] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -61,17 +86,30 @@ export default function TrainingPage() {
     const user = authData.session?.user;
     if (!user) { setUserId(''); setLoading(false); return; }
     setUserId(user.id);
-    const [sessionsResult, goalResult, playerResult, dismissalResult] = await Promise.all([
+    const [sessionsResult, goalResult, playerResult, dismissalResult, invitationsResult] = await Promise.all([
       supabase.from('training_sessions').select('id, activity_date, notes, source, tournament_id, training_entries(id, entry_type, duration_minutes, focus_area, custom_name, play_type, play_format)').eq('user_id', user.id).order('activity_date', { ascending: false }).order('created_at', { ascending: false }),
       supabase.from('training_goals').select('goal_type, target').eq('user_id', user.id).maybeSingle(),
       supabase.from('tournament_players').select('tournament_id').eq('claimed_by_user_id', user.id),
       supabase.from('training_tournament_dismissals').select('tournament_id').eq('user_id', user.id),
+      supabase.from('training_partner_invitations').select('id, source_session_id, sender_id, recipient_id, activity_date, entry_snapshot, status').or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).eq('status', 'pending').order('created_at', { ascending: false }),
     ]);
     if (sessionsResult.error) setMessage(sessionsResult.error.message);
     const loadedSessions = (sessionsResult.data || []) as Session[];
     setSessions(loadedSessions);
     const loadedGoal = goalResult.data as Goal | null;
     setGoal(loadedGoal); if (loadedGoal) { setGoalType(loadedGoal.goal_type); setGoalTarget(String(loadedGoal.target)); }
+    const loadedInvitations = (invitationsResult.data || []) as TrainingInvitation[];
+    setInvitations(loadedInvitations);
+    const invitationUserIds = Array.from(new Set(loadedInvitations.flatMap((invite) => [invite.sender_id, invite.recipient_id])));
+    if (invitationUserIds.length) {
+      const { data: invitationProfiles } = await supabase.from('profiles').select('id, display_name, email').in('id', invitationUserIds);
+      setInvitationNames(Object.fromEntries(((invitationProfiles || []) as PlayerProfile[]).map((profile) => [
+        profile.id,
+        profile.display_name?.trim() || profile.email?.split('@')[0] || 'DinkDraw player',
+      ])));
+    } else {
+      setInvitationNames({});
+    }
     const tournamentIds = Array.from(new Set((playerResult.data || []).map((row) => row.tournament_id)));
     const ignored = new Set([...(dismissalResult.data || []).map((row) => row.tournament_id), ...loadedSessions.map((row) => row.tournament_id).filter(Boolean)]);
     if (tournamentIds.length) {
@@ -95,13 +133,47 @@ export default function TrainingPage() {
   const goalProgress = goal ? (goal.goal_type === 'drill_minutes' ? totals.drill : goal.goal_type === 'play_minutes' ? totals.play : goal.goal_type === 'active_days' ? totals.days : totals.total) : 0;
   const goalPercent = goal ? Math.min(100, Math.round((goalProgress / goal.target) * 100)) : 0;
 
-  function resetForm() { setEditingId(null); setDate(localDateValue()); setNotes(''); setEntries([makeEntry('drill')]); setTournamentId(null); setShowForm(false); }
+  function resetForm() {
+    setEditingId(null); setDate(localDateValue()); setNotes(''); setEntries([makeEntry('drill')]);
+    setTournamentId(null); setAcceptingInvitationId(null); setSelectedPartners([]);
+    setPartnerSearch(''); setPartnerResults([]); setShowForm(false);
+  }
   function updateEntry(id: string, values: Partial<DraftEntry>) { setEntries((current) => current.map((entry) => entry.id === id ? { ...entry, ...values } : entry)); }
   function beginTournament(tournament: Tournament) { setEditingId(null); setDate(tournament.event_date || localDateValue()); setNotes(tournament.title); setEntries([makeEntry('play', { playType: 'Tournament', playFormat: tournament.format === 'singles' ? 'Singles' : 'Doubles' })]); setTournamentId(tournament.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   function editSession(session: Session) {
     setEditingId(session.id); setDate(session.activity_date); setNotes(session.notes || ''); setTournamentId(session.tournament_id);
     setEntries(session.training_entries.map((entry) => makeEntry(entry.entry_type, { minutes: String(entry.duration_minutes), focusArea: entry.focus_area || 'Other', customName: entry.custom_name || '', playType: entry.play_type || 'Other', playFormat: entry.play_format || 'Other' })));
     setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  async function searchForPartners(value: string) {
+    setPartnerSearch(value);
+    const query = value.trim();
+    if (query.length < 2) { setPartnerResults([]); return; }
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, display_name, email')
+      .neq('id', userId)
+      .ilike('display_name', `%${query}%`)
+      .order('display_name')
+      .limit(8);
+    const selectedIds = new Set(selectedPartners.map((partner) => partner.id));
+    setPartnerResults(((data || []) as PlayerProfile[]).filter((profile) => !selectedIds.has(profile.id)));
+  }
+
+  function reviewInvitation(invitation: TrainingInvitation) {
+    resetForm();
+    setDate(invitation.activity_date);
+    setEntries(invitation.entry_snapshot.map((entry) => makeEntry(entry.entry_type, {
+      minutes: String(entry.duration_minutes),
+      focusArea: entry.focus_area || 'Other',
+      customName: entry.custom_name || '',
+      playType: entry.play_type || 'Other',
+      playFormat: entry.play_format || 'Other',
+    })));
+    setAcceptingInvitationId(invitation.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function saveSession() {
@@ -121,12 +193,56 @@ export default function TrainingPage() {
     }
     const rows = validEntries.map((entry) => ({ session_id: sessionId, user_id: userId, entry_type: entry.entryType, duration_minutes: Number(entry.minutes), focus_area: entry.entryType === 'drill' ? entry.focusArea : null, custom_name: entry.entryType === 'drill' ? entry.customName.trim() || null : null, play_type: entry.entryType === 'play' ? entry.playType : null, play_format: entry.entryType === 'play' ? entry.playFormat : null }));
     const { error } = await supabase.from('training_entries').insert(rows);
-    if (error) setMessage(error.message); else { resetForm(); setMessage('Activity saved.'); await load(); }
+    if (error) {
+      setMessage(error.message);
+    } else if (acceptingInvitationId) {
+      const { error: responseError } = await supabase.rpc('respond_to_training_partner_invitation', {
+        invitation_id: acceptingInvitationId,
+        response: 'accepted',
+        copied_session_id: sessionId,
+      });
+      if (responseError) {
+        if (sessionId) await supabase.from('training_sessions').delete().eq('id', sessionId);
+        setMessage(responseError.message);
+      } else {
+        resetForm(); setMessage('Training invitation added to your history.'); await load();
+      }
+    } else {
+      if (!editingId && !tournamentId && selectedPartners.length && sessionId) {
+        const snapshot = rows.map(({ session_id: _sessionId, user_id: _userId, ...entry }) => entry);
+        const { error: inviteError } = await supabase.from('training_partner_invitations').insert(
+          selectedPartners.map((partner) => ({
+            source_session_id: sessionId,
+            sender_id: userId,
+            recipient_id: partner.id,
+            activity_date: date,
+            entry_snapshot: snapshot,
+          }))
+        );
+        if (inviteError) {
+          setMessage(`Activity saved, but partner invitations could not be sent: ${inviteError.message}`);
+          setSaving(false);
+          await load();
+          return;
+        }
+      }
+      resetForm();
+      setMessage(selectedPartners.length ? 'Activity saved and training invitations sent.' : 'Activity saved.');
+      await load();
+    }
     setSaving(false);
   }
 
   async function deleteSession(id: string) { if (!window.confirm('Delete this activity?')) return; await supabase.from('training_sessions').delete().eq('id', id); await load(); }
   async function dismissTournament(id: string) { await supabase.from('training_tournament_dismissals').insert({ user_id: userId, tournament_id: id }); setPendingTournaments((current) => current.filter((row) => row.id !== id)); }
+  async function declineInvitation(id: string) {
+    const { error } = await supabase.rpc('respond_to_training_partner_invitation', { invitation_id: id, response: 'declined', copied_session_id: null });
+    if (error) setMessage(error.message); else { setMessage('Training invitation declined.'); await load(); }
+  }
+  async function cancelInvitation(id: string) {
+    const { error } = await supabase.rpc('cancel_training_partner_invitation', { invitation_id: id });
+    if (error) setMessage(error.message); else { setMessage('Training invitation cancelled.'); await load(); }
+  }
   async function saveGoal() {
     const target = Number(goalTarget); if (!userId || target <= 0) { setMessage('Enter a goal greater than zero.'); return; }
     const { error } = await supabase.from('training_goals').upsert({ user_id: userId, goal_type: goalType, target, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
@@ -141,7 +257,7 @@ export default function TrainingPage() {
     {message ? <div className="notice training-notice">{message}</div> : null}
 
     {showForm ? <div className="card training-form-card">
-      <div className="row-between"><div><div className="card-title">{editingId ? 'Edit activity' : tournamentId ? 'Add tournament play' : 'Log activity'}</div><div className="card-subtitle">Add as many drill and play entries as you need.</div></div><button className="icon-button" aria-label="Close" onClick={resetForm}>×</button></div>
+      <div className="row-between"><div><div className="card-title">{editingId ? 'Edit activity' : acceptingInvitationId ? 'Review training invitation' : tournamentId ? 'Add tournament play' : 'Log activity'}</div><div className="card-subtitle">{acceptingInvitationId ? 'Adjust anything that was different for you before adding it.' : 'Add as many drill and play entries as you need.'}</div></div><button className="icon-button" aria-label="Close" onClick={resetForm}>×</button></div>
       <label className="label">Date</label><input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
       <div className="training-entry-list">{entries.map((entry, index) => <div className={`training-entry ${entry.entryType}`} key={entry.id}>
         <div className="row-between"><strong>{entry.entryType === 'drill' ? 'Drill' : 'Play'} {entries.length > 1 ? index + 1 : ''}</strong><button className="text-button danger" onClick={() => setEntries((current) => current.filter((item) => item.id !== entry.id))}>Remove</button></div>
@@ -150,8 +266,15 @@ export default function TrainingPage() {
         <label className="label">Time spent (minutes)</label><input className="input" type="number" min="1" max="1440" inputMode="numeric" value={entry.minutes} onChange={(e) => updateEntry(entry.id, { minutes: e.target.value })} placeholder="45" />
       </div>)}</div>
       <div className="two-col"><button className="button secondary" onClick={() => setEntries((current) => [...current, makeEntry('drill')])}>+ Add drill</button><button className="button secondary" onClick={() => setEntries((current) => [...current, makeEntry('play')])}>+ Add play</button></div>
-      <label className="label training-notes-label">Session notes (optional)</label><textarea className="input training-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What clicked? What should you work on next?" />
-      <button className="button primary training-save" disabled={saving} onClick={saveSession}>{saving ? 'Saving…' : 'Save activity'}</button>
+      {!editingId && !tournamentId && !acceptingInvitationId ? <div className="training-partner-picker">
+        <label className="label">Training partners (optional)</label>
+        <div className="card-subtitle">They can review these details and add an editable copy to their own history. Your notes stay private.</div>
+        {selectedPartners.length ? <div className="training-partner-chips">{selectedPartners.map((partner) => <span key={partner.id}>{partner.display_name || partner.email?.split('@')[0] || 'DinkDraw player'}<button aria-label={`Remove ${partner.display_name || 'partner'}`} onClick={() => setSelectedPartners((current) => current.filter((item) => item.id !== partner.id))}>×</button></span>)}</div> : null}
+        <input className="input" value={partnerSearch} onChange={(e) => void searchForPartners(e.target.value)} placeholder="Search DinkDraw players by name" />
+        {partnerResults.length ? <div className="training-partner-results">{partnerResults.map((partner) => <button key={partner.id} onClick={() => { setSelectedPartners((current) => [...current, partner]); setPartnerResults((current) => current.filter((item) => item.id !== partner.id)); setPartnerSearch(''); }}>{partner.display_name || partner.email?.split('@')[0] || 'DinkDraw player'}<span>Add</span></button>)}</div> : partnerSearch.trim().length >= 2 ? <div className="muted training-search-empty">No matching registered players.</div> : null}
+      </div> : null}
+      <label className="label training-notes-label">Private session notes (optional)</label><textarea className="input training-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What clicked? What should you work on next?" />
+      <button className="button primary training-save" disabled={saving} onClick={saveSession}>{saving ? 'Saving…' : acceptingInvitationId ? 'Add to my training history' : 'Save activity'}</button>
     </div> : null}
 
     <section className="training-summary-grid"><div className="card training-total"><span>This week</span><strong>{formatMinutes(totals.total)}</strong><small>{totals.days} active {totals.days === 1 ? 'day' : 'days'}</small></div><div className="card"><span className="summary-label drill-dot">Drilling</span><strong className="summary-number">{formatMinutes(totals.drill)}</strong></div><div className="card"><span className="summary-label play-dot">Playing</span><strong className="summary-number">{formatMinutes(totals.play)}</strong></div></section>
@@ -160,6 +283,13 @@ export default function TrainingPage() {
       {goal ? <><div className="goal-progress"><span style={{ width: `${goalPercent}%` }} /></div><div className="muted goal-copy">{goalProgress} of {goal.target} {goal.goal_type === 'active_days' ? 'days' : 'minutes'}</div></> : null}
       <div className="goal-controls"><select className="input" value={goalType} onChange={(e) => setGoalType(e.target.value as Goal['goal_type'])}><option value="total_minutes">Total activity minutes</option><option value="drill_minutes">Drilling minutes</option><option value="play_minutes">Playing minutes</option><option value="active_days">Active days</option></select><input className="input" type="number" min="1" value={goalTarget} onChange={(e) => setGoalTarget(e.target.value)} /><button className="button secondary" onClick={saveGoal}>{goal ? 'Update' : 'Set goal'}</button></div>
     </div>
+
+    {invitations.length ? <div className="card"><div className="card-title">Training invitations</div><div className="card-subtitle">Shared activity is never added until the invited player reviews it.</div>
+      {invitations.map((invitation) => {
+        const incoming = invitation.recipient_id === userId;
+        return <div className="training-invitation" key={invitation.id}><div><strong>{incoming ? `${invitationNames[invitation.sender_id] || 'A DinkDraw player'} trained with you` : `Waiting for ${invitationNames[invitation.recipient_id] || 'your training partner'}`}</strong><div className="muted">{displayDate(invitation.activity_date)} · {invitationSummary(invitation.entry_snapshot)}</div></div>{incoming ? <div className="row"><button className="button primary compact" onClick={() => reviewInvitation(invitation)}>Review &amp; add</button><button className="text-button" onClick={() => declineInvitation(invitation.id)}>Decline</button></div> : <button className="text-button danger" onClick={() => cancelInvitation(invitation.id)}>Cancel invitation</button>}</div>;
+      })}
+    </div> : null}
 
     {pendingTournaments.length ? <div className="card"><div className="card-title">Needs your input</div><div className="card-subtitle">Add the time you actually played—not the tournament’s total duration.</div>{pendingTournaments.map((tournament) => <div className="tournament-reminder" key={tournament.id}><div><strong>{tournament.title}</strong><div className="muted">{tournament.event_date ? displayDate(tournament.event_date) : 'Completed tournament'}</div></div><div className="row"><button className="button primary compact" onClick={() => beginTournament(tournament)}>Enter time</button><button className="text-button" onClick={() => dismissTournament(tournament.id)}>Dismiss</button></div></div>)}</div> : null}
 

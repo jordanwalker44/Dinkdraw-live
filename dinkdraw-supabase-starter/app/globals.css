@@ -271,6 +271,7 @@ img {
 .training-partner-results button:last-child { border-bottom:0; }
 .training-partner-results span { color:var(--accent); }
 .training-search-empty { padding-top:9px; font-size:13px; }
+.training-search-error { padding-top:9px; color:#ff9b9b; font-size:13px; font-weight:700; }
 .training-invitation { display:flex; justify-content:space-between; align-items:center; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
 .training-invitation .muted { max-width:520px; margin-top:4px; font-size:13px; line-height:1.4; }
 .training-summary-grid { display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:12px; margin-bottom:14px; }

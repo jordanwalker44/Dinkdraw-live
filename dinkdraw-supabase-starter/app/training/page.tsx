@@ -11,7 +11,7 @@ type SavedEntry = { id: string; entry_type: EntryType; duration_minutes: number;
 type Session = { id: string; activity_date: string; notes: string | null; source: 'manual' | 'dinkdraw_tournament'; tournament_id: string | null; training_entries: SavedEntry[] };
 type Goal = { goal_type: 'total_minutes' | 'drill_minutes' | 'play_minutes' | 'active_days'; target: number };
 type Tournament = { id: string; title: string; event_date: string | null; format: string };
-type PlayerProfile = { id: string; display_name: string | null; email: string | null };
+type PlayerProfile = { id: string; display_name: string | null; email?: string | null };
 type InvitationSnapshot = Omit<SavedEntry, 'id'>;
 type TrainingInvitation = {
   id: string;
@@ -77,6 +77,7 @@ export default function TrainingPage() {
   const [invitationNames, setInvitationNames] = useState<Record<string, string>>({});
   const [partnerSearch, setPartnerSearch] = useState('');
   const [partnerResults, setPartnerResults] = useState<PlayerProfile[]>([]);
+  const [partnerSearchError, setPartnerSearchError] = useState('');
   const [selectedPartners, setSelectedPartners] = useState<PlayerProfile[]>([]);
   const [acceptingInvitationId, setAcceptingInvitationId] = useState<string | null>(null);
 
@@ -136,7 +137,7 @@ export default function TrainingPage() {
   function resetForm() {
     setEditingId(null); setDate(localDateValue()); setNotes(''); setEntries([makeEntry('drill')]);
     setTournamentId(null); setAcceptingInvitationId(null); setSelectedPartners([]);
-    setPartnerSearch(''); setPartnerResults([]); setShowForm(false);
+    setPartnerSearch(''); setPartnerResults([]); setPartnerSearchError(''); setShowForm(false);
   }
   function updateEntry(id: string, values: Partial<DraftEntry>) { setEntries((current) => current.map((entry) => entry.id === id ? { ...entry, ...values } : entry)); }
   function beginTournament(tournament: Tournament) { setEditingId(null); setDate(tournament.event_date || localDateValue()); setNotes(tournament.title); setEntries([makeEntry('play', { playType: 'Tournament', playFormat: tournament.format === 'singles' ? 'Singles' : 'Doubles' })]); setTournamentId(tournament.id); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -148,15 +149,15 @@ export default function TrainingPage() {
 
   async function searchForPartners(value: string) {
     setPartnerSearch(value);
+    setPartnerSearchError('');
     const query = value.trim();
     if (query.length < 2) { setPartnerResults([]); return; }
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, display_name, email')
-      .neq('id', userId)
-      .ilike('display_name', `%${query}%`)
-      .order('display_name')
-      .limit(8);
+    const { data, error } = await supabase.rpc('search_training_partners', { search_term: query });
+    if (error) {
+      setPartnerResults([]);
+      setPartnerSearchError('Player search is temporarily unavailable. Please try again.');
+      return;
+    }
     const selectedIds = new Set(selectedPartners.map((partner) => partner.id));
     setPartnerResults(((data || []) as PlayerProfile[]).filter((profile) => !selectedIds.has(profile.id)));
   }
@@ -271,7 +272,7 @@ export default function TrainingPage() {
         <div className="card-subtitle">They can review these details and add an editable copy to their own history. Your notes stay private.</div>
         {selectedPartners.length ? <div className="training-partner-chips">{selectedPartners.map((partner) => <span key={partner.id}>{partner.display_name || partner.email?.split('@')[0] || 'DinkDraw player'}<button aria-label={`Remove ${partner.display_name || 'partner'}`} onClick={() => setSelectedPartners((current) => current.filter((item) => item.id !== partner.id))}>×</button></span>)}</div> : null}
         <input className="input" value={partnerSearch} onChange={(e) => void searchForPartners(e.target.value)} placeholder="Search DinkDraw players by name" />
-        {partnerResults.length ? <div className="training-partner-results">{partnerResults.map((partner) => <button key={partner.id} onClick={() => { setSelectedPartners((current) => [...current, partner]); setPartnerResults((current) => current.filter((item) => item.id !== partner.id)); setPartnerSearch(''); }}>{partner.display_name || partner.email?.split('@')[0] || 'DinkDraw player'}<span>Add</span></button>)}</div> : partnerSearch.trim().length >= 2 ? <div className="muted training-search-empty">No matching registered players.</div> : null}
+        {partnerResults.length ? <div className="training-partner-results">{partnerResults.map((partner) => <button key={partner.id} onClick={() => { setSelectedPartners((current) => [...current, partner]); setPartnerResults((current) => current.filter((item) => item.id !== partner.id)); setPartnerSearch(''); }}>{partner.display_name || 'DinkDraw player'}<span>Add</span></button>)}</div> : partnerSearchError ? <div className="training-search-error">{partnerSearchError}</div> : partnerSearch.trim().length >= 2 ? <div className="muted training-search-empty">No matching registered players.</div> : null}
       </div> : null}
       <label className="label training-notes-label">Private session notes (optional)</label><textarea className="input training-textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="What clicked? What should you work on next?" />
       <button className="button primary training-save" disabled={saving} onClick={saveSession}>{saving ? 'Saving…' : acceptingInvitationId ? 'Add to my training history' : 'Save activity'}</button>

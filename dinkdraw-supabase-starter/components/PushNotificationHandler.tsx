@@ -75,7 +75,10 @@ export default function PushNotificationHandler() {
       const tapListener = await PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
         const url = event.notification.data?.url;
 
-        if (typeof url === 'string' && url.startsWith('/tournament')) {
+        if (
+          typeof url === 'string' &&
+          (url.startsWith('/tournament') || url === '/training')
+        ) {
           router.push(url);
         }
       });

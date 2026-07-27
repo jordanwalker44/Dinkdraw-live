@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../../components/TopNav';
 import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
+import { sendTrainingPartnerInvitationPush } from '../../lib/tournament-push';
 
 type EntryType = 'drill' | 'play';
 type DraftEntry = { id: string; entryType: EntryType; minutes: string; focusArea: string; customName: string; playType: string; playFormat: string };
@@ -211,21 +212,28 @@ export default function TrainingPage() {
     } else {
       if (!editingId && !tournamentId && selectedPartners.length && sessionId) {
         const snapshot = rows.map(({ session_id: _sessionId, user_id: _userId, ...entry }) => entry);
-        const { error: inviteError } = await supabase.from('training_partner_invitations').insert(
-          selectedPartners.map((partner) => ({
-            source_session_id: sessionId,
-            sender_id: userId,
-            recipient_id: partner.id,
-            activity_date: date,
-            entry_snapshot: snapshot,
-          }))
-        );
+        const { data: createdInvitations, error: inviteError } = await supabase
+          .from('training_partner_invitations')
+          .insert(
+            selectedPartners.map((partner) => ({
+              source_session_id: sessionId,
+              sender_id: userId,
+              recipient_id: partner.id,
+              activity_date: date,
+              entry_snapshot: snapshot,
+            }))
+          )
+          .select('id');
         if (inviteError) {
           setMessage(`Activity saved, but partner invitations could not be sent: ${inviteError.message}`);
           setSaving(false);
           await load();
           return;
         }
+        void sendTrainingPartnerInvitationPush(
+          supabase,
+          (createdInvitations || []).map((invitation) => invitation.id)
+        );
       }
       resetForm();
       setMessage(selectedPartners.length ? 'Activity saved and training invitations sent.' : 'Activity saved.');

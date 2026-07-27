@@ -23,6 +23,10 @@ type TournamentPushEvent =
       eventType: 'announcement_posted';
       tournamentId: string;
       messageId: string;
+    }
+  | {
+      eventType: 'training_partner_invited';
+      invitationIds: string[];
     };
 
 export async function sendTournamentPushEvent(
@@ -43,4 +47,15 @@ export async function sendTournamentPushEvent(
   } catch (error) {
     console.warn('Tournament push notification failed', error);
   }
+}
+
+export async function sendTrainingPartnerInvitationPush(
+  supabase: SupabaseClient,
+  invitationIds: string[]
+) {
+  if (!invitationIds.length) return;
+  await sendTournamentPushEvent(supabase, {
+    eventType: 'training_partner_invited',
+    invitationIds,
+  });
 }

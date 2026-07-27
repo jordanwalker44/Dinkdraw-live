@@ -23,6 +23,10 @@ type PushEvent =
       eventType: 'announcement_posted';
       tournamentId: string;
       messageId?: string;
+    }
+  | {
+      eventType: 'training_partner_invited';
+      invitationIds?: string[];
     };
 
 type Tournament = {
@@ -79,6 +83,14 @@ type Notification = {
 type ProfileRow = {
   id: string;
   email: string | null;
+  display_name?: string | null;
+};
+
+type TrainingPartnerInvitation = {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  activity_date: string;
 };
 
 type AnnouncementMessage = {
@@ -640,6 +652,87 @@ async function buildAnnouncementNotifications(
   return { notifications, claimedMessageId: message.id };
 }
 
+async function claimTrainingInvitationNotifications(
+  adminClient: ReturnType<typeof createClient>,
+  event: Extract<PushEvent, { eventType: 'training_partner_invited' }>,
+  userId: string,
+) {
+  const invitationIds = Array.from(new Set(event.invitationIds || [])).slice(0, 10);
+  if (!invitationIds.length) throw new Error('Missing invitationIds');
+
+  const claimedAt = new Date().toISOString();
+  const { data, error } = await adminClient
+    .from('training_partner_invitations')
+    .update({ push_claimed_at: claimedAt })
+    .in('id', invitationIds)
+    .eq('sender_id', userId)
+    .eq('status', 'pending')
+    .is('push_claimed_at', null)
+    .select('id, sender_id, recipient_id, activity_date');
+
+  if (error) throw error;
+
+  const invitations = (data || []) as TrainingPartnerInvitation[];
+  if (!invitations.length) {
+    console.log('send-tournament-push training invitations skipped: invalid or already claimed', {
+      requesterUserId: userId,
+      requestedInvitationIds: invitationIds,
+    });
+    return { invitations, notifications: [] as Notification[] };
+  }
+
+  const { data: senderProfile, error: profileError } = await adminClient
+    .from('profiles')
+    .select('id, display_name, email')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+
+  const profile = senderProfile as ProfileRow | null;
+  const senderName =
+    profile?.display_name?.trim() ||
+    profile?.email?.split('@')[0] ||
+    'A DinkDraw player';
+
+  const notifications = invitations.map((invitation) => {
+    const dateLabel = new Date(`${invitation.activity_date}T12:00:00Z`).toLocaleDateString(
+      'en-US',
+      { month: 'short', day: 'numeric', timeZone: 'UTC' },
+    );
+
+    return {
+      userId: invitation.recipient_id,
+      title: 'Training invitation',
+      body: `${senderName} said you trained together on ${dateLabel}. Review and add it to your training time.`,
+      url: '/training',
+    };
+  });
+
+  return { invitations, notifications };
+}
+
+async function completeTrainingInvitationPushes(
+  adminClient: ReturnType<typeof createClient>,
+  invitations: TrainingPartnerInvitation[],
+  results: Array<{ userId: string; sent: boolean }>,
+) {
+  const resultByUserId = new Map(results.map((result) => [result.userId, result]));
+  const completedAt = new Date().toISOString();
+
+  for (const invitation of invitations) {
+    const { error } = await adminClient
+      .from('training_partner_invitations')
+      .update({
+        push_completed_at: completedAt,
+        push_sent: resultByUserId.get(invitation.recipient_id)?.sent === true,
+      })
+      .eq('id', invitation.id);
+
+    if (error) throw error;
+  }
+}
+
 async function sendNotifications(adminClient: ReturnType<typeof createClient>, notifications: Notification[]) {
   const uniqueNotifications = Array.from(
     new Map(notifications.map((notification) => [notification.userId, notification])).values(),
@@ -753,6 +846,26 @@ Deno.serve(async (req) => {
     }
 
     const event = (await req.json()) as PushEvent;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    if (event.eventType === 'training_partner_invited') {
+      const delivery = await claimTrainingInvitationNotifications(adminClient, event, user.id);
+      const results = await sendNotifications(adminClient, delivery.notifications);
+      await completeTrainingInvitationPushes(adminClient, delivery.invitations, results);
+
+      console.log('send-tournament-push training invitation results', {
+        requesterUserId: user.id,
+        requestedNotificationCount: delivery.notifications.length,
+        sentCount: results.filter((result) => result.sent).length,
+        failedCount: results.filter((result) => !result.sent).length,
+        results,
+      });
+
+      return new Response(
+        JSON.stringify({ ok: true, requested: delivery.notifications.length, results }),
+        { headers: { ...corsHeaders, 'content-type': 'application/json' } },
+      );
+    }
 
     if (!event.tournamentId) {
       return new Response(JSON.stringify({ error: 'Missing tournamentId' }), {
@@ -761,7 +874,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { tournament, players, matches, playersById } = await loadTournamentContext(
       adminClient,
       event.tournamentId,

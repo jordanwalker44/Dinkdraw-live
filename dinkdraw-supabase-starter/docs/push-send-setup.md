@@ -44,7 +44,11 @@ From this folder:
 ```bash
 npx supabase functions deploy send-test-push
 npx supabase functions deploy send-league-push
+npx supabase functions deploy send-tournament-push
 ```
+
+`send-tournament-push` also delivers training-partner invitations. Keep it deployed
+with the tournament notification updates so both features use the same APNs secrets.
 
 ## Test
 

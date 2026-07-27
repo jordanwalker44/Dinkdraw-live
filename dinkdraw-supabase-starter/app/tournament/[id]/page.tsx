@@ -2707,6 +2707,28 @@ function scheduleTournamentRefresh(currentUserId?: string) {
     void loadTournamentData(currentUserId);
   }, 400);
 }
+
+function nowForScoreSubmitTiming() {
+  if (typeof performance === 'undefined') return Date.now();
+  return performance.now();
+}
+
+function scoreSubmitElapsedMs(startedAt: number) {
+  return Math.round(nowForScoreSubmitTiming() - startedAt);
+}
+
+function logScoreSubmitTiming(
+  label: string,
+  startedAt: number,
+  details: Record<string, unknown> = {}
+) {
+  if (typeof window === 'undefined') return;
+
+  console.info('[DinkDraw score submit]', label, {
+    durationMs: scoreSubmitElapsedMs(startedAt),
+    ...details,
+  });
+}
   const [submittingScoreId, setSubmittingScoreId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
@@ -4633,6 +4655,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
     const currentMatch = matches.find((m) => m.id === matchId);
     if (!currentMatch) return;
+    const submitStartedAt = nowForScoreSubmitTiming();
 
     const optimisticMatchWithSubmittedGame: Match = {
       ...currentMatch,
@@ -4714,6 +4737,8 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
       }
     }
 
+    const databaseStartedAt = nowForScoreSubmitTiming();
+
     const { error, count } = await supabase
       .from('matches')
       .update(updateData, { count: 'exact' })
@@ -4731,10 +4756,17 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
       return;
     }
 
+    logScoreSubmitTiming('best-of-3 game saved', submitStartedAt, {
+      databaseMs: scoreSubmitElapsedMs(databaseStartedAt),
+      game,
+      matchId,
+      seriesComplete: seriesNowComplete,
+    });
+
     pendingScoreSubmitIdsRef.current.delete(matchId);
     setMatches(optimisticMatches);
     setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
-    await loadTournamentData(userId);
+    scheduleTournamentRefresh(userId);
 
     if (seriesNowComplete) {
       if (tournament) {
@@ -4931,6 +4963,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
   const existingMatch = matches.find((m) => m.id === matchId);
   const isEditingCompletedMatch = !!existingMatch?.is_complete;
 
+  const submitStartedAt = nowForScoreSubmitTiming();
   const previousMatches = matches;
 
   const optimisticMatches = matches.map((m) =>
@@ -4973,6 +5006,8 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   const nextRound = getNextIncompleteRound(optimisticMatches);
 
+  const databaseStartedAt = nowForScoreSubmitTiming();
+
   const { error, count } = await supabase
     .from('matches')
     .update({
@@ -4994,12 +5029,19 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
     return;
   }
 
+  logScoreSubmitTiming('match score saved', submitStartedAt, {
+    databaseMs: scoreSubmitElapsedMs(databaseStartedAt),
+    isEditingCompletedMatch,
+    isFinalScore: !nextRound,
+    matchId,
+  });
+
   pendingScoreSubmitIdsRef.current.delete(matchId);
   setMatches(optimisticMatches);
   setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
 
   if (isEditingCompletedMatch) {
-    await loadTournamentData(userId);
+    scheduleTournamentRefresh(userId);
     setMessage('Score updated successfully.');
     return;
   }

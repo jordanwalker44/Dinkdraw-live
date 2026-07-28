@@ -20,46 +20,41 @@ export function buildCreamOfTheCropStageSchedule(
 
     if (!p1 || !p2 || !p3 || !p4) continue;
 
-    output.push({
-      round_number: startingRoundNumber,
-      court_number: courtNumber,
-      court_label: null,
-      team_a_player_1_id: p1.id,
-      team_a_player_2_id: p2.id,
-      team_b_player_1_id: p3.id,
-      team_b_player_2_id: p4.id,
-      team_a_score: null,
-      team_b_score: null,
-      is_bye: false,
-      is_complete: false,
-    });
+    const playerIds = [p1.id, p2.id, p3.id, p4.id];
+    const omittedFirstIndex = courtIndex % playerIds.length;
+    const firstTeamPairsByOmittedIndex: Array<Array<[number, number]>> = [
+      [[2, 3], [1, 3], [1, 2]],
+      [[2, 3], [0, 2], [0, 3]],
+      [[0, 1], [1, 3], [0, 3]],
+      [[0, 1], [0, 2], [1, 2]],
+    ];
+    const allRoundPairs: Array<[[number, number], [number, number]]> = [
+      [[0, 1], [2, 3]],
+      [[0, 2], [1, 3]],
+      [[0, 3], [1, 2]],
+    ];
+    const firstTeamPairs = firstTeamPairsByOmittedIndex[omittedFirstIndex];
 
-    output.push({
-      round_number: startingRoundNumber + 1,
-      court_number: courtNumber,
-      court_label: null,
-      team_a_player_1_id: p1.id,
-      team_a_player_2_id: p3.id,
-      team_b_player_1_id: p2.id,
-      team_b_player_2_id: p4.id,
-      team_a_score: null,
-      team_b_score: null,
-      is_bye: false,
-      is_complete: false,
-    });
+    allRoundPairs.forEach(([pairA, pairB], roundOffset) => {
+      const firstPair = firstTeamPairs[roundOffset];
+      const firstKey = [...firstPair].sort().join('|');
+      const pairAKey = [...pairA].sort().join('|');
+      const teamA = firstKey === pairAKey ? pairA : pairB;
+      const teamB = firstKey === pairAKey ? pairB : pairA;
 
-    output.push({
-      round_number: startingRoundNumber + 2,
-      court_number: courtNumber,
-      court_label: null,
-      team_a_player_1_id: p1.id,
-      team_a_player_2_id: p4.id,
-      team_b_player_1_id: p2.id,
-      team_b_player_2_id: p3.id,
-      team_a_score: null,
-      team_b_score: null,
-      is_bye: false,
-      is_complete: false,
+      output.push({
+        round_number: startingRoundNumber + roundOffset,
+        court_number: courtNumber,
+        court_label: null,
+        team_a_player_1_id: playerIds[teamA[0]],
+        team_a_player_2_id: playerIds[teamA[1]],
+        team_b_player_1_id: playerIds[teamB[0]],
+        team_b_player_2_id: playerIds[teamB[1]],
+        team_a_score: null,
+        team_b_score: null,
+        is_bye: false,
+        is_complete: false,
+      });
     });
   }
 

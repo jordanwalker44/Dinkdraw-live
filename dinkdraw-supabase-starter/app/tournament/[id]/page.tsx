@@ -1319,7 +1319,7 @@ function scoreFirstTwosomeBalance(counts: Map<string, number>) {
     0
   );
 
-  return (max - min) * 100000 + variancePenalty;
+  return (max - min) * 100000 + variancePenalty + max * 100;
 }
 
 function orientDoublesServingSides(
@@ -1394,6 +1394,72 @@ function balanceDoublesServingSidesInSchedule(
   rows: ScheduleRow[],
   playerIds: string[]
 ) {
+  const orientableIndexes = rows
+    .map((row, index) => ({ row, index }))
+    .filter(
+      ({ row }) =>
+        !row.is_bye &&
+        !!row.team_a_player_1_id &&
+        !!row.team_a_player_2_id &&
+        !!row.team_b_player_1_id &&
+        !!row.team_b_player_2_id
+    )
+    .map(({ index }) => index);
+
+  if (orientableIndexes.length > 0 && orientableIndexes.length <= 18) {
+    let bestRows = rows;
+    let bestScore = scoreFirstTwosomeSchedule(rows, playerIds);
+
+    function increment(counts: Map<string, number>, playerId: string | null) {
+      if (!playerId) return;
+      counts.set(playerId, (counts.get(playerId) ?? 0) + 1);
+    }
+
+    function search(
+      orientationIndex: number,
+      currentRows: ScheduleRow[],
+      counts: Map<string, number>
+    ) {
+      if (orientationIndex >= orientableIndexes.length) {
+        const score = scoreFirstTwosomeBalance(counts);
+
+        if (score < bestScore) {
+          bestScore = score;
+          bestRows = currentRows;
+        }
+
+        return;
+      }
+
+      const rowIndex = orientableIndexes[orientationIndex];
+      const row = currentRows[rowIndex];
+
+      const normalCounts = new Map(counts);
+      increment(normalCounts, row.team_a_player_1_id);
+      increment(normalCounts, row.team_a_player_2_id);
+      search(orientationIndex + 1, currentRows, normalCounts);
+
+      const flippedRow = {
+        ...row,
+        team_a_player_1_id: row.team_b_player_1_id,
+        team_a_player_2_id: row.team_b_player_2_id,
+        team_b_player_1_id: row.team_a_player_1_id,
+        team_b_player_2_id: row.team_a_player_2_id,
+      };
+      const flippedRows = currentRows.map((candidate, candidateIndex) =>
+        candidateIndex === rowIndex ? flippedRow : candidate
+      );
+      const flippedCounts = new Map(counts);
+      increment(flippedCounts, flippedRow.team_a_player_1_id);
+      increment(flippedCounts, flippedRow.team_a_player_2_id);
+      search(orientationIndex + 1, flippedRows, flippedCounts);
+    }
+
+    search(0, rows, new Map<string, number>(playerIds.map((id) => [id, 0])));
+
+    return bestRows;
+  }
+
   let balancedRows = [...rows];
   let bestScore = scoreFirstTwosomeSchedule(balancedRows, playerIds);
   let improved = true;

@@ -144,6 +144,10 @@ function reminderBody(minutes: number) {
   return 'Tournament starts in about 5 minutes. Open DinkDraw so you are ready when play begins.';
 }
 
+function shouldSkipTournamentStatus(status: string) {
+  return ['completed', 'cancelled', 'archived'].includes(status);
+}
+
 async function sendNotifications(adminClient: ReturnType<typeof createClient>, notifications: Notification[]) {
   const unique = Array.from(new Map(notifications.map((item) => [item.userId, item])).values());
   if (!unique.length) return [];
@@ -225,6 +229,11 @@ Deno.serve(async (req) => {
     const apikeyHeader = req.headers.get('apikey') || '';
 
     if (authHeader !== `Bearer ${serviceRoleKey}` && apikeyHeader !== serviceRoleKey) {
+      console.error('send-tournament-reminders unauthorized request', {
+        hasAuthorization: Boolean(authHeader),
+        hasApikey: Boolean(apikeyHeader),
+      });
+
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'content-type': 'application/json' },
@@ -253,6 +262,11 @@ Deno.serve(async (req) => {
     const reminders = (data || []) as ReminderRow[];
     const outcomes = [];
 
+    console.log('send-tournament-reminders due reminder lookup complete', {
+      checkedCount: reminders.length,
+      now: now.toISOString(),
+    });
+
     for (const reminder of reminders) {
       const tournament = reminder.tournaments;
       const deliveryStartedAt = new Date().toISOString();
@@ -269,7 +283,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      if (tournament.status !== 'draft') {
+      if (shouldSkipTournamentStatus(tournament.status)) {
         await skipReminder(adminClient, reminder.id, `Tournament status is ${tournament.status}`);
         outcomes.push({
           reminderId: reminder.id,

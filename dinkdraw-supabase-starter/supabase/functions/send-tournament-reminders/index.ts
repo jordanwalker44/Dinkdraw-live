@@ -37,7 +37,7 @@ type Notification = {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
 };
 
 function requiredEnv(name: string) {
@@ -227,11 +227,17 @@ Deno.serve(async (req) => {
     const serviceRoleKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
     const authHeader = req.headers.get('Authorization') || '';
     const apikeyHeader = req.headers.get('apikey') || '';
+    const cronSecret = Deno.env.get('REMINDER_CRON_SECRET') || '';
+    const cronSecretHeader = req.headers.get('x-cron-secret') || '';
+    const isServiceRoleRequest = authHeader === `Bearer ${serviceRoleKey}` || apikeyHeader === serviceRoleKey;
+    const isCronSecretRequest = Boolean(cronSecret) && cronSecretHeader === cronSecret;
 
-    if (authHeader !== `Bearer ${serviceRoleKey}` && apikeyHeader !== serviceRoleKey) {
+    if (!isServiceRoleRequest && !isCronSecretRequest) {
       console.error('send-tournament-reminders unauthorized request', {
         hasAuthorization: Boolean(authHeader),
         hasApikey: Boolean(apikeyHeader),
+        hasCronSecret: Boolean(cronSecretHeader),
+        cronSecretConfigured: Boolean(cronSecret),
       });
 
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {

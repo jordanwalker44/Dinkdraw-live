@@ -96,7 +96,12 @@ export default function MyStatsPage() {
       setUserId(user.id);
 
       const [userStatResult, profileResult] = await Promise.all([
-        supabase.from('player_match_stats').select('*').eq('user_id', user.id).order('played_at', { ascending: false }),
+        supabase
+          .from('player_match_stats')
+          .select('*, tournaments!inner(exclude_from_stats)')
+          .eq('user_id', user.id)
+          .eq('tournaments.exclude_from_stats', false)
+          .order('played_at', { ascending: false }),
         supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
       ]);
 

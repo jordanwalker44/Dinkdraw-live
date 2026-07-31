@@ -50,7 +50,8 @@ if (!user) {
 
 const { data: myStatsData, error: myStatsError } = await supabase
   .from('player_match_stats')
-  .select('tournament_id')
+  .select('tournament_id, tournaments!inner(exclude_from_stats)')
+  .eq('tournaments.exclude_from_stats', false)
   .eq('user_id', user.id);
 
 if (myStatsError) {
@@ -73,7 +74,8 @@ if (connectedTournamentIds.length === 0) {
 
 const { data: statsData, error: statsError } = await supabase
   .from('player_match_stats')
-  .select('*')
+  .select('*, tournaments!inner(exclude_from_stats)')
+  .eq('tournaments.exclude_from_stats', false)
   .in('tournament_id', connectedTournamentIds);
 
       if (statsError) {

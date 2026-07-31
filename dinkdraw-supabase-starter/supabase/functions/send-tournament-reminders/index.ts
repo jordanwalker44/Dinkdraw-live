@@ -259,6 +259,7 @@ Deno.serve(async (req) => {
       .is('sent_at', null)
       .is('skipped_at', null)
       .lte('scheduled_for', now.toISOString())
+      .gte('scheduled_for', staleBefore)
       .or(`delivery_started_at.is.null,delivery_started_at.lt.${claimStaleBefore}`)
       .order('scheduled_for', { ascending: true })
       .limit(25);
@@ -271,6 +272,7 @@ Deno.serve(async (req) => {
     console.log('send-tournament-reminders due reminder lookup complete', {
       checkedCount: reminders.length,
       now: now.toISOString(),
+      staleBefore,
     });
 
     for (const reminder of reminders) {

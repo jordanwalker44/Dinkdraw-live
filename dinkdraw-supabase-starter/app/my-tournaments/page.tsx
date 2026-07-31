@@ -16,6 +16,7 @@ type Tournament = {
   event_date?: string | null;
   event_time?: string | null;
   location?: string | null;
+  exclude_from_stats?: boolean;
 };
 
 type PlayerSlot = {
@@ -318,6 +319,9 @@ export default function MyTournamentsPage() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                   <span className="tag green">Organizer</span>
+                  {tournament.exclude_from_stats && (
+                    <span className="tag">Excluded from stats</span>
+                  )}
                   <span className={statusTagClass(tournament.status)}>
                     {statusLabel(tournament.status)}
                   </span>
@@ -355,6 +359,9 @@ export default function MyTournamentsPage() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                 <span className="tag green">Played</span>
+                {tournament.exclude_from_stats && (
+                  <span className="tag">Excluded from stats</span>
+                )}
                 <span className={statusTagClass(tournament.status)}>
                   {statusLabel(tournament.status)}
                 </span>

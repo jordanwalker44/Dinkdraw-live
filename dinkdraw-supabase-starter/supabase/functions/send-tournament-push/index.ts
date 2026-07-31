@@ -385,6 +385,43 @@ function buildSpotClaimedNotifications(
   ].filter((notification) => notification.userId !== userId);
 }
 
+async function claimSpotClaimedPush(
+  adminClient: ReturnType<typeof createClient>,
+  event: Extract<PushEvent, { eventType: 'spot_claimed' }>,
+  userId: string,
+) {
+  if (!event.slotId) throw new Error('Missing slotId');
+
+  const claimedAt = new Date().toISOString();
+  const claimStaleBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+
+  const { data, error } = await adminClient
+    .from('tournament_players')
+    .update({ spot_claim_push_claimed_at: claimedAt })
+    .eq('id', event.slotId)
+    .eq('claimed_by_user_id', userId)
+    .is('spot_claim_push_completed_at', null)
+    .or(`spot_claim_push_claimed_at.is.null,spot_claim_push_claimed_at.lt.${claimStaleBefore}`)
+    .select('id')
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return Boolean(data);
+}
+
+async function completeSpotClaimedPush(
+  adminClient: ReturnType<typeof createClient>,
+  slotId: string,
+) {
+  const { error } = await adminClient
+    .from('tournament_players')
+    .update({ spot_claim_push_completed_at: new Date().toISOString() })
+    .eq('id', slotId);
+
+  if (error) throw error;
+}
+
 function buildTournamentStartedNotifications(
   tournament: Tournament,
   players: PlayerSlot[],
@@ -881,8 +918,23 @@ Deno.serve(async (req) => {
 
     let notifications: Notification[] = [];
     let announcementMessageId: string | null = null;
+    let spotClaimedSlotId: string | null = null;
 
     if (event.eventType === 'spot_claimed') {
+      const claimed = await claimSpotClaimedPush(adminClient, event, user.id);
+      if (!claimed) {
+        console.log('send-tournament-push spot claimed skipped: duplicate or invalid claim', {
+          tournamentId: event.tournamentId,
+          slotId: event.slotId,
+          requesterUserId: user.id,
+        });
+
+        return new Response(JSON.stringify({ ok: true, requested: 0, results: [], skipped: 'duplicate_or_invalid_claim' }), {
+          headers: { ...corsHeaders, 'content-type': 'application/json' },
+        });
+      }
+
+      spotClaimedSlotId = event.slotId || null;
       notifications = buildSpotClaimedNotifications(event, tournament, players, user.id);
     } else if (event.eventType === 'tournament_started') {
       notifications = buildTournamentStartedNotifications(
@@ -944,6 +996,10 @@ Deno.serve(async (req) => {
         .eq('id', announcementMessageId);
 
       if (completionError) throw completionError;
+    }
+
+    if (spotClaimedSlotId) {
+      await completeSpotClaimedPush(adminClient, spotClaimedSlotId);
     }
 
     console.log('send-tournament-push results', {

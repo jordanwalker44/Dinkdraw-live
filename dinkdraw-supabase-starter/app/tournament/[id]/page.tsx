@@ -3599,6 +3599,8 @@ async function unclaimMySpot(slotId: string) {
       display_name: '',
       claimed_by_user_id: null,
       gender: null,
+      spot_claim_push_claimed_at: null,
+      spot_claim_push_completed_at: null,
     })
     .eq('id', slotId)
     .eq('claimed_by_user_id', user.id);
@@ -3780,6 +3782,8 @@ async function clearPlayerSlot(slotId: string) {
       claimed_by_user_id: null,
       gender: null,
       dupr_id: null,
+      spot_claim_push_claimed_at: null,
+      spot_claim_push_completed_at: null,
     })
     .eq('id', slotId);
 

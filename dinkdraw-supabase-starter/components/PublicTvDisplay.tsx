@@ -66,11 +66,6 @@ function formatDiff(value: number) {
   return String(value);
 }
 
-function formatWinPercentage(wins: number, losses: number) {
-  const gamesPlayed = wins + losses;
-  return gamesPlayed ? `${Math.round((wins / gamesPlayed) * 100)}%` : '0%';
-}
-
 function renderScore(value: number | null) {
   return value === null ? '—' : String(value);
 }
@@ -821,7 +816,7 @@ export default function PublicTvDisplay({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: isCreamOfTheCrop
-                    ? '34px minmax(0, 1fr) 46px 54px 58px 54px'
+                    ? '40px minmax(0, 1fr) 54px 64px 58px'
                     : showNextCourt
                     ? '42px minmax(0, 1fr) 48px 58px 58px'
                     : '46px minmax(0, 1fr) 58px 62px',
@@ -843,7 +838,6 @@ export default function PublicTvDisplay({
                 <div style={{ textAlign: 'right' }}>
                   {isCreamOfTheCrop ? 'W-L' : 'Diff'}
                 </div>
-                {isCreamOfTheCrop ? <div style={{ textAlign: 'right' }}>Win%</div> : null}
                 {isCreamOfTheCrop ? <div style={{ textAlign: 'right' }}>Diff</div> : null}
               </div>
 
@@ -860,7 +854,7 @@ export default function PublicTvDisplay({
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
-                        ? '34px minmax(0, 1fr) 46px 54px 58px 54px'
+                        ? '40px minmax(0, 1fr) 54px 64px 58px'
                         : showNextCourt
                         ? '42px minmax(0, 1fr) 48px 58px 58px'
                         : '46px minmax(0, 1fr) 58px 62px',
@@ -934,18 +928,6 @@ export default function PublicTvDisplay({
                         ? `${row.wins}-${row.losses}`
                         : formatDiff(row.pointDiff)}
                     </div>
-                    {isCreamOfTheCrop ? (
-                      <div
-                        style={{
-                          textAlign: 'right',
-                          fontSize: isLeader ? 20 : 17,
-                          fontWeight: 950,
-                          color: 'rgba(255,255,255,0.86)',
-                        }}
-                      >
-                        {formatWinPercentage(row.wins, row.losses)}
-                      </div>
-                    ) : null}
                     {isCreamOfTheCrop ? (
                       <div
                         style={{

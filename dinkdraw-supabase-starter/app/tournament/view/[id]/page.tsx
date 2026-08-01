@@ -10,6 +10,12 @@ import {
   type OrganizationBrand,
 } from '../../../../components/OrganizationBrandBanner';
 import { loadPublicOrganizationBrand } from '../../../../lib/organization-brand';
+import { CreamStageTeamStatus } from '../../../../components/CreamStageStatus';
+import {
+  buildCreamStageStatusMap,
+  getCreamStageLabel,
+  SHOW_CREAM_STAGE_STATUS,
+} from '../../../../lib/cream-stage-status';
 
 export const dynamic = 'force-dynamic';
 
@@ -468,6 +474,22 @@ export default function PublicTournamentViewPage({
         .filter((m) => m.round_number === selectedRound && !m.is_bye)
         .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999)),
     [matches, selectedRound]
+  );
+
+  const currentCreamStageStatus = useMemo(
+    () =>
+      tournament?.tournament_mode === 'cream_of_the_crop'
+        ? buildCreamStageStatusMap(playerSlots, matches, currentRound)
+        : new Map(),
+    [tournament?.tournament_mode, playerSlots, matches, currentRound]
+  );
+
+  const selectedCreamStageStatus = useMemo(
+    () =>
+      tournament?.tournament_mode === 'cream_of_the_crop'
+        ? buildCreamStageStatusMap(playerSlots, matches, selectedRound)
+        : new Map(),
+    [tournament?.tournament_mode, playerSlots, matches, selectedRound]
   );
 
   const byesForSelectedRound = useMemo(
@@ -1199,6 +1221,26 @@ useEffect(() => {
     </div>
 
     <div style={{ display: 'grid', gap: 10 }}>
+      {SHOW_CREAM_STAGE_STATUS &&
+      tournament.tournament_mode === 'cream_of_the_crop' ? (
+        <div
+          style={{
+            padding: '10px 12px',
+            borderRadius: 14,
+            border: '1px solid rgba(255,203,5,0.22)',
+            background: 'rgba(255,203,5,0.06)',
+            color: 'rgba(255,255,255,0.74)',
+            fontSize: 12,
+            fontWeight: 800,
+            lineHeight: 1.35,
+          }}
+        >
+          {getCreamStageLabel(currentRound)} • Games reset at Round{' '}
+          {currentRound <= 3 ? 1 : currentRound <= 6 ? 4 : 7} • Ranked by stage
+          wins, then point differential
+        </div>
+      ) : null}
+
       {matches
         .filter((m) => m.round_number === currentRound && !m.is_bye)
         .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999))
@@ -1247,8 +1289,24 @@ useEffect(() => {
                     alignItems: 'center',
                   }}
                 >
-                  <div style={{ fontWeight: 800 }}>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>
                     {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+                    {SHOW_CREAM_STAGE_STATUS &&
+                    tournament.tournament_mode === 'cream_of_the_crop' ? (
+                      <CreamStageTeamStatus
+                        players={[
+                          {
+                            id: match.team_a_player_1_id,
+                            name: renderPlayerName(match.team_a_player_1_id),
+                          },
+                          {
+                            id: match.team_a_player_2_id,
+                            name: renderPlayerName(match.team_a_player_2_id),
+                          },
+                        ]}
+                        statusByPlayer={currentCreamStageStatus}
+                      />
+                    ) : null}
                   </div>
 
                   <div style={{ fontWeight: 900, color: '#FFCB05' }}>
@@ -1266,8 +1324,24 @@ useEffect(() => {
                     alignItems: 'center',
                   }}
                 >
-                  <div style={{ fontWeight: 800 }}>
+                  <div style={{ fontWeight: 800, minWidth: 0 }}>
                     {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+                    {SHOW_CREAM_STAGE_STATUS &&
+                    tournament.tournament_mode === 'cream_of_the_crop' ? (
+                      <CreamStageTeamStatus
+                        players={[
+                          {
+                            id: match.team_b_player_1_id,
+                            name: renderPlayerName(match.team_b_player_1_id),
+                          },
+                          {
+                            id: match.team_b_player_2_id,
+                            name: renderPlayerName(match.team_b_player_2_id),
+                          },
+                        ]}
+                        statusByPlayer={currentCreamStageStatus}
+                      />
+                    ) : null}
                   </div>
 
                   <div style={{ fontWeight: 900, color: '#FFCB05' }}>
@@ -1883,8 +1957,6 @@ useEffect(() => {
                           fontWeight: 900,
                           fontSize: 15,
                           letterSpacing: '-0.01em',
-                          display: 'flex',
-                          alignItems: 'center',
                           minHeight: 32,
                           ...getWinnerStyle('a', match),
                       }}
@@ -1893,6 +1965,22 @@ useEffect(() => {
                           match.team_a_player_1_id,
                           match.team_a_player_2_id
                         )}
+                        {SHOW_CREAM_STAGE_STATUS &&
+                        tournament.tournament_mode === 'cream_of_the_crop' ? (
+                          <CreamStageTeamStatus
+                            players={[
+                              {
+                                id: match.team_a_player_1_id,
+                                name: renderPlayerName(match.team_a_player_1_id),
+                              },
+                              {
+                                id: match.team_a_player_2_id,
+                                name: renderPlayerName(match.team_a_player_2_id),
+                              },
+                            ]}
+                            statusByPlayer={selectedCreamStageStatus}
+                          />
+                        ) : null}
                       </div>
                       <div
                         style={{
@@ -1939,8 +2027,6 @@ useEffect(() => {
                       <div
                         style={{
                         fontWeight: 900,
-                        display: 'flex',
-                        alignItems: 'center',
                         minHeight: 32,
                         fontSize: 15,
                         letterSpacing: '-0.01em',
@@ -1951,6 +2037,22 @@ useEffect(() => {
                           match.team_b_player_1_id,
                           match.team_b_player_2_id
                         )}
+                        {SHOW_CREAM_STAGE_STATUS &&
+                        tournament.tournament_mode === 'cream_of_the_crop' ? (
+                          <CreamStageTeamStatus
+                            players={[
+                              {
+                                id: match.team_b_player_1_id,
+                                name: renderPlayerName(match.team_b_player_1_id),
+                              },
+                              {
+                                id: match.team_b_player_2_id,
+                                name: renderPlayerName(match.team_b_player_2_id),
+                              },
+                            ]}
+                            statusByPlayer={selectedCreamStageStatus}
+                          />
+                        ) : null}
                       </div>
                       <div
                         style={{

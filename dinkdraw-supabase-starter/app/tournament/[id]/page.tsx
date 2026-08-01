@@ -15,6 +15,12 @@ import {
 import { loadPublicOrganizationBrand } from '../../../lib/organization-brand';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import { TournamentAnnouncementsLink } from '../../../components/TournamentAnnouncementsLink';
+import { CreamStageTeamStatus } from '../../../components/CreamStageStatus';
+import {
+  buildCreamStageStatusMap,
+  getCreamStageLabel,
+  SHOW_CREAM_STAGE_STATUS,
+} from '../../../lib/cream-stage-status';
 import {
   buildCreamOfTheCropStageSchedule,
   buildNextCreamOfTheCropStagePlayers
@@ -3045,6 +3051,22 @@ const hasAnyScores = matches.some(
     [matches, selectedRound]
   );
 
+  const currentCreamStageStatus = useMemo(
+    () =>
+      tournament?.tournament_mode === 'cream_of_the_crop'
+        ? buildCreamStageStatusMap(playerSlots, matches, currentRound)
+        : new Map(),
+    [tournament?.tournament_mode, playerSlots, matches, currentRound]
+  );
+
+  const selectedCreamStageStatus = useMemo(
+    () =>
+      tournament?.tournament_mode === 'cream_of_the_crop'
+        ? buildCreamStageStatusMap(playerSlots, matches, selectedRound)
+        : new Map(),
+    [tournament?.tournament_mode, playerSlots, matches, selectedRound]
+  );
+
   const byesForSelectedRound = useMemo(
     () => matches.filter((m) => m.round_number === selectedRound && m.is_bye),
     [matches, selectedRound]
@@ -5869,6 +5891,45 @@ function renderShortTeam(a: string | null, b: string | null) {
       {renderTeam(yourMatch.team_b_player_1_id, yourMatch.team_b_player_2_id)}
     </div>
 
+    {SHOW_CREAM_STAGE_STATUS &&
+    tournament.tournament_mode === 'cream_of_the_crop' ? (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <CreamStageTeamStatus
+          players={[
+            {
+              id: yourMatch.team_a_player_1_id,
+              name: renderPlayerName(yourMatch.team_a_player_1_id),
+            },
+            {
+              id: yourMatch.team_a_player_2_id,
+              name: renderPlayerName(yourMatch.team_a_player_2_id),
+            },
+          ]}
+          statusByPlayer={currentCreamStageStatus}
+        />
+        <CreamStageTeamStatus
+          players={[
+            {
+              id: yourMatch.team_b_player_1_id,
+              name: renderPlayerName(yourMatch.team_b_player_1_id),
+            },
+            {
+              id: yourMatch.team_b_player_2_id,
+              name: renderPlayerName(yourMatch.team_b_player_2_id),
+            },
+          ]}
+          statusByPlayer={currentCreamStageStatus}
+        />
+      </div>
+    ) : null}
+
     <button
       type="button"
       className="button primary"
@@ -7426,6 +7487,26 @@ isOrganizer &&
             <div className="muted">No matches in this round yet.</div>
           ) : (
             <div className="grid" style={{ display: selectedPlayoffRound === null ? undefined : 'none' }}>
+              {SHOW_CREAM_STAGE_STATUS &&
+              tournament?.tournament_mode === 'cream_of_the_crop' ? (
+                <div
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 14,
+                    border: '1px solid rgba(255,203,5,0.22)',
+                    background: 'rgba(255,203,5,0.06)',
+                    color: 'rgba(255,255,255,0.74)',
+                    fontSize: 12,
+                    fontWeight: 800,
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {getCreamStageLabel(selectedRound)} • Stage record and differential
+                  reset at Round {selectedRound <= 3 ? 1 : selectedRound <= 6 ? 4 : 7} •
+                  Ranked by stage wins, then point differential
+                </div>
+              ) : null}
+
               {matchesForSelectedRound.map((match) => {
                 const isNextUp =
                   !isCompleted &&
@@ -7541,6 +7622,22 @@ isOrganizer &&
       }}
     >
       {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+      {SHOW_CREAM_STAGE_STATUS &&
+      tournament?.tournament_mode === 'cream_of_the_crop' ? (
+        <CreamStageTeamStatus
+          players={[
+            {
+              id: match.team_a_player_1_id,
+              name: renderPlayerName(match.team_a_player_1_id),
+            },
+            {
+              id: match.team_a_player_2_id,
+              name: renderPlayerName(match.team_a_player_2_id),
+            },
+          ]}
+          statusByPlayer={selectedCreamStageStatus}
+        />
+      ) : null}
     </div>
 
     <input
@@ -7594,6 +7691,22 @@ isOrganizer &&
       }}
     >
       {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+      {SHOW_CREAM_STAGE_STATUS &&
+      tournament?.tournament_mode === 'cream_of_the_crop' ? (
+        <CreamStageTeamStatus
+          players={[
+            {
+              id: match.team_b_player_1_id,
+              name: renderPlayerName(match.team_b_player_1_id),
+            },
+            {
+              id: match.team_b_player_2_id,
+              name: renderPlayerName(match.team_b_player_2_id),
+            },
+          ]}
+          statusByPlayer={selectedCreamStageStatus}
+        />
+      ) : null}
     </div>
 
     <input

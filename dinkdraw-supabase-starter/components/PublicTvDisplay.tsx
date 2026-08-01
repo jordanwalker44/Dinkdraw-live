@@ -168,6 +168,8 @@ export default function PublicTvDisplay({
   const courtPages = useMemo(() => chunkMatches(currentMatches, 6), [currentMatches]);
   const [courtPageIndex, setCourtPageIndex] = useState(0);
   const visibleMatches = courtPages[courtPageIndex] || courtPages[0] || [];
+  const visibleMatchRowCount =
+    visibleMatches.length <= 2 ? 1 : visibleMatches.length <= 4 ? 2 : 3;
   const courtPageStart = courtPageIndex * 6 + 1;
   const courtPageEnd = Math.min(courtPageStart + visibleMatches.length - 1, currentMatches.length);
   const showCourtPager = !isFinal && courtPages.length > 1;
@@ -313,7 +315,9 @@ export default function PublicTvDisplay({
               minHeight: 0,
               display: 'grid',
               gridTemplateColumns: isFinal ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
-              gridTemplateRows: isFinal ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0, 1fr))',
+              gridTemplateRows: isFinal
+                ? 'minmax(0, 1fr)'
+                : `repeat(${visibleMatchRowCount}, minmax(0, 1fr))`,
               gap: 10,
             }}
           >

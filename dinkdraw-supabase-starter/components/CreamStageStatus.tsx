@@ -29,14 +29,15 @@ export function CreamStageTeamStatus({
   return (
     <div
       style={{
-        display: 'grid',
-        gap: variant === 'tv' ? 4 : 3,
+        display: variant === 'tv' ? 'flex' : 'grid',
+        flexWrap: variant === 'tv' ? 'wrap' : undefined,
+        gap: variant === 'tv' ? '5px 12px' : 3,
         marginTop: variant === 'tv' ? 7 : 5,
         color:
           variant === 'tv'
             ? 'rgba(255,255,255,0.68)'
             : 'rgba(255,255,255,0.62)',
-        fontSize: variant === 'tv' ? 'clamp(13px, 0.9vw, 17px)' : 11,
+        fontSize: variant === 'tv' ? 'clamp(12px, 0.82vw, 16px)' : 11,
         fontWeight: 800,
         lineHeight: 1.25,
       }}
@@ -45,9 +46,13 @@ export function CreamStageTeamStatus({
         const status = statusByPlayer.get(player.id)!;
 
         return (
-          <div key={player.id}>
+          <div
+            key={player.id}
+            style={variant === 'tv' ? { whiteSpace: 'nowrap' } : undefined}
+          >
             {shortPlayerName(player.name)}: {status.wins}-{status.losses} •{' '}
-            {formatCreamStageDiff(status.pointDiff)} diff •{' '}
+            {formatCreamStageDiff(status.pointDiff)}
+            {variant === 'tv' ? '' : ' diff'} •{' '}
             {formatCreamStageRank(status.rank)}
           </div>
         );

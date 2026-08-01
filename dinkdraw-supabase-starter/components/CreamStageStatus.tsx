@@ -44,15 +44,18 @@ export function CreamStageTeamStatus({
     >
       {visiblePlayers.map((player) => {
         const status = statusByPlayer.get(player.id)!;
+        const gamesPlayed = status.wins + status.losses;
+        const winPercentage = gamesPlayed
+          ? Math.round((status.wins / gamesPlayed) * 100)
+          : 0;
 
         return (
           <div
             key={player.id}
             style={variant === 'tv' ? { whiteSpace: 'nowrap' } : undefined}
           >
-            {shortPlayerName(player.name)}: {status.wins}-{status.losses} •{' '}
-            {formatCreamStageDiff(status.pointDiff)}
-            {variant === 'tv' ? '' : ' diff'} •{' '}
+            {shortPlayerName(player.name)}: {status.wins}-{status.losses} ({winPercentage}%) •{' '}
+            {formatCreamStageDiff(status.pointDiff)} diff •{' '}
             {formatCreamStageRank(status.rank)}
           </div>
         );

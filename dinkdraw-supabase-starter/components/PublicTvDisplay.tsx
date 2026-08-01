@@ -66,6 +66,11 @@ function formatDiff(value: number) {
   return String(value);
 }
 
+function formatWinPercentage(wins: number, losses: number) {
+  const gamesPlayed = wins + losses;
+  return gamesPlayed ? `${Math.round((wins / gamesPlayed) * 100)}%` : '0%';
+}
+
 function renderScore(value: number | null) {
   return value === null ? '—' : String(value);
 }
@@ -317,7 +322,10 @@ export default function PublicTvDisplay({
               gridTemplateColumns: isFinal ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
               gridTemplateRows: isFinal
                 ? 'minmax(0, 1fr)'
+                : visibleMatchRowCount === 1
+                ? 'minmax(220px, 300px)'
                 : `repeat(${visibleMatchRowCount}, minmax(0, 1fr))`,
+              alignContent: visibleMatchRowCount === 1 && !isFinal ? 'start' : undefined,
               gap: 10,
             }}
           >
@@ -813,7 +821,7 @@ export default function PublicTvDisplay({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: isCreamOfTheCrop
-                    ? '40px minmax(0, 1fr) 54px 64px'
+                    ? '34px minmax(0, 1fr) 46px 54px 58px 54px'
                     : showNextCourt
                     ? '42px minmax(0, 1fr) 48px 58px 58px'
                     : '46px minmax(0, 1fr) 58px 62px',
@@ -835,6 +843,8 @@ export default function PublicTvDisplay({
                 <div style={{ textAlign: 'right' }}>
                   {isCreamOfTheCrop ? 'W-L' : 'Diff'}
                 </div>
+                {isCreamOfTheCrop ? <div style={{ textAlign: 'right' }}>Win%</div> : null}
+                {isCreamOfTheCrop ? <div style={{ textAlign: 'right' }}>Diff</div> : null}
               </div>
 
               {topStandings.map((row, index) => {
@@ -850,7 +860,7 @@ export default function PublicTvDisplay({
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
-                        ? '40px minmax(0, 1fr) 54px 64px'
+                        ? '34px minmax(0, 1fr) 46px 54px 58px 54px'
                         : showNextCourt
                         ? '42px minmax(0, 1fr) 48px 58px 58px'
                         : '46px minmax(0, 1fr) 58px 62px',
@@ -924,6 +934,30 @@ export default function PublicTvDisplay({
                         ? `${row.wins}-${row.losses}`
                         : formatDiff(row.pointDiff)}
                     </div>
+                    {isCreamOfTheCrop ? (
+                      <div
+                        style={{
+                          textAlign: 'right',
+                          fontSize: isLeader ? 20 : 17,
+                          fontWeight: 950,
+                          color: 'rgba(255,255,255,0.86)',
+                        }}
+                      >
+                        {formatWinPercentage(row.wins, row.losses)}
+                      </div>
+                    ) : null}
+                    {isCreamOfTheCrop ? (
+                      <div
+                        style={{
+                          textAlign: 'right',
+                          fontSize: isLeader ? 20 : 17,
+                          fontWeight: 950,
+                          color: row.pointDiff > 0 ? '#FFCB05' : 'rgba(255,255,255,0.86)',
+                        }}
+                      >
+                        {formatDiff(row.pointDiff)}
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}

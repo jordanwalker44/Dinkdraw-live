@@ -13,9 +13,11 @@ function shortPlayerName(name: string) {
 export function CreamStageTeamStatus({
   players,
   statusByPlayer,
+  variant = 'card',
 }: {
   players: Array<{ id: string | null; name: string }>;
   statusByPlayer: Map<string, CreamStageStatus>;
+  variant?: 'card' | 'tv';
 }) {
   const visiblePlayers = players.filter(
     (player): player is { id: string; name: string } =>
@@ -28,10 +30,13 @@ export function CreamStageTeamStatus({
     <div
       style={{
         display: 'grid',
-        gap: 3,
-        marginTop: 5,
-        color: 'rgba(255,255,255,0.62)',
-        fontSize: 11,
+        gap: variant === 'tv' ? 4 : 3,
+        marginTop: variant === 'tv' ? 7 : 5,
+        color:
+          variant === 'tv'
+            ? 'rgba(255,255,255,0.68)'
+            : 'rgba(255,255,255,0.62)',
+        fontSize: variant === 'tv' ? 'clamp(13px, 0.9vw, 17px)' : 11,
         fontWeight: 800,
         lineHeight: 1.25,
       }}

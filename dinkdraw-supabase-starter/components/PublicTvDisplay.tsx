@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { type OrganizationBrand } from './OrganizationBrandBanner';
+import { CreamStageTeamStatus } from './CreamStageStatus';
+import {
+  buildCreamStageStatusMap,
+  SHOW_CREAM_STAGE_STATUS,
+} from '../lib/cream-stage-status';
 
 type Tournament = {
   title: string;
@@ -137,6 +142,13 @@ export default function PublicTvDisplay({
   const completeThisRound = currentMatches.filter((match) => match.is_complete).length;
   const totalRounds = tournament.rounds || 9;
   const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
+  const currentCreamStageStatus = useMemo(
+    () =>
+      isCreamOfTheCrop
+        ? buildCreamStageStatusMap(playerSlots, matches, currentRound)
+        : new Map(),
+    [isCreamOfTheCrop, playerSlots, matches, currentRound]
+  );
   const playableMatches = useMemo(
     () => matches.filter((match) => !match.is_bye),
     [matches]
@@ -515,13 +527,35 @@ export default function PublicTvDisplay({
     style={{
       minWidth: 0,
       overflow: 'hidden',
-      display: '-webkit-box',
-      WebkitLineClamp: 2,
-      WebkitBoxOrient: 'vertical',
       paddingBottom: 4,
     }}
   >
-    {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+    <div
+      style={{
+        overflow: 'hidden',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+      }}
+    >
+      {renderTeam(match.team_a_player_1_id, match.team_a_player_2_id)}
+    </div>
+    {SHOW_CREAM_STAGE_STATUS && isCreamOfTheCrop ? (
+      <CreamStageTeamStatus
+        players={[
+          {
+            id: match.team_a_player_1_id,
+            name: renderPlayerName(match.team_a_player_1_id),
+          },
+          {
+            id: match.team_a_player_2_id,
+            name: renderPlayerName(match.team_a_player_2_id),
+          },
+        ]}
+        statusByPlayer={currentCreamStageStatus}
+        variant="tv"
+      />
+    ) : null}
   </div>
 
   <div
@@ -569,13 +603,35 @@ export default function PublicTvDisplay({
     style={{
       minWidth: 0,
       overflow: 'hidden',
-      display: '-webkit-box',
-      WebkitLineClamp: 2,
-      WebkitBoxOrient: 'vertical',
       paddingBottom: 4,
     }}
   >
-    {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+    <div
+      style={{
+        overflow: 'hidden',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+      }}
+    >
+      {renderTeam(match.team_b_player_1_id, match.team_b_player_2_id)}
+    </div>
+    {SHOW_CREAM_STAGE_STATUS && isCreamOfTheCrop ? (
+      <CreamStageTeamStatus
+        players={[
+          {
+            id: match.team_b_player_1_id,
+            name: renderPlayerName(match.team_b_player_1_id),
+          },
+          {
+            id: match.team_b_player_2_id,
+            name: renderPlayerName(match.team_b_player_2_id),
+          },
+        ]}
+        statusByPlayer={currentCreamStageStatus}
+        variant="tv"
+      />
+    ) : null}
   </div>
 
   <div

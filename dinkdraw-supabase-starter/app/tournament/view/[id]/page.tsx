@@ -575,14 +575,26 @@ export default function PublicTournamentViewPage({
     setMatches(matchesResult.data || []);
     setPlayoffMatches(playoffMatchesResult.data || []);
 
-    setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
+    // Branding is optional and must never hold the tournament screen on its loader.
+    // Load it independently so the core tournament data can render immediately.
+    void loadPublicOrganizationBrand(supabase, tournamentData?.organization_id)
+      .then(setOrganizationBrand)
+      .catch((error) => {
+        console.error('Failed to load organization branding:', error);
+        setOrganizationBrand(null);
+      });
   }
 
   useEffect(() => {
     async function load() {
       setIsLoading(true);
-      await loadTournamentData();
-      setIsLoading(false);
+      try {
+        await loadTournamentData();
+      } catch (error) {
+        console.error('Failed to load public tournament:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     void load();

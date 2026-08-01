@@ -2,7 +2,7 @@ import { rankCreamOfTheCropStage } from './scheduler';
 import type { Match, PlayerSlot } from './tournament-types';
 
 // Emergency off-switch: false restores the previous game-card presentation.
-export const SHOW_CREAM_STAGE_STATUS = true;
+export const SHOW_CREAM_STAGE_STATUS = false;
 
 type StagePlayerInput = {
   id: string;

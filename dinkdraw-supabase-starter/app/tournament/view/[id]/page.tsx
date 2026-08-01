@@ -478,7 +478,7 @@ export default function PublicTournamentViewPage({
 
   const currentCreamStageStatus = useMemo(
     () =>
-      tournament?.tournament_mode === 'cream_of_the_crop'
+      SHOW_CREAM_STAGE_STATUS && tournament?.tournament_mode === 'cream_of_the_crop'
         ? buildCreamStageStatusMap(playerSlots, matches, currentRound)
         : new Map(),
     [tournament?.tournament_mode, playerSlots, matches, currentRound]
@@ -486,7 +486,7 @@ export default function PublicTournamentViewPage({
 
   const selectedCreamStageStatus = useMemo(
     () =>
-      tournament?.tournament_mode === 'cream_of_the_crop'
+      SHOW_CREAM_STAGE_STATUS && tournament?.tournament_mode === 'cream_of_the_crop'
         ? buildCreamStageStatusMap(playerSlots, matches, selectedRound)
         : new Map(),
     [tournament?.tournament_mode, playerSlots, matches, selectedRound]

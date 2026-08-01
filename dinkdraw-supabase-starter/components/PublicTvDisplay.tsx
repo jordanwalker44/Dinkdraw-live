@@ -144,7 +144,7 @@ export default function PublicTvDisplay({
   const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
   const currentCreamStageStatus = useMemo(
     () =>
-      isCreamOfTheCrop
+      SHOW_CREAM_STAGE_STATUS && isCreamOfTheCrop
         ? buildCreamStageStatusMap(playerSlots, matches, currentRound)
         : new Map(),
     [isCreamOfTheCrop, playerSlots, matches, currentRound]

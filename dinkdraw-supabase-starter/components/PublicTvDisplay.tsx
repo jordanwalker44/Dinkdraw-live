@@ -816,11 +816,11 @@ export default function PublicTvDisplay({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: isCreamOfTheCrop
-                    ? '34px minmax(0, 1fr) 64px 48px 56px 58px'
+                    ? '34px minmax(0, 1fr) 78px 54px 58px 62px'
                     : showNextCourt
                     ? '42px minmax(0, 1fr) 48px 58px 58px'
                     : '46px minmax(0, 1fr) 58px 62px',
-                  gap: 8,
+                  gap: isCreamOfTheCrop ? 12 : 8,
                   padding: '10px 14px',
                   color: 'rgba(255,255,255,0.52)',
                   fontSize: 12,
@@ -831,10 +831,22 @@ export default function PublicTvDisplay({
               >
                 <div>#</div>
                 <div>Player</div>
-                {isCreamOfTheCrop ? <div style={{ textAlign: 'center' }}>Original</div> : null}
+                {isCreamOfTheCrop ? (
+                  <div style={{ textAlign: 'center', lineHeight: 1.05 }}>
+                    Original<br />Rank
+                  </div>
+                ) : null}
                 {showNextCourt ? <div style={{ textAlign: 'center' }}>Next</div> : null}
-                <div style={{ textAlign: 'center' }}>
-                  {isCreamOfTheCrop ? 'Court' : 'W-L'}
+                <div style={{ textAlign: 'center', lineHeight: 1.05 }}>
+                  {isCreamOfTheCrop ? (
+                    isFinal ? (
+                      <>Final<br />Court</>
+                    ) : (
+                      'Playing'
+                    )
+                  ) : (
+                    'W-L'
+                  )}
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   {isCreamOfTheCrop ? 'W-L' : 'Diff'}
@@ -848,6 +860,10 @@ export default function PublicTvDisplay({
                 const nextMatch = showNextCourt
                   ? nextRoundMatches.find((match) => includesPlayer(match, row.playerId))
                   : undefined;
+                const currentCreamMatch =
+                  isCreamOfTheCrop && !isFinal
+                    ? currentMatches.find((match) => includesPlayer(match, row.playerId))
+                    : undefined;
 
                 return (
                   <div
@@ -855,11 +871,11 @@ export default function PublicTvDisplay({
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
-                        ? '34px minmax(0, 1fr) 64px 48px 56px 58px'
+                        ? '34px minmax(0, 1fr) 78px 54px 58px 62px'
                         : showNextCourt
                         ? '42px minmax(0, 1fr) 48px 58px 58px'
                         : '46px minmax(0, 1fr) 58px 62px',
-                      gap: 8,
+                      gap: isCreamOfTheCrop ? 12 : 8,
                       alignItems: 'center',
                       padding: isCreamOfTheCrop ? '7px 14px' : '9px 14px',
                       borderTop: '1px solid rgba(255,255,255,0.075)',
@@ -924,7 +940,13 @@ export default function PublicTvDisplay({
                       fontWeight: 950,
                     }}
                   >
-                      {isCreamOfTheCrop ? row.finalCourt ?? '-' : `${row.wins}-${row.losses}`}
+                      {isCreamOfTheCrop
+                        ? isFinal
+                          ? row.finalCourt ?? '-'
+                          : currentCreamMatch
+                          ? formatCourtValue(currentCreamMatch)
+                          : 'Pending'
+                        : `${row.wins}-${row.losses}`}
                     </div>
                     <div
                       style={{

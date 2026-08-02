@@ -3559,41 +3559,44 @@ useEffect(() => {
       setMessage('You already claimed a spot in this tournament.');
       return;
     }
-    if (isLocked) {
-      setMessage('Tournament already started. Player spots are locked.');
+    const slot = playerSlots.find((player) => player.id === slotId);
+    if (!slot) {
+      setMessage('That player spot could not be found.');
       return;
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('display_name')
-      .eq('id', user.id)
-      .maybeSingle();
+    const spotLabel = slot.display_name?.trim() || `Player ${slot.slot_number}`;
+    const confirmed = window.confirm(
+      `Claim ${spotLabel}? This links your DinkDraw account to this player's tournament results and cannot be undone after the tournament starts.`
+    );
+    if (!confirmed) return;
 
-    const claimedName = profile?.display_name?.trim() || user.email?.split('@')[0] || 'Player';
-
-    const { error } = await supabase
-      .from('tournament_players')
-      .update({ claimed_by_user_id: user.id, display_name: claimedName })
-      .eq('id', slotId)
-      .is('claimed_by_user_id', null);
+    const { data, error } = await supabase.rpc('claim_tournament_player_spot', {
+      p_slot_id: slotId,
+    });
 
     if (error) {
       setMessage(error.message);
       return;
     }
 
-    setNewNames((prev) => ({ ...prev, [slotId]: claimedName }));
     await loadTournamentData(user.id);
-    void sendTournamentPushEvent(supabase, {
-      eventType: 'spot_claimed',
-      tournamentId: params.id,
-      slotId,
-    });
-    setMessage('Spot claimed.');
+    const claimResult = Array.isArray(data) ? data[0] : data;
+    if (claimResult?.tournament_status !== 'completed') {
+      void sendTournamentPushEvent(supabase, {
+        eventType: 'spot_claimed',
+        tournamentId: params.id,
+        slotId,
+      });
+    }
+    setMessage(
+      claimResult?.tournament_status === 'completed'
+        ? 'Spot claimed. Your completed tournament results are now linked to your account.'
+        : 'Spot claimed.'
+    );
   }
 
-async function unclaimMySpot(slotId: string) {
+  async function unclaimMySpot(slotId: string) {
   if (isLocked) {
     setMessage('Player spots are locked.');
     return;
@@ -3635,6 +3638,43 @@ async function unclaimMySpot(slotId: string) {
   setNewNames((prev) => ({ ...prev, [slotId]: '' }));
   await loadTournamentData(user.id);
   setMessage('You have given up your spot.');
+}
+
+async function unlinkClaimedAccount(slotId: string) {
+  if (!canManageScores) {
+    setMessage('Only a tournament organizer can unlink a player account.');
+    return;
+  }
+
+  const slot = playerSlots.find((player) => player.id === slotId);
+  if (!slot?.claimed_by_user_id) {
+    setMessage('That player spot is not linked to an account.');
+    return;
+  }
+
+  const playerName = slot.display_name?.trim() || `Player ${slot.slot_number}`;
+  const confirmed = window.confirm(
+    `Unlink the DinkDraw account from ${playerName}? The player name, scores, standings, and tournament results will remain unchanged. The linked account's personal stats from this tournament will be removed.`
+  );
+  if (!confirmed) return;
+
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData.user) {
+    setMessage('Sign in first.');
+    return;
+  }
+
+  const { error } = await supabase.rpc('unlink_tournament_player_account', {
+    p_slot_id: slotId,
+  });
+
+  if (error) {
+    setMessage(`Could not unlink account: ${error.message}`);
+    return;
+  }
+
+  await loadTournamentData(authData.user.id);
+  setMessage(`${playerName}'s account was unlinked. The tournament results were preserved.`);
 }
 
 async function saveTournamentTitle() {
@@ -6062,7 +6102,7 @@ function renderShortTeam(a: string | null, b: string | null) {
             {[player1, player2].map((slot) => {
   const isMine = slot.claimed_by_user_id === userId;
   const isClaimedBySomeone = !!slot.claimed_by_user_id;
-  const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
+  const canClaim = !isClaimedBySomeone && !claimedSlot;
   const canEditName = !isLocked && (isOrganizer || isMine || !isClaimedBySomeone);
 
   return (
@@ -6100,8 +6140,6 @@ function renderShortTeam(a: string | null, b: string | null) {
           <span className="tag yours">Yours</span>
         ) : isClaimedBySomeone ? (
           <span className="tag">Claimed</span>
-        ) : isLocked ? (
-          <span className="tag">Locked</span>
         ) : canClaim ? (
           <button
             type="button"
@@ -6140,6 +6178,24 @@ function renderShortTeam(a: string | null, b: string | null) {
           Clear
         </button>
       ) : null}
+
+      {canManageScores && isLocked && isClaimedBySomeone ? (
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => unlinkClaimedAccount(slot.id)}
+          style={{
+            width: '100%',
+            marginTop: 8,
+            borderColor: 'rgba(255,203,5,0.35)',
+            background: 'rgba(255,203,5,0.08)',
+            color: '#FFCB05',
+            fontWeight: 800,
+          }}
+        >
+          Unlink Account
+        </button>
+      ) : null}
     </div>
   );
 })}
@@ -6153,7 +6209,7 @@ function renderShortTeam(a: string | null, b: string | null) {
       {playerSlots.map((slot) => {
         const isMine = slot.claimed_by_user_id === userId;
         const isClaimedBySomeone = !!slot.claimed_by_user_id;
-        const canClaim = !isClaimedBySomeone && !claimedSlot && !isLocked;
+        const canClaim = !isClaimedBySomeone && !claimedSlot;
         const firstOpenSlot = playerSlots.find((player) => !player.claimed_by_user_id);
         const isFirstOpenSlot = firstOpenSlot?.id === slot.id;
         
@@ -6251,8 +6307,6 @@ const shouldShowClaimButton = canClaim && (
     <span className="tag yours">Yours</span>
   ) : isClaimedBySomeone ? (
     <span className="tag">Claimed</span>
-  ) : isLocked ? (
-    <span className="tag">Locked</span>
   ) : shouldShowClaimButton ? (
     <button
       type="button"
@@ -6280,6 +6334,27 @@ const shouldShowClaimButton = canClaim && (
   <div className="muted" style={{ fontSize: 13, marginBottom: 10 }}>
     Need to give up your spot? Ask the organizer to clear it.
   </div>
+) : null}
+
+{canManageScores && isLocked && isClaimedBySomeone ? (
+  <button
+    type="button"
+    className="button secondary"
+    onClick={(e) => {
+      e.stopPropagation();
+      unlinkClaimedAccount(slot.id);
+    }}
+    style={{
+      width: '100%',
+      marginBottom: 10,
+      borderColor: 'rgba(255,203,5,0.35)',
+      background: 'rgba(255,203,5,0.08)',
+      color: '#FFCB05',
+      fontWeight: 800,
+    }}
+  >
+    Unlink Account
+  </button>
 ) : null}
             
             {editingSlot === slot.id ? (
@@ -6356,7 +6431,7 @@ disabled={!canEditName}
                 </div>
               ) : null}
 
-              {!isLocked && canClaim ? (
+              {canClaim ? (
                 <button className="button primary" onClick={(e) => {
                   e.stopPropagation();
                   claimSlot(slot.id);

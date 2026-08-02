@@ -816,7 +816,7 @@ export default function PublicTvDisplay({
                 style={{
                   display: 'grid',
                   gridTemplateColumns: isCreamOfTheCrop
-                    ? '40px minmax(0, 1fr) 54px 64px 58px'
+                    ? '34px minmax(0, 1fr) 64px 48px 56px 58px'
                     : showNextCourt
                     ? '42px minmax(0, 1fr) 48px 58px 58px'
                     : '46px minmax(0, 1fr) 58px 62px',
@@ -831,6 +831,7 @@ export default function PublicTvDisplay({
               >
                 <div>#</div>
                 <div>Player</div>
+                {isCreamOfTheCrop ? <div style={{ textAlign: 'center' }}>Original</div> : null}
                 {showNextCourt ? <div style={{ textAlign: 'center' }}>Next</div> : null}
                 <div style={{ textAlign: 'center' }}>
                   {isCreamOfTheCrop ? 'Court' : 'W-L'}
@@ -854,7 +855,7 @@ export default function PublicTvDisplay({
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
-                        ? '40px minmax(0, 1fr) 54px 64px 58px'
+                        ? '34px minmax(0, 1fr) 64px 48px 56px 58px'
                         : showNextCourt
                         ? '42px minmax(0, 1fr) 48px 58px 58px'
                         : '46px minmax(0, 1fr) 58px 62px',
@@ -892,6 +893,18 @@ export default function PublicTvDisplay({
                     >
                       {row.name}
                     </div>
+                    {isCreamOfTheCrop ? (
+                      <div
+                        style={{
+                          textAlign: 'center',
+                          fontSize: isLeader ? 20 : 17,
+                          fontWeight: 950,
+                          color: 'rgba(255,255,255,0.76)',
+                        }}
+                      >
+                        {row.slotNumber}
+                      </div>
+                    ) : null}
                     {showNextCourt ? (
                       <div
                         style={{

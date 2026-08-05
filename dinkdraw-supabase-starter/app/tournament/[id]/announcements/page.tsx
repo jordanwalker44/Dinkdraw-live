@@ -58,6 +58,8 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
   const [isChangingMode, setIsChangingMode] = useState(false);
   const [acceptedGuidelines, setAcceptedGuidelines] = useState(false);
   const [message, setMessage] = useState('');
+  const [leagueSessionId, setLeagueSessionId] = useState<string | null>(null);
+  const [isLeagueSubstitute, setIsLeagueSubstitute] = useState(false);
 
   const isManager =
     !!userId &&
@@ -215,9 +217,17 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
 
       const { data: leagueSession } = await supabase
         .from('league_sessions')
-        .select('league_id')
+        .select('id, league_id')
         .eq('tournament_id', params.id)
         .maybeSingle();
+      setLeagueSessionId(leagueSession?.id || null);
+      if (leagueSession?.league_id) {
+        const { data: leagueMember } = await supabase.from('league_members')
+          .select('member_type').eq('league_id', leagueSession.league_id).eq('user_id', currentUserId).maybeSingle();
+        setIsLeagueSubstitute(leagueMember?.member_type === 'substitute');
+      } else {
+        setIsLeagueSubstitute(false);
+      }
       const roomQuery = supabase
         .from('tournament_rooms')
         .select('id, tournament_id, league_id, posting_mode, conversation_closes_at, conversation_closed_at');
@@ -310,6 +320,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     const { data, error } = await supabase.rpc('post_tournament_announcement', {
       p_room_id: room.id,
       p_body: draft.trim(),
+      p_league_session_id: leagueSessionId,
     });
 
     setIsPosting(false);
@@ -333,7 +344,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
   }
 
   async function postConversationMessage() {
-    if (!room || !conversationDraft.trim() || !isConversationOpen) return;
+    if (!room || !conversationDraft.trim() || !isConversationOpen || isLeagueSubstitute) return;
 
     setIsSendingMessage(true);
     setMessage('');
@@ -573,7 +584,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
       <div className="announcement-heading">
         <div>
           <div className="eyebrow">Tournament Room</div>
-          <h1>{isConversation ? 'Group Conversation' : 'Announcements'}</h1>
+          <h1>{isLeagueSubstitute ? 'Week Announcements' : isConversation ? 'Group Conversation' : 'Announcements'}</h1>
           <p>
             {tournament?.title ||
               (isConversation ? 'Private tournament conversation' : 'Tournament updates from the organizer')}
@@ -662,7 +673,11 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
             </div>
           ) : null}
 
-          {isConversationOpen && !isPostingRestricted ? (
+          {isLeagueSubstitute ? (
+            <div className="notice announcement-read-only">
+              As a substitute, you can view organizer announcements for the week you accepted. The season-long player conversation remains private to regular league players.
+            </div>
+          ) : isConversationOpen && !isPostingRestricted ? (
             <div className="card conversation-composer">
               <label className="label" htmlFor="conversation-body">Message the group</label>
               <textarea

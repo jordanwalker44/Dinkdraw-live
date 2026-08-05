@@ -104,6 +104,7 @@ type AnnouncementMessage = {
   sender_user_id: string | null;
   message_type: string;
   body: string;
+  league_session_id: string | null;
 };
 
 type RoomUserState = {
@@ -643,7 +644,7 @@ async function buildRoomMessageNotifications(
     .eq('sender_user_id', userId)
     .eq('message_type', event.eventType === 'announcement_posted' ? 'announcement' : 'message')
     .is('push_claimed_at', null)
-    .select('id, room_id, sender_user_id, message_type, body')
+    .select('id, room_id, sender_user_id, message_type, body, league_session_id')
     .maybeSingle();
 
   if (claimError) throw claimError;
@@ -665,9 +666,19 @@ async function buildRoomMessageNotifications(
   if (room.league_id) {
     const [{ data: league }, { data: leagueMembers }] = await Promise.all([
       adminClient.from('leagues').select('name, organizer_user_id').eq('id', room.league_id).maybeSingle(),
-      adminClient.from('league_members').select('user_id').eq('league_id', room.league_id).not('user_id', 'is', null),
+      adminClient.from('league_members').select('id, user_id, member_type').eq('league_id', room.league_id).not('user_id', 'is', null),
     ]);
-    recipientIds = uniqueUserIds([league?.organizer_user_id, ...(leagueMembers || []).map((member: any) => member.user_id)]);
+    const regularIds = (leagueMembers || []).filter((member: any) => member.member_type === 'regular').map((member: any) => member.user_id);
+    let assignedSubstituteIds: string[] = [];
+    if (event.eventType === 'announcement_posted' && message.league_session_id) {
+      const { data: assignments } = await adminClient.from('league_session_attendance')
+        .select('substitute_member_id').eq('session_id', message.league_session_id).not('substitute_accepted_at', 'is', null);
+      const assignedIds = new Set((assignments || []).map((assignment: any) => assignment.substitute_member_id));
+      assignedSubstituteIds = (leagueMembers || [])
+        .filter((member: any) => member.member_type === 'substitute' && assignedIds.has(member.id))
+        .map((member: any) => member.user_id);
+    }
+    recipientIds = uniqueUserIds([league?.organizer_user_id, ...regularIds, ...assignedSubstituteIds]);
     notificationTitle = `${league?.name || 'League'} ${event.eventType === 'announcement_posted' ? 'announcement' : 'group chat'}`;
   } else {
     recipientIds = uniqueUserIds([tournament.organizer_user_id, tournament.co_organizer_user_id, ...players.map((player) => player.claimed_by_user_id)]);

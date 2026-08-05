@@ -35,6 +35,20 @@ type Notification = {
   url: string;
 };
 
+type LeagueReminderRow = {
+  id: string;
+  session_id: string;
+  reminder_hours: 48 | 24;
+  scheduled_for: string;
+  league_sessions: {
+    id: string;
+    league_id: string;
+    session_number: number;
+    status: string;
+    leagues: { id: string; name: string; organizer_user_id: string } | null;
+  } | null;
+};
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cron-secret',
@@ -249,6 +263,7 @@ Deno.serve(async (req) => {
     const adminClient = createClient(requiredEnv('SUPABASE_URL'), serviceRoleKey);
     const now = new Date();
     const staleBefore = new Date(now.getTime() - 20 * 60 * 1000).toISOString();
+    const leagueStaleBefore = new Date(now.getTime() - 70 * 60 * 1000).toISOString();
     const claimStaleBefore = new Date(now.getTime() - 15 * 60 * 1000).toISOString();
 
     const { data, error } = await adminClient
@@ -359,12 +374,109 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { data: leagueReminderData, error: leagueReminderError } = await adminClient
+      .from('league_attendance_push_reminders')
+      .select('id, session_id, reminder_hours, scheduled_for, league_sessions(id, league_id, session_number, status, leagues(id, name, organizer_user_id))')
+      .is('sent_at', null)
+      .is('skipped_at', null)
+      .lte('scheduled_for', now.toISOString())
+      .gte('scheduled_for', leagueStaleBefore)
+      .or(`delivery_started_at.is.null,delivery_started_at.lt.${claimStaleBefore}`)
+      .order('scheduled_for', { ascending: true })
+      .limit(25);
+
+    if (leagueReminderError) throw leagueReminderError;
+
+    const leagueReminders = (leagueReminderData || []) as unknown as LeagueReminderRow[];
+    const leagueOutcomes = [];
+
+    for (const reminder of leagueReminders) {
+      const session = reminder.league_sessions;
+      const league = session?.leagues;
+
+      if (!session || !league || ['in_progress', 'completed', 'cancelled'].includes(session.status)) {
+        const reason = !session || !league ? 'League week not found' : `League week status is ${session.status}`;
+        const { error } = await adminClient.from('league_attendance_push_reminders')
+          .update({ skipped_at: new Date().toISOString(), skip_reason: reason, updated_at: new Date().toISOString() })
+          .eq('id', reminder.id).is('sent_at', null).is('skipped_at', null);
+        if (error) throw error;
+        leagueOutcomes.push({ reminderId: reminder.id, skipped: true, reason });
+        continue;
+      }
+
+      const deliveryStartedAt = new Date().toISOString();
+      const { data: claimedReminder, error: claimError } = await adminClient
+        .from('league_attendance_push_reminders')
+        .update({ delivery_started_at: deliveryStartedAt, updated_at: deliveryStartedAt })
+        .eq('id', reminder.id)
+        .is('sent_at', null)
+        .is('skipped_at', null)
+        .or(`delivery_started_at.is.null,delivery_started_at.lt.${claimStaleBefore}`)
+        .select('id')
+        .maybeSingle();
+      if (claimError) throw claimError;
+      if (!claimedReminder) continue;
+
+      const { data: attendance, error: attendanceError } = await adminClient
+        .from('league_session_attendance')
+        .select('regular_member_id, attendance_status')
+        .eq('session_id', session.id)
+        .eq('attendance_status', 'expected');
+      if (attendanceError) throw attendanceError;
+
+      const missingMemberIds = (attendance || []).map((row: any) => row.regular_member_id);
+      const { data: missingMembers, error: memberError } = missingMemberIds.length
+        ? await adminClient.from('league_members').select('id, user_id, display_name, roster_position')
+            .in('id', missingMemberIds).not('user_id', 'is', null)
+        : { data: [], error: null };
+      if (memberError) throw memberError;
+
+      const claimedMissing = missingMembers || [];
+      let notifications: Notification[] = [];
+      if (reminder.reminder_hours === 48) {
+        notifications = claimedMissing.map((member: any) => ({
+          userId: member.user_id,
+          title: `${league.name} attendance`,
+          body: `Week ${session.session_number} starts in about 48 hours. Please mark Playing, Need Sub, or Absent without substitute.`,
+          url: `/leagues/${league.id}`,
+        }));
+      } else if (claimedMissing.length) {
+        const names = claimedMissing
+          .map((member: any) => member.display_name?.trim() || `Player ${member.roster_position}`)
+          .join(', ');
+        notifications = [{
+          userId: league.organizer_user_id,
+          title: `${league.name} attendance incomplete`,
+          body: `${claimedMissing.length} player${claimedMissing.length === 1 ? ' has' : 's have'} not marked attendance for Week ${session.session_number}: ${names}.`,
+          url: `/leagues/${league.id}`,
+        }];
+      }
+
+      const results = await sendNotifications(adminClient, notifications);
+      const completedAt = new Date().toISOString();
+      const { error: markSentError } = await adminClient.from('league_attendance_push_reminders')
+        .update({ sent_at: completedAt, recipient_count: notifications.length, updated_at: completedAt })
+        .eq('id', reminder.id).is('sent_at', null).is('skipped_at', null);
+      if (markSentError) throw markSentError;
+
+      leagueOutcomes.push({
+        reminderId: reminder.id,
+        sessionId: session.id,
+        reminderHours: reminder.reminder_hours,
+        requested: notifications.length,
+        sent: results.filter((result) => result.sent).length,
+        failed: results.filter((result) => !result.sent).length,
+      });
+    }
+
     console.log('send-tournament-reminders complete', {
       checkedCount: reminders.length,
       outcomes,
+      leagueCheckedCount: leagueReminders.length,
+      leagueOutcomes,
     });
 
-    return new Response(JSON.stringify({ ok: true, checked: reminders.length, outcomes }), {
+    return new Response(JSON.stringify({ ok: true, checked: reminders.length, outcomes, leagueChecked: leagueReminders.length, leagueOutcomes }), {
       headers: { ...corsHeaders, 'content-type': 'application/json' },
     });
   } catch (error) {

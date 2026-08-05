@@ -55,6 +55,10 @@ export default function LeaguePage() {
   const [substituteEmail, setSubstituteEmail] = useState('');
   const [startingSession, setStartingSession] = useState(false);
   const [copiedPosition, setCopiedPosition] = useState<number | null>(null);
+  const [editingSchedule, setEditingSchedule] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [scheduleTime, setScheduleTime] = useState('');
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -160,13 +164,39 @@ export default function LeaguePage() {
     setSaving(false);
   }
 
-  async function setMyAttendance(status: 'playing' | 'unsure' | 'sub_needed') {
+  async function setMyAttendance(status: 'playing' | 'sub_needed' | 'absent') {
     if (!selectedSessionRow) return;
     const { error } = await supabase.rpc('set_my_league_attendance', {
       p_session_id: selectedSessionRow.id, p_status: status, p_note: null,
     });
     setMessage(error?.message || 'Attendance updated.');
     if (!error) await load();
+  }
+
+  function beginScheduleEdit() {
+    if (!selectedSessionRow) return;
+    setScheduleDate(selectedSessionRow.scheduled_date);
+    setScheduleTime(selectedSessionRow.scheduled_time || '');
+    setEditingSchedule(true);
+  }
+
+  async function saveSessionSchedule() {
+    if (!selectedSessionRow || !scheduleDate) return;
+    setSavingSchedule(true);
+    setMessage('');
+    const { error } = await supabase.rpc('update_league_session_schedule', {
+      p_session_id: selectedSessionRow.id,
+      p_scheduled_date: scheduleDate,
+      p_scheduled_time: scheduleTime || null,
+    });
+    setSavingSchedule(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setEditingSchedule(false);
+    setMessage(`Week ${selectedSessionRow.session_number} schedule updated.`);
+    await load();
   }
 
   async function addSubstitute() {
@@ -391,6 +421,23 @@ export default function LeaguePage() {
               {selectedSessionRow.scheduled_time ? ` • ${selectedSessionRow.scheduled_time}` : ''}
             </div>
           ) : null}
+          {isOrganizer && selectedSessionRow && !selectedSessionRow.tournament_id ? (
+            editingSchedule ? (
+              <div className="notice" style={{ marginBottom: 12 }}>
+                <div className="label">Change Week {selectedSession} date and time</div>
+                <div className="grid two" style={{ gap: 8, marginTop: 8 }}>
+                  <input className="input" type="date" value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)} />
+                  <input className="input" type="time" value={scheduleTime} onChange={(event) => setScheduleTime(event.target.value)} />
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <button className="button primary" type="button" disabled={savingSchedule || !scheduleDate} onClick={saveSessionSchedule}>{savingSchedule ? 'Saving...' : 'Save New Schedule'}</button>
+                  <button className="button secondary" type="button" disabled={savingSchedule} onClick={() => setEditingSchedule(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button className="button secondary" type="button" onClick={beginScheduleEdit} style={{ marginBottom: 12 }}>Change This Week’s Date or Time</button>
+            )
+          ) : null}
           <div className="grid" style={{ gap: 8 }}>
             {selectedTeams.map((team) => (
               <div key={team.id} className="notice">
@@ -427,8 +474,8 @@ export default function LeaguePage() {
           <div className="label">My response</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             <button className="button secondary" style={{ width: 'auto' }} onClick={() => setMyAttendance('playing')}>I’m playing</button>
-            <button className="button secondary" style={{ width: 'auto' }} onClick={() => setMyAttendance('unsure')}>Unsure</button>
             <button className="button secondary" style={{ width: 'auto' }} onClick={() => setMyAttendance('sub_needed')}>I need a substitute</button>
+            <button className="button secondary" style={{ width: 'auto' }} onClick={() => setMyAttendance('absent')}>Absent without substitute</button>
           </div>
         </div> : null}
 

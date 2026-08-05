@@ -152,15 +152,26 @@ Deno.serve(async (req) => {
       const { error: claimError } = await adminClient.from('league_substitute_responses')
         .update({ push_sent_at: new Date().toISOString() }).eq('id', response.id).is('push_sent_at', null);
       if (claimError) throw claimError;
-      notifications.push({ userId: league.organizer_user_id, title: `${league.name} substitute response`, body: `${substitute.display_name || 'The substitute'} ${event.accepted ? 'accepted' : 'declined'} the Week ${session.session_number} request for ${regular?.display_name || 'a player'}.`, url: leagueUrl });
-      if (regular?.user_id && regular.user_id !== league.organizer_user_id) notifications.push({ userId: regular.user_id, title: `${league.name} substitute response`, body: `${substitute.display_name || 'The substitute'} ${event.accepted ? 'accepted' : 'declined'} your Week ${session.session_number} request.`, url: leagueUrl });
+      if (event.accepted) {
+        notifications.push({ userId: league.organizer_user_id, title: `${league.name} substitute confirmed`, body: `${substitute.display_name || 'The substitute'} will play for ${regular?.display_name || 'a player'} in Week ${session.session_number}.`, url: leagueUrl });
+      }
+      if (regular?.user_id) {
+        notifications.push({
+          userId: regular.user_id,
+          title: event.accepted ? `${league.name} substitute confirmed` : `${league.name} substitute declined`,
+          body: event.accepted
+            ? `${substitute.display_name || 'The substitute'} accepted your Week ${session.session_number} spot. Your attendance is now marked Playing.`
+            : `${substitute.display_name || 'The substitute'} cannot take your Week ${session.session_number} spot. You still need a substitute.`,
+          url: leagueUrl,
+        });
+      }
     } else if (event.eventType === 'session_started') {
       if (!isOrganizer || !session?.tournament_id) throw new Error('Only the organizer can send session start notifications');
       const { data: mappings, error } = await adminClient.from('league_session_players').select('actual_member_id').eq('session_id', event.sessionId);
       if (error) throw error;
       for (const mapping of mappings || []) {
         const actual = memberById.get(mapping.actual_member_id) as any;
-        if (actual?.user_id && actual.user_id !== user.id) notifications.push({ userId: actual.user_id, title: `${league.name} Week ${session.session_number}`, body: 'Teams and the two-match opponent schedule are ready.', url: `/tournament/${session.tournament_id}` });
+        if (actual?.user_id && actual.user_id !== user.id) notifications.push({ userId: actual.user_id, title: `${league.name} Week ${session.session_number}`, body: 'Teams and the opponent schedule are ready.', url: `/tournament/${session.tournament_id}` });
       }
     } else if (event.eventType === 'standings_updated') {
       if (!isOrganizer || session?.status !== 'completed') throw new Error('Only the organizer can send completed standings notifications');

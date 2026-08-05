@@ -25,6 +25,11 @@ type TournamentPushEvent =
       messageId: string;
     }
   | {
+      eventType: 'message_posted';
+      tournamentId: string;
+      messageId: string;
+    }
+  | {
       eventType: 'training_partner_invited';
       invitationIds: string[];
     };

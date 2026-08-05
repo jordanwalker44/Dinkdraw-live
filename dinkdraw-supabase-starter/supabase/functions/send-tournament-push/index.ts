@@ -25,6 +25,11 @@ type PushEvent =
       messageId?: string;
     }
   | {
+      eventType: 'message_posted';
+      tournamentId: string;
+      messageId?: string;
+    }
+  | {
       eventType: 'training_partner_invited';
       invitationIds?: string[];
     };
@@ -606,25 +611,25 @@ function announcementPushBody(body: string) {
   return compact.length > 180 ? `${compact.slice(0, 177)}...` : compact;
 }
 
-async function buildAnnouncementNotifications(
+async function buildRoomMessageNotifications(
   adminClient: ReturnType<typeof createClient>,
-  event: Extract<PushEvent, { eventType: 'announcement_posted' }>,
+  event: Extract<PushEvent, { eventType: 'announcement_posted' | 'message_posted' }>,
   tournament: Tournament,
   players: PlayerSlot[],
   userId: string,
 ) {
-  if (!canManageTournament(tournament, userId)) {
+  if (event.eventType === 'announcement_posted' && !canManageTournament(tournament, userId)) {
     throw new Error('Only an organizer can send announcement notifications');
   }
 
   if (!event.messageId) throw new Error('Missing messageId');
 
-  const { data: room, error: roomError } = await adminClient
-    .from('tournament_rooms')
-    .select('id')
-    .eq('tournament_id', tournament.id)
-    .is('archived_at', null)
-    .maybeSingle();
+  const { data: leagueSession } = await adminClient.from('league_sessions')
+    .select('league_id').eq('tournament_id', tournament.id).maybeSingle();
+  const roomQuery = adminClient.from('tournament_rooms').select('id, league_id').is('archived_at', null);
+  const { data: room, error: roomError } = leagueSession?.league_id
+    ? await roomQuery.eq('league_id', leagueSession.league_id).maybeSingle()
+    : await roomQuery.eq('tournament_id', tournament.id).maybeSingle();
 
   if (roomError) throw roomError;
   if (!room) throw new Error('Active tournament room not found');
@@ -636,7 +641,7 @@ async function buildAnnouncementNotifications(
     .eq('id', event.messageId)
     .eq('room_id', room.id)
     .eq('sender_user_id', userId)
-    .eq('message_type', 'announcement')
+    .eq('message_type', event.eventType === 'announcement_posted' ? 'announcement' : 'message')
     .is('push_claimed_at', null)
     .select('id, room_id, sender_user_id, message_type, body')
     .maybeSingle();
@@ -653,11 +658,21 @@ async function buildAnnouncementNotifications(
   }
 
   const message = claimedMessage as AnnouncementMessage;
-  const recipientIds = uniqueUserIds([
-    tournament.organizer_user_id,
-    tournament.co_organizer_user_id,
-    ...players.map((player) => player.claimed_by_user_id),
-  ]).filter((recipientId) => recipientId !== userId);
+  let recipientIds: string[];
+  let notificationTitle = event.eventType === 'announcement_posted'
+    ? `${titleFor(tournament)} announcement`
+    : `${titleFor(tournament)} group chat`;
+  if (room.league_id) {
+    const [{ data: league }, { data: leagueMembers }] = await Promise.all([
+      adminClient.from('leagues').select('name, organizer_user_id').eq('id', room.league_id).maybeSingle(),
+      adminClient.from('league_members').select('user_id').eq('league_id', room.league_id).not('user_id', 'is', null),
+    ]);
+    recipientIds = uniqueUserIds([league?.organizer_user_id, ...(leagueMembers || []).map((member: any) => member.user_id)]);
+    notificationTitle = `${league?.name || 'League'} ${event.eventType === 'announcement_posted' ? 'announcement' : 'group chat'}`;
+  } else {
+    recipientIds = uniqueUserIds([tournament.organizer_user_id, tournament.co_organizer_user_id, ...players.map((player) => player.claimed_by_user_id)]);
+  }
+  recipientIds = recipientIds.filter((recipientId) => recipientId !== userId);
 
   let stateRows: RoomUserState[] = [];
   if (recipientIds.length) {
@@ -681,7 +696,7 @@ async function buildAnnouncementNotifications(
     .filter((recipientId) => !optedOutUserIds.has(recipientId))
     .map((recipientId) => ({
       userId: recipientId,
-      title: `${titleFor(tournament)} announcement`,
+      title: notificationTitle,
       body: announcementPushBody(message.body),
       url: `/tournament/${tournament.id}/announcements`,
     }));
@@ -958,8 +973,8 @@ Deno.serve(async (req) => {
       );
     } else if (event.eventType === 'tournament_completed') {
       notifications = buildTournamentCompletedNotifications(tournament, players, user.id);
-    } else if (event.eventType === 'announcement_posted') {
-      const announcementDelivery = await buildAnnouncementNotifications(
+    } else if (event.eventType === 'announcement_posted' || event.eventType === 'message_posted') {
+      const announcementDelivery = await buildRoomMessageNotifications(
         adminClient,
         event,
         tournament,

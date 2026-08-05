@@ -9,6 +9,7 @@ import { sendTournamentPushEvent } from '../../../../lib/tournament-push';
 type Room = {
   id: string;
   tournament_id: string;
+  league_id: string | null;
   posting_mode: string;
   conversation_closes_at: string | null;
   conversation_closed_at: string | null;
@@ -212,11 +213,17 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
 
       setUserId(currentUserId);
 
-      const { data: roomData, error: roomError } = await supabase
-        .from('tournament_rooms')
-        .select('id, tournament_id, posting_mode, conversation_closes_at, conversation_closed_at')
+      const { data: leagueSession } = await supabase
+        .from('league_sessions')
+        .select('league_id')
         .eq('tournament_id', params.id)
         .maybeSingle();
+      const roomQuery = supabase
+        .from('tournament_rooms')
+        .select('id, tournament_id, league_id, posting_mode, conversation_closes_at, conversation_closed_at');
+      const { data: roomData, error: roomError } = leagueSession?.league_id
+        ? await roomQuery.eq('league_id', leagueSession.league_id).maybeSingle()
+        : await roomQuery.eq('tournament_id', params.id).maybeSingle();
 
       if (cancelled) return;
 
@@ -331,7 +338,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     setIsSendingMessage(true);
     setMessage('');
 
-    const { error } = await supabase.rpc('post_tournament_room_message', {
+    const { data, error } = await supabase.rpc('post_tournament_room_message', {
       p_room_id: room.id,
       p_body: conversationDraft.trim(),
     });
@@ -344,6 +351,14 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
     }
 
     setConversationDraft('');
+    const postedMessage = Array.isArray(data) ? data[0] : data;
+    if (postedMessage?.id) {
+      await sendTournamentPushEvent(supabase, {
+        eventType: 'message_posted',
+        tournamentId: params.id,
+        messageId: postedMessage.id,
+      });
+    }
     await loadAnnouncements(room.id);
     await markRead(room.id, userId);
   }
@@ -375,7 +390,7 @@ export default function TournamentAnnouncementsPage({ params }: { params: { id: 
 
     const { data: updatedRoom } = await supabase
       .from('tournament_rooms')
-      .select('id, tournament_id, posting_mode, conversation_closes_at, conversation_closed_at')
+      .select('id, tournament_id, league_id, posting_mode, conversation_closes_at, conversation_closed_at')
       .eq('id', room.id)
       .maybeSingle();
     if (updatedRoom) setRoom(updatedRoom as Room);

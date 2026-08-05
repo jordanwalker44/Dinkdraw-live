@@ -306,6 +306,11 @@ export default function LeaguePage() {
           <strong>League code: {league.join_code}</strong><br />
           {gameFormatLabel} against every weekly opponent, played to {league.games_to}. First serve alternates between teams each game.
         </div>
+        {sessions.find((session) => session.tournament_id)?.tournament_id ? (
+          <button className="button secondary" type="button" style={{ marginTop: 10 }} onClick={() => router.push(`/tournament/${sessions.find((session) => session.tournament_id)?.tournament_id}/announcements`)}>
+            Open League Group Chat
+          </button>
+        ) : null}
       </div>
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}

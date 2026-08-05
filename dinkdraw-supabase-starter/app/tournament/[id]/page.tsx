@@ -2733,9 +2733,11 @@ function getTournamentModeBadges(tournament: Tournament | null) {
     }
   }
 
-  badges.push(
-    tournament.match_format === 'best_of_3' ? 'Best of 3' : 'Single Game'
-  );
+  badges.push(tournament.match_format === 'best_of_3'
+    ? 'Best of 3'
+    : tournament.match_format === 'two_game'
+      ? 'Two Games'
+      : 'Single Game');
 
   return badges;
 }
@@ -2746,6 +2748,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [organizationBrand, setOrganizationBrand] = useState<OrganizationBrand | null>(null);
+  const [leagueSession, setLeagueSession] = useState<{ league_id: string; session_number: number } | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [playoffMatches, setPlayoffMatches] = useState<PlayoffMatch[]>([]);
@@ -2830,6 +2833,8 @@ function logScoreSubmitTiming(
     (tournament?.format === 'doubles' && tournament?.doubles_mode === 'fixed'));
   
   const isBestOf3 = tournament?.match_format === 'best_of_3';
+  const isTwoGame = tournament?.match_format === 'two_game';
+  const isMultiGame = isBestOf3 || isTwoGame;
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
   const isLocked = isStarted || isCompleted;
@@ -3108,11 +3113,11 @@ const hasAnyScores = matches.some(
     playerSlots,
     matches,
     isSingles,
-    isBestOf3,
+    isMultiGame,
     tournament?.tournament_mode
   )
 );
-  }, [playerSlots, matches, isSingles, isBestOf3, tournament?.tournament_mode]);
+  }, [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
 
@@ -3209,6 +3214,7 @@ const hasAnyScores = matches.some(
   playersResult,
   matchesResult,
   playoffMatchesResult,
+  leagueSessionResult,
 ] = await Promise.all([
   supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
   supabase
@@ -3228,6 +3234,7 @@ const hasAnyScores = matches.some(
     .eq('tournament_id', params.id)
     .order('round_number', { ascending: true })
     .order('match_number', { ascending: true }),
+  supabase.from('league_sessions').select('league_id, session_number').eq('tournament_id', params.id).maybeSingle(),
 ]);
 
 const tournamentData = tournamentResult.data;
@@ -3258,6 +3265,7 @@ setMatches((prev) => {
   });
 });
 setPlayoffMatches(playoffMatchesResult.data || []);
+setLeagueSession(leagueSessionResult.data || null);
 
 setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
 
@@ -4803,11 +4811,13 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
       [`game_${game}_b`]: bNum,
     };
 
-    const optimisticMatch = clearGame3IfSeriesDecidedInTwo(
-      optimisticMatchWithSubmittedGame
-    );
+    const optimisticMatch = isTwoGame
+      ? optimisticMatchWithSubmittedGame
+      : clearGame3IfSeriesDecidedInTwo(optimisticMatchWithSubmittedGame);
 
-    const seriesNowComplete = isSeriesComplete(optimisticMatch);
+    const seriesNowComplete = isTwoGame
+      ? optimisticMatch.game_1_a !== null && optimisticMatch.game_1_b !== null && optimisticMatch.game_2_a !== null && optimisticMatch.game_2_b !== null
+      : isSeriesComplete(optimisticMatch);
 
     let finalOptimisticMatch: Match = optimisticMatch;
 
@@ -4827,7 +4837,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
     pendingScoreSubmitIdsRef.current.add(matchId);
     setMatches(optimisticMatches);
-    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
     setMessage(`Submitting Game ${game}...`);
 
     const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
@@ -4887,7 +4897,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     if (error || count === 0) {
       pendingScoreSubmitIdsRef.current.delete(matchId);
       setMatches(previousMatches);
-      setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+      setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
       setMessage(
         error
           ? `Submit failed: ${error.message}`
@@ -4905,7 +4915,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
     pendingScoreSubmitIdsRef.current.delete(matchId);
     setMatches(optimisticMatches);
-    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
     scheduleTournamentRefresh(userId);
 
     if (seriesNowComplete) {
@@ -5130,7 +5140,7 @@ setScoreDrafts((prev) => ({
   },
 }));
 
-setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
 
   const completedMatch = optimisticMatches.find((m) => m.id === matchId);
   if (!completedMatch) return;
@@ -5160,7 +5170,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
   if (error || count === 0) {
     pendingScoreSubmitIdsRef.current.delete(matchId);
     setMatches(previousMatches);
-    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
     setMessage(
       error
         ? `Submit failed: ${error.message}`
@@ -5178,7 +5188,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   pendingScoreSubmitIdsRef.current.delete(matchId);
   setMatches(optimisticMatches);
-  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
 
   if (isEditingCompletedMatch) {
     scheduleTournamentRefresh(userId);
@@ -5266,7 +5276,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
   );
 
   setMatches(optimisticMatches);
-  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
   setMessage('Reopening match...');
 
   const { error } = await supabase
@@ -5276,7 +5286,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   if (error) {
     setMatches(previousMatches);
-    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isBestOf3,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
     setMessage(`Reopen failed: ${error.message}`);
     return;
   }
@@ -5460,7 +5470,7 @@ function renderShortTeam(a: string | null, b: string | null) {
     return isWinner ? { color: '#FFCB05' } : {};
   }
 
-  function renderBestOf3Match(match: Match) {
+  function renderMultiGameMatch(match: Match) {
   const draft = scoreDrafts[match.id] || {
     team_a_score: '',
     team_b_score: '',
@@ -5476,7 +5486,7 @@ function renderShortTeam(a: string | null, b: string | null) {
   const game1Done = match.game_1_a !== null && match.game_1_b !== null;
   const game2Done = match.game_2_a !== null && match.game_2_b !== null;
   const game3Done = match.game_3_a !== null && match.game_3_b !== null;
-  const showGame3 = game1Done && game2Done && needsGame3(match);
+  const showGame3 = isBestOf3 && game1Done && game2Done && needsGame3(match);
   const shouldShowGame3Column = showGame3 || game3Done;
   const seriesComplete = match.is_complete;
   const canReportThisMatch = canReportMatchScore(match);
@@ -5697,7 +5707,7 @@ function renderShortTeam(a: string | null, b: string | null) {
               color: seriesComplete && aWins > bWins ? '#FFCB05' : '#fff',
             }}
           >
-            {teamAName}
+            ⭐ {teamAName}
           </div>
 
           {renderScoreInput({
@@ -5795,9 +5805,11 @@ function renderShortTeam(a: string | null, b: string | null) {
           fontSize: 13,
         }}
       >
-        {seriesComplete
-          ? `${aWins > bWins ? teamAName : teamBName} win series ${aWins}-${bWins}`
-          : `Series: ${aWins}-${bWins}`}
+        {isTwoGame
+          ? (seriesComplete ? `Both games complete • ${aWins}-${bWins}` : `Game wins: ${aWins}-${bWins} • Team A serves first in Game 1; Team B in Game 2`)
+          : seriesComplete
+            ? `${aWins > bWins ? teamAName : teamBName} win series ${aWins}-${bWins}`
+            : `Series: ${aWins}-${bWins} • Team A serves first in Game 1; Team B in Game 2`}
       </div>
 
       {!seriesComplete && nextGameNumber ? (
@@ -5849,6 +5861,11 @@ function renderShortTeam(a: string | null, b: string | null) {
   return (
     <main className="page-shell">
       <TopNav />
+      {leagueSession ? (
+        <Link href={`/leagues/${leagueSession.league_id}`} className="button secondary" style={{ marginBottom: 14, width: '100%' }}>
+          ← Back to League • Week {leagueSession.session_number}
+        </Link>
+      ) : null}
 
       <OrganizationBrandBanner brand={organizationBrand} />
 
@@ -6810,7 +6827,7 @@ Sign in with this same email address to submit and edit scores.`;
   </span>
 
   <span className="tag">
-    {isBestOf3 ? '🏆 Best of 3' : '🎾 Single Game'}
+    {isBestOf3 ? '🏆 Best of 3' : isTwoGame ? '🎾 Two Games' : '🎾 Single Game'}
   </span>
 </div>
                 </div>
@@ -7588,7 +7605,7 @@ isOrganizer &&
                   match.round_number === currentRound &&
                   nextUpMatch?.id === match.id;
 
-                if (isBestOf3) return renderBestOf3Match(match);
+                if (isMultiGame) return renderMultiGameMatch(match);
 
                 const draft = scoreDrafts[match.id] || {
                   team_a_score: match.team_a_score === null ? '' : String(match.team_a_score),

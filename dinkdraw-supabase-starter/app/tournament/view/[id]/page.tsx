@@ -350,6 +350,8 @@ export default function PublicTournamentViewPage({
 
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
+  const isTwoGame = tournament?.match_format === 'two_game';
+  const isMultiGame = isBestOf3 || isTwoGame;
   const isStarted = tournament?.status === 'started';
   const isCompleted = tournament?.status === 'completed';
 
@@ -531,10 +533,10 @@ export default function PublicTournamentViewPage({
         playerSlots,
         matches,
         !!isSingles,
-        !!isBestOf3,
+        !!isMultiGame,
         tournament?.tournament_mode
       ),
-    [playerSlots, matches, isSingles, isBestOf3, tournament?.tournament_mode]
+    [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode]
   );
 
   const eventMeta = useMemo(
@@ -794,7 +796,7 @@ useEffect(() => {
   }
 
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
-    if (isBestOf3) {
+    if (isMultiGame) {
       if (!match.is_complete) return {};
       const { aWins, bWins } = getSeriesWins(match);
       const isWinner =
@@ -959,7 +961,7 @@ useEffect(() => {
                 lineHeight: 1.2,
               }}
             >
-              {teamA}
+              ⭐ {teamA}
             </div>
 
             {games.map((game) => (
@@ -1038,6 +1040,9 @@ useEffect(() => {
               {bWins}
             </div>
           </div>
+        </div>
+        <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          ⭐ Team A serves first in Game 1; Team B serves first in Game 2{isBestOf3 ? '; Team A serves first in Game 3' : ''}.
         </div>
 
         <div
@@ -1258,8 +1263,8 @@ useEffect(() => {
         .sort((a, b) => (a.court_number ?? 999) - (b.court_number ?? 999))
         .map((match) => {
           const isCurrentMatch = !match.is_complete;
-          const series = isBestOf3 ? getSeriesWins(match) : null;
-          const seriesScore = isBestOf3 ? getSeriesScore(match) : null;
+          const series = isMultiGame ? getSeriesWins(match) : null;
+          const seriesScore = isMultiGame ? getSeriesScore(match) : null;
 
           return (
             <div
@@ -1322,7 +1327,7 @@ useEffect(() => {
                   </div>
 
                   <div style={{ fontWeight: 900, color: '#FFCB05' }}>
-                    {isBestOf3
+                    {isMultiGame
                       ? `${series?.aWins ?? 0}`
                       : match.team_a_score ?? '—'}
                   </div>
@@ -1357,14 +1362,14 @@ useEffect(() => {
                   </div>
 
                   <div style={{ fontWeight: 900, color: '#FFCB05' }}>
-                    {isBestOf3
+                    {isMultiGame
                       ? `${series?.bWins ?? 0}`
                       : match.team_b_score ?? '—'}
                   </div>
                 </div>
               </div>
 
-              {isBestOf3 && seriesScore ? (
+              {isMultiGame && seriesScore ? (
                 <div
                   className="muted"
                   style={{ marginTop: 8, fontSize: 12, textAlign: 'center' }}
@@ -1463,7 +1468,7 @@ useEffect(() => {
                   fontWeight: 800,
                 }}
               >
-                {isBestOf3
+                {isMultiGame
                   ? `${getSeriesWins(match).aWins}-${getSeriesWins(match).bWins}`
                   : `${match.team_a_score ?? '-'}-${match.team_b_score ?? '-'}`}
               </div>
@@ -1852,7 +1857,7 @@ useEffect(() => {
                 match.round_number === currentRound &&
                 liveMatchIds.has(match.id);
 
-              if (isBestOf3) return renderBestOf3Match(match);
+              if (isMultiGame) return renderBestOf3Match(match);
 
               return (
                 <div

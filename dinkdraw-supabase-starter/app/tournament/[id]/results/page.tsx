@@ -97,7 +97,7 @@ function getTournamentModeBadges(tournament: Tournament | null) {
   }
 
   badges.push(
-    tournament.match_format === 'best_of_3' ? 'Best of 3' : 'Single Game'
+  tournament.match_format === 'best_of_3' ? 'Best of 3' : tournament.match_format === 'two_game' ? 'Two Games' : 'Single Game'
   );
 
   return badges;
@@ -354,6 +354,7 @@ export default function TournamentResultsPage({
 
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
+  const isMultiGame = isBestOf3 || tournament?.match_format === 'two_game';
   const publicViewUrl =
     typeof window !== 'undefined' && tournament?.id
       ? `${window.location.origin}/tournament/view/${tournament.id}`
@@ -382,10 +383,10 @@ export default function TournamentResultsPage({
       playerSlots,
       matches,
       !!isSingles,
-      !!isBestOf3,
+      !!isMultiGame,
       tournament?.tournament_mode
     ),
-  [playerSlots, matches, isSingles, isBestOf3, tournament?.tournament_mode]
+  [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode]
 );
 
   const winner = standings[0] || null;
@@ -401,7 +402,7 @@ export default function TournamentResultsPage({
   }
 
   function renderScore(match: Match) {
-    if (isBestOf3) {
+    if (isMultiGame) {
       const { aWins, bWins } = getSeriesWins(match);
       const { aScore, bScore } = getSeriesScore(match);
       return `${aWins}-${bWins} games (${aScore}-${bScore} points)`;

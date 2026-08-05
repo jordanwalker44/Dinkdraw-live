@@ -16,6 +16,7 @@ type League = {
   session_count: number;
   regular_player_count: number;
   matches_per_opponent: number;
+  game_format: 'single' | 'two_game' | 'best_of_3';
   games_to: number;
   default_time: string | null;
   default_location: string | null;
@@ -118,6 +119,14 @@ export default function LeaguePage() {
     || (row.attendance_status === 'sub_confirmed' && !row.organizer_confirmed_at)
   );
   const sessionReady = unnamedRegulars.length === 0 && unresolvedAttendance.length === 0;
+  const selectedSessionIndex = sessions.findIndex((session) => session.session_number === selectedSession);
+  const previousSession = selectedSessionIndex > 0 ? sessions[selectedSessionIndex - 1] : null;
+  const nextSession = selectedSessionIndex >= 0 ? sessions[selectedSessionIndex + 1] : null;
+  const gameFormatLabel = league?.game_format === 'single'
+    ? 'Single game'
+    : league?.game_format === 'best_of_3'
+      ? 'Best 2 of 3'
+      : 'Two games';
   const memberName = (id: string) => {
     const member = membersById.get(id);
     return member?.display_name?.trim() || `Player ${member?.roster_position || '?'}`;
@@ -265,7 +274,7 @@ export default function LeaguePage() {
         </div>
         <div className="notice" style={{ marginTop: 14 }}>
           <strong>League code: {league.join_code}</strong><br />
-          {league.matches_per_opponent} consecutive matches against every weekly opponent, played to {league.games_to}.
+          {gameFormatLabel} against every weekly opponent, played to {league.games_to}. First serve alternates between teams each game.
         </div>
       </div>
 
@@ -370,6 +379,11 @@ export default function LeaguePage() {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="row-between" style={{ gap: 10, marginTop: 12 }}>
+            <button className="button secondary" type="button" disabled={!previousSession} onClick={() => previousSession && setSelectedSession(previousSession.session_number)}>← Previous week</button>
+            <strong style={{ whiteSpace: 'nowrap' }}>Week {selectedSession} of {sessions.length}</strong>
+            <button className="button secondary" type="button" disabled={!nextSession} onClick={() => nextSession && setSelectedSession(nextSession.session_number)}>Next week →</button>
           </div>
           {selectedSessionRow ? (
             <div className="muted" style={{ margin: '12px 0' }}>
@@ -486,10 +500,10 @@ export default function LeaguePage() {
         <div className="card-title">Season sessions</div>
         <div className="grid" style={{ gap: 8, marginTop: 12 }}>
           {sessions.map((session) => (
-            <div key={session.id} className="notice" style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+            <button key={session.id} type="button" className="notice" onClick={() => setSelectedSession(session.session_number)} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, width: '100%', color: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
               <div><strong>Week {session.session_number}</strong> • {new Date(`${session.scheduled_date}T12:00:00`).toLocaleDateString()}</div>
-              <span>{session.tournament_id ? 'Live tournament ready' : session.status === 'scheduled' ? 'Scheduled' : session.status}</span>
-            </div>
+              <span>{session.session_number === selectedSession ? 'Viewing' : session.tournament_id ? 'Open week' : session.status === 'scheduled' ? 'Scheduled' : session.status}</span>
+            </button>
           ))}
         </div>
       </section>

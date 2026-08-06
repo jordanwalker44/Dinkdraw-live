@@ -135,6 +135,21 @@ export default function AdminFeaturesPage() {
     setMessage(error ? error.message : 'Organization mode granted to user.');
   }
 
+  async function grantUserPoolBrackets() {
+    setMessage('');
+    setIsWorking(true);
+
+    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
+      p_user_id: userId.trim(),
+      p_organization_id: null,
+      p_feature_key: 'round_robin_pool_brackets',
+      p_notes: 'Pool bracket premium access granted from admin page',
+    });
+
+    setIsWorking(false);
+    setMessage(error ? error.message : 'Pool and postseason bracket access granted to user.');
+  }
+
   async function grantSelectedOrganizationLeagueMode() {
     if (!selectedOrganizationId) {
       setMessage('Choose an organization first.');
@@ -151,6 +166,23 @@ export default function AdminFeaturesPage() {
     });
     setIsWorking(false);
     setMessage(error ? error.message : 'League access granted to the selected organization.');
+  }
+
+  async function grantSelectedOrganizationPoolBrackets() {
+    if (!selectedOrganizationId) {
+      setMessage('Choose an organization first.');
+      return;
+    }
+    setMessage('');
+    setIsWorking(true);
+    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
+      p_user_id: null,
+      p_organization_id: selectedOrganizationId,
+      p_feature_key: 'round_robin_pool_brackets',
+      p_notes: 'Pool bracket premium access granted from admin page',
+    });
+    setIsWorking(false);
+    setMessage(error ? error.message : 'Pool and postseason bracket access granted to the selected organization.');
   }
 
   async function createOrganizationForUser() {
@@ -334,6 +366,15 @@ export default function AdminFeaturesPage() {
                   >
                     Grant Premium League Access
                   </button>
+
+                  <button
+                    type="button"
+                    className="button primary"
+                    onClick={grantSelectedOrganizationPoolBrackets}
+                    disabled={isWorking || !selectedOrganizationId}
+                  >
+                    Grant Pool + Bracket Premium Access
+                  </button>
                 </div>
               ) : (
                 <div className="muted">This user does not belong to any organizations yet.</div>
@@ -376,6 +417,15 @@ export default function AdminFeaturesPage() {
             disabled={isWorking || !userId.trim()}
           >
             Grant Organization Mode to User
+          </button>
+
+          <button
+            type="button"
+            className="button secondary"
+            onClick={grantUserPoolBrackets}
+            disabled={isWorking || !userId.trim()}
+          >
+            Grant Pool + Bracket Premium Access
           </button>
 
           {message ? <div className="notice">{message}</div> : null}

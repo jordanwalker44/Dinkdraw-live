@@ -60,6 +60,12 @@ type Tournament = {
   champion_player_2_id: string | null;
   ask_for_dupr_id: boolean | null;
   organization_id: string | null;
+  pool_brackets_enabled: boolean | null;
+  pool_count: number | null;
+  pool_qualifiers_per_gender: number | null;
+  bracket_match_format: 'single' | 'best_of_3' | null;
+  bracket_games_to: number | null;
+  bracket_deciding_game_to: number | null;
 };
 
 type PlayerSlot = {
@@ -70,6 +76,7 @@ type PlayerSlot = {
   claimed_by_user_id: string | null;
   gender: string | null;
   dupr_id: string | null;
+  pool_number: number | null;
 };
 
 type Match = {
@@ -141,6 +148,16 @@ type PlayoffMatch = {
   next_match_team: string | null;
   is_bye: boolean;
   is_complete: boolean;
+  bracket_type: 'championship' | 'consolation';
+  match_format: 'single' | 'best_of_3';
+  games_to: number | null;
+  deciding_game_to: number | null;
+  game_1_a: number | null;
+  game_1_b: number | null;
+  game_2_a: number | null;
+  game_2_b: number | null;
+  game_3_a: number | null;
+  game_3_b: number | null;
 };
 
 type SavedCoOrganizer = {
@@ -2403,6 +2420,47 @@ function buildSchedule(
   return buildDoublesSchedule(players, rounds, courts);
 }
 
+function assignPlayersToBalancedPools(players: PlayerSlot[], poolCount: number, mixed: boolean) {
+  const assignments = new Map<string, number>();
+
+  if (mixed) {
+    const men = players.filter((player) => player.gender === 'male');
+    const women = players.filter((player) => player.gender === 'female');
+
+    men.forEach((player, index) => assignments.set(player.id, (index % poolCount) + 1));
+    women.forEach((player, index) => assignments.set(player.id, (index % poolCount) + 1));
+  } else {
+    players.forEach((player, index) => assignments.set(player.id, (index % poolCount) + 1));
+  }
+
+  return players.map((player) => ({
+    ...player,
+    pool_number: assignments.get(player.id) || 1,
+  }));
+}
+
+function buildPoolSchedule(
+  players: PlayerSlot[],
+  poolCount: number,
+  rounds: number,
+  courts: number,
+  doublesMode: string | null
+): ScheduleRow[] {
+  const courtsPerPool = Math.floor(courts / poolCount);
+  if (courtsPerPool < 1) return [];
+
+  return Array.from({ length: poolCount }, (_, index) => index + 1).flatMap((poolNumber) => {
+    const poolPlayers = players.filter((player) => player.pool_number === poolNumber);
+    const rows = buildSchedule(poolPlayers, rounds, courtsPerPool, 'doubles', doublesMode);
+    const courtOffset = (poolNumber - 1) * courtsPerPool;
+
+    return rows.map((row) => ({
+      ...row,
+      court_number: row.court_number === null ? null : row.court_number + courtOffset,
+    }));
+  });
+}
+
 // Best of 3 helpers
 function getSeriesWins(match: Match): { aWins: number; bWins: number } {
   let aWins = 0;
@@ -2682,6 +2740,16 @@ function getPlayoffRoundLabel(roundNumber: number, totalRounds: number) {
   return `Round ${roundNumber}`;
 }
 
+function buildStandardSeedOrder(size: number): number[] {
+  if (size === 1) return [1];
+  let order = [1, 2];
+  while (order.length < size) {
+    const nextSize = order.length * 2;
+    order = order.flatMap((seed) => [seed, nextSize + 1 - seed]);
+  }
+  return order;
+}
+
 function getSeedPairs(seedCount: number, seedingStyle: string | null) {
   const seeds = Array.from({ length: seedCount }, (_, index) => index + 1);
 
@@ -2771,7 +2839,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [scoreDrafts, setScoreDrafts] = useState<Record<string, ScoreDraft>>({});
   const [playoffScoreDrafts, setPlayoffScoreDrafts] = useState<
-  Record<string, { team_a_score: string; team_b_score: string }>
+  Record<string, Partial<ScoreDraft>>
   >({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [editedTournamentTitle, setEditedTournamentTitle] = useState('');
@@ -2829,7 +2897,7 @@ function logScoreSubmitTiming(
   const isSingles = tournament?.format === 'singles';
   const playoffsAllowedForTournament =
   tournament?.tournament_mode === 'round_robin' &&
-  (tournament?.format === 'singles' ||
+  (tournament?.pool_brackets_enabled || tournament?.format === 'singles' ||
     (tournament?.format === 'doubles' && tournament?.doubles_mode === 'fixed'));
   
   const isBestOf3 = tournament?.match_format === 'best_of_3';
@@ -4123,6 +4191,53 @@ const results = updates.length > 0 ? await Promise.all(updates) : [];
         Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
       );
 
+      const poolCount = tournament.pool_count || 0;
+      let scheduledPlayers = namedPlayers as PlayerSlot[];
+
+      if (tournament.pool_brackets_enabled) {
+        if (poolCount < 2 || namedPlayers.length % poolCount !== 0) {
+          setMessage('Pool play requires players to divide evenly across every pool.');
+          setIsStarting(false);
+          return;
+        }
+        if (availableCourts < poolCount) {
+          setMessage(`Pool play needs at least ${poolCount} courts so every pool can play each round.`);
+          setIsStarting(false);
+          return;
+        }
+
+        scheduledPlayers = assignPlayersToBalancedPools(
+          namedPlayers as PlayerSlot[],
+          poolCount,
+          tournament.doubles_mode === 'mixed'
+        );
+
+        if (tournament.doubles_mode === 'mixed') {
+          const poolsAreBalanced = Array.from({ length: poolCount }, (_, index) => index + 1).every((poolNumber) => {
+            const pool = scheduledPlayers.filter((player) => player.pool_number === poolNumber);
+            return pool.filter((player) => player.gender === 'male').length ===
+              pool.filter((player) => player.gender === 'female').length;
+          });
+          if (!poolsAreBalanced) {
+            setMessage('Each mixed pool must contain the same number of men and women.');
+            setIsStarting(false);
+            return;
+          }
+        }
+
+        const poolUpdates = await Promise.all(
+          scheduledPlayers.map((player) =>
+            supabase.from('tournament_players').update({ pool_number: player.pool_number }).eq('id', player.id)
+          )
+        );
+        const failedPoolUpdate = poolUpdates.find((result) => result.error);
+        if (failedPoolUpdate?.error) {
+          setMessage(`Could not save pool assignments: ${failedPoolUpdate.error.message}`);
+          setIsStarting(false);
+          return;
+        }
+      }
+
       if (tournament.tournament_mode === 'cream_of_the_crop') {
       if (namedPlayers.length % 4 !== 0) {
         setMessage('Cream of the Crop requires players in groups of 4.');
@@ -4134,6 +4249,14 @@ const results = updates.length > 0 ? await Promise.all(updates) : [];
       const scheduleRows =
         tournament.tournament_mode === 'cream_of_the_crop'
         ? buildCreamOfTheCropStageSchedule(namedPlayers, 1)
+        : tournament.pool_brackets_enabled
+        ? buildPoolSchedule(
+            scheduledPlayers,
+            poolCount,
+            tournament.rounds,
+            availableCourts,
+            tournament.doubles_mode
+          )
         : buildSchedule(
         namedPlayers,
         tournament.rounds,
@@ -4206,6 +4329,145 @@ if (!scheduleValidation.isValid) {
     setIsStarting(false);
   }
 
+  async function generatePoolPostseasonBrackets() {
+    if (!tournament) return;
+
+    const standingByPlayerId = new Map(standings.map((standing) => [standing.playerId, standing]));
+    const rankPlayers = (players: PlayerSlot[]) => [...players].sort((a, b) => {
+      const aStanding = standingByPlayerId.get(a.id);
+      const bStanding = standingByPlayerId.get(b.id);
+      if ((bStanding?.wins || 0) !== (aStanding?.wins || 0)) return (bStanding?.wins || 0) - (aStanding?.wins || 0);
+      if ((bStanding?.pointDiff || 0) !== (aStanding?.pointDiff || 0)) return (bStanding?.pointDiff || 0) - (aStanding?.pointDiff || 0);
+      return a.slot_number - b.slot_number;
+    });
+
+    const championshipPlayers: PlayerSlot[] = [];
+    const consolationPlayers: PlayerSlot[] = [];
+    const poolCount = tournament.pool_count || 0;
+    const qualifiersPerGender = tournament.pool_qualifiers_per_gender || 1;
+
+    for (let poolNumber = 1; poolNumber <= poolCount; poolNumber += 1) {
+      const pool = playerSlots.filter((player) => player.pool_number === poolNumber && (player.display_name || '').trim());
+      if (tournament.doubles_mode === 'mixed') {
+        for (const gender of ['male', 'female']) {
+          const ranked = rankPlayers(pool.filter((player) => player.gender === gender));
+          championshipPlayers.push(...ranked.slice(0, qualifiersPerGender));
+          consolationPlayers.push(...ranked.slice(qualifiersPerGender));
+        }
+      } else {
+        const ranked = rankPlayers(pool);
+        const advanceCount = Math.floor(ranked.length / 2);
+        championshipPlayers.push(...ranked.slice(0, advanceCount));
+        consolationPlayers.push(...ranked.slice(advanceCount));
+      }
+    }
+
+    type PostseasonTeam = { player1Id: string; player2Id: string; seed: number };
+    const formTeams = (players: PlayerSlot[]): PostseasonTeam[] => {
+      if (tournament.doubles_mode === 'mixed') {
+        const men = rankPlayers(players.filter((player) => player.gender === 'male'));
+        const women = rankPlayers(players.filter((player) => player.gender === 'female'));
+        return men.slice(0, Math.min(men.length, women.length)).map((man, index) => ({
+          player1Id: man.id,
+          player2Id: women[index].id,
+          seed: index + 1,
+        }));
+      }
+
+      const ranked = rankPlayers(players);
+      const teams: PostseasonTeam[] = [];
+      for (let index = 0; index + 1 < ranked.length; index += 2) {
+        teams.push({ player1Id: ranked[index].id, player2Id: ranked[index + 1].id, seed: teams.length + 1 });
+      }
+      return teams;
+    };
+
+    const brackets = [
+      { type: 'championship' as const, teams: formTeams(championshipPlayers) },
+      { type: 'consolation' as const, teams: formTeams(consolationPlayers) },
+    ];
+
+    if (brackets.some((bracket) => bracket.teams.length < 2)) {
+      setMessage('Each postseason bracket needs at least two complete teams.');
+      return;
+    }
+
+    const rows = brackets.flatMap((bracket) => {
+      const bracketSize = nextPowerOfTwo(bracket.teams.length);
+      const slotSeeds = buildStandardSeedOrder(bracketSize).map((seed) => seed <= bracket.teams.length ? seed : null);
+      const firstRoundPairs: Array<[number | null, number | null]> = [];
+      for (let index = 0; index < slotSeeds.length; index += 2) firstRoundPairs.push([slotSeeds[index], slotSeeds[index + 1]]);
+      const roundCounts: number[] = [];
+      for (let count = firstRoundPairs.length; count >= 1; count = Math.ceil(count / 2)) {
+        roundCounts.push(count);
+        if (count === 1) break;
+      }
+
+      return roundCounts.flatMap((matchCount, roundIndex) =>
+        Array.from({ length: matchCount }, (_, matchIndex) => {
+          const pair = roundIndex === 0 ? firstRoundPairs[matchIndex] : null;
+          const seedA = pair?.[0] || null;
+          const seedB = pair?.[1] || null;
+          const teamA = seedA ? bracket.teams[seedA - 1] : null;
+          const teamB = seedB ? bracket.teams[seedB - 1] : null;
+          const isBye = roundIndex === 0 && !!teamA && !teamB;
+          return {
+            tournament_id: tournament.id,
+            bracket_type: bracket.type,
+            round_number: roundIndex + 1,
+            match_number: matchIndex + 1,
+            round_label: getPlayoffRoundLabel(roundIndex + 1, roundCounts.length),
+            team_a_seed: seedA,
+            team_b_seed: seedB,
+            team_a_player_1_id: teamA?.player1Id || null,
+            team_a_player_2_id: teamA?.player2Id || null,
+            team_b_player_1_id: teamB?.player1Id || null,
+            team_b_player_2_id: teamB?.player2Id || null,
+            winner_team: isBye ? 'A' : null,
+            winner_player_1_id: isBye ? teamA?.player1Id || null : null,
+            winner_player_2_id: isBye ? teamA?.player2Id || null : null,
+            next_match_id: null,
+            next_match_team: null,
+            is_bye: isBye,
+            is_complete: isBye,
+            match_format: tournament.bracket_match_format || 'single',
+            games_to: tournament.bracket_games_to || 11,
+            deciding_game_to: tournament.bracket_deciding_game_to,
+          };
+        })
+      );
+    });
+
+    const { error: deleteError } = await supabase.from('playoff_matches').delete().eq('tournament_id', tournament.id);
+    if (deleteError) { setMessage(`Could not reset postseason brackets: ${deleteError.message}`); return; }
+    const { data: inserted, error: insertError } = await supabase.from('playoff_matches').insert(rows).select('*');
+    if (insertError || !inserted) { setMessage(`Could not generate postseason brackets: ${insertError?.message || 'No matches returned.'}`); return; }
+
+    const matchMap = new Map<string, PlayoffMatch>();
+    for (const match of inserted as PlayoffMatch[]) matchMap.set(`${match.bracket_type}-${match.round_number}-${match.match_number}`, match);
+    const updates: any[] = [];
+    for (const match of inserted as PlayoffMatch[]) {
+      const nextMatch = matchMap.get(`${match.bracket_type}-${match.round_number + 1}-${Math.ceil(match.match_number / 2)}`);
+      if (!nextMatch) continue;
+      const nextTeam = match.match_number % 2 === 1 ? 'A' : 'B';
+      updates.push(supabase.from('playoff_matches').update({ next_match_id: nextMatch.id, next_match_team: nextTeam }).eq('id', match.id));
+      if (match.is_bye && match.winner_player_1_id) {
+        updates.push(supabase.from('playoff_matches').update(nextTeam === 'A' ? {
+          team_a_seed: match.team_a_seed, team_a_player_1_id: match.winner_player_1_id, team_a_player_2_id: match.winner_player_2_id,
+        } : {
+          team_b_seed: match.team_a_seed, team_b_player_1_id: match.winner_player_1_id, team_b_player_2_id: match.winner_player_2_id,
+        }).eq('id', nextMatch.id));
+      }
+    }
+    const updateResults = await Promise.all(updates);
+    const failed = updateResults.find((result) => result.error);
+    if (failed?.error) { setMessage(`Brackets generated, but linking failed: ${failed.error.message}`); return; }
+    const { error: tournamentError } = await supabase.from('tournaments').update({ playoff_status: 'started' }).eq('id', tournament.id);
+    if (tournamentError) { setMessage(`Could not start postseason: ${tournamentError.message}`); return; }
+    await loadTournamentData(userId);
+    setMessage('Championship and consolation brackets generated. Partnerships are now locked.');
+  }
+
   async function generatePlayoffBracket() {
   if (!tournament) return;
 
@@ -4214,12 +4476,12 @@ if (!scheduleValidation.isValid) {
     return;
   }
 
-  if (tournament.playoff_format === 'none') {
+  if (!tournament.pool_brackets_enabled && tournament.playoff_format === 'none') {
     setMessage('This tournament does not have playoffs enabled.');
     return;
   }
 
-    if (!playoffsAllowedForTournament) {
+    if (!playoffsAllowedForTournament && !tournament.pool_brackets_enabled) {
   setMessage('Playoffs are only available for Singles and Fixed Partners tournaments.');
   return;
 }
@@ -4231,6 +4493,11 @@ if (!scheduleValidation.isValid) {
 
   if (playoffMatches.length > 0) {
     setMessage('Playoff bracket already exists.');
+    return;
+  }
+
+  if (tournament.pool_brackets_enabled) {
+    await generatePoolPostseasonBrackets();
     return;
   }
 
@@ -4300,19 +4567,6 @@ if (!scheduleValidation.isValid) {
   }
 
   const seededCompetitors = sortedCompetitors.slice(0, seedCount);
-
-  function buildStandardSeedOrder(size: number): number[] {
-    if (size === 1) return [1];
-
-    let order = [1, 2];
-
-    while (order.length < size) {
-      const nextSize = order.length * 2;
-      order = order.flatMap((seed) => [seed, nextSize + 1 - seed]);
-    }
-
-    return order;
-  }
 
   const bracketSize =
     tournament.playoff_seeding_style === 'simple'
@@ -4959,34 +5213,60 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
   }
 
   const draft = playoffScoreDrafts[matchId];
+  let aScore = 0;
+  let bScore = 0;
+  let teamAWins = false;
+  let scoreUpdate: Record<string, number | null> = {};
 
-  const aRaw =
-    draft?.team_a_score ??
-    (match.team_a_score === null ? '' : String(match.team_a_score));
-
-  const bRaw =
-    draft?.team_b_score ??
-    (match.team_b_score === null ? '' : String(match.team_b_score));
-
-  if (aRaw.trim() === '' || bRaw.trim() === '') {
-    setMessage('Enter both playoff scores before submitting.');
-    return;
+  if (match.match_format === 'best_of_3') {
+    const gameValues = [1, 2, 3].map((gameNumber) => {
+      const aField = `game_${gameNumber}_a` as keyof ScoreDraft;
+      const bField = `game_${gameNumber}_b` as keyof ScoreDraft;
+      const storedA = match[aField as keyof PlayoffMatch] as number | null;
+      const storedB = match[bField as keyof PlayoffMatch] as number | null;
+      const rawA = draft?.[aField] ?? (storedA === null ? '' : String(storedA));
+      const rawB = draft?.[bField] ?? (storedB === null ? '' : String(storedB));
+      return { aField, bField, rawA, rawB };
+    });
+    if (gameValues.slice(0, 2).some((game) => !game.rawA?.trim() || !game.rawB?.trim())) {
+      setMessage('Enter scores for the first two playoff games.');
+      return;
+    }
+    const firstGameAWon = Number(gameValues[0].rawA) > Number(gameValues[0].rawB);
+    const secondGameAWon = Number(gameValues[1].rawA) > Number(gameValues[1].rawB);
+    if (firstGameAWon === secondGameAWon && (gameValues[2].rawA?.trim() || gameValues[2].rawB?.trim())) {
+      setMessage('Game 3 is not played when a team wins the first two games.');
+      return;
+    }
+    let aGameWins = 0;
+    let bGameWins = 0;
+    for (const [index, game] of gameValues.entries()) {
+      if (!game.rawA?.trim() && !game.rawB?.trim()) continue;
+      if (!game.rawA?.trim() || !game.rawB?.trim()) { setMessage(`Enter both scores for game ${index + 1}.`); return; }
+      const gameA = Number(game.rawA);
+      const gameB = Number(game.rawB);
+      if (!Number.isFinite(gameA) || !Number.isFinite(gameB) || gameA === gameB) { setMessage(`Game ${index + 1} needs valid, non-tied scores.`); return; }
+      scoreUpdate[game.aField] = gameA;
+      scoreUpdate[game.bField] = gameB;
+      if (gameA > gameB) aGameWins += 1; else bGameWins += 1;
+    }
+    if (aGameWins < 2 && bGameWins < 2) { setMessage('Enter a deciding third game for a 1–1 series.'); return; }
+    aScore = aGameWins;
+    bScore = bGameWins;
+    teamAWins = aGameWins > bGameWins;
+    scoreUpdate.team_a_score = aScore;
+    scoreUpdate.team_b_score = bScore;
+  } else {
+    const aRaw = draft?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score));
+    const bRaw = draft?.team_b_score ?? (match.team_b_score === null ? '' : String(match.team_b_score));
+    if (!aRaw?.trim() || !bRaw?.trim()) { setMessage('Enter both playoff scores before submitting.'); return; }
+    aScore = Math.max(0, Number(aRaw));
+    bScore = Math.max(0, Number(bRaw));
+    if (Number.isNaN(aScore) || Number.isNaN(bScore)) { setMessage('Playoff scores must be valid numbers.'); return; }
+    if (aScore === bScore) { setMessage('A playoff match cannot end in a tie.'); return; }
+    teamAWins = aScore > bScore;
+    scoreUpdate = { team_a_score: aScore, team_b_score: bScore };
   }
-
-  const aScore = Math.max(0, Number(aRaw));
-  const bScore = Math.max(0, Number(bRaw));
-
-  if (Number.isNaN(aScore) || Number.isNaN(bScore)) {
-    setMessage('Playoff scores must be valid numbers.');
-    return;
-  }
-
-  if (aScore === bScore) {
-    setMessage('A playoff match cannot end in a tie.');
-    return;
-  }
-
-  const teamAWins = aScore > bScore;
 
   const winnerPlayer1Id = teamAWins
     ? match.team_a_player_1_id
@@ -5004,8 +5284,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
   const { error: matchError } = await supabase
     .from('playoff_matches')
     .update({
-      team_a_score: aScore,
-      team_b_score: bScore,
+      ...scoreUpdate,
       winner_team: winnerTeam,
       winner_player_1_id: winnerPlayer1Id,
       winner_player_2_id: winnerPlayer2Id,
@@ -5045,6 +5324,24 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
     await loadTournamentData(userId);
     setMessage('Playoff score submitted. Winner advanced.');
+    return;
+  }
+
+  if (tournament.pool_brackets_enabled) {
+    const unfinishedOtherMatches = playoffMatches.filter((playoffMatch) => playoffMatch.id !== match.id && !playoffMatch.is_complete);
+    const poolTournamentUpdate: Record<string, unknown> = {};
+    if (match.bracket_type === 'championship') {
+      poolTournamentUpdate.champion_player_1_id = winnerPlayer1Id;
+      poolTournamentUpdate.champion_player_2_id = winnerPlayer2Id;
+    }
+    if (unfinishedOtherMatches.length === 0) {
+      poolTournamentUpdate.playoff_status = 'completed';
+      poolTournamentUpdate.status = 'completed';
+    }
+    const { error: poolTournamentError } = await supabase.from('tournaments').update(poolTournamentUpdate).eq('id', tournament.id);
+    if (poolTournamentError) { setMessage(`Bracket winner saved, but tournament update failed: ${poolTournamentError.message}`); return; }
+    await loadTournamentData(userId);
+    setMessage(unfinishedOtherMatches.length === 0 ? 'Postseason complete. Tournament finished!' : `${match.bracket_type === 'championship' ? 'Championship' : 'Consolation'} bracket complete.`);
     return;
   }
 
@@ -7034,16 +7331,18 @@ Sign in with this same email address to submit and edit scores.`;
     {(
 isOrganizer &&
   playoffsAllowedForTournament &&
-  tournament?.playoff_format !== 'none' &&
+  (tournament?.pool_brackets_enabled || tournament?.playoff_format !== 'none') &&
   (isStarted || isCompleted) &&
   matches.length > 0 &&
   matches.every((m) => m.is_bye || m.is_complete) &&
   playoffRounds.length === 0
 ) ? (
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-title">Playoff Bracket</div>
+        <div className="card-title">{tournament?.pool_brackets_enabled ? 'Postseason Brackets' : 'Playoff Bracket'}</div>
         <div className="card-subtitle">
-          Round robin is complete. Generate the seeded playoff bracket.
+          {tournament?.pool_brackets_enabled
+            ? 'Pool play is complete. Rank qualifiers, lock partnerships, and generate championship and consolation brackets.'
+            : 'Round robin is complete. Generate the seeded playoff bracket.'}
         </div>
 
         <button
@@ -7057,7 +7356,7 @@ isOrganizer &&
             borderRadius: 12,
           }}
         >
-          Generate Playoff Bracket
+          {tournament?.pool_brackets_enabled ? 'Generate Postseason Brackets' : 'Generate Playoff Bracket'}
         </button>
       </div>
     ) : null}
@@ -7327,6 +7626,11 @@ isOrganizer &&
                 className="list-item"
                 style={{ padding: 12 }}
               >
+               {tournament?.pool_brackets_enabled ? (
+                 <div style={{ color: match.bracket_type === 'championship' ? '#FFCB05' : '#A78BFA', fontSize: 11, fontWeight: 900, letterSpacing: 1.2, marginBottom: 8, textTransform: 'uppercase' }}>
+                   {match.bracket_type} bracket · {match.match_format === 'best_of_3' ? `Best of 3 to ${match.games_to || 11}` : `Single game to ${match.games_to || 11}`}
+                 </div>
+               ) : null}
                {!match.is_bye ? (
   <div
     style={{
@@ -7345,7 +7649,7 @@ isOrganizer &&
   <div
     style={{
       display: 'grid',
-      gridTemplateColumns: '1fr 64px',
+      gridTemplateColumns: match.match_format === 'best_of_3' ? '1fr auto' : '1fr 64px',
       gap: 10,
       alignItems: 'center',
       padding: 10,
@@ -7395,34 +7699,39 @@ isOrganizer &&
 </div>
     </div>
 
-    <input
-      className="input"
-      type="number"
-      value={
-        playoffScoreDrafts[match.id]?.team_a_score ??
-        (match.team_a_score === null ? '' : String(match.team_a_score))
-      }
-      onChange={(e) =>
-        setPlayoffScoreDrafts((prev) => ({
-          ...prev,
-          [match.id]: {
-            team_a_score: e.target.value.replace(/[^\d]/g, ''),
-            team_b_score:
-              prev[match.id]?.team_b_score ??
-              (match.team_b_score === null ? '' : String(match.team_b_score)),
-          },
-        }))
-      }
-      disabled={match.is_complete}
-      placeholder="0"
-      style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
-    />
+    {match.match_format === 'best_of_3' ? (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 42px)', gap: 4 }}>
+        {(['game_1_a', 'game_2_a', 'game_3_a'] as const).map((field, gameIndex) => (
+          <input
+            key={field}
+            className="input"
+            type="number"
+            aria-label={`Team A game ${gameIndex + 1}`}
+            value={playoffScoreDrafts[match.id]?.[field] ?? (match[field] === null ? '' : String(match[field]))}
+            onChange={(e) => setPlayoffScoreDrafts((prev) => ({ ...prev, [match.id]: { ...prev[match.id], [field]: e.target.value.replace(/[^\d]/g, '') } }))}
+            disabled={match.is_complete}
+            placeholder={`G${gameIndex + 1}`}
+            style={{ textAlign: 'center', padding: '8px 2px', fontWeight: 900 }}
+          />
+        ))}
+      </div>
+    ) : (
+      <input
+        className="input"
+        type="number"
+        value={playoffScoreDrafts[match.id]?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score))}
+        onChange={(e) => setPlayoffScoreDrafts((prev) => ({ ...prev, [match.id]: { ...prev[match.id], team_a_score: e.target.value.replace(/[^\d]/g, '') } }))}
+        disabled={match.is_complete}
+        placeholder="0"
+        style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
+      />
+    )}
   </div>
 
   <div
   style={{
     display: 'grid',
-    gridTemplateColumns: '1fr 64px',
+    gridTemplateColumns: match.match_format === 'best_of_3' ? '1fr auto' : '1fr 64px',
     gap: 10,
     alignItems: 'center',
     padding: 10,
@@ -7470,7 +7779,23 @@ isOrganizer &&
     </div>
   </div>
 
-  <input
+  {match.match_format === 'best_of_3' ? (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 42px)', gap: 4 }}>
+      {(['game_1_b', 'game_2_b', 'game_3_b'] as const).map((field, gameIndex) => (
+        <input
+          key={field}
+          className="input"
+          type="number"
+          aria-label={`Team B game ${gameIndex + 1}`}
+          value={playoffScoreDrafts[match.id]?.[field] ?? (match[field] === null ? '' : String(match[field]))}
+          onChange={(e) => setPlayoffScoreDrafts((prev) => ({ ...prev, [match.id]: { ...prev[match.id], [field]: e.target.value.replace(/[^\d]/g, '') } }))}
+          disabled={match.is_complete || !match.team_b_player_1_id}
+          placeholder={`G${gameIndex + 1}`}
+          style={{ textAlign: 'center', padding: '8px 2px', fontWeight: 900 }}
+        />
+      ))}
+    </div>
+  ) : <input
     className="input"
     type="number"
     value={
@@ -7496,7 +7821,7 @@ isOrganizer &&
       fontWeight: 900,
       opacity: match.is_bye ? 0.45 : 1,
     }}
-  />
+  />}
 </div>
             </div>
 
@@ -8287,6 +8612,11 @@ isOrganizer &&
                           {medal ? `${medal} ` : ''}
                           {row.name}
                         </div>
+                        {tournament?.pool_brackets_enabled ? (
+                          <div className="muted" style={{ fontSize: 11, fontWeight: 800, marginTop: 2 }}>
+                            Pool {playersById[row.playerId]?.pool_number || '—'}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
 

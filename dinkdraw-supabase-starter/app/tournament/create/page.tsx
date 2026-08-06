@@ -132,7 +132,9 @@ export default function CreateTournamentPage() {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
   const [canUseOrganizations, setCanUseOrganizations] = useState(false);
   const [canUseCreamOfTheCrop, setCanUseCreamOfTheCrop] = useState(false);
+  const [canUsePoolBracketsAsUser, setCanUsePoolBracketsAsUser] = useState(false);
   const [leagueEnabledOrganizationIds, setLeagueEnabledOrganizationIds] = useState<string[]>([]);
+  const [poolBracketEnabledOrganizationIds, setPoolBracketEnabledOrganizationIds] = useState<string[]>([]);
   const [selectedFavoriteLocationId, setSelectedFavoriteLocationId] = useState('');
   const [saveLocationForLater, setSaveLocationForLater] = useState(false);
   const [favoriteLocationName, setFavoriteLocationName] = useState('');
@@ -142,6 +144,12 @@ export default function CreateTournamentPage() {
   const [playoffFormat, setPlayoffFormat] = useState<'none' | 'everyone' | 'top_4' | 'top_8' | 'top_16'>('none');
   const [playoffAdvanceCount, setPlayoffAdvanceCount] = useState(8);
   const [playoffSeedingStyle, setPlayoffSeedingStyle] = useState<'traditional' | 'simple'>('traditional');
+  const [poolBracketsEnabled, setPoolBracketsEnabled] = useState(false);
+  const [poolCount, setPoolCount] = useState(2);
+  const [poolQualifiersPerGender, setPoolQualifiersPerGender] = useState(2);
+  const [bracketMatchFormat, setBracketMatchFormat] = useState<'single' | 'best_of_3'>('single');
+  const [bracketGamesTo, setBracketGamesTo] = useState(11);
+  const [bracketDecidingGameTo, setBracketDecidingGameTo] = useState(11);
   
   const [playerCount, setPlayerCount] = useState(8);
   const [courts, setCourts] = useState(2);
@@ -172,6 +180,12 @@ export default function CreateTournamentPage() {
         playoffFormat,
         playoffAdvanceCount,
         playoffSeedingStyle,
+        poolBracketsEnabled,
+        poolCount,
+        poolQualifiersPerGender,
+        bracketMatchFormat,
+        bracketGamesTo,
+        bracketDecidingGameTo,
         playerCount,
         courts,
         courtLabels,
@@ -225,6 +239,12 @@ export default function CreateTournamentPage() {
       if (draft.playoffSeedingStyle) {
         setPlayoffSeedingStyle(draft.playoffSeedingStyle);
       }
+      if (typeof draft.poolBracketsEnabled === 'boolean') setPoolBracketsEnabled(draft.poolBracketsEnabled);
+      if (typeof draft.poolCount === 'number') setPoolCount(draft.poolCount);
+      if (typeof draft.poolQualifiersPerGender === 'number') setPoolQualifiersPerGender(draft.poolQualifiersPerGender);
+      if (draft.bracketMatchFormat) setBracketMatchFormat(draft.bracketMatchFormat);
+      if (typeof draft.bracketGamesTo === 'number') setBracketGamesTo(draft.bracketGamesTo);
+      if (typeof draft.bracketDecidingGameTo === 'number') setBracketDecidingGameTo(draft.bracketDecidingGameTo);
       if (typeof draft.playerCount === 'number') setPlayerCount(draft.playerCount);
       if (typeof draft.courts === 'number') setCourts(draft.courts);
       if (Array.isArray(draft.courtLabels)) setCourtLabels(draft.courtLabels);
@@ -276,6 +296,7 @@ export default function CreateTournamentPage() {
 
     setCanUseOrganizations(organizationEnabled);
     setCanUseCreamOfTheCrop(creamEnabled);
+    setCanUsePoolBracketsAsUser(entitlementKeys.includes('round_robin_pool_brackets'));
 
     if (!organizationEnabled) {
       return;
@@ -295,18 +316,19 @@ export default function CreateTournamentPage() {
       const organizerOrganizationIds = (memberships || [])
         .filter((membership: any) => ['owner', 'admin'].includes(membership.role))
         .map((membership: any) => membership.organization_id);
-      const { data: leagueEntitlements } = organizerOrganizationIds.length
+      const { data: organizationEntitlements } = organizerOrganizationIds.length
         ? await supabase
             .from('feature_entitlements')
-            .select('organization_id')
+            .select('organization_id, feature_key')
             .in('organization_id', organizerOrganizationIds)
-            .eq('feature_key', 'league_mode')
+            .in('feature_key', ['league_mode', 'round_robin_pool_brackets'])
             .eq('status', 'active')
-        : { data: [] as { organization_id: string }[] };
+        : { data: [] as { organization_id: string; feature_key: string }[] };
 
       setOrganizations(loadedOrganizations);
       setSelectedOrganizationId(loadedOrganizations[0].id);
-      setLeagueEnabledOrganizationIds((leagueEntitlements || []).map((entitlement) => entitlement.organization_id));
+      setLeagueEnabledOrganizationIds((organizationEntitlements || []).filter((item) => item.feature_key === 'league_mode').map((item) => item.organization_id));
+      setPoolBracketEnabledOrganizationIds((organizationEntitlements || []).filter((item) => item.feature_key === 'round_robin_pool_brackets').map((item) => item.organization_id));
       return;
     }
 
@@ -321,6 +343,10 @@ export default function CreateTournamentPage() {
   const canUsePremiumLeagues =
     Boolean(selectedOrganizationId)
     && leagueEnabledOrganizationIds.includes(selectedOrganizationId);
+  const canUsePoolBrackets = canUsePoolBracketsAsUser || (
+    Boolean(selectedOrganizationId) && poolBracketEnabledOrganizationIds.includes(selectedOrganizationId)
+  );
+  const poolBracketsAvailable = tournamentMode === 'round_robin' && format === 'doubles' && ['rotating', 'mixed'].includes(doublesMode);
 
   useEffect(() => {
     if (courts > maxCourtsAllowed) {
@@ -366,6 +392,10 @@ export default function CreateTournamentPage() {
   }
 }, [playoffsAllowed, playoffFormat]);
 
+  useEffect(() => {
+    if (!poolBracketsAvailable && poolBracketsEnabled) setPoolBracketsEnabled(false);
+  }, [poolBracketsAvailable, poolBracketsEnabled]);
+
   async function handleCreate() {
   setMessage('');
 
@@ -377,6 +407,26 @@ export default function CreateTournamentPage() {
   if (tournamentMode === 'cream_of_the_crop' && playerCount % 4 !== 0) {
     setMessage('Cream of the Crop requires players in groups of 4.');
     return;
+  }
+
+  if (poolBracketsEnabled) {
+    if (!canUsePoolBrackets) {
+      setMessage('Premium pool and bracket access is required.');
+      return;
+    }
+    if (playerCount % poolCount !== 0) {
+      setMessage('Players must divide evenly across the selected pools.');
+      return;
+    }
+    const playersPerPool = playerCount / poolCount;
+    if (doublesMode === 'mixed' && playersPerPool % 2 !== 0) {
+      setMessage('Each mixed pool must have the same number of men and women.');
+      return;
+    }
+    if (doublesMode === 'mixed' && poolQualifiersPerGender * 2 >= playersPerPool) {
+      setMessage('Each pool needs players remaining for both championship and consolation brackets.');
+      return;
+    }
   }
 
   if (!title.trim()) {
@@ -446,6 +496,15 @@ export default function CreateTournamentPage() {
             ? 16
           : null,
         playoff_seeding_style: 'traditional',
+        pool_brackets_enabled: poolBracketsEnabled,
+        pool_count: poolBracketsEnabled ? poolCount : null,
+        pool_qualifiers_per_gender: poolBracketsEnabled ? poolQualifiersPerGender : null,
+        bracket_match_format: poolBracketsEnabled ? bracketMatchFormat : null,
+        bracket_games_to: poolBracketsEnabled ? bracketGamesTo : null,
+        bracket_deciding_game_to:
+          poolBracketsEnabled && bracketMatchFormat === 'best_of_3'
+            ? bracketDecidingGameTo
+            : null,
       })
       .select()
       .single();
@@ -899,7 +958,91 @@ and final placement tie-breakers.
             </div>
           ) : null}
 
-{playoffsAllowed ? (
+{poolBracketsAvailable ? (
+  <div
+    style={{
+      border: '1px solid rgba(255,203,5,0.24)',
+      borderRadius: 14,
+      padding: 14,
+      background: 'rgba(255,203,5,0.05)',
+    }}
+  >
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+      <div>
+        <div className="card-title" style={{ fontSize: 17 }}>Pool Play + Postseason Brackets</div>
+        <div className="muted" style={{ fontSize: 12 }}>Individual pool standings, then permanent partnerships.</div>
+      </div>
+      <span style={{ color: '#FFCB05', fontWeight: 900, fontSize: 12 }}>PREMIUM</span>
+    </div>
+
+    <button
+      type="button"
+      className={`button ${poolBracketsEnabled ? 'primary' : 'secondary'}`}
+      onClick={() => {
+        if (!canUsePoolBrackets) {
+          setMessage('Pool play with postseason brackets is a premium feature. Contact DinkDraw to upgrade.');
+          return;
+        }
+        setPoolBracketsEnabled((enabled) => !enabled);
+        setPlayoffFormat('none');
+      }}
+      style={{ marginTop: 12, width: '100%' }}
+    >
+      {poolBracketsEnabled ? 'Postseason Enabled' : canUsePoolBrackets ? 'Enable Postseason' : 'Unlock Premium Postseason'}
+    </button>
+
+    {poolBracketsEnabled ? (
+      <div className="grid" style={{ gap: 12, marginTop: 14 }}>
+        <div>
+          <label className="label">Number of Pools</label>
+          <select className="input" value={poolCount} onChange={(event) => setPoolCount(Number(event.target.value))}>
+            {[2, 3, 4, 5, 6, 8].filter((count) => playerCount % count === 0).map((count) => (
+              <option key={count} value={count}>{count} pools ({playerCount / count} players each)</option>
+            ))}
+          </select>
+        </div>
+
+        {doublesMode === 'mixed' ? (
+          <div>
+            <label className="label">Championship Qualifiers Per Pool</label>
+            <select className="input" value={poolQualifiersPerGender} onChange={(event) => setPoolQualifiersPerGender(Number(event.target.value))}>
+              {Array.from({ length: Math.max(1, Math.floor(playerCount / poolCount / 2) - 1) }, (_, index) => index + 1).map((count) => (
+                <option key={count} value={count}>Top {count} men + top {count} women</option>
+              ))}
+            </select>
+            <div className="muted" style={{ fontSize: 12, marginTop: 5 }}>Remaining players enter the consolation bracket.</div>
+          </div>
+        ) : null}
+
+        <div>
+          <label className="label">Bracket Match Format</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+            <button type="button" className={`button ${bracketMatchFormat === 'single' ? 'primary' : 'secondary'}`} onClick={() => setBracketMatchFormat('single')}>Single Game</button>
+            <button type="button" className={`button ${bracketMatchFormat === 'best_of_3' ? 'primary' : 'secondary'}`} onClick={() => setBracketMatchFormat('best_of_3')}>Best of 3</button>
+          </div>
+        </div>
+
+        <div>
+          <label className="label">Bracket Games Play To</label>
+          <select className="input" value={bracketGamesTo} onChange={(event) => setBracketGamesTo(Number(event.target.value))}>
+            {[11, 15, 21].map((score) => <option key={score} value={score}>{score}</option>)}
+          </select>
+        </div>
+
+        {bracketMatchFormat === 'best_of_3' ? (
+          <div>
+            <label className="label">Deciding Third Game Plays To</label>
+            <select className="input" value={bracketDecidingGameTo} onChange={(event) => setBracketDecidingGameTo(Number(event.target.value))}>
+              {[11, 15, 21].map((score) => <option key={score} value={score}>{score}</option>)}
+            </select>
+          </div>
+        ) : null}
+      </div>
+    ) : null}
+  </div>
+) : null}
+
+{playoffsAllowed && !poolBracketsEnabled ? (
   <div>
     <label className="label">Playoff Bracket</label>
 

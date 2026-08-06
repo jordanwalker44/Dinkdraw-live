@@ -34,6 +34,7 @@ type Tournament = {
   tournament_mode: string | null;
   organization_id: string | null;
   pool_brackets_enabled: boolean | null;
+  standings_ranking_method: 'record_first' | 'point_diff_first' | null;
 };
 
 type PlayoffMatch = {
@@ -162,10 +163,18 @@ function computeStandings(
   matches: Match[],
   isSingles: boolean,
   isBestOf3: boolean,
-  tournamentMode?: string | null
+  tournamentMode?: string | null,
+  rankingMethod: 'record_first' | 'point_diff_first' | null = 'record_first'
 ): StandingRow[] {
   const rows = new Map<string, StandingRow>();
   const playerInitialRanks = new Map<string, number>();
+  const headToHead = new Map<string, number>();
+  const recordHeadToHead = (winnerIds: string[], loserIds: string[]) => {
+    for (const winnerId of winnerIds) for (const loserId of loserIds) {
+      headToHead.set(`${winnerId}|${loserId}`, (headToHead.get(`${winnerId}|${loserId}`) || 0) + 1);
+      headToHead.set(`${loserId}|${winnerId}`, (headToHead.get(`${loserId}|${winnerId}`) || 0) - 1);
+    }
+  };
 
   for (const slot of playerSlots) {
     playerInitialRanks.set(slot.id, slot.slot_number);
@@ -252,6 +261,7 @@ const bIds = isSingles
         }
 
         if (gA > gB) {
+          recordHeadToHead(aIds, bIds);
           aIds.forEach((id) => {
             const row = rows.get(id);
             if (row) row.wins += 1;
@@ -261,6 +271,7 @@ const bIds = isSingles
             if (row) row.losses += 1;
           });
         } else if (gB > gA) {
+          recordHeadToHead(bIds, aIds);
           bIds.forEach((id) => {
             const row = rows.get(id);
             if (row) row.wins += 1;
@@ -300,6 +311,7 @@ const bIds = isSingles
     }
 
     if (aScore > bScore) {
+      recordHeadToHead(aIds, bIds);
       aIds.forEach((id) => {
         const row = rows.get(id);
         if (row) row.wins += 1;
@@ -309,6 +321,7 @@ const bIds = isSingles
         if (row) row.losses += 1;
       });
     } else if (bScore > aScore) {
+      recordHeadToHead(bIds, aIds);
       bIds.forEach((id) => {
         const row = rows.get(id);
         if (row) row.wins += 1;
@@ -341,10 +354,15 @@ const bIds = isSingles
         return a.initialRank - b.initialRank;
       }
 
+      if (rankingMethod === 'point_diff_first') {
+        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+        const directResult = headToHead.get(`${a.playerId}|${b.playerId}`) || 0;
+        if (directResult !== 0) return -directResult;
+      }
       if (b.wins !== a.wins) return b.wins - a.wins;
-      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-      if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-      return a.name.localeCompare(b.name);
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      if (rankingMethod !== 'point_diff_first' && b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      return a.initialRank - b.initialRank;
     });
 }
 
@@ -395,9 +413,10 @@ export default function TournamentResultsPage({
       matches,
       !!isSingles,
       !!isMultiGame,
-      tournament?.tournament_mode
+      tournament?.tournament_mode,
+      tournament?.standings_ranking_method
     ),
-  [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode]
+  [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode, tournament?.standings_ranking_method]
 );
 
   const winner = standings[0] || null;

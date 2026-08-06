@@ -64,6 +64,7 @@ type Tournament = {
   ask_for_dupr_id: boolean | null;
   organization_id: string | null;
   pool_brackets_enabled: boolean | null;
+  standings_ranking_method: 'record_first' | 'point_diff_first' | null;
   pool_count: number | null;
   pool_qualifiers_per_gender: number | null;
   bracket_match_format: 'single' | 'best_of_3' | null;
@@ -2551,10 +2552,21 @@ function computeStandings(
   matches: Match[],
   isSingles: boolean,
   isBestOf3: boolean,
-  tournamentMode?: string | null
+  tournamentMode?: string | null,
+  rankingMethod: 'record_first' | 'point_diff_first' | null = 'record_first'
 ): StandingRow[] {
   const rows = new Map<string, StandingRow>();
   const playerInitialRanks = new Map<string, number>();
+  const headToHead = new Map<string, number>();
+
+  const recordHeadToHead = (winnerIds: string[], loserIds: string[]) => {
+    for (const winnerId of winnerIds) {
+      for (const loserId of loserIds) {
+        headToHead.set(`${winnerId}|${loserId}`, (headToHead.get(`${winnerId}|${loserId}`) || 0) + 1);
+        headToHead.set(`${loserId}|${winnerId}`, (headToHead.get(`${loserId}|${winnerId}`) || 0) - 1);
+      }
+    }
+  };
 
   for (const slot of playerSlots) {
     playerInitialRanks.set(slot.id, slot.slot_number);
@@ -2641,6 +2653,7 @@ function computeStandings(
         }
 
         if (gA > gB) {
+          recordHeadToHead(aIds, bIds);
           aIds.forEach((id) => {
             const row = rows.get(id);
             if (row) row.wins += 1;
@@ -2650,6 +2663,7 @@ function computeStandings(
             if (row) row.losses += 1;
           });
         } else if (gB > gA) {
+          recordHeadToHead(bIds, aIds);
           bIds.forEach((id) => {
             const row = rows.get(id);
             if (row) row.wins += 1;
@@ -2689,6 +2703,7 @@ function computeStandings(
     }
 
     if (aScore > bScore) {
+      recordHeadToHead(aIds, bIds);
       aIds.forEach((id) => {
         const row = rows.get(id);
         if (row) row.wins += 1;
@@ -2698,6 +2713,7 @@ function computeStandings(
         if (row) row.losses += 1;
       });
     } else if (bScore > aScore) {
+      recordHeadToHead(bIds, aIds);
       bIds.forEach((id) => {
         const row = rows.get(id);
         if (row) row.wins += 1;
@@ -2729,10 +2745,15 @@ function computeStandings(
         return a.initialRank - b.initialRank;
       }
 
+      if (rankingMethod === 'point_diff_first') {
+        if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+        const directResult = headToHead.get(`${a.playerId}|${b.playerId}`) || 0;
+        if (directResult !== 0) return -directResult;
+      }
       if (b.wins !== a.wins) return b.wins - a.wins;
-      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-      if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
-      return a.name.localeCompare(b.name);
+      if (a.losses !== b.losses) return a.losses - b.losses;
+      if (rankingMethod !== 'point_diff_first' && b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      return a.initialRank - b.initialRank;
     });
 }
 
@@ -2958,7 +2979,7 @@ function logScoreSubmitTiming(
       const poolMatches = matches.filter((match) => !!match.team_a_player_1_id && poolPlayerIds.has(match.team_a_player_1_id));
       return {
         poolNumber,
-        standings: computeStandings(poolPlayers, poolMatches, isSingles, isMultiGame, tournament.tournament_mode),
+        standings: computeStandings(poolPlayers, poolMatches, isSingles, isMultiGame, tournament.tournament_mode, tournament.standings_ranking_method),
       };
     });
   }, [tournament, playerSlots, matches, isSingles, isMultiGame]);
@@ -3221,10 +3242,11 @@ const hasAnyScores = matches.some(
     matches,
     isSingles,
     isMultiGame,
-    tournament?.tournament_mode
+    tournament?.tournament_mode,
+    tournament?.standings_ranking_method
   )
 );
-  }, [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode]);
+  }, [playerSlots, matches, isSingles, isMultiGame, tournament?.tournament_mode, tournament?.standings_ranking_method]);
 
   const isOrganizer = tournament?.organizer_user_id === userId;
 
@@ -4416,13 +4438,10 @@ if (!scheduleValidation.isValid) {
   async function generatePoolPostseasonBrackets() {
     if (!tournament) return;
 
-    const standingByPlayerId = new Map(standings.map((standing) => [standing.playerId, standing]));
+    const standingRankByPlayerId = new Map(standings.map((standing, index) => [standing.playerId, index]));
     const rankPlayers = (players: PlayerSlot[]) => [...players].sort((a, b) => {
-      const aStanding = standingByPlayerId.get(a.id);
-      const bStanding = standingByPlayerId.get(b.id);
-      if ((bStanding?.wins || 0) !== (aStanding?.wins || 0)) return (bStanding?.wins || 0) - (aStanding?.wins || 0);
-      if ((bStanding?.pointDiff || 0) !== (aStanding?.pointDiff || 0)) return (bStanding?.pointDiff || 0) - (aStanding?.pointDiff || 0);
-      return a.slot_number - b.slot_number;
+      return (standingRankByPlayerId.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+        (standingRankByPlayerId.get(b.id) ?? Number.MAX_SAFE_INTEGER);
     });
 
     const championshipPlayers: PlayerSlot[] = [];
@@ -4588,6 +4607,7 @@ if (!scheduleValidation.isValid) {
   const standingByPlayerId = Object.fromEntries(
     standings.map((row) => [row.playerId, row])
   );
+  const standingRankByPlayerId = new Map(standings.map((row, index) => [row.playerId, index]));
 
   const competitors =
     tournament.format === 'doubles' && tournament.doubles_mode === 'fixed'
@@ -4634,6 +4654,10 @@ if (!scheduleValidation.isValid) {
         }));
 
   const sortedCompetitors = [...competitors].sort((a, b) => {
+    if (tournament.standings_ranking_method === 'point_diff_first') {
+      return (standingRankByPlayerId.get(a.player1Id) ?? Number.MAX_SAFE_INTEGER) -
+        (standingRankByPlayerId.get(b.player1Id) ?? Number.MAX_SAFE_INTEGER);
+    }
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
     if (b.pointsFor !== a.pointsFor) return b.pointsFor - a.pointsFor;
@@ -5178,7 +5202,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
     pendingScoreSubmitIdsRef.current.add(matchId);
     setMatches(optimisticMatches);
-    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
     setMessage(`Submitting Game ${game}...`);
 
     const submittedRound = finalOptimisticMatch.round_number ?? selectedRound;
@@ -5238,7 +5262,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     if (error || count === 0) {
       pendingScoreSubmitIdsRef.current.delete(matchId);
       setMatches(previousMatches);
-      setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+      setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
       setMessage(
         error
           ? `Submit failed: ${error.message}`
@@ -5256,7 +5280,7 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
     pendingScoreSubmitIdsRef.current.delete(matchId);
     setMatches(optimisticMatches);
-    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
     scheduleTournamentRefresh(userId);
 
     if (seriesNowComplete) {
@@ -5542,7 +5566,7 @@ setScoreDrafts((prev) => ({
   },
 }));
 
-setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
 
   const completedMatch = optimisticMatches.find((m) => m.id === matchId);
   if (!completedMatch) return;
@@ -5572,7 +5596,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
   if (error || count === 0) {
     pendingScoreSubmitIdsRef.current.delete(matchId);
     setMatches(previousMatches);
-    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
     setMessage(
       error
         ? `Submit failed: ${error.message}`
@@ -5590,7 +5614,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   pendingScoreSubmitIdsRef.current.delete(matchId);
   setMatches(optimisticMatches);
-  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
 
   if (isEditingCompletedMatch) {
     scheduleTournamentRefresh(userId);
@@ -5685,7 +5709,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
   );
 
   setMatches(optimisticMatches);
-  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+  setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
   setMessage('Reopening match...');
 
   const { error } = await supabase
@@ -5695,7 +5719,7 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
 
   if (error) {
     setMatches(previousMatches);
-    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode ));
+    setStandings(computeStandings(   playerSlots,   previousMatches,   isSingles,   isMultiGame,   tournament?.tournament_mode, tournament?.standings_ranking_method ));
     setMessage(`Reopen failed: ${error.message}`);
     return;
   }
@@ -8481,7 +8505,9 @@ isOrganizer &&
     ? 'Ranked by final court, overall record, then initial seed.'
     : isCompleted
     ? 'Tournament complete. Final results are locked.'
-    : 'Ranked by wins, then point differential, then points scored.'}
+    : tournament?.standings_ranking_method === 'point_diff_first'
+    ? 'Ranked by point differential, then head-to-head, then win/loss record.'
+    : 'Ranked by win/loss record, then point differential.'}
 </div>
 
           <Link

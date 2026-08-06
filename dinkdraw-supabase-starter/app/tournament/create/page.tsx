@@ -121,6 +121,7 @@ export default function CreateTournamentPage() {
   const [format, setFormat] = useState<'singles' | 'doubles'>('doubles');
   const [tournamentMode, setTournamentMode] = useState<'round_robin' | 'cream_of_the_crop'>('round_robin');
   const [matchFormat, setMatchFormat] = useState<'single' | 'best_of_3'>('single');
+  const [standingsRankingMethod, setStandingsRankingMethod] = useState<'record_first' | 'point_diff_first'>('record_first');
   const [doublesMode, setDoublesMode] = useState<'rotating' | 'fixed' | 'mixed'>('rotating');
   const [title, setTitle] = useState('Saturday Round Robin');
   const [organizerName, setOrganizerName] = useState('');
@@ -167,6 +168,7 @@ export default function CreateTournamentPage() {
         format,
         tournamentMode,
         matchFormat,
+        standingsRankingMethod,
         doublesMode,
         title,
         organizerName,
@@ -213,6 +215,9 @@ export default function CreateTournamentPage() {
       if (draft.format) setFormat(draft.format);
       if (draft.tournamentMode) setTournamentMode(draft.tournamentMode);
       if (draft.matchFormat) setMatchFormat(draft.matchFormat);
+      if (draft.standingsRankingMethod === 'record_first' || draft.standingsRankingMethod === 'point_diff_first') {
+        setStandingsRankingMethod(draft.standingsRankingMethod);
+      }
       if (draft.doublesMode) setDoublesMode(draft.doublesMode);
       if (typeof draft.title === 'string') setTitle(draft.title);
       if (typeof draft.organizerName === 'string') setOrganizerName(draft.organizerName);
@@ -476,6 +481,7 @@ export default function CreateTournamentPage() {
         status: 'draft',
         format,
         match_format: matchFormat,
+        standings_ranking_method: standingsRankingMethod,
         doubles_mode: doublesMode,
         tournament_mode: tournamentMode,
         court_labels: courtLabels.map((label, index) => label.trim() || `Court ${index + 1}`),
@@ -880,7 +886,7 @@ and final placement tie-breakers.
 ) : null}
 
 {tournamentMode === 'round_robin' && (
-  <div>
+  <div style={{ display: 'grid', gap: 14 }}>
     <label className="label">Player Format</label>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
       <button
@@ -897,6 +903,20 @@ and final placement tie-breakers.
       >
         Singles
       </button>
+    </div>
+    <div>
+      <label className="label">How Standings Are Ranked</label>
+      <select
+        className="input"
+        value={standingsRankingMethod}
+        onChange={(event) => setStandingsRankingMethod(event.target.value as 'record_first' | 'point_diff_first')}
+      >
+        <option value="record_first">Win/Loss, then Point Differential</option>
+        <option value="point_diff_first">Point Differential, then Head-to-Head, then Win/Loss</option>
+      </select>
+      <div className="muted" style={{ marginTop: 5, fontSize: 12 }}>
+        This ranking order controls standings, qualifiers, and postseason seeding.
+      </div>
     </div>
   </div>
 )}

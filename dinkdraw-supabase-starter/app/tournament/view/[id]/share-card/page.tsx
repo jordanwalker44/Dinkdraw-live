@@ -56,10 +56,12 @@ function shortName(name: string) {
 function computeStandings(
   players: PlayerSlot[],
   matches: Match[],
-  tournamentMode?: string | null
+  tournamentMode?: string | null,
+  rankingMethod: 'record_first' | 'point_diff_first' | null = 'record_first'
 ) {
   const rows = new Map<string, StandingRow>();
   const latestMatchByPlayer = new Map<string, Match>();
+  const headToHead = new Map<string, number>();
 
   for (const player of players) {
     rows.set(player.id, {
@@ -86,6 +88,15 @@ function computeStandings(
 
     const aIds = [match.team_a_player_1_id, match.team_a_player_2_id].filter(Boolean) as string[];
     const bIds = [match.team_b_player_1_id, match.team_b_player_2_id].filter(Boolean) as string[];
+
+    if (match.team_a_score !== match.team_b_score) {
+      const winnerIds = match.team_a_score > match.team_b_score ? aIds : bIds;
+      const loserIds = match.team_a_score > match.team_b_score ? bIds : aIds;
+      for (const winnerId of winnerIds) for (const loserId of loserIds) {
+        headToHead.set(`${winnerId}|${loserId}`, (headToHead.get(`${winnerId}|${loserId}`) || 0) + 1);
+        headToHead.set(`${loserId}|${winnerId}`, (headToHead.get(`${loserId}|${winnerId}`) || 0) - 1);
+      }
+    }
 
     for (const id of [...aIds, ...bIds]) {
       const currentLatest = latestMatchByPlayer.get(id);
@@ -120,6 +131,7 @@ function computeStandings(
   return Array.from(rows.entries())
     .map(([playerId, row]) => ({
       ...row,
+      playerId,
       finalCourt: latestMatchByPlayer.get(playerId)?.court_number ?? null,
     }))
     .sort((a, b) => {
@@ -133,9 +145,15 @@ function computeStandings(
       return a.slotNumber - b.slotNumber;
     }
 
+    if (rankingMethod === 'point_diff_first') {
+      if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+      const directResult = headToHead.get(`${a.playerId}|${b.playerId}`) || 0;
+      if (directResult !== 0) return -directResult;
+    }
     if (b.wins !== a.wins) return b.wins - a.wins;
-    if (b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
-    return a.name.localeCompare(b.name);
+    if (a.losses !== b.losses) return a.losses - b.losses;
+    if (rankingMethod !== 'point_diff_first' && b.pointDiff !== a.pointDiff) return b.pointDiff - a.pointDiff;
+    return a.slotNumber - b.slotNumber;
   });
 }
 
@@ -215,7 +233,7 @@ export default async function ShareCardPage({
   const [tournamentResult, playersResult, matchesResult, playoffMatchesResult] = await Promise.all([
     supabase
       .from('tournaments')
-      .select('id, title, tournament_mode, organization_id, pool_brackets_enabled')
+      .select('id, title, tournament_mode, organization_id, pool_brackets_enabled, standings_ranking_method')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -239,7 +257,8 @@ export default async function ShareCardPage({
   const standings = computeStandings(
     (playersResult.data || []) as PlayerSlot[],
     (matchesResult.data || []) as Match[],
-    tournament?.tournament_mode
+    tournament?.tournament_mode,
+    tournament?.standings_ranking_method
   );
 
   const first = standings[0];

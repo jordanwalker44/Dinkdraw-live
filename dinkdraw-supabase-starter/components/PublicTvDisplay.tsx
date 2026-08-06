@@ -13,12 +13,14 @@ type Tournament = {
   court_labels: string[] | null;
   rounds: number;
   status: string;
+  pool_brackets_enabled: boolean | null;
 };
 
 type PlayerSlot = {
   id: string;
   slot_number: number;
   display_name: string | null;
+  pool_number: number | null;
 };
 
 type Match = {
@@ -49,6 +51,14 @@ type StandingRow = {
   finalCourt: number | null;
 };
 
+type PlayoffMatch = {
+  bracket_type: 'championship' | 'consolation';
+  next_match_id: string | null;
+  is_complete: boolean;
+  winner_player_1_id: string | null;
+  winner_player_2_id: string | null;
+};
+
 type PublicTvDisplayProps = {
   tournament: Tournament;
   playerSlots: PlayerSlot[];
@@ -59,6 +69,8 @@ type PublicTvDisplayProps = {
   isLive: boolean;
   organizationBrand?: OrganizationBrand | null;
   tournamentMode?: string | null;
+  poolStandings?: Array<{ poolNumber: number; standings: StandingRow[] }>;
+  playoffMatches?: PlayoffMatch[];
 };
 
 function formatDiff(value: number) {
@@ -114,6 +126,8 @@ export default function PublicTvDisplay({
   isLive,
   organizationBrand,
   tournamentMode,
+  poolStandings = [],
+  playoffMatches = [],
 }: PublicTvDisplayProps) {
   const playersById = Object.fromEntries(playerSlots.map((slot) => [slot.id, slot]));
 
@@ -128,7 +142,9 @@ export default function PublicTvDisplay({
   }
 
   function renderCourtLabel(match: Match) {
-    return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
+    const court = match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
+    const poolNumber = playersById[match.team_a_player_1_id || '']?.pool_number || playersById[match.team_b_player_1_id || '']?.pool_number;
+    return poolNumber ? `Pool ${poolNumber} • ${court}` : court;
   }
 
   const currentMatches = useMemo(
@@ -155,16 +171,26 @@ export default function PublicTvDisplay({
   );
   const allPlayableMatchesComplete =
     playableMatches.length > 0 && playableMatches.every((match) => match.is_complete);
-  const isFinal = tournament.status === 'completed' || allPlayableMatchesComplete;
+  const isPoolTournament = !!tournament.pool_brackets_enabled;
+  const isFinal = tournament.status === 'completed' || (!isPoolTournament && allPlayableMatchesComplete);
   const nextRound = currentRound + 1;
   const nextRoundMatches = !isCreamOfTheCrop && nextRound <= totalRounds
     ? matches.filter((match) => match.round_number === nextRound && !match.is_bye)
     : [];
   const showNextCourt = !isFinal && nextRoundMatches.length > 0;
-  const topStandings = standings.slice(0, isCreamOfTheCrop ? 14 : 12);
+  const [poolPageIndex, setPoolPageIndex] = useState(0);
+  const activePool = isPoolTournament && poolStandings.length ? poolStandings[poolPageIndex % poolStandings.length] : null;
+  const topStandings = (activePool?.standings || standings).slice(0, isCreamOfTheCrop ? 14 : 12);
   const leader = topStandings[0];
   const runnerUp = topStandings[1];
   const thirdPlace = topStandings[2];
+  const championshipFinal = playoffMatches.find((match) => match.bracket_type === 'championship' && !match.next_match_id && match.is_complete);
+  const consolationFinal = playoffMatches.find((match) => match.bracket_type === 'consolation' && !match.next_match_id && match.is_complete);
+  const playoffWinnerName = (match: PlayoffMatch | undefined) => match
+    ? [match.winner_player_1_id, match.winner_player_2_id].filter(Boolean).map((id) => renderPlayerName(id)).join(' / ')
+    : null;
+  const championName = playoffWinnerName(championshipFinal);
+  const consolationWinnerName = playoffWinnerName(consolationFinal);
   const courtPages = useMemo(() => chunkMatches(currentMatches, 6), [currentMatches]);
   const [courtPageIndex, setCourtPageIndex] = useState(0);
   const visibleMatches = courtPages[courtPageIndex] || courtPages[0] || [];
@@ -187,6 +213,14 @@ export default function PublicTvDisplay({
 
     return () => window.clearInterval(interval);
   }, [courtPages.length, isFinal]);
+
+  useEffect(() => {
+    if (!isPoolTournament || poolStandings.length <= 1) return;
+    const interval = window.setInterval(() => {
+      setPoolPageIndex((current) => (current + 1) % poolStandings.length);
+    }, 10000);
+    return () => window.clearInterval(interval);
+  }, [isPoolTournament, poolStandings.length]);
 
   const biggestClimber = standings
     .filter((row) => row.played > 0)
@@ -251,7 +285,7 @@ export default function PublicTvDisplay({
                   marginBottom: 6,
                 }}
               >
-                {isFinal ? 'Tournament Complete' : 'Now Playing'}
+                {isFinal ? 'Tournament Complete' : allPlayableMatchesComplete && isPoolTournament ? 'Pool Play Complete' : 'Now Playing'}
               </div>
               <div
                 style={{
@@ -262,7 +296,7 @@ export default function PublicTvDisplay({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {isFinal ? 'Final Results' : `Round ${currentRound}`}
+                {isFinal ? 'Final Results' : allPlayableMatchesComplete && isPoolTournament ? 'Postseason Next' : `Round ${currentRound}`}
               </div>
             </div>
 
@@ -291,7 +325,7 @@ export default function PublicTvDisplay({
                   textTransform: 'uppercase',
                 }}
               >
-                {isFinal ? 'Final' : isLive ? 'Live' : 'Updating'}
+                {isFinal ? 'Final' : allPlayableMatchesComplete && isPoolTournament ? 'Awaiting Brackets' : isLive ? 'Live' : 'Updating'}
               </div>
               <div
                 style={{
@@ -361,9 +395,9 @@ export default function PublicTvDisplay({
                       letterSpacing: '-0.06em',
                     }}
                   >
-                    {leader?.name || 'Final standings'}
+                    {championName || leader?.name || 'Final standings'}
                   </div>
-                  {leader ? (
+                  {leader && !championName ? (
                     <div
                       style={{
                         marginTop: 14,
@@ -379,10 +413,25 @@ export default function PublicTvDisplay({
                   ) : null}
                 </div>
 
+                {championName ? (
+                  <div style={{ minHeight: 0, display: 'grid', gridTemplateColumns: consolationWinnerName ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: 18, alignItems: 'center' }}>
+                    <div style={{ padding: 28, borderRadius: 26, border: '2px solid rgba(255,203,5,0.62)', background: 'rgba(255,203,5,0.12)', textAlign: 'center' }}>
+                      <div style={{ color: '#FFCB05', fontSize: 18, fontWeight: 950, letterSpacing: 2 }}>🏆 CHAMPIONS</div>
+                      <div style={{ marginTop: 14, fontSize: 'clamp(34px, 3vw, 58px)', fontWeight: 950 }}>{championName}</div>
+                    </div>
+                    {consolationWinnerName ? (
+                      <div style={{ padding: 28, borderRadius: 26, border: '2px solid rgba(167,139,250,0.62)', background: 'rgba(167,139,250,0.10)', textAlign: 'center' }}>
+                        <div style={{ color: '#A78BFA', fontSize: 18, fontWeight: 950, letterSpacing: 2 }}>🏅 CONSOLATION WINNERS</div>
+                        <div style={{ marginTop: 14, fontSize: 'clamp(30px, 2.7vw, 52px)', fontWeight: 950 }}>{consolationWinnerName}</div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 <div
                   style={{
                     minHeight: 0,
-                    display: 'grid',
+                    display: championName ? 'none' : 'grid',
                     gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                     gap: 16,
                     alignItems: 'end',
@@ -797,7 +846,7 @@ export default function PublicTvDisplay({
                   letterSpacing: '-0.05em',
                 }}
               >
-                {isCreamOfTheCrop ? 'Cream Standings' : 'Standings'}
+                {isCreamOfTheCrop ? 'Cream Standings' : activePool ? `Pool ${activePool.poolNumber} Standings` : 'Standings'}
               </div>
               <div
                 style={{
@@ -807,7 +856,11 @@ export default function PublicTvDisplay({
                   fontWeight: 800,
                 }}
               >
-                {isCreamOfTheCrop ? 'Court ladder • Current record' : 'Record • Point differential'}
+                {isCreamOfTheCrop
+                  ? 'Court ladder • Current record'
+                  : activePool
+                  ? `Pool rankings • ${poolPageIndex % poolStandings.length + 1} of ${poolStandings.length}`
+                  : 'Record • Point differential'}
               </div>
             </div>
 

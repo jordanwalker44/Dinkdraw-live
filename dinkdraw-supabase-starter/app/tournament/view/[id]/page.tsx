@@ -1124,6 +1124,8 @@ useEffect(() => {
         isLive={isLive}
         organizationBrand={organizationBrand}
         tournamentMode={tournament.tournament_mode}
+        poolStandings={poolStandings}
+        playoffMatches={playoffMatches}
       />
     );
   }

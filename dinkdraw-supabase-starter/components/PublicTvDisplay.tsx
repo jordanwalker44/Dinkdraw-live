@@ -69,6 +69,7 @@ type PublicTvDisplayProps = {
   isLive: boolean;
   organizationBrand?: OrganizationBrand | null;
   tournamentMode?: string | null;
+  standingsRankingMethod?: 'record_first' | 'point_diff_first' | null;
   poolStandings?: Array<{ poolNumber: number; standings: StandingRow[] }>;
   playoffMatches?: PlayoffMatch[];
 };
@@ -126,6 +127,7 @@ export default function PublicTvDisplay({
   isLive,
   organizationBrand,
   tournamentMode,
+  standingsRankingMethod,
   poolStandings = [],
   playoffMatches = [],
 }: PublicTvDisplayProps) {
@@ -158,6 +160,7 @@ export default function PublicTvDisplay({
   const completeThisRound = currentMatches.filter((match) => match.is_complete).length;
   const totalRounds = tournament.rounds || 9;
   const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
+  const showPointDifferential = standingsRankingMethod === 'point_diff_first';
   const currentCreamStageStatus = useMemo(
     () =>
       SHOW_CREAM_STAGE_STATUS && isCreamOfTheCrop
@@ -408,7 +411,9 @@ export default function PublicTvDisplay({
                     >
                       {isCreamOfTheCrop
                         ? `${leader.wins}-${leader.losses} on Court ${leader.finalCourt ?? '-'}`
-                        : `${leader.wins}-${leader.losses} • ${formatDiff(leader.pointDiff)} diff`}
+                        : showPointDifferential
+                        ? `${leader.wins}-${leader.losses} • ${formatDiff(leader.pointDiff)} diff`
+                        : `${leader.wins}-${leader.losses}`}
                     </div>
                   ) : null}
                 </div>
@@ -491,7 +496,9 @@ export default function PublicTvDisplay({
                           >
                             {isCreamOfTheCrop
                               ? `${place.row.wins}-${place.row.losses}`
-                              : `${place.row.wins}-${place.row.losses} • ${formatDiff(place.row.pointDiff)}`}
+                              : showPointDifferential
+                              ? `${place.row.wins}-${place.row.losses} • ${formatDiff(place.row.pointDiff)}`
+                              : `${place.row.wins}-${place.row.losses}`}
                           </div>
                         </div>
                       </div>
@@ -860,7 +867,7 @@ export default function PublicTvDisplay({
                   ? 'Court ladder • Current record'
                   : activePool
                   ? `Pool rankings • ${poolPageIndex % poolStandings.length + 1} of ${poolStandings.length}`
-                  : 'Record • Point differential'}
+                  : showPointDifferential ? 'Record • Point differential' : 'Win/loss record'}
               </div>
             </div>
 
@@ -871,8 +878,8 @@ export default function PublicTvDisplay({
                   gridTemplateColumns: isCreamOfTheCrop
                     ? '34px minmax(0, 1fr) 78px 54px 58px 62px'
                     : showNextCourt
-                    ? '42px minmax(0, 1fr) 48px 58px 58px'
-                    : '46px minmax(0, 1fr) 58px 62px',
+                    ? showPointDifferential ? '42px minmax(0, 1fr) 48px 58px 58px' : '42px minmax(0, 1fr) 48px 70px'
+                    : showPointDifferential ? '46px minmax(0, 1fr) 58px 62px' : '46px minmax(0, 1fr) 70px',
                   gap: isCreamOfTheCrop ? 12 : 8,
                   padding: '10px 14px',
                   color: 'rgba(255,255,255,0.52)',
@@ -901,9 +908,9 @@ export default function PublicTvDisplay({
                     'W-L'
                   )}
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                {isCreamOfTheCrop || showPointDifferential ? <div style={{ textAlign: 'right' }}>
                   {isCreamOfTheCrop ? 'W-L' : 'Diff'}
-                </div>
+                </div> : null}
                 {isCreamOfTheCrop ? <div style={{ textAlign: 'right' }}>Diff</div> : null}
               </div>
 
@@ -926,8 +933,8 @@ export default function PublicTvDisplay({
                       gridTemplateColumns: isCreamOfTheCrop
                         ? '34px minmax(0, 1fr) 78px 54px 58px 62px'
                         : showNextCourt
-                        ? '42px minmax(0, 1fr) 48px 58px 58px'
-                        : '46px minmax(0, 1fr) 58px 62px',
+                        ? showPointDifferential ? '42px minmax(0, 1fr) 48px 58px 58px' : '42px minmax(0, 1fr) 48px 70px'
+                        : showPointDifferential ? '46px minmax(0, 1fr) 58px 62px' : '46px minmax(0, 1fr) 70px',
                       gap: isCreamOfTheCrop ? 12 : 8,
                       alignItems: 'center',
                       padding: isCreamOfTheCrop ? '7px 14px' : '9px 14px',
@@ -939,7 +946,7 @@ export default function PublicTvDisplay({
                         : 'transparent',
                     }}
                   >
-                    <div
+                    {isCreamOfTheCrop || showPointDifferential ? <div
                       style={{
                         fontSize: isLeader ? 23 : 18,
                         fontWeight: 950,
@@ -947,7 +954,7 @@ export default function PublicTvDisplay({
                       }}
                     >
                       {place}
-                    </div>
+                    </div> : null}
                     <div
                       style={{
                         minWidth: 0,

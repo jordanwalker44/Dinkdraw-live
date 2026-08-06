@@ -1143,6 +1143,7 @@ useEffect(() => {
         isLive={isLive}
         organizationBrand={organizationBrand}
         tournamentMode={tournament.tournament_mode}
+        standingsRankingMethod={tournament.standings_ranking_method}
         poolStandings={poolStandings}
         playoffMatches={playoffMatches}
       />
@@ -2229,11 +2230,13 @@ useEffect(() => {
                       ? `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0} on Court ${
                           standings[0]?.finalCourt ?? '-'
                         }`
-                      : `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0} • ${
+                      : tournament.standings_ranking_method === 'point_diff_first'
+                      ? `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0} • ${
                           (standings[0]?.pointDiff ?? 0) > 0
                             ? `+${standings[0]?.pointDiff}`
                             : standings[0]?.pointDiff ?? 0
-                        } diff`}
+                        } diff`
+                      : `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0}`}
                   </div>
                 </div>
 
@@ -2293,9 +2296,11 @@ useEffect(() => {
                       >
                         {tournament.tournament_mode === 'cream_of_the_crop'
                           ? `${row.wins}-${row.losses}`
-                          : `${row.wins}-${row.losses} • ${
+                          : tournament.standings_ranking_method === 'point_diff_first'
+                          ? `${row.wins}-${row.losses} • ${
                               row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff
-                            }`}
+                            }`
+                          : `${row.wins}-${row.losses}`}
                       </div>
                     </div>
                   ))}
@@ -2320,7 +2325,7 @@ useEffect(() => {
               </div>
             ) : null}
 
-           {tournament.pool_brackets_enabled ? <PoolStandingsTables pools={poolStandings} /> : null}
+           {tournament.pool_brackets_enabled ? <PoolStandingsTables pools={poolStandings} showPointDifferential={tournament.standings_ranking_method === 'point_diff_first'} /> : null}
            <div
               style={{
                 display: tournament.pool_brackets_enabled ? 'none' : 'block',
@@ -2333,7 +2338,7 @@ useEffect(() => {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '44px 1fr 72px 64px',
+                  gridTemplateColumns: tournament.standings_ranking_method === 'point_diff_first' ? '44px 1fr 72px 64px' : '44px 1fr 82px',
                   padding: '10px 8px',
                   borderBottom: '1px solid rgba(255,255,255,0.08)',
                   fontSize: 12,
@@ -2346,7 +2351,7 @@ useEffect(() => {
                 <div style={{ textAlign: 'center' }}>#</div>
                 <div>Player</div>
                 <div style={{ textAlign: 'center' }}>W-L</div>
-                <div style={{ textAlign: 'center' }}>Diff</div>
+                {tournament.standings_ranking_method === 'point_diff_first' ? <div style={{ textAlign: 'center' }}>Diff</div> : null}
               </div>
 
               {standings.map((row, index, arr) => {
@@ -2357,7 +2362,7 @@ useEffect(() => {
                     key={row.playerId}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '44px 1fr 72px 64px',
+                      gridTemplateColumns: tournament.standings_ranking_method === 'point_diff_first' ? '44px 1fr 72px 64px' : '44px 1fr 82px',
                       alignItems: 'center',
                       padding: '12px 8px',
                       borderBottom:
@@ -2376,7 +2381,7 @@ useEffect(() => {
                       {place}
                     </div>
 
-                    <div
+                    {tournament.standings_ranking_method === 'point_diff_first' ? <div
                       style={{
                         fontWeight: 800,
                         whiteSpace: 'nowrap',
@@ -2386,7 +2391,7 @@ useEffect(() => {
                       }}
                     >
                       {row.name}
-                    </div>
+                    </div> : null}
 
                     <div style={{ textAlign: 'center', fontWeight: 800 }}>
                       {row.wins}-{row.losses}

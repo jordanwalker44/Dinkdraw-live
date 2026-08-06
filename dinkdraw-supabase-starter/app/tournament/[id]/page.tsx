@@ -2868,6 +2868,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [coOrganizerNameQuery, setCoOrganizerNameQuery] = useState('');
   const [coOrganizerSearchResults, setCoOrganizerSearchResults] = useState<CoOrganizerSearchResult[]>([]);
   const [selectedCoOrganizerUserId, setSelectedCoOrganizerUserId] = useState('');
+  const [claimGenderBySlot, setClaimGenderBySlot] = useState<Record<string, 'male' | 'female'>>({});
   const [isSearchingCoOrganizer, setIsSearchingCoOrganizer] = useState(false);
   const coOrganizerDraftTournamentIdRef = useRef<string | null>(null);
   const [newNames, setNewNames] = useState<Record<string, string>>({});
@@ -3739,13 +3740,20 @@ useEffect(() => {
     }
 
     const spotLabel = slot.display_name?.trim() || `Player ${slot.slot_number}`;
+    const isMixedDoubles = tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed';
+    const selectedGender = claimGenderBySlot[slotId] || (slot.gender === 'male' || slot.gender === 'female' ? slot.gender : null);
+    if (isMixedDoubles && !selectedGender) {
+      setMessage('Choose Male or Female before claiming this mixed doubles spot.');
+      return;
+    }
     const confirmed = window.confirm(
-      `Claim ${spotLabel}? This links your DinkDraw account to this player's tournament results and cannot be undone after the tournament starts.`
+      `Claim ${spotLabel}${isMixedDoubles ? ` as ${selectedGender === 'male' ? 'Male' : 'Female'}` : ''}? This links your DinkDraw account to this player's tournament results and cannot be undone after the tournament starts.`
     );
     if (!confirmed) return;
 
     const { data, error } = await supabase.rpc('claim_tournament_player_spot', {
       p_slot_id: slotId,
+      p_gender: isMixedDoubles ? selectedGender : null,
     });
 
     if (error) {
@@ -6870,16 +6878,20 @@ disabled={!canEditName}
                 >
                   <button
                     type="button"
-                    className={`button ${slot.gender === 'male' ? 'primary' : 'secondary'}`}
-                    onClick={() => updatePlayerGender(slot.id, 'male')}
+                    className={`button ${(claimGenderBySlot[slot.id] || slot.gender) === 'male' ? 'primary' : 'secondary'}`}
+                    onClick={() => canClaim && !isOrganizer
+                      ? setClaimGenderBySlot((current) => ({ ...current, [slot.id]: 'male' }))
+                      : updatePlayerGender(slot.id, 'male')}
                     disabled={isLocked}
                   >
                     Male
                   </button>
                   <button
                     type="button"
-                    className={`button ${slot.gender === 'female' ? 'primary' : 'secondary'}`}
-                    onClick={() => updatePlayerGender(slot.id, 'female')}
+                    className={`button ${(claimGenderBySlot[slot.id] || slot.gender) === 'female' ? 'primary' : 'secondary'}`}
+                    onClick={() => canClaim && !isOrganizer
+                      ? setClaimGenderBySlot((current) => ({ ...current, [slot.id]: 'female' }))
+                      : updatePlayerGender(slot.id, 'female')}
                     disabled={isLocked}
                   >
                     Female
@@ -6887,7 +6899,13 @@ disabled={!canEditName}
                   <button
                     type="button"
                     className="button secondary"
-                    onClick={() => updatePlayerGender(slot.id, '')}
+                    onClick={() => canClaim && !isOrganizer
+                      ? setClaimGenderBySlot((current) => {
+                          const next = { ...current };
+                          delete next[slot.id];
+                          return next;
+                        })
+                      : updatePlayerGender(slot.id, '')}
                     disabled={isLocked}
                   >
                     Clear
@@ -6896,11 +6914,16 @@ disabled={!canEditName}
               ) : null}
 
               {canClaim ? (
-                <button className="button primary" onClick={(e) => {
+                <button
+                  className="button primary"
+                  disabled={tournament?.doubles_mode === 'mixed' && !(claimGenderBySlot[slot.id] || slot.gender)}
+                  onClick={(e) => {
                   e.stopPropagation();
                   claimSlot(slot.id);
-              }}>
-                  Claim Spot
+                }}>
+                  {tournament?.doubles_mode === 'mixed' && !(claimGenderBySlot[slot.id] || slot.gender)
+                    ? 'Choose Male or Female'
+                    : 'Claim Spot'}
                 </button>
               ) : null}
 

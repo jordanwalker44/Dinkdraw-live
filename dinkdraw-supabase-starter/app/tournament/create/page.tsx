@@ -28,6 +28,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function recommendedCourtCount(playerCount: number, format: 'singles' | 'doubles') {
+  return Math.max(1, Math.floor(playerCount / (format === 'singles' ? 2 : 4)));
+}
+
 function Stepper({
   label,
   value,
@@ -791,18 +795,35 @@ and final placement tie-breakers.
       }
     } else {
       setPlayerCount(next);
+      setCourts(recommendedCourtCount(next, format));
     }
   }}
 />
 
    {tournamentMode === 'round_robin' ? (
-  <Stepper
-    label={`Courts (max ${maxCourtsAllowed})`}
-    value={courts}
-    min={1}
-    max={maxCourtsAllowed}
-    onChange={setCourts}
-  />
+  <div>
+    <Stepper
+      label={`Courts (recommended ${recommendedCourtCount(playerCount, format)}, max ${maxCourtsAllowed})`}
+      value={courts}
+      min={1}
+      max={maxCourtsAllowed}
+      onChange={setCourts}
+    />
+    {courts !== recommendedCourtCount(playerCount, format) ? (
+      <button
+        type="button"
+        className="button secondary"
+        onClick={() => setCourts(recommendedCourtCount(playerCount, format))}
+        style={{ width: '100%', marginTop: 8 }}
+      >
+        Use Recommended ({recommendedCourtCount(playerCount, format)})
+      </button>
+    ) : (
+      <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+        Automatically adjusted for {playerCount} players. You can still choose fewer courts.
+      </div>
+    )}
+  </div>
 ) : (
   <div>
     <label className="label">Courts</label>
@@ -892,14 +913,20 @@ and final placement tie-breakers.
       <button
         type="button"
         className={`button ${format === 'doubles' ? 'primary' : 'secondary'}`}
-        onClick={() => setFormat('doubles')}
+        onClick={() => {
+          setFormat('doubles');
+          setCourts(recommendedCourtCount(playerCount, 'doubles'));
+        }}
       >
         Doubles
       </button>
       <button
         type="button"
         className={`button ${format === 'singles' ? 'primary' : 'secondary'}`}
-        onClick={() => setFormat('singles')}
+        onClick={() => {
+          setFormat('singles');
+          setCourts(recommendedCourtCount(playerCount, 'singles'));
+        }}
       >
         Singles
       </button>

@@ -169,6 +169,12 @@ type SavedCoOrganizer = {
   email: string;
 };
 
+type CoOrganizerSearchResult = {
+  user_id: string;
+  display_name: string;
+  masked_email: string;
+};
+
 type ScheduleRow = {
   round_number: number;
   court_number: number | null;
@@ -2837,6 +2843,12 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [selectedSavedCoOrganizerId, setSelectedSavedCoOrganizerId] = useState('');
   const [saveCoOrganizerForLater, setSaveCoOrganizerForLater] = useState(false);
   const [savedCoOrganizerName, setSavedCoOrganizerName] = useState('');
+  const [coOrganizerEmailDraft, setCoOrganizerEmailDraft] = useState('');
+  const [coOrganizerNameQuery, setCoOrganizerNameQuery] = useState('');
+  const [coOrganizerSearchResults, setCoOrganizerSearchResults] = useState<CoOrganizerSearchResult[]>([]);
+  const [selectedCoOrganizerUserId, setSelectedCoOrganizerUserId] = useState('');
+  const [isSearchingCoOrganizer, setIsSearchingCoOrganizer] = useState(false);
+  const coOrganizerDraftTournamentIdRef = useRef<string | null>(null);
   const [newNames, setNewNames] = useState<Record<string, string>>({});
   const [newDuprIds, setNewDuprIds] = useState<Record<string, string>>({});
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
@@ -3550,6 +3562,12 @@ useEffect(() => {
   }, [roundsAvailable, currentRound, finalRound, isCompleted]);
 
   useEffect(() => {
+    if (!tournament?.id || coOrganizerDraftTournamentIdRef.current === tournament.id) return;
+    coOrganizerDraftTournamentIdRef.current = tournament.id;
+    setCoOrganizerEmailDraft(tournament.co_organizer_email || '');
+  }, [tournament?.id, tournament?.co_organizer_email]);
+
+  useEffect(() => {
     if (isCompleted) {
       setSelectedRound(finalRound);
       setActiveTab('standings');
@@ -3616,6 +3634,36 @@ useEffect(() => {
     } catch {
       setMessage('Could not share join link.');
     }
+  }
+
+  async function searchCoOrganizerByName() {
+    if (!tournament?.id) return;
+    setIsSearchingCoOrganizer(true);
+    setCoOrganizerSearchResults([]);
+    const { data, error } = await supabase.rpc('search_co_organizer_accounts', {
+      p_tournament_id: tournament.id,
+      p_query: coOrganizerNameQuery.trim(),
+    });
+    setIsSearchingCoOrganizer(false);
+    if (error) { setMessage(error.message); return; }
+    const results = (data || []) as CoOrganizerSearchResult[];
+    setCoOrganizerSearchResults(results);
+    if (!results.length) setMessage('No DinkDraw accounts matched that name.');
+  }
+
+  async function assignCoOrganizerByName(result: CoOrganizerSearchResult) {
+    if (!tournament?.id) return;
+    setSelectedCoOrganizerUserId(result.user_id);
+    const { error } = await supabase.rpc('assign_tournament_co_organizer_by_user_id', {
+      p_tournament_id: tournament.id,
+      p_co_organizer_user_id: result.user_id,
+    });
+    if (error) { setSelectedCoOrganizerUserId(''); setMessage(error.message); return; }
+    setCoOrganizerNameQuery(result.display_name);
+    setCoOrganizerSearchResults([]);
+    setMessage(`${result.display_name} was added as co-organizer.`);
+    coOrganizerDraftTournamentIdRef.current = null;
+    await loadTournamentData(userId);
   }
 
   async function copyPublicLink() {
@@ -6410,6 +6458,23 @@ function renderShortTeam(a: string | null, b: string | null) {
   <div className="card" style={{ marginBottom: 14 }}>
     <div className="card-title">Invite Players</div>
 
+    <div
+      className="list-item"
+      style={{ marginTop: 12, marginBottom: 12, textAlign: 'center' }}
+    >
+      <div className="label">Join Code</div>
+      <div
+        style={{
+          marginTop: 4,
+          fontSize: 32,
+          fontWeight: 950,
+          letterSpacing: '0.14em',
+        }}
+      >
+        {tournament?.join_code || '...'}
+      </div>
+    </div>
+
     <div className="grid">
       <button type="button" className="button secondary" onClick={copyJoinCode}>
         {copied ? 'Join Code Copied' : 'Copy Join Code'}
@@ -6977,9 +7042,7 @@ disabled={!canEditName}
 
         const selected = savedCoOrganizers.find((item) => item.id === selectedId);
         if (selected) {
-          setTournament((prev) =>
-            prev ? { ...prev, co_organizer_email: selected.email } : prev
-          );
+          setCoOrganizerEmailDraft(selected.email);
           setSavedCoOrganizerName(selected.name || selected.email);
         }
       }}
@@ -6994,14 +7057,68 @@ disabled={!canEditName}
     </select>
   ) : null}
 
+  <div className="label" style={{ marginTop: 12 }}>Add by name</div>
+  <div className="grid" style={{ marginTop: 8 }}>
+    <input
+      className="input"
+      value={coOrganizerNameQuery}
+      onChange={(e) => {
+        setCoOrganizerNameQuery(e.target.value);
+        setCoOrganizerSearchResults([]);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && coOrganizerNameQuery.trim().length >= 3) {
+          e.preventDefault();
+          searchCoOrganizerByName();
+        }
+      }}
+      placeholder="Search DinkDraw account name"
+    />
+    <button
+      type="button"
+      className="button secondary"
+      onClick={searchCoOrganizerByName}
+      disabled={isSearchingCoOrganizer || coOrganizerNameQuery.trim().length < 3}
+    >
+      {isSearchingCoOrganizer ? 'Searching...' : 'Search'}
+    </button>
+  </div>
+
+  {coOrganizerSearchResults.length ? (
+    <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+      {coOrganizerSearchResults.map((result) => (
+        <div
+          key={result.user_id}
+          className="list-item"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}
+        >
+          <div>
+            <div style={{ fontWeight: 900 }}>{result.display_name}</div>
+            <div className="muted" style={{ marginTop: 2, fontSize: 12 }}>
+              {result.masked_email}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => assignCoOrganizerByName(result)}
+            disabled={selectedCoOrganizerUserId === result.user_id}
+          >
+            {selectedCoOrganizerUserId === result.user_id ? 'Adding...' : 'Add'}
+          </button>
+        </div>
+      ))}
+    </div>
+  ) : null}
+
+  <div className="label" style={{ marginTop: 14 }}>Or add by email</div>
+
   <input
     className="input"
     type="email"
-    value={tournament?.co_organizer_email || ''}
+    value={coOrganizerEmailDraft}
     onChange={(e) => {
-      setTournament((prev) =>
-        prev ? { ...prev, co_organizer_email: e.target.value } : prev
-      );
+      setCoOrganizerEmailDraft(e.target.value);
       setSelectedSavedCoOrganizerId('');
     }}
     placeholder="coorganizer@email.com"
@@ -7042,7 +7159,7 @@ disabled={!canEditName}
     onClick={async () => {
       if (!tournament) return;
 
-      const cleanEmail = tournament.co_organizer_email?.trim() || '';
+      const cleanEmail = coOrganizerEmailDraft.trim();
 
       const { error } = await supabase
         .from('tournaments')

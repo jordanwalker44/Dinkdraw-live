@@ -112,6 +112,10 @@ export default function CreateLeaguePage() {
       setMessage('Choose a start time so attendance reminders can be scheduled.');
       return;
     }
+    if (!location.trim()) {
+      setMessage('Enter the club or court location.');
+      return;
+    }
     if (playerCount % 4 !== 0) {
       setMessage('Rotating doubles leagues require a player count in multiples of four.');
       return;
@@ -127,7 +131,7 @@ export default function CreateLeaguePage() {
       p_courts: courts,
       p_games_to: gamesTo,
       p_default_time: startTime || null,
-      p_default_location: location.trim() || null,
+      p_default_location: location.trim(),
     });
 
     if (error || !leagueId) {
@@ -178,7 +182,7 @@ export default function CreateLeaguePage() {
             </div>
             <div className="grid two league-compact-row">
               <div><label className="label">Time zone <span className="league-label-hint">• reminders</span></label><select className="input" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{timeZoneOptions(timeZone).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></div>
-              <div><label className="label">Location <span className="league-label-hint">• optional</span></label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or courts" /></div>
+              <div><label className="label">Location</label><input className="input" required value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or courts" /></div>
             </div>
             <div className="grid two league-compact-row">
               <div>

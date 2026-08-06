@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../../../components/TopNav';
 import { sendLeaguePushEvent } from '../../../lib/league-push';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
+import { LEAGUE_TIME_ZONES } from '../../../lib/time-zones';
 
 type League = {
   id: string;
@@ -20,6 +21,7 @@ type League = {
   games_to: number;
   default_time: string | null;
   default_location: string | null;
+  time_zone: string;
   organizations: { name: string } | null;
 };
 type Member = { id: string; roster_position: number | null; display_name: string | null; user_id: string | null; member_type: 'regular' | 'substitute'; status: string };
@@ -59,6 +61,7 @@ export default function LeaguePage() {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [savingTimeZone, setSavingTimeZone] = useState(false);
 
   async function load() {
     const { data: authData } = await supabase.auth.getUser();
@@ -287,6 +290,16 @@ export default function LeaguePage() {
     setMessage(`Standings update requested for Week ${selectedSessionRow.session_number}.`);
   }
 
+  async function saveTimeZone(timeZone: string) {
+    if (!league || !isOrganizer) return;
+    setSavingTimeZone(true);
+    const { error } = await supabase.from('leagues').update({ time_zone: timeZone }).eq('id', league.id);
+    setSavingTimeZone(false);
+    if (error) { setMessage(error.message); return; }
+    setLeague({ ...league, time_zone: timeZone });
+    setMessage('League timezone saved. Future attendance reminders have been rescheduled.');
+  }
+
   if (loading) return <main className="page-shell"><TopNav /><div className="card"><div className="muted">Loading league...</div></div></main>;
   if (!league) return <main className="page-shell"><TopNav /><div className="notice">{message}</div></main>;
 
@@ -308,6 +321,7 @@ export default function LeaguePage() {
           <strong>League code: {league.join_code}</strong><br />
           {gameFormatLabel} against every weekly opponent, played to {league.games_to}. First serve alternates between teams each game.
         </div>
+        {isOrganizer ? <div style={{ marginTop: 10 }}><label className="label" htmlFor="league-time-zone">League timezone</label><select id="league-time-zone" className="input" disabled={savingTimeZone} value={league.time_zone || 'America/Denver'} onChange={(event) => void saveTimeZone(event.target.value)}>{LEAGUE_TIME_ZONES.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></div> : <div className="muted" style={{ marginTop: 10 }}>Timezone: {LEAGUE_TIME_ZONES.find((zone) => zone.value === league.time_zone)?.label || league.time_zone}</div>}
         <button className="button secondary" type="button" style={{ marginTop: 10 }} onClick={() => router.push(`/leagues/${league.id}/chat`)}>Open League Group Chat</button>
       </div>
 

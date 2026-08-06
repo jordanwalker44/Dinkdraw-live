@@ -135,8 +135,8 @@ Deno.serve(async (req) => {
         .eq('id', event.messageId).eq('room_id', room.data.id).eq('sender_user_id', user.id).eq('message_type', 'message')
         .is('push_claimed_at', null).select('id, body').maybeSingle();
       if (!claimed.data) throw new Error('League message not found or already notified');
-      const states = await adminClient.from('tournament_room_user_state').select('user_id, is_muted, push_enabled').eq('room_id', room.data.id);
-      const optedOut = new Set((states.data || []).filter((state: any) => state.is_muted || !state.push_enabled).map((state: any) => state.user_id));
+      const states = await adminClient.from('tournament_room_user_state').select('user_id, is_muted, push_enabled, notification_preference').eq('room_id', room.data.id);
+      const optedOut = new Set((states.data || []).filter((state: any) => state.is_muted || !state.push_enabled || state.notification_preference !== 'all').map((state: any) => state.user_id));
       for (const member of memberRows.filter((item: any) => item.member_type === 'regular' && item.user_id && item.user_id !== user.id && !optedOut.has(item.user_id))) {
         notifications.push({ userId: member.user_id, title: `${league.name} group chat`, body: claimed.data.body, url: leagueUrl + '/chat' });
       }

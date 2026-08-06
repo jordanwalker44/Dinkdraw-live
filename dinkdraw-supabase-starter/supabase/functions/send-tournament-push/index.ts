@@ -111,6 +111,7 @@ type RoomUserState = {
   user_id: string;
   is_muted: boolean;
   push_enabled: boolean;
+  notification_preference: 'all' | 'announcements_only' | 'off';
 };
 
 const corsHeaders = {
@@ -689,7 +690,7 @@ async function buildRoomMessageNotifications(
   if (recipientIds.length) {
     const { data, error } = await adminClient
       .from('tournament_room_user_state')
-      .select('user_id, is_muted, push_enabled')
+      .select('user_id, is_muted, push_enabled, notification_preference')
       .eq('room_id', room.id)
       .in('user_id', recipientIds);
 
@@ -699,7 +700,7 @@ async function buildRoomMessageNotifications(
 
   const optedOutUserIds = new Set(
     stateRows
-      .filter((state) => state.is_muted || !state.push_enabled)
+      .filter((state) => state.is_muted || !state.push_enabled || state.notification_preference === 'off' || (event.eventType === 'message_posted' && state.notification_preference === 'announcements_only'))
       .map((state) => state.user_id),
   );
 

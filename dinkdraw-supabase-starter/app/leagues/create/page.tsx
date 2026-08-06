@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopNav } from '../../../components/TopNav';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
+import { LEAGUE_TIME_ZONES } from '../../../lib/time-zones';
 
 type Organization = { id: string; name: string; hasLeagueAccess: boolean };
 
@@ -20,6 +21,7 @@ export default function CreateLeaguePage() {
   const [name, setName] = useState('Rotating Doubles League');
   const [startDate, setStartDate] = useState(localDateInput());
   const [startTime, setStartTime] = useState('18:00');
+  const [timeZone, setTimeZone] = useState('America/Denver');
   const [location, setLocation] = useState('');
   const [playerCount, setPlayerCount] = useState(12);
   const [sessionCount, setSessionCount] = useState(11);
@@ -128,7 +130,7 @@ export default function CreateLeaguePage() {
 
     const { error: formatError } = await supabase
       .from('leagues')
-      .update({ game_format: gameFormat, matches_per_opponent: gamesPerMatch })
+      .update({ game_format: gameFormat, matches_per_opponent: gamesPerMatch, time_zone: timeZone })
       .eq('id', leagueId);
     if (formatError) {
       setMessage(`League created, but the game format could not be saved: ${formatError.message}`);
@@ -166,6 +168,7 @@ export default function CreateLeaguePage() {
               <div className="league-native-field"><label className="label">First play date</label><input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
               <div className="league-native-field"><label className="label">Start time</label><input className="input" type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
             </div>
+            <div><label className="label">League timezone</label><select className="input" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{LEAGUE_TIME_ZONES.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select><div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Attendance reminders use this timezone.</div></div>
             <div><label className="label">Location</label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or court location" /></div>
             <div className="grid two">
               <div>

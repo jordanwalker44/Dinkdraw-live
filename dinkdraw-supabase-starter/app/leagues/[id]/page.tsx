@@ -116,6 +116,14 @@ export default function LeaguePage() {
   const selectedSessionRow = sessions.find((session) => session.session_number === selectedSession);
   const selectedTeams = teams.filter((team) => team.session_id === selectedSessionRow?.id);
   const selectedAttendance = attendance.filter((row) => row.session_id === selectedSessionRow?.id);
+  const attendanceSummary = members.reduce((summary, member) => {
+    const status = selectedAttendance.find((row) => row.regular_member_id === member.id)?.attendance_status || 'expected';
+    if (['playing', 'sub_confirmed', 'completed'].includes(status)) summary.playing += 1;
+    else if (['sub_needed', 'sub_invited'].includes(status)) summary.needSub += 1;
+    else if (status === 'absent') summary.absent += 1;
+    else summary.awaiting += 1;
+    return summary;
+  }, { playing: 0, needSub: 0, absent: 0, awaiting: 0 });
   const selectedSessionPlayers = sessionPlayers.filter((row) => row.session_id === selectedSessionRow?.id);
   const myRegularMember = members.find((member) => member.user_id === userId);
   const mySubstituteMember = substitutes.find((member) => member.user_id === userId);
@@ -485,6 +493,12 @@ export default function LeaguePage() {
       <section className="card" style={{ marginTop: 14 }}>
         <div className="card-title">Week {selectedSession} attendance</div>
         <div className="card-subtitle">Regular positions and the people who will actually play are tracked separately.</div>
+        {isOrganizer ? <div className="league-attendance-summary" aria-label={`Attendance summary: ${attendanceSummary.playing} playing, ${attendanceSummary.needSub} need a substitute, ${attendanceSummary.absent} absent, ${attendanceSummary.awaiting} awaiting response`}>
+          <div className="league-attendance-stat is-playing"><strong>{attendanceSummary.playing}</strong><span>Playing</span></div>
+          <div className="league-attendance-stat is-sub-needed"><strong>{attendanceSummary.needSub}</strong><span>Need Sub</span></div>
+          <div className="league-attendance-stat is-absent"><strong>{attendanceSummary.absent}</strong><span>Absent</span></div>
+          <div className="league-attendance-stat is-awaiting"><strong>{attendanceSummary.awaiting}</strong><span>Awaiting Response</span></div>
+        </div> : null}
         {isOrganizer && !selectedSessionRow?.tournament_id ? <button className="button secondary" type="button" onClick={requestAttendanceResponses} style={{ width: 'auto', marginTop: 12 }}>Send Attendance Reminder</button> : null}
 
         {myRegularMember && !selectedSessionRow?.tournament_id ? <div className="grid" style={{ gap: 8, marginTop: 14 }}>

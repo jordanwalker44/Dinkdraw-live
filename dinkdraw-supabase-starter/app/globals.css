@@ -1148,6 +1148,39 @@ textarea.input:focus {
   font-weight: 600;
 }
 
+.league-attendance-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.league-attendance-stat {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.league-attendance-stat strong {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.league-attendance-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.league-attendance-stat.is-playing strong { color: #86efac; }
+.league-attendance-stat.is-sub-needed strong { color: #ffcb05; }
+.league-attendance-stat.is-absent strong { color: #fca5a5; }
+
 .tournament-mode-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1182,6 +1215,10 @@ textarea.input:focus {
 
   .league-create-page .league-compact-row {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .league-attendance-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .league-page .card {

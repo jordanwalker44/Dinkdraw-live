@@ -2231,11 +2231,11 @@ useEffect(() => {
                           standings[0]?.finalCourt ?? '-'
                         }`
                       : tournament.standings_ranking_method === 'point_diff_first'
-                      ? `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0} • ${
+                      ? `${
                           (standings[0]?.pointDiff ?? 0) > 0
                             ? `+${standings[0]?.pointDiff}`
                             : standings[0]?.pointDiff ?? 0
-                        } diff`
+                        } point differential`
                       : `${standings[0]?.wins ?? 0}-${standings[0]?.losses ?? 0}`}
                   </div>
                 </div>
@@ -2297,9 +2297,9 @@ useEffect(() => {
                         {tournament.tournament_mode === 'cream_of_the_crop'
                           ? `${row.wins}-${row.losses}`
                           : tournament.standings_ranking_method === 'point_diff_first'
-                          ? `${row.wins}-${row.losses} • ${
+                          ? `${
                               row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff
-                            }`
+                            } point differential`
                           : `${row.wins}-${row.losses}`}
                       </div>
                     </div>
@@ -2338,7 +2338,7 @@ useEffect(() => {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: tournament.standings_ranking_method === 'point_diff_first' ? '44px 1fr 72px 64px' : '44px 1fr 82px',
+                  gridTemplateColumns: '44px 1fr 82px',
                   padding: '10px 8px',
                   borderBottom: '1px solid rgba(255,255,255,0.08)',
                   fontSize: 12,
@@ -2350,8 +2350,7 @@ useEffect(() => {
               >
                 <div style={{ textAlign: 'center' }}>#</div>
                 <div>Player</div>
-                <div style={{ textAlign: 'center' }}>W-L</div>
-                {tournament.standings_ranking_method === 'point_diff_first' ? <div style={{ textAlign: 'center' }}>Diff</div> : null}
+                <div style={{ textAlign: 'center' }}>{tournament.standings_ranking_method === 'point_diff_first' ? 'Diff' : 'W-L'}</div>
               </div>
 
               {standings.map((row, index, arr) => {
@@ -2362,7 +2361,7 @@ useEffect(() => {
                     key={row.playerId}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: tournament.standings_ranking_method === 'point_diff_first' ? '44px 1fr 72px 64px' : '44px 1fr 82px',
+                      gridTemplateColumns: '44px 1fr 82px',
                       alignItems: 'center',
                       padding: '12px 8px',
                       borderBottom:
@@ -2381,7 +2380,7 @@ useEffect(() => {
                       {place}
                     </div>
 
-                    {tournament.standings_ranking_method === 'point_diff_first' ? <div
+                    <div
                       style={{
                         fontWeight: 800,
                         whiteSpace: 'nowrap',
@@ -2391,20 +2390,18 @@ useEffect(() => {
                       }}
                     >
                       {row.name}
-                    </div> : null}
-
-                    <div style={{ textAlign: 'center', fontWeight: 800 }}>
-                      {row.wins}-{row.losses}
                     </div>
 
                     <div
                       style={{
                         textAlign: 'center',
                         fontWeight: 800,
-                        color: row.pointDiff > 0 ? '#FFCB05' : undefined,
+                        color: tournament.standings_ranking_method === 'point_diff_first' && row.pointDiff > 0 ? '#FFCB05' : undefined,
                       }}
                     >
-                      {row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff}
+                      {tournament.standings_ranking_method === 'point_diff_first'
+                        ? row.pointDiff > 0 ? `+${row.pointDiff}` : row.pointDiff
+                        : `${row.wins}-${row.losses}`}
                     </div>
                   </div>
                 );

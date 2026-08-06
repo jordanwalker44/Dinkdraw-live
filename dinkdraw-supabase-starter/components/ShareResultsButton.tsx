@@ -4,13 +4,15 @@ export function ShareResultsButton({
   title,
   resultsUrl,
   shareCardUrl,
+  resultSummary,
 }: {
   title: string;
   resultsUrl: string;
   shareCardUrl: string;
+  resultSummary?: string;
 }) {
   async function handleShare() {
-    const shareText = `🏆 ${title} Final Results\n\nView the DinkDraw results:\n${resultsUrl}`;
+    const shareText = `🏆 ${title} Final Results${resultSummary ? `\n\n${resultSummary}` : ''}\n\nView the DinkDraw results:\n${resultsUrl}`;
 
     if (navigator.share) {
       try {

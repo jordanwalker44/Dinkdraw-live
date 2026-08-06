@@ -33,6 +33,16 @@ type Tournament = {
   doubles_mode: string | null;
   tournament_mode: string | null;
   organization_id: string | null;
+  pool_brackets_enabled: boolean | null;
+};
+
+type PlayoffMatch = {
+  id: string;
+  bracket_type: 'championship' | 'consolation';
+  next_match_id: string | null;
+  is_complete: boolean;
+  winner_player_1_id: string | null;
+  winner_player_2_id: string | null;
 };
 
 type PlayerSlot = {
@@ -349,6 +359,7 @@ export default function TournamentResultsPage({
   const [organizationBrand, setOrganizationBrand] = useState<OrganizationBrand | null>(null);
   const [playerSlots, setPlayerSlots] = useState<PlayerSlot[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [playoffMatches, setPlayoffMatches] = useState<PlayoffMatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState('');
 
@@ -390,6 +401,8 @@ export default function TournamentResultsPage({
 );
 
   const winner = standings[0] || null;
+  const championshipFinal = playoffMatches.find((match) => match.bracket_type === 'championship' && !match.next_match_id && match.is_complete) || null;
+  const consolationFinal = playoffMatches.find((match) => match.bracket_type === 'consolation' && !match.next_match_id && match.is_complete) || null;
 
   function renderPlayerName(id: string | null) {
     if (!id) return '-';
@@ -400,6 +413,14 @@ export default function TournamentResultsPage({
     if (isSingles) return renderPlayerName(a);
     return `${renderPlayerName(a)} & ${renderPlayerName(b)}`;
   }
+
+  const championshipWinnerName = championshipFinal
+    ? renderTeam(championshipFinal.winner_player_1_id, championshipFinal.winner_player_2_id)
+    : null;
+  const consolationWinnerName = consolationFinal
+    ? renderTeam(consolationFinal.winner_player_1_id, consolationFinal.winner_player_2_id)
+    : null;
+  const primaryWinnerName = championshipWinnerName || winner?.name || null;
 
   function renderScore(match: Match) {
     if (isMultiGame) {
@@ -415,7 +436,7 @@ export default function TournamentResultsPage({
     setIsLoading(true);
     setMessage('');
 
-    const [tournamentResult, playersResult, matchesResult] = await Promise.all([
+    const [tournamentResult, playersResult, matchesResult, playoffMatchesResult] = await Promise.all([
       supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
       supabase
         .from('tournament_players')
@@ -428,6 +449,10 @@ export default function TournamentResultsPage({
         .eq('tournament_id', params.id)
         .order('round_number', { ascending: true })
         .order('court_number', { ascending: true }),
+      supabase
+        .from('playoff_matches')
+        .select('id, bracket_type, next_match_id, is_complete, winner_player_1_id, winner_player_2_id')
+        .eq('tournament_id', params.id),
     ]);
 
     if (tournamentResult.error) {
@@ -439,6 +464,7 @@ export default function TournamentResultsPage({
     setTournament(tournamentData || null);
     setPlayerSlots(playersResult.data || []);
     setMatches(matchesResult.data || []);
+    setPlayoffMatches((playoffMatchesResult.data || []) as PlayoffMatch[]);
 
     setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
 
@@ -541,7 +567,7 @@ export default function TournamentResultsPage({
       🏆 Champion
     </div>
     <div style={{ fontSize: 20, fontWeight: 900, color: '#FFCB05' }}>
-      {winner.name}
+      {primaryWinnerName}
     </div>
   </div>
 ) : null}
@@ -562,7 +588,7 @@ export default function TournamentResultsPage({
           <div className="list-item">
             <div style={{ fontWeight: 800, marginBottom: 6 }}>Winner</div>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#FFCB05' }}>
-              {winner?.name || 'TBD'}
+              {primaryWinnerName || 'TBD'}
             </div>
           </div>
 
@@ -625,6 +651,9 @@ export default function TournamentResultsPage({
   title={tournament?.title || 'DinkDraw Tournament'}
   resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
   shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+  resultSummary={championshipWinnerName
+    ? `Champions: ${championshipWinnerName}${consolationWinnerName ? `\nConsolation winners: ${consolationWinnerName}` : ''}`
+    : undefined}
 />
         </div>
 
@@ -651,8 +680,13 @@ export default function TournamentResultsPage({
     <div style={{ marginBottom: 10 }}>
       <div style={{ fontSize: 12, opacity: 0.7 }}>🏆 Champion</div>
       <div style={{ fontSize: 18, fontWeight: 900, color: '#FFCB05' }}>
-        {winner.name}
+        {primaryWinnerName}
       </div>
+      {consolationWinnerName ? (
+        <div style={{ marginTop: 8, fontSize: 14, color: '#A78BFA', fontWeight: 800 }}>
+          Consolation winners: {consolationWinnerName}
+        </div>
+      ) : null}
     </div>
   ) : null}
 

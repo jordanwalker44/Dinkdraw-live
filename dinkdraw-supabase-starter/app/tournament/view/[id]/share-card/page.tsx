@@ -26,6 +26,14 @@ type Match = {
   is_complete: boolean;
 };
 
+type PlayoffMatch = {
+  bracket_type: 'championship' | 'consolation';
+  next_match_id: string | null;
+  is_complete: boolean;
+  winner_player_1_id: string | null;
+  winner_player_2_id: string | null;
+};
+
 type StandingRow = {
   name: string;
   slotNumber: number;
@@ -204,10 +212,10 @@ export default async function ShareCardPage({
 
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-  const [tournamentResult, playersResult, matchesResult] = await Promise.all([
+  const [tournamentResult, playersResult, matchesResult, playoffMatchesResult] = await Promise.all([
     supabase
       .from('tournaments')
-      .select('id, title, tournament_mode, organization_id')
+      .select('id, title, tournament_mode, organization_id, pool_brackets_enabled')
       .eq('id', params.id)
       .maybeSingle(),
     supabase
@@ -216,6 +224,10 @@ export default async function ShareCardPage({
       .eq('tournament_id', params.id)
       .order('slot_number', { ascending: true }),
     supabase.from('matches').select('*').eq('tournament_id', params.id),
+    supabase
+      .from('playoff_matches')
+      .select('bracket_type, next_match_id, is_complete, winner_player_1_id, winner_player_2_id')
+      .eq('tournament_id', params.id),
   ]);
 
   const tournament = tournamentResult.data;
@@ -235,6 +247,17 @@ const second = standings[1];
 const third = standings[2];
 
 const isCreamOfTheCrop = tournament?.tournament_mode === 'cream_of_the_crop';
+const playersById = new Map((playersResult.data || []).map((player) => [player.id, player]));
+const playoffMatches = (playoffMatchesResult.data || []) as PlayoffMatch[];
+const teamName = (player1Id: string | null, player2Id: string | null) =>
+  [player1Id, player2Id]
+    .filter(Boolean)
+    .map((id) => playersById.get(id as string)?.display_name || 'Player')
+    .join(' & ');
+const championshipFinal = playoffMatches.find((match) => match.bracket_type === 'championship' && !match.next_match_id && match.is_complete);
+const consolationFinal = playoffMatches.find((match) => match.bracket_type === 'consolation' && !match.next_match_id && match.is_complete);
+const championshipWinner = championshipFinal ? teamName(championshipFinal.winner_player_1_id, championshipFinal.winner_player_2_id) : null;
+const consolationWinner = consolationFinal ? teamName(consolationFinal.winner_player_1_id, consolationFinal.winner_player_2_id) : null;
 
 const biggestClimber = isCreamOfTheCrop
   ? standings
@@ -454,6 +477,36 @@ const biggestClimber = isCreamOfTheCrop
         Final placement is based on court ladder position and record.
       </div>
     </>
+  ) : championshipWinner ? (
+    <>
+      <div
+        style={{
+          padding: '20px 16px',
+          borderRadius: 18,
+          border: '2px solid #FFCB05',
+          background: 'linear-gradient(90deg, rgba(255,203,5,0.20), rgba(255,203,5,0.05))',
+          boxShadow: '0 0 24px rgba(255,203,5,0.18)',
+          textAlign: 'center',
+        }}
+      >
+        <div style={{ fontSize: 15, fontWeight: 950, color: '#FFCB05' }}>🏆 TOURNAMENT CHAMPIONS</div>
+        <div style={{ marginTop: 9, fontSize: 29, fontWeight: 950 }}>{championshipWinner}</div>
+      </div>
+      {consolationWinner ? (
+        <div
+          style={{
+            padding: '18px 16px',
+            borderRadius: 18,
+            border: '1px solid #A78BFA',
+            background: 'rgba(167,139,250,0.10)',
+            textAlign: 'center',
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 950, color: '#A78BFA' }}>🏅 CONSOLATION WINNERS</div>
+          <div style={{ marginTop: 8, fontSize: 25, fontWeight: 950 }}>{consolationWinner}</div>
+        </div>
+      ) : null}
+    </>
   ) : (
     [
       { place: '1', medal: '🥇', row: first, color: '#FFCB05' },
@@ -581,6 +634,9 @@ const biggestClimber = isCreamOfTheCrop
     title={tournament.title || 'DinkDraw Tournament'}
     resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
     shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
+    resultSummary={championshipWinner
+      ? `Champions: ${championshipWinner}${consolationWinner ? `\nConsolation winners: ${consolationWinner}` : ''}`
+      : undefined}
   />
 </div>
       </div>

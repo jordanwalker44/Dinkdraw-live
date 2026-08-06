@@ -16,6 +16,7 @@ import {
   getCreamStageLabel,
   SHOW_CREAM_STAGE_STATUS,
 } from '../../../../lib/cream-stage-status';
+import { TournamentBracket } from '../../../../components/TournamentBracket';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,6 +90,7 @@ type PlayoffMatch = {
   winner_player_2_id: string | null;
   next_match_id: string | null;
   next_match_team: string | null;
+  bracket_type: 'championship' | 'consolation';
   is_bye: boolean;
   is_complete: boolean;
 };
@@ -1623,6 +1625,15 @@ useEffect(() => {
 
         </div>
 
+        {playoffMatches.length > 0 ? (
+          <div className="card" style={{ marginBottom: 14 }}>
+            <div className="card-title">Bracket Path</div>
+            <div className="card-subtitle">Follow every team from its opening matchup to the championship.</div>
+            <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" title="Championship Bracket" accentColor="#FFCB05" />
+            <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" title="Consolation Bracket" accentColor="#A78BFA" />
+          </div>
+        ) : null}
+
          {selectedPlayoffRound !== null ? (
   <div style={{ display: 'grid', gap: 12 }}>
     {playoffRounds
@@ -1815,7 +1826,11 @@ useEffect(() => {
                         textAlign: 'center',
                       }}
                     >
-                      Winner Advanced
+                      {match.next_match_id
+                        ? 'Winner Advanced'
+                        : match.bracket_type === 'championship'
+                        ? '🏆 Champions Crowned'
+                        : '🏅 Consolation Winners Crowned'}
                     </div>
                   ) : match.is_bye ? (
                     <div

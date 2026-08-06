@@ -15,6 +15,7 @@ import {
 import { loadPublicOrganizationBrand } from '../../../lib/organization-brand';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import { TournamentAnnouncementsLink } from '../../../components/TournamentAnnouncementsLink';
+import { TournamentBracket } from '../../../components/TournamentBracket';
 import { CreamStageTeamStatus } from '../../../components/CreamStageStatus';
 import {
   buildCreamStageStatusMap,
@@ -4898,8 +4899,11 @@ if (!scheduleValidation.isValid) {
     return null;
   }
 
-  async function markTournamentCompleted() {
+  async function markTournamentCompleted(force = false) {
     if (!tournament || isCompleted) return true;
+    if (tournament.pool_brackets_enabled && tournament.playoff_status !== 'completed' && !force) {
+      return true;
+    }
     const { error } = await supabase
       .from('tournaments')
       .update({ status: 'completed' })
@@ -4924,7 +4928,7 @@ if (!scheduleValidation.isValid) {
     if (!confirmed) return;
     setIsEndingEarly(true);
     setMessage('');
-    const completed = await markTournamentCompleted();
+    const completed = await markTournamentCompleted(true);
     if (completed) {
       setActiveTab('standings');
       setSelectedRound(currentRound);
@@ -5107,8 +5111,8 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     if (seriesNowComplete) {
       if (!nextRound) {
         setSelectedRound(finalRound);
-        setActiveTab('standings');
-        setMessage('Series complete. Tournament finished!');
+        setActiveTab(tournament?.pool_brackets_enabled ? 'rounds' : 'standings');
+        setMessage(tournament?.pool_brackets_enabled ? 'Pool play complete. Generate the postseason brackets.' : 'Series complete. Tournament finished!');
       } else if (submittedRoundComplete && nextRound !== submittedRound) {
         setSelectedRound(nextRound);
         setMessage(
@@ -5182,6 +5186,12 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
       }
 
       if (!nextRound) {
+        if (tournament?.pool_brackets_enabled) {
+          setSelectedRound(finalRound);
+          setActiveTab('rounds');
+          setMessage('Pool play complete. Generate the postseason brackets.');
+          return;
+        }
         const completed = await markTournamentCompleted();
         if (!completed) return;
         setSelectedRound(finalRound);
@@ -5340,8 +5350,20 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     }
     const { error: poolTournamentError } = await supabase.from('tournaments').update(poolTournamentUpdate).eq('id', tournament.id);
     if (poolTournamentError) { setMessage(`Bracket winner saved, but tournament update failed: ${poolTournamentError.message}`); return; }
+    if (unfinishedOtherMatches.length === 0) {
+      void sendTournamentPushEvent(supabase, {
+        eventType: 'tournament_completed',
+        tournamentId: tournament.id,
+      });
+    }
     await loadTournamentData(userId);
-    setMessage(unfinishedOtherMatches.length === 0 ? 'Postseason complete. Tournament finished!' : `${match.bracket_type === 'championship' ? 'Championship' : 'Consolation'} bracket complete.`);
+    setMessage(
+      unfinishedOtherMatches.length === 0
+        ? '🏆 Champions crowned! Postseason complete.'
+        : match.bracket_type === 'championship'
+        ? '🏆 Champions crowned! Finish the consolation bracket to complete the tournament.'
+        : '🏅 Consolation winners crowned! Finish the championship bracket to complete the tournament.'
+    );
     return;
   }
 
@@ -5525,6 +5547,13 @@ setStandings(computeStandings(   playerSlots,   optimisticMatches,   isSingles, 
       setActiveTab('standings');
 
       setMessage('Final Round complete. Tournament finished.');
+      return;
+    }
+
+    if (tournament?.pool_brackets_enabled) {
+      setSelectedRound(finalRound);
+      setActiveTab('rounds');
+      setMessage('Pool play complete. Generate the postseason brackets.');
       return;
     }
 
@@ -7576,6 +7605,27 @@ isOrganizer &&
 )}
           </div>
 
+{playoffMatches.length > 0 ? (
+  <div className="card" style={{ marginTop: 14 }}>
+    <div className="card-title">Bracket Path</div>
+    <div className="card-subtitle">Follow every team from its opening matchup to the championship.</div>
+    <TournamentBracket
+      matches={playoffMatches}
+      players={playersById}
+      bracketType="championship"
+      title="Championship Bracket"
+      accentColor="#FFCB05"
+    />
+    <TournamentBracket
+      matches={playoffMatches}
+      players={playersById}
+      bracketType="consolation"
+      title="Consolation Bracket"
+      accentColor="#A78BFA"
+    />
+  </div>
+) : null}
+
 {playoffRounds.length > 0 && selectedPlayoffRound !== null ? (
   <div className="card" style={{ marginTop: 14 }}>
     <div className="card-title">Playoffs</div>
@@ -7865,7 +7915,11 @@ isOrganizer &&
       textAlign: 'center',
     }}
   >
-    Winner Advanced
+    {match.next_match_id
+      ? 'Winner Advanced'
+      : match.bracket_type === 'championship'
+      ? '🏆 Champions Crowned'
+      : '🏅 Consolation Winners Crowned'}
   </div>
 ) : null}
              {match.is_bye ? (

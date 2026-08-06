@@ -4270,6 +4270,15 @@ const results = updates.length > 0 ? await Promise.all(updates) : [];
         return;
       }
 
+      if (tournament.pool_brackets_enabled) {
+        const unlinkedPlayers = namedPlayers.filter((slot) => !slot.claimed_by_user_id);
+        if (unlinkedPlayers.length > 0) {
+          setMessage(`Every player must claim their spot with a DinkDraw account before this tournament can start. ${unlinkedPlayers.length} player${unlinkedPlayers.length === 1 ? ' is' : 's are'} still unclaimed.`);
+          setIsStarting(false);
+          return;
+        }
+      }
+
       if (tournament.format === 'doubles' && tournament.doubles_mode === 'mixed') {
         const playersMissingGender = namedPlayers.filter((slot) => !slot.gender);
 
@@ -6542,12 +6551,6 @@ function renderShortTeam(a: string | null, b: string | null) {
     ? 'Singles tournament — each player competes individually.'
     : 'Players can claim a spot, or the organizer can type names manually.'}
 </div>
-
-  {tournament?.pool_brackets_enabled && !isStarted ? (
-    <div className="notice" style={{ marginTop: 10 }}>
-      Testing mode: the organizer may enter player names and start pool play without those players claiming an account-linked spot.
-    </div>
-  ) : null}
 
   {isLoading ? (
   <div className="muted">Loading player spots...</div>

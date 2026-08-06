@@ -3257,6 +3257,13 @@ const hasAnyScores = matches.some(
     tournament.co_organizer_user_id === userId;
 
   const canManageScores = isOrganizer || isCoOrganizer;
+  const championshipFinalWinnerNames = (() => {
+    const final = playoffMatches.find((match) => match.bracket_type === 'championship' && !match.next_match_id && match.is_complete);
+    if (!final) return [];
+    return [final.winner_player_1_id, final.winner_player_2_id]
+      .filter((id): id is string => !!id)
+      .map((id) => playerSlots.find((player) => player.id === id)?.display_name || 'Player');
+  })();
 
   function isClaimedPlayerInMatch(match: Match) {
     if (!claimedSlot) return false;
@@ -6510,6 +6517,14 @@ function renderShortTeam(a: string | null, b: string | null) {
   </div>
 ) : null}
 
+{tournament?.pool_brackets_enabled && tournament.id && canManageScores && !isStarted ? (
+  <div className="card" style={{ marginBottom: 14 }}>
+    <div className="card-title">Player Payments</div>
+    <div className="card-subtitle">Record each player’s contribution before starting. Every amount is divided equally between today’s prize and the race-to-three grand prize.</div>
+    <TournamentPrizePool tournamentId={tournament.id} canManage={canManageScores} dailyWinnerNames={championshipFinalWinnerNames} />
+  </div>
+) : null}
+
 <div className="card" style={{ marginBottom: 14 }}>
   <div className="card-title">
   {tournament?.tournament_mode === 'cream_of_the_crop' ? 'Seeded Players' : 'Players'}
@@ -8663,7 +8678,7 @@ isOrganizer &&
           {tournament?.pool_brackets_enabled && tournament.id ? (
             <div style={{ margin: '14px 0 18px', padding: 14, borderRadius: 16, border: '1px solid rgba(255,203,5,0.2)', background: 'rgba(255,203,5,0.035)' }}>
               <div className="card-title" style={{ fontSize: 20 }}>Race to 3 + Prize Pot</div>
-              <TournamentPrizePool tournamentId={tournament.id} canManage={canManageScores} />
+              <TournamentPrizePool tournamentId={tournament.id} canManage={canManageScores} dailyWinnerNames={championshipFinalWinnerNames} />
             </div>
           ) : null}
 

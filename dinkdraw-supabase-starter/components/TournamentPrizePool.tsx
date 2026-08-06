@@ -26,31 +26,48 @@ function money(cents: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 }
 
-export function TournamentPrizePool({ tournamentId, canManage }: { tournamentId: string; canManage: boolean }) {
+export function TournamentPrizePool({ tournamentId, canManage, dailyWinnerNames = [] }: { tournamentId: string; canManage: boolean; dailyWinnerNames?: string[] }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [message, setMessage] = useState('');
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, string>>({});
+  const [bulkPaymentDraft, setBulkPaymentDraft] = useState('10.00');
+  const [isSavingAll, setIsSavingAll] = useState(false);
 
   async function load() {
-    const { data, error } = await supabase.rpc('get_tournament_prize_dashboard', { p_tournament_id: tournamentId });
+    const [{ data, error }, amountsResult] = await Promise.all([
+      supabase.rpc('get_tournament_prize_dashboard', { p_tournament_id: tournamentId }),
+      canManage
+        ? supabase.rpc('get_tournament_pot_payment_amounts', { p_tournament_id: tournamentId })
+        : Promise.resolve({ data: [], error: null }),
+    ]);
     if (error) { setMessage(error.message); return; }
     const next = data as Dashboard;
     setDashboard(next);
+    if (!amountsResult.error) {
+      setPaymentDrafts(Object.fromEntries(((amountsResult.data || []) as Array<{ user_id: string; amount_cents: number }>).map((row) => [row.user_id, (row.amount_cents / 100).toFixed(2)])));
+    }
   }
 
   useEffect(() => { void load(); }, [tournamentId]);
 
-  async function setPayment(player: PrizePlayer, paid: boolean) {
+  async function setPayment(player: PrizePlayer) {
+    const amount = Number(paymentDrafts[player.user_id] || 0);
+    const amountCents = Math.round(amount * 100);
+    if (!Number.isFinite(amount) || amount < 0 || amountCents % 2 !== 0) {
+      setMessage('Enter a valid payment amount that can be split equally between both pots.');
+      return;
+    }
     setWorkingId(player.user_id);
     const { error } = await supabase.rpc('set_tournament_pot_payment', {
       p_tournament_id: tournamentId,
       p_user_id: player.user_id,
-      p_paid: paid,
+      p_amount_cents: amountCents,
     });
     setWorkingId(null);
     if (error) { setMessage(error.message); return; }
-    setMessage(`${player.name} was marked ${paid ? 'paid' : 'unpaid'}.`);
+    setMessage(amountCents ? `${player.name}'s ${money(amountCents)} payment was saved: ${money(amountCents / 2)} to each pot.` : `${player.name}'s payment was cleared.`);
     await load();
   }
 
@@ -67,6 +84,25 @@ export function TournamentPrizePool({ tournamentId, canManage }: { tournamentId:
     await load();
   }
 
+  async function setEveryonePaid() {
+    const amount = Number(bulkPaymentDraft);
+    const amountCents = Math.round(amount * 100);
+    if (!Number.isFinite(amount) || amount <= 0 || amountCents % 2 !== 0) {
+      setMessage('Enter a buy-in greater than zero that can be split equally between both pots.');
+      return;
+    }
+    if (!window.confirm(`Mark every account-linked player paid ${money(amountCents)}? ${money(amountCents / 2)} per player will go to each prize pot.`)) return;
+    setIsSavingAll(true);
+    const { data, error } = await supabase.rpc('set_all_tournament_pot_payments', {
+      p_tournament_id: tournamentId,
+      p_amount_cents: amountCents,
+    });
+    setIsSavingAll(false);
+    if (error) { setMessage(error.message); return; }
+    setMessage(`${Number(data) || 0} players were marked paid ${money(amountCents)} each.`);
+    await load();
+  }
+
   if (!dashboard) return <div className="muted" style={{ marginTop: 12 }}>{message || 'Loading prize pool…'}</div>;
 
   return (
@@ -76,7 +112,31 @@ export function TournamentPrizePool({ tournamentId, canManage }: { tournamentId:
         <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Grand Prize Pot</div><div style={{ color: '#FFCB05', fontSize: 26, fontWeight: 950 }}>{money(dashboard.grand_pot_cents)}</div></div>
         <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Race Status</div><div style={{ color: dashboard.status === 'pending_payout' ? '#A78BFA' : '#fff', fontSize: 20, fontWeight: 950 }}>{dashboard.status === 'pending_payout' ? 'Winner Pending Payout' : `First to ${dashboard.target_wins} Wins`}</div></div>
       </div>
-      <div className="muted" style={{ textAlign: 'center' }}>{dashboard.paid_player_count} paid players • $5 per player to each prize</div>
+      <div className="muted" style={{ textAlign: 'center' }}>{dashboard.paid_player_count} paid players • Every payment is split 50% daily / 50% grand prize</div>
+
+      {canManage && dashboard.status === 'active' ? (
+        <div className="list-item" style={{ borderColor: 'rgba(255,203,5,0.38)' }}>
+          <div style={{ fontSize: 18, fontWeight: 950 }}>Set Everyone’s Buy-In</div>
+          <div className="muted" style={{ marginTop: 4 }}>Apply one amount to every account-linked player. You can still adjust individuals below.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
+            <div>
+              <label className="label">Buy-In Per Player</label>
+              <input className="input" type="number" min="0.02" step="0.02" value={bulkPaymentDraft} onChange={(event) => setBulkPaymentDraft(event.target.value)} />
+            </div>
+            <button type="button" className="button primary" style={{ alignSelf: 'end' }} onClick={setEveryonePaid} disabled={isSavingAll}>
+              {isSavingAll ? 'Saving Everyone…' : `Everybody Paid ${money(Math.max(0, Math.round((Number(bulkPaymentDraft) || 0) * 100)))}`}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {dailyWinnerNames.length ? (
+        <div className="list-item" style={{ borderColor: 'rgba(255,203,5,0.55)', textAlign: 'center' }}>
+          <div className="muted">Daily Prize Winners — Championship Final</div>
+          <div style={{ marginTop: 6, color: '#FFCB05', fontSize: 22, fontWeight: 950 }}>{dailyWinnerNames.join(' & ')}</div>
+          <div className="muted" style={{ marginTop: 5 }}>These are the two players who receive today’s daily prize.</div>
+        </div>
+      ) : null}
 
       {dashboard.players.map((player, index) => (
         <div key={player.user_id} className="list-item" style={{ borderColor: player.eligible_for_payout ? 'rgba(167,139,250,0.7)' : index === 0 ? 'rgba(255,203,5,0.38)' : undefined }}>
@@ -89,7 +149,13 @@ export function TournamentPrizePool({ tournamentId, canManage }: { tournamentId:
           </div>
 
           {canManage && dashboard.status === 'active' ? (
-            <button type="button" className={`button ${player.paid ? 'secondary' : 'primary'}`} style={{ width: '100%', marginTop: 12 }} onClick={() => setPayment(player, !player.paid)} disabled={workingId === player.user_id}>{workingId === player.user_id ? 'Saving…' : player.paid ? '✓ Paid $10 — Mark Unpaid' : 'Mark $10 Paid'}</button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
+              <div>
+                <label className="label">Amount Paid</label>
+                <input className="input" type="number" min="0" step="0.02" value={paymentDrafts[player.user_id] ?? ''} onChange={(event) => setPaymentDrafts((current) => ({ ...current, [player.user_id]: event.target.value }))} placeholder="10.00" />
+              </div>
+              <button type="button" className="button primary" style={{ alignSelf: 'end' }} onClick={() => setPayment(player)} disabled={workingId === player.user_id}>{workingId === player.user_id ? 'Saving…' : 'Save Payment'}</button>
+            </div>
           ) : null}
 
           {canManage && dashboard.status === 'pending_payout' && player.eligible_for_payout ? (

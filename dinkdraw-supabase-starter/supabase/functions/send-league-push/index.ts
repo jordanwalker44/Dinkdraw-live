@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 type LeagueEvent =
   | { eventType: 'roster_claimed'; leagueId: string }
   | { eventType: 'attendance_requested'; sessionId: string }
+  | { eventType: 'schedule_changed'; sessionId: string }
+  | { eventType: 'group_message_posted'; leagueId: string; messageId: string }
   | { eventType: 'substitute_invited'; sessionId: string; regularMemberId: string }
   | { eventType: 'substitute_response'; sessionId: string; regularMemberId: string; accepted: boolean }
   | { eventType: 'session_started'; sessionId: string }
@@ -126,10 +128,30 @@ Deno.serve(async (req) => {
       const claimed = memberRows.find((member: any) => member.user_id === user.id && member.member_type === 'regular');
       if (!claimed) throw new Error('Claimed roster position not found');
       if (league.organizer_user_id !== user.id) notifications.push({ userId: league.organizer_user_id, title: league.name, body: `${claimed.display_name || 'A player'} claimed roster position ${claimed.roster_position}.`, url: leagueUrl });
+    } else if (event.eventType === 'group_message_posted') {
+      const room = await adminClient.from('tournament_rooms').select('id').eq('league_id', league.id).maybeSingle();
+      if (!room.data) throw new Error('League room not found');
+      const claimed = await adminClient.from('tournament_room_messages').update({ push_claimed_at: new Date().toISOString() })
+        .eq('id', event.messageId).eq('room_id', room.data.id).eq('sender_user_id', user.id).eq('message_type', 'message')
+        .is('push_claimed_at', null).select('id, body').maybeSingle();
+      if (!claimed.data) throw new Error('League message not found or already notified');
+      const states = await adminClient.from('tournament_room_user_state').select('user_id, is_muted, push_enabled').eq('room_id', room.data.id);
+      const optedOut = new Set((states.data || []).filter((state: any) => state.is_muted || !state.push_enabled).map((state: any) => state.user_id));
+      for (const member of memberRows.filter((item: any) => item.member_type === 'regular' && item.user_id && item.user_id !== user.id && !optedOut.has(item.user_id))) {
+        notifications.push({ userId: member.user_id, title: `${league.name} group chat`, body: claimed.data.body, url: leagueUrl + '/chat' });
+      }
+      await adminClient.from('tournament_room_messages').update({ push_completed_at: new Date().toISOString() }).eq('id', event.messageId);
     } else if (event.eventType === 'attendance_requested') {
       if (!isOrganizer) throw new Error('Only the organizer can request attendance');
       for (const member of memberRows.filter((item: any) => item.member_type === 'regular' && item.user_id && item.user_id !== user.id)) {
         notifications.push({ userId: member.user_id, title: `${league.name} attendance`, body: `Please confirm your availability for Week ${session.session_number}.`, url: leagueUrl });
+      }
+    } else if (event.eventType === 'schedule_changed') {
+      if (!isOrganizer) throw new Error('Only the organizer can send schedule changes');
+      const dateText = new Date(`${session.scheduled_date}T12:00:00`).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      const assignedSubstituteIds = new Set((await adminClient.from('league_session_attendance').select('substitute_member_id').eq('session_id', session.id).not('substitute_accepted_at', 'is', null)).data?.map((row: any) => row.substitute_member_id) || []);
+      for (const member of memberRows.filter((item: any) => item.user_id && (item.member_type === 'regular' || assignedSubstituteIds.has(item.id)))) {
+        if (member.user_id !== user.id) notifications.push({ userId: member.user_id, title: `${league.name} schedule changed`, body: `Week ${session.session_number} is now ${dateText} at ${session.scheduled_time}.`, url: leagueUrl });
       }
     } else if (event.eventType === 'substitute_invited') {
       if (!isOrganizer) throw new Error('Only the organizer can invite a substitute');

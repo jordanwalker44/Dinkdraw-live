@@ -98,6 +98,10 @@ export default function CreateLeaguePage() {
       setMessage('Enter a league name.');
       return;
     }
+    if (!startTime) {
+      setMessage('Choose a start time so attendance reminders can be scheduled.');
+      return;
+    }
     if (playerCount % 4 !== 0) {
       setMessage('Rotating doubles leagues require a player count in multiples of four.');
       return;
@@ -160,7 +164,7 @@ export default function CreateLeaguePage() {
             <div><label className="label">League name</label><input className="input" value={name} onChange={(event) => setName(event.target.value)} /></div>
             <div className="grid two">
               <div className="league-native-field"><label className="label">First play date</label><input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
-              <div className="league-native-field"><label className="label">Start time</label><input className="input" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
+              <div className="league-native-field"><label className="label">Start time</label><input className="input" type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
             </div>
             <div><label className="label">Location</label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or court location" /></div>
             <div className="grid two">

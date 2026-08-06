@@ -182,6 +182,7 @@ export default function LeaguePage() {
 
   async function saveSessionSchedule() {
     if (!selectedSessionRow || !scheduleDate) return;
+    if (!scheduleTime) { setMessage('Choose a start time so attendance reminders can be scheduled.'); return; }
     setSavingSchedule(true);
     setMessage('');
     const { error } = await supabase.rpc('update_league_session_schedule', {
@@ -196,6 +197,7 @@ export default function LeaguePage() {
     }
     setEditingSchedule(false);
     setMessage(`Week ${selectedSessionRow.session_number} schedule updated.`);
+    void sendLeaguePushEvent(supabase, { eventType: 'schedule_changed', sessionId: selectedSessionRow.id });
     await load();
   }
 
@@ -306,11 +308,7 @@ export default function LeaguePage() {
           <strong>League code: {league.join_code}</strong><br />
           {gameFormatLabel} against every weekly opponent, played to {league.games_to}. First serve alternates between teams each game.
         </div>
-        {sessions.find((session) => session.tournament_id)?.tournament_id ? (
-          <button className="button secondary" type="button" style={{ marginTop: 10 }} onClick={() => router.push(`/tournament/${sessions.find((session) => session.tournament_id)?.tournament_id}/announcements`)}>
-            Open League Group Chat
-          </button>
-        ) : null}
+        <button className="button secondary" type="button" style={{ marginTop: 10 }} onClick={() => router.push(`/leagues/${league.id}/chat`)}>Open League Group Chat</button>
       </div>
 
       {message ? <div className="notice" style={{ marginBottom: 14 }}>{message}</div> : null}
@@ -432,7 +430,7 @@ export default function LeaguePage() {
                 <div className="label">Change Week {selectedSession} date and time</div>
                 <div className="grid two" style={{ gap: 8, marginTop: 8 }}>
                   <input className="input" type="date" value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)} />
-                  <input className="input" type="time" value={scheduleTime} onChange={(event) => setScheduleTime(event.target.value)} />
+                  <input className="input" type="time" required value={scheduleTime} onChange={(event) => setScheduleTime(event.target.value)} />
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                   <button className="button primary" type="button" disabled={savingSchedule || !scheduleDate} onClick={saveSessionSchedule}>{savingSchedule ? 'Saving...' : 'Save New Schedule'}</button>

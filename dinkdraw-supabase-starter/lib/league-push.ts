@@ -3,6 +3,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export type LeaguePushEvent =
   | { eventType: 'roster_claimed'; leagueId: string }
   | { eventType: 'attendance_requested'; sessionId: string }
+  | { eventType: 'schedule_changed'; sessionId: string }
+  | { eventType: 'group_message_posted'; leagueId: string; messageId: string }
   | { eventType: 'substitute_invited'; sessionId: string; regularMemberId: string }
   | { eventType: 'substitute_response'; sessionId: string; regularMemberId: string; accepted: boolean }
   | { eventType: 'session_started'; sessionId: string }

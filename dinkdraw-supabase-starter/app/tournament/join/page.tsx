@@ -92,23 +92,31 @@ function JoinTournamentInner() {
         p_roster_position: rosterPosition,
       });
 
-      setIsLoading(false);
-
       if (error || !data) {
-        setMessage(error?.message || 'Could not claim that League roster position.');
+        const { data: tournamentData, error: tournamentError } = await supabase.rpc(
+          'find_tournament_by_join_code',
+          { p_join_code: joinCode }
+        );
+        const tournament = Array.isArray(tournamentData) ? tournamentData[0] : tournamentData;
+        setIsLoading(false);
+        if (tournament && !tournamentError) {
+          setJoinType('tournament');
+          router.push(`/tournament/${tournament.id}`);
+          return;
+        }
+        setMessage(error?.message || 'No league or tournament was found for that code.');
         return;
       }
 
+      setIsLoading(false);
       void sendLeaguePushEvent(supabase, { eventType: 'roster_claimed', leagueId: data });
       router.push(`/leagues/${data}`);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('tournaments')
-      .select('id, title, join_code, status')
-      .eq('join_code', joinCode)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('find_tournament_by_join_code', {
+      p_join_code: joinCode,
+    });
 
     setIsLoading(false);
 
@@ -117,12 +125,14 @@ function JoinTournamentInner() {
       return;
     }
 
-    if (!data) {
+    const tournament = Array.isArray(data) ? data[0] : data;
+
+    if (!tournament) {
       setMessage(`No tournament found for code "${joinCode}".`);
       return;
     }
 
-    router.push(`/tournament/${data.id}`);
+    router.push(`/tournament/${tournament.id}`);
   }
 
   if (isSignedIn === null) {

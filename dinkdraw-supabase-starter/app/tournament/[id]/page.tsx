@@ -2871,6 +2871,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [coOrganizerSearchResults, setCoOrganizerSearchResults] = useState<CoOrganizerSearchResult[]>([]);
   const [selectedCoOrganizerUserId, setSelectedCoOrganizerUserId] = useState('');
   const [claimGenderBySlot, setClaimGenderBySlot] = useState<Record<string, 'male' | 'female'>>({});
+  const [genderPromptSlotId, setGenderPromptSlotId] = useState<string | null>(null);
   const [isSearchingCoOrganizer, setIsSearchingCoOrganizer] = useState(false);
   const coOrganizerDraftTournamentIdRef = useRef<string | null>(null);
   const [newNames, setNewNames] = useState<Record<string, string>>({});
@@ -3755,7 +3756,11 @@ useEffect(() => {
     const isMixedDoubles = tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed';
     const selectedGender = claimGenderBySlot[slotId] || (slot.gender === 'male' || slot.gender === 'female' ? slot.gender : null);
     if (isMixedDoubles && !selectedGender) {
-      setMessage('Choose Male or Female before claiming this mixed doubles spot.');
+      setEditingSlot(slotId);
+      setGenderPromptSlotId(slotId);
+      window.setTimeout(() => {
+        document.getElementById(`player-slot-${slotId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
       return;
     }
     const confirmed = window.confirm(
@@ -3774,6 +3779,7 @@ useEffect(() => {
     }
 
     await loadTournamentData(user.id);
+    setGenderPromptSlotId(null);
     const claimResult = Array.isArray(data) ? data[0] : data;
     if (claimResult?.tournament_status !== 'completed') {
       void sendTournamentPushEvent(supabase, {
@@ -6733,6 +6739,7 @@ const shouldShowClaimButton = canClaim && (
 
         return (
           <div
+  id={`player-slot-${slot.id}`}
   key={slot.id}
   className="list-item"
   onClick={() =>
@@ -6904,6 +6911,12 @@ disabled={!canEditName}
 ) : null}
 
               {tournament?.format === 'doubles' && tournament?.doubles_mode === 'mixed' ? (
+                <div>
+                {genderPromptSlotId === slot.id ? (
+                  <div className="notice" style={{ marginBottom: 8, textAlign: 'center', fontWeight: 900 }}>
+                    Required: choose Male or Female to continue.
+                  </div>
+                ) : null}
                 <div
                   style={{
                     display: 'grid',
@@ -6915,7 +6928,7 @@ disabled={!canEditName}
                     type="button"
                     className={`button ${(claimGenderBySlot[slot.id] || slot.gender) === 'male' ? 'primary' : 'secondary'}`}
                     onClick={() => canClaim && !isOrganizer
-                      ? setClaimGenderBySlot((current) => ({ ...current, [slot.id]: 'male' }))
+                      ? (setClaimGenderBySlot((current) => ({ ...current, [slot.id]: 'male' })), setGenderPromptSlotId(null))
                       : updatePlayerGender(slot.id, 'male')}
                     disabled={isLocked}
                   >
@@ -6925,7 +6938,7 @@ disabled={!canEditName}
                     type="button"
                     className={`button ${(claimGenderBySlot[slot.id] || slot.gender) === 'female' ? 'primary' : 'secondary'}`}
                     onClick={() => canClaim && !isOrganizer
-                      ? setClaimGenderBySlot((current) => ({ ...current, [slot.id]: 'female' }))
+                      ? (setClaimGenderBySlot((current) => ({ ...current, [slot.id]: 'female' })), setGenderPromptSlotId(null))
                       : updatePlayerGender(slot.id, 'female')}
                     disabled={isLocked}
                   >
@@ -6945,6 +6958,7 @@ disabled={!canEditName}
                   >
                     Clear
                   </button>
+                </div>
                 </div>
               ) : null}
 

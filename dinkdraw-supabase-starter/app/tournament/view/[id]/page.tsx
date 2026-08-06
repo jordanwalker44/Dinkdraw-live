@@ -422,7 +422,10 @@ export default function PublicTournamentViewPage({
     .map(([roundNumber, matches]) => ({
       roundNumber,
       label: matches[0]?.round_label || `Round ${roundNumber}`,
-      matches: matches.sort((a, b) => a.match_number - b.match_number),
+      matches: matches.sort((a, b) => {
+        if (a.bracket_type !== b.bracket_type) return a.bracket_type === 'championship' ? -1 : 1;
+        return a.match_number - b.match_number;
+      }),
     }));
 }, [playoffMatches]);
 
@@ -1696,9 +1699,11 @@ useEffect(() => {
 
           <div style={{ display: 'grid', gap: 12 }}>
             {round.matches.map((match) => {
+              const playableMatchIndex = round.matches.filter((candidate) => !candidate.is_bye).findIndex((candidate) => candidate.id === match.id);
+              const playoffCourtNumber = playableMatchIndex < 0 ? 1 : (playableMatchIndex % Math.max(1, tournament?.courts || 1)) + 1;
               const playoffCourtLabel =
-                  tournament?.court_labels?.[match.match_number - 1]?.trim() ||
-                  `Court ${match.match_number}`;
+                  tournament?.court_labels?.[playoffCourtNumber - 1]?.trim() ||
+                  `Court ${playoffCourtNumber}`;
               const teamAName =
                 playersById[match.team_a_player_1_id || '']?.display_name ||
                 'TBD';

@@ -160,7 +160,7 @@ export default function CreateLeaguePage() {
 
         {message ? <div className="notice" style={{ margin: '14px 0' }}>{message}</div> : null}
         {loading ? <div className="muted">Loading organization access...</div> : (
-          <div className="grid" style={{ gap: 14, marginTop: 16 }}>
+          <div className="grid league-create-form" style={{ marginTop: 16 }}>
             <div>
               <label className="label">Club or organization</label>
               <select className="input" value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>
@@ -172,13 +172,15 @@ export default function CreateLeaguePage() {
               </select>
             </div>
             <div><label className="label">League name</label><input className="input" value={name} onChange={(event) => setName(event.target.value)} /></div>
-            <div className="grid two">
+            <div className="grid two league-compact-row">
               <div className="league-native-field"><label className="label">First play date</label><input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
               <div className="league-native-field"><label className="label">Start time</label><input className="input" type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
             </div>
-            <div><label className="label">League timezone</label><select className="input" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{timeZoneOptions(timeZone).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select><div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Defaults to your profile or device timezone. Attendance reminders use this timezone.</div></div>
-            <div><label className="label">Location</label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or court location" /></div>
-            <div className="grid two">
+            <div className="grid two league-compact-row">
+              <div><label className="label">Time zone <span className="league-label-hint">• reminders</span></label><select className="input" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{timeZoneOptions(timeZone).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></div>
+              <div><label className="label">Location <span className="league-label-hint">• optional</span></label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or courts" /></div>
+            </div>
+            <div className="grid two league-compact-row">
               <div>
                 <label className="label">Regular players</label>
                 <select className="input" value={playerCount} onChange={(event) => setPlayerCount(Number(event.target.value))}>
@@ -194,21 +196,21 @@ export default function CreateLeaguePage() {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="label">Game format</label>
-              <select className="input" value={gameFormat} onChange={(event) => setGameFormat(event.target.value as typeof gameFormat)}>
-                <option value="single">Single game</option>
-                <option value="two_game">Two games (both always played)</option>
-                <option value="best_of_3">Best 2 of 3</option>
-              </select>
-            </div>
-            <div className="grid two">
-              <div><label className="label">Courts required</label><input className="input" type="number" value={courts} readOnly /></div>
-              <div><label className="label">Play each match to</label><input className="input" type="number" min={1} max={99} value={gamesTo} onChange={(event) => setGamesTo(Number(event.target.value))} /></div>
+            <div className="grid league-format-row">
+              <div>
+                <label className="label">Game format</label>
+                <select className="input" value={gameFormat} onChange={(event) => setGameFormat(event.target.value as typeof gameFormat)}>
+                  <option value="single">Single game</option>
+                  <option value="two_game">Two games</option>
+                  <option value="best_of_3">Best 2 of 3</option>
+                </select>
+              </div>
+              <div><label className="label">Play to</label><input className="input" type="number" min={1} max={99} value={gamesTo} onChange={(event) => setGamesTo(Number(event.target.value))} /></div>
             </div>
 
             <div className="notice">
-              <strong>{teamCount} teams</strong> • {opponentRounds} opponent rounds • {gamesPerMatch === 3 ? 'up to 3' : gamesPerMatch} {gamesPerMatch === 1 ? 'game' : 'games'} per opponent
+              <strong>{teamCount} teams • {courts} courts</strong> • {opponentRounds} opponent rounds • {gamesPerMatch === 3 ? 'up to 3' : gamesPerMatch} {gamesPerMatch === 1 ? 'game' : 'games'} per opponent
+              {gameFormat === 'two_game' ? ' (both games played)' : ''}
               <br />A complete partnership cycle is {playerCount - 1} sessions.
             </div>
 

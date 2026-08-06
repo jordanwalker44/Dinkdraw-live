@@ -1124,6 +1124,30 @@ textarea.input:focus {
   margin: 0;
 }
 
+/* Isolated compact league-creation experiment; remove this block and the
+   league-create-form row classes to restore the previous spacing/layout. */
+.league-create-form {
+  gap: 10px;
+}
+
+.league-create-form .input {
+  min-height: 48px;
+}
+
+.league-compact-row {
+  gap: 10px;
+}
+
+.league-format-row {
+  grid-template-columns: minmax(0, 2fr) minmax(100px, 1fr);
+  gap: 10px;
+}
+
+.league-label-hint {
+  color: var(--muted);
+  font-weight: 600;
+}
+
 .tournament-mode-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1154,6 +1178,10 @@ textarea.input:focus {
 
   .league-page .grid.two {
     grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .league-create-page .league-compact-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   .league-page .card {

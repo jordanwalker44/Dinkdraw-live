@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
 import { TopNav } from '../../components/TopNav';
 import { detectDeviceTimeZone, timeZoneOptions } from '../../lib/time-zones';
+import { MyTournamentWinnings } from '../../components/MyTournamentWinnings';
 
 type AuthMode = 'signup' | 'signin';
 
@@ -335,6 +336,7 @@ export default function AccountPage() {
 
       {userEmail ? (
         <>
+          <MyTournamentWinnings />
           <div className="card" style={{ marginBottom: 14 }}>
       <div className="card-title">Quick Actions</div>
       <div className="grid">

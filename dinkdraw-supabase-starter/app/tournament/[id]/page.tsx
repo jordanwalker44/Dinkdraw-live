@@ -17,6 +17,7 @@ import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import { TournamentAnnouncementsLink } from '../../../components/TournamentAnnouncementsLink';
 import { TournamentBracket } from '../../../components/TournamentBracket';
 import { PoolStandingsTables } from '../../../components/PoolStandingsTables';
+import { TournamentPrizePool } from '../../../components/TournamentPrizePool';
 import { CreamStageTeamStatus } from '../../../components/CreamStageStatus';
 import {
   buildCreamStageStatusMap,
@@ -4182,6 +4183,15 @@ const results = updates.length > 0 ? await Promise.all(updates) : [];
         setMessage(`Please save at least ${minPlayersRequired} player names before starting.`);
         setIsStarting(false);
         return;
+      }
+
+      if (tournament.pool_brackets_enabled) {
+        const unlinkedPlayers = namedPlayers.filter((slot) => !slot.claimed_by_user_id);
+        if (unlinkedPlayers.length > 0) {
+          setMessage(`Every player must claim their spot with a DinkDraw account before this tournament can start. ${unlinkedPlayers.length} player${unlinkedPlayers.length === 1 ? ' is' : 's are'} still unlinked.`);
+          setIsStarting(false);
+          return;
+        }
       }
 
       if (tournament.format === 'doubles' && tournament.doubles_mode === 'mixed') {
@@ -8486,6 +8496,13 @@ isOrganizer &&
               Day Summary
             </button>
           </div>
+
+          {tournament?.pool_brackets_enabled && tournament.id ? (
+            <div style={{ margin: '14px 0 18px', padding: 14, borderRadius: 16, border: '1px solid rgba(255,203,5,0.2)', background: 'rgba(255,203,5,0.035)' }}>
+              <div className="card-title" style={{ fontSize: 20 }}>Race to 3 + Prize Pot</div>
+              <TournamentPrizePool tournamentId={tournament.id} canManage={canManageScores} />
+            </div>
+          ) : null}
 
           {!standings.length ? (
             <div className="muted">No players yet.</div>

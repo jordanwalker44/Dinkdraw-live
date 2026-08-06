@@ -52,6 +52,7 @@ type PlayerSlot = {
   display_name: string | null;
   claimed_by_user_id: string | null;
   pool_number: number | null;
+  gender: string | null;
 };
 
 type Match = {
@@ -109,6 +110,7 @@ type StandingRow = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
+  gender: string | null;
   finalCourt: number | null;
 };
 
@@ -185,6 +187,7 @@ function computeStandings(
       pointsFor: 0,
       pointsAgainst: 0,
       pointDiff: 0,
+      gender: slot.gender,
       finalCourt: null,
     });
   }

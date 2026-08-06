@@ -114,6 +114,7 @@ type StandingRow = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
+  gender: string | null;
   initialRank: number;
   finalCourt: number | null;
   finalCourtWins: number;
@@ -2580,6 +2581,7 @@ function computeStandings(
       pointsFor: 0,
       pointsAgainst: 0,
       pointDiff: 0,
+      gender: slot.gender,
       initialRank: slot.slot_number,
       finalCourt: null,
       finalCourtWins: 0,

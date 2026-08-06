@@ -48,6 +48,7 @@ type StandingRow = {
   pointsFor: number;
   pointsAgainst: number;
   pointDiff: number;
+  gender?: string | null;
   finalCourt: number | null;
 };
 
@@ -182,7 +183,15 @@ export default function PublicTvDisplay({
     : [];
   const showNextCourt = !isFinal && nextRoundMatches.length > 0;
   const [poolPageIndex, setPoolPageIndex] = useState(0);
-  const activePool = isPoolTournament && poolStandings.length ? poolStandings[poolPageIndex % poolStandings.length] : null;
+  const tvPoolPages = poolStandings.flatMap((pool) => {
+    const hasGenderGroups = pool.standings.some((row) => row.gender === 'male' || row.gender === 'female');
+    if (!hasGenderGroups) return [{ ...pool, genderLabel: '' }];
+    return [
+      { ...pool, genderLabel: "Men's", standings: pool.standings.filter((row) => row.gender === 'male') },
+      { ...pool, genderLabel: "Women's", standings: pool.standings.filter((row) => row.gender === 'female') },
+    ].filter((page) => page.standings.length);
+  });
+  const activePool = isPoolTournament && tvPoolPages.length ? tvPoolPages[poolPageIndex % tvPoolPages.length] : null;
   const topStandings = (activePool?.standings || standings).slice(0, isCreamOfTheCrop ? 14 : 12);
   const leader = topStandings[0];
   const runnerUp = topStandings[1];
@@ -218,12 +227,12 @@ export default function PublicTvDisplay({
   }, [courtPages.length, isFinal]);
 
   useEffect(() => {
-    if (!isPoolTournament || poolStandings.length <= 1) return;
+    if (!isPoolTournament || tvPoolPages.length <= 1) return;
     const interval = window.setInterval(() => {
-      setPoolPageIndex((current) => (current + 1) % poolStandings.length);
+      setPoolPageIndex((current) => (current + 1) % tvPoolPages.length);
     }, 10000);
     return () => window.clearInterval(interval);
-  }, [isPoolTournament, poolStandings.length]);
+  }, [isPoolTournament, tvPoolPages.length]);
 
   const biggestClimber = standings
     .filter((row) => row.played > 0)
@@ -853,7 +862,7 @@ export default function PublicTvDisplay({
                   letterSpacing: '-0.05em',
                 }}
               >
-                {isCreamOfTheCrop ? 'Cream Standings' : activePool ? `Pool ${activePool.poolNumber} Standings` : 'Standings'}
+                {isCreamOfTheCrop ? 'Cream Standings' : activePool ? `Pool ${activePool.poolNumber}${activePool.genderLabel ? ` • ${activePool.genderLabel}` : ''} Standings` : 'Standings'}
               </div>
               <div
                 style={{
@@ -866,7 +875,7 @@ export default function PublicTvDisplay({
                 {isCreamOfTheCrop
                   ? 'Court ladder • Current record'
                   : activePool
-                  ? `Pool rankings • ${poolPageIndex % poolStandings.length + 1} of ${poolStandings.length}`
+                  ? `Pool rankings • ${poolPageIndex % tvPoolPages.length + 1} of ${tvPoolPages.length}`
                   : showPointDifferential ? 'Point differential' : 'Win/loss record'}
               </div>
             </div>

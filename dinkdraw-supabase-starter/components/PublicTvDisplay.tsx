@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { type OrganizationBrand } from './OrganizationBrandBanner';
 import { CreamStageTeamStatus } from './CreamStageStatus';
 import {
@@ -183,16 +183,12 @@ export default function PublicTvDisplay({
     : [];
   const showNextCourt = !isFinal && nextRoundMatches.length > 0;
   const [poolPageIndex, setPoolPageIndex] = useState(0);
-  const tvPoolPages = poolStandings.flatMap((pool) => {
-    const hasGenderGroups = pool.standings.some((row) => row.gender === 'male' || row.gender === 'female');
-    if (!hasGenderGroups) return [{ ...pool, genderLabel: '' }];
-    return [
-      { ...pool, genderLabel: "Men's", standings: pool.standings.filter((row) => row.gender === 'male') },
-      { ...pool, genderLabel: "Women's", standings: pool.standings.filter((row) => row.gender === 'female') },
-    ].filter((page) => page.standings.length);
-  });
-  const activePool = isPoolTournament && tvPoolPages.length ? tvPoolPages[poolPageIndex % tvPoolPages.length] : null;
-  const topStandings = (activePool?.standings || standings).slice(0, isCreamOfTheCrop ? 14 : 12);
+  const activePool = isPoolTournament && poolStandings.length ? poolStandings[poolPageIndex % poolStandings.length] : null;
+  const activePoolHasGenderGroups = !!activePool?.standings.some((row) => row.gender === 'male' || row.gender === 'female');
+  const activeRows = activePoolHasGenderGroups && activePool
+    ? [...activePool.standings.filter((row) => row.gender === 'male'), ...activePool.standings.filter((row) => row.gender === 'female')]
+    : activePool?.standings || standings;
+  const topStandings = activeRows.slice(0, isCreamOfTheCrop ? 14 : 12);
   const leader = topStandings[0];
   const runnerUp = topStandings[1];
   const thirdPlace = topStandings[2];
@@ -227,12 +223,12 @@ export default function PublicTvDisplay({
   }, [courtPages.length, isFinal]);
 
   useEffect(() => {
-    if (!isPoolTournament || tvPoolPages.length <= 1) return;
+    if (!isPoolTournament || poolStandings.length <= 1) return;
     const interval = window.setInterval(() => {
-      setPoolPageIndex((current) => (current + 1) % tvPoolPages.length);
+      setPoolPageIndex((current) => (current + 1) % poolStandings.length);
     }, 10000);
     return () => window.clearInterval(interval);
-  }, [isPoolTournament, tvPoolPages.length]);
+  }, [isPoolTournament, poolStandings.length]);
 
   const biggestClimber = standings
     .filter((row) => row.played > 0)
@@ -862,7 +858,7 @@ export default function PublicTvDisplay({
                   letterSpacing: '-0.05em',
                 }}
               >
-                {isCreamOfTheCrop ? 'Cream Standings' : activePool ? `Pool ${activePool.poolNumber}${activePool.genderLabel ? ` • ${activePool.genderLabel}` : ''} Standings` : 'Standings'}
+                {isCreamOfTheCrop ? 'Cream Standings' : activePool ? `Pool ${activePool.poolNumber} Standings` : 'Standings'}
               </div>
               <div
                 style={{
@@ -875,7 +871,7 @@ export default function PublicTvDisplay({
                 {isCreamOfTheCrop
                   ? 'Court ladder • Current record'
                   : activePool
-                  ? `Pool rankings • ${poolPageIndex % tvPoolPages.length + 1} of ${tvPoolPages.length}`
+                  ? `Men's + Women's rankings • Pool ${poolPageIndex % poolStandings.length + 1} of ${poolStandings.length}`
                   : showPointDifferential ? 'Point differential' : 'Win/loss record'}
               </div>
             </div>
@@ -920,8 +916,11 @@ export default function PublicTvDisplay({
               </div>
 
               {topStandings.map((row, index) => {
-                const place = index + 1;
-                const isLeader = leader?.playerId === row.playerId;
+                const place = activePoolHasGenderGroups
+                  ? topStandings.slice(0, index).filter((prior) => prior.gender === row.gender).length + 1
+                  : index + 1;
+                const isLeader = place === 1;
+                const showGenderHeader = activePoolHasGenderGroups && (index === 0 || topStandings[index - 1]?.gender !== row.gender);
                 const nextMatch = showNextCourt
                   ? nextRoundMatches.find((match) => includesPlayer(match, row.playerId))
                   : undefined;
@@ -931,8 +930,13 @@ export default function PublicTvDisplay({
                     : undefined;
 
                 return (
+                  <Fragment key={row.playerId}>
+                  {showGenderHeader ? (
+                    <div style={{ padding: '7px 14px 5px', borderTop: index ? '1px solid rgba(255,203,5,0.24)' : '1px solid rgba(255,255,255,0.075)', color: '#FFCB05', fontSize: 14, fontWeight: 950 }}>
+                      {row.gender === 'female' ? "Women's Standings" : "Men's Standings"}
+                    </div>
+                  ) : null}
                   <div
-                    key={row.playerId}
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isCreamOfTheCrop
@@ -1041,6 +1045,7 @@ export default function PublicTvDisplay({
                       </div>
                     ) : null}
                   </div>
+                  </Fragment>
                 );
               })}
             </div>

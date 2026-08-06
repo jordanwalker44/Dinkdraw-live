@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopNav } from '../../../components/TopNav';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
-import { LEAGUE_TIME_ZONES } from '../../../lib/time-zones';
+import { detectDeviceTimeZone, timeZoneOptions } from '../../../lib/time-zones';
 
 type Organization = { id: string; name: string; hasLeagueAccess: boolean };
 
@@ -40,6 +40,14 @@ export default function CreateLeaguePage() {
         setMessage('Sign in before creating a league.');
         setLoading(false);
         return;
+      }
+
+      const { data: profile } = await supabase.from('profiles').select('time_zone').eq('id', user.id).maybeSingle();
+      const detectedTimeZone = detectDeviceTimeZone();
+      const preferredTimeZone = profile?.time_zone || detectedTimeZone || 'America/Denver';
+      setTimeZone(preferredTimeZone);
+      if (!profile?.time_zone && detectedTimeZone) {
+        void supabase.from('profiles').update({ time_zone: detectedTimeZone }).eq('id', user.id);
       }
 
       const { data: memberships, error } = await supabase
@@ -168,7 +176,7 @@ export default function CreateLeaguePage() {
               <div className="league-native-field"><label className="label">First play date</label><input className="input" type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /></div>
               <div className="league-native-field"><label className="label">Start time</label><input className="input" type="time" required value={startTime} onChange={(event) => setStartTime(event.target.value)} /></div>
             </div>
-            <div><label className="label">League timezone</label><select className="input" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{LEAGUE_TIME_ZONES.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select><div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Attendance reminders use this timezone.</div></div>
+            <div><label className="label">League timezone</label><select className="input" value={timeZone} onChange={(event) => setTimeZone(event.target.value)}>{timeZoneOptions(timeZone).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select><div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Defaults to your profile or device timezone. Attendance reminders use this timezone.</div></div>
             <div><label className="label">Location</label><input className="input" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Club or court location" /></div>
             <div className="grid two">
               <div>

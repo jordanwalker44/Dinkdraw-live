@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
 import { TopNav } from '../../components/TopNav';
+import { detectDeviceTimeZone, timeZoneOptions } from '../../lib/time-zones';
 
 type AuthMode = 'signup' | 'signin';
 
@@ -28,6 +29,7 @@ export default function AccountPage() {
   const [mode, setMode] = useState<AuthMode>('signin');
   const [name, setName] = useState('');
   const [profileName, setProfileName] = useState('');
+  const [profileTimeZone, setProfileTimeZone] = useState('America/Denver');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -51,13 +53,19 @@ export default function AccountPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name')
+        .select('display_name, time_zone')
         .eq('id', user.id)
         .maybeSingle();
 
       const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
+      const detectedTimeZone = detectDeviceTimeZone();
+      const resolvedTimeZone = profile?.time_zone || detectedTimeZone || 'America/Denver';
+      setProfileTimeZone(resolvedTimeZone);
+      if (!profile?.time_zone && detectedTimeZone) {
+        void supabase.from('profiles').update({ time_zone: detectedTimeZone }).eq('id', user.id);
+      }
 
     }
 
@@ -77,13 +85,19 @@ export default function AccountPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name')
+        .select('display_name, time_zone')
         .eq('id', user.id)
         .maybeSingle();
 
       const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
+      const detectedTimeZone = detectDeviceTimeZone();
+      const resolvedTimeZone = profile?.time_zone || detectedTimeZone || 'America/Denver';
+      setProfileTimeZone(resolvedTimeZone);
+      if (!profile?.time_zone && detectedTimeZone) {
+        void supabase.from('profiles').update({ time_zone: detectedTimeZone }).eq('id', user.id);
+      }
     });
 
     return () => { subscription.unsubscribe(); };
@@ -155,13 +169,14 @@ export default function AccountPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('display_name')
+        .select('display_name, time_zone')
         .eq('id', data.user.id)
         .maybeSingle();
 
       const resolvedName = profile?.display_name || signedInEmail.split('@')[0] || '';
       setProfileName(resolvedName);
       setName(resolvedName);
+      setProfileTimeZone(profile?.time_zone || detectDeviceTimeZone() || 'America/Denver');
       setPassword('');
 
             if (profile?.display_name?.trim()) {
@@ -211,13 +226,14 @@ export default function AccountPage() {
       id: user.id,
       display_name: nextName,
       email: user.email,
+      time_zone: profileTimeZone,
     });
 
     if (error) { setMessage(error.message); setIsSavingProfile(false); return; }
 
     setProfileName(nextName);
     setName(nextName);
-    setMessage('Display name saved.');
+    setMessage('Profile saved.');
     setIsSavingProfile(false);
 
     const redirectPath = getSafeRedirectPath();
@@ -373,8 +389,15 @@ export default function AccountPage() {
                   placeholder="Your display name"
                 />
               </div>
+              <div>
+                <label className="label">Timezone</label>
+                <select className="input" value={profileTimeZone} onChange={(event) => setProfileTimeZone(event.target.value)}>
+                  {timeZoneOptions(profileTimeZone).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}
+                </select>
+                <div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Detected from this device. You can change it at any time.</div>
+              </div>
               <button className="button primary" onClick={handleSaveDisplayName} disabled={isSavingProfile}>
-                {isSavingProfile ? 'Saving...' : 'Save Display Name'}
+                {isSavingProfile ? 'Saving...' : 'Save Profile'}
               </button>
               <button
                 className="button secondary"

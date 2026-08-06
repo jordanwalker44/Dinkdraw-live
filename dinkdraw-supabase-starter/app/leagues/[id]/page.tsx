@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../../../components/TopNav';
 import { sendLeaguePushEvent } from '../../../lib/league-push';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
-import { LEAGUE_TIME_ZONES } from '../../../lib/time-zones';
+import { timeZoneOptions } from '../../../lib/time-zones';
 
 type League = {
   id: string;
@@ -321,7 +321,7 @@ export default function LeaguePage() {
           <strong>League code: {league.join_code}</strong><br />
           {gameFormatLabel} against every weekly opponent, played to {league.games_to}. First serve alternates between teams each game.
         </div>
-        {isOrganizer ? <div style={{ marginTop: 10 }}><label className="label" htmlFor="league-time-zone">League timezone</label><select id="league-time-zone" className="input" disabled={savingTimeZone} value={league.time_zone || 'America/Denver'} onChange={(event) => void saveTimeZone(event.target.value)}>{LEAGUE_TIME_ZONES.map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></div> : <div className="muted" style={{ marginTop: 10 }}>Timezone: {LEAGUE_TIME_ZONES.find((zone) => zone.value === league.time_zone)?.label || league.time_zone}</div>}
+        {isOrganizer ? <div style={{ marginTop: 10 }}><label className="label" htmlFor="league-time-zone">League timezone</label><select id="league-time-zone" className="input" disabled={savingTimeZone} value={league.time_zone || 'America/Denver'} onChange={(event) => void saveTimeZone(event.target.value)}>{timeZoneOptions(league.time_zone).map((zone) => <option key={zone.value} value={zone.value}>{zone.label}</option>)}</select></div> : <div className="muted" style={{ marginTop: 10 }}>Timezone: {timeZoneOptions(league.time_zone).find((zone) => zone.value === league.time_zone)?.label || league.time_zone}</div>}
         <button className="button secondary" type="button" style={{ marginTop: 10 }} onClick={() => router.push(`/leagues/${league.id}/chat`)}>Open League Group Chat</button>
       </div>
 

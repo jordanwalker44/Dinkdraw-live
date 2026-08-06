@@ -8,3 +8,14 @@ export const LEAGUE_TIME_ZONES = [
   { value: 'America/New_York', label: 'Eastern Time' },
 ] as const;
 
+export function detectDeviceTimeZone() {
+  if (typeof Intl === 'undefined') return '';
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+}
+
+export function timeZoneOptions(selectedTimeZone?: string) {
+  if (!selectedTimeZone || LEAGUE_TIME_ZONES.some((zone) => zone.value === selectedTimeZone)) {
+    return [...LEAGUE_TIME_ZONES];
+  }
+  return [{ value: selectedTimeZone, label: selectedTimeZone.replaceAll('_', ' ') }, ...LEAGUE_TIME_ZONES];
+}

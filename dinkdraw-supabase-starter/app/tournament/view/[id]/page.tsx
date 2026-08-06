@@ -17,6 +17,7 @@ import {
   SHOW_CREAM_STAGE_STATUS,
 } from '../../../../lib/cream-stage-status';
 import { TournamentBracket } from '../../../../components/TournamentBracket';
+import { PoolStandingsTables } from '../../../../components/PoolStandingsTables';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,7 @@ type Tournament = {
   match_format: string;
   tournament_mode: string | null;
   organization_id: string | null;
+  pool_brackets_enabled: boolean | null;
 };
 
 type PlayerSlot = {
@@ -48,6 +50,7 @@ type PlayerSlot = {
   slot_number: number;
   display_name: string | null;
   claimed_by_user_id: string | null;
+  pool_number: number | null;
 };
 
 type Match = {
@@ -361,6 +364,17 @@ export default function PublicTournamentViewPage({
     () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
     [playerSlots]
   );
+
+  const poolStandings = useMemo(() => {
+    if (!tournament?.pool_brackets_enabled) return [];
+    const poolNumbers = Array.from(new Set(playerSlots.map((player) => player.pool_number).filter((value): value is number => value !== null))).sort((a, b) => a - b);
+    return poolNumbers.map((poolNumber) => {
+      const poolPlayers = playerSlots.filter((player) => player.pool_number === poolNumber);
+      const poolIds = new Set(poolPlayers.map((player) => player.id));
+      const poolMatches = matches.filter((match) => !!match.team_a_player_1_id && poolIds.has(match.team_a_player_1_id));
+      return { poolNumber, standings: computeStandings(poolPlayers, poolMatches, !!isSingles, !!isMultiGame, tournament.tournament_mode) };
+    });
+  }, [tournament, playerSlots, matches, isSingles, isMultiGame]);
 
   const roundsAvailable = useMemo(() => {
     const roundSet = new Set<number>();
@@ -794,7 +808,9 @@ useEffect(() => {
   }
 
   function renderCourtLabel(match: Match) {
-    return match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
+    const court = match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
+    const poolNumber = playersById[match.team_a_player_1_id || '']?.pool_number || playersById[match.team_b_player_1_id || '']?.pool_number;
+    return poolNumber ? `Pool ${poolNumber} • ${court}` : court;
   }
 
   function getWinnerStyle(team: 'a' | 'b', match: Match) {
@@ -2138,7 +2154,7 @@ useEffect(() => {
           <div className="muted">Standings will appear once matches are scored.</div>
         ) : (
           <div>
-            {isCompleted ? (
+            {isCompleted && !tournament.pool_brackets_enabled ? (
               <div
                 style={{
                   margin: '16px 0 18px',
@@ -2281,8 +2297,10 @@ useEffect(() => {
               </div>
             ) : null}
 
+           {tournament.pool_brackets_enabled ? <PoolStandingsTables pools={poolStandings} /> : null}
            <div
               style={{
+                display: tournament.pool_brackets_enabled ? 'none' : 'block',
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 16,
                 overflow: 'hidden',

@@ -16,6 +16,7 @@ import { loadPublicOrganizationBrand } from '../../../lib/organization-brand';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
 import { TournamentAnnouncementsLink } from '../../../components/TournamentAnnouncementsLink';
 import { TournamentBracket } from '../../../components/TournamentBracket';
+import { PoolStandingsTables } from '../../../components/PoolStandingsTables';
 import { CreamStageTeamStatus } from '../../../components/CreamStageStatus';
 import {
   buildCreamStageStatusMap,
@@ -2924,6 +2925,30 @@ function logScoreSubmitTiming(
     () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
     [playerSlots]
   );
+
+  const getMatchPoolNumber = (match: Match) =>
+    playersById[match.team_a_player_1_id || '']?.pool_number ||
+    playersById[match.team_b_player_1_id || '']?.pool_number ||
+    null;
+  const getMatchLocationLabel = (match: Match) => {
+    const court = getCourtLabel(tournament, match.court_number) || '-';
+    const poolNumber = getMatchPoolNumber(match);
+    return poolNumber ? `Pool ${poolNumber} • ${court}` : court;
+  };
+
+  const poolStandings = useMemo(() => {
+    if (!tournament?.pool_brackets_enabled) return [];
+    const poolNumbers = Array.from(new Set(playerSlots.map((player) => player.pool_number).filter((value): value is number => value !== null))).sort((a, b) => a - b);
+    return poolNumbers.map((poolNumber) => {
+      const poolPlayers = playerSlots.filter((player) => player.pool_number === poolNumber);
+      const poolPlayerIds = new Set(poolPlayers.map((player) => player.id));
+      const poolMatches = matches.filter((match) => !!match.team_a_player_1_id && poolPlayerIds.has(match.team_a_player_1_id));
+      return {
+        poolNumber,
+        standings: computeStandings(poolPlayers, poolMatches, isSingles, isMultiGame, tournament.tournament_mode),
+      };
+    });
+  }, [tournament, playerSlots, matches, isSingles, isMultiGame]);
 
   const yourMatch = useMemo(() => {
     if (!claimedSlot) return null;
@@ -5947,7 +5972,7 @@ function renderShortTeam(a: string | null, b: string | null) {
             color: '#FFCB05',
           }}
         >
-          {getCourtLabel(tournament, match.court_number) || '-'}
+          {getMatchLocationLabel(match)}
         </div>
 
         <div
@@ -6257,7 +6282,7 @@ function renderShortTeam(a: string | null, b: string | null) {
         marginBottom: 10,
       }}
     >
-      {getCourtLabel(tournament, yourMatch.court_number)}
+      {getMatchLocationLabel(yourMatch)}
     </div>
 
     <div
@@ -8029,7 +8054,7 @@ isOrganizer &&
       color: '#FFCB05',
     }}
   >
-    {getCourtLabel(tournament, match.court_number) || '-'}
+    {getMatchLocationLabel(match)}
   </div>
 
   <div
@@ -8465,8 +8490,11 @@ isOrganizer &&
           {!standings.length ? (
             <div className="muted">No players yet.</div>
           ) : (
+            <>
+            {tournament?.pool_brackets_enabled ? <PoolStandingsTables pools={poolStandings} /> : null}
             <div
               style={{
+                display: tournament?.pool_brackets_enabled ? 'none' : 'block',
                 marginTop: 4,
                 border: '1px solid rgba(255,255,255,0.08)',
                 borderRadius: 16,
@@ -8709,6 +8737,7 @@ isOrganizer &&
                 );
               })}
             </div>
+            </>
           )}
         </div>
       )}

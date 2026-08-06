@@ -5434,6 +5434,17 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     return;
   }
 
+  const currentPlayoffRoundIsComplete = playoffMatches
+    .filter((playoffMatch) => playoffMatch.round_number === match.round_number)
+    .every((playoffMatch) => playoffMatch.id === match.id || playoffMatch.is_complete);
+  const nextPlayoffRound = playoffRounds.find((round) => round.roundNumber > match.round_number) || null;
+  const advanceToNextPlayoffRound = () => {
+    if (!currentPlayoffRoundIsComplete || !nextPlayoffRound) return false;
+    setSelectedPlayoffRound(nextPlayoffRound.roundNumber);
+    setSelectedRound(nextPlayoffRound.roundNumber);
+    return true;
+  };
+
   if (match.next_match_id && match.next_match_team) {
     const nextUpdate =
       match.next_match_team === 'A'
@@ -5460,7 +5471,8 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     }
 
     await loadTournamentData(userId);
-    setMessage('Playoff score submitted. Winner advanced.');
+    const movedForward = advanceToNextPlayoffRound();
+    setMessage(movedForward ? `${nextPlayoffRound?.label || 'Next playoff round'} is ready.` : 'Playoff score submitted. Winner advanced.');
     return;
   }
 

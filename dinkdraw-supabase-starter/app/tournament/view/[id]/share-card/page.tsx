@@ -277,6 +277,7 @@ const championshipFinal = playoffMatches.find((match) => match.bracket_type === 
 const consolationFinal = playoffMatches.find((match) => match.bracket_type === 'consolation' && !match.next_match_id && match.is_complete);
 const championshipWinner = championshipFinal ? teamName(championshipFinal.winner_player_1_id, championshipFinal.winner_player_2_id) : null;
 const consolationWinner = consolationFinal ? teamName(consolationFinal.winner_player_1_id, consolationFinal.winner_player_2_id) : null;
+const isBracketTournament = !!tournament?.pool_brackets_enabled;
 
 const biggestClimber = isCreamOfTheCrop
   ? standings
@@ -496,7 +497,7 @@ const biggestClimber = isCreamOfTheCrop
         Final placement is based on court ladder position and record.
       </div>
     </>
-  ) : championshipWinner ? (
+  ) : isBracketTournament ? (
     <>
       <div
         style={{
@@ -508,10 +509,17 @@ const biggestClimber = isCreamOfTheCrop
           textAlign: 'center',
         }}
       >
-        <div style={{ fontSize: 15, fontWeight: 950, color: '#FFCB05' }}>🏆 TOURNAMENT CHAMPIONS</div>
-        <div style={{ marginTop: 9, fontSize: 29, fontWeight: 950 }}>{championshipWinner}</div>
+        <div style={{ fontSize: 15, fontWeight: 950, color: '#FFCB05' }}>🏆 CHAMPIONSHIP BRACKET WINNERS</div>
+        <div style={{ marginTop: 9, fontSize: 29, fontWeight: 950 }}>
+          {championshipWinner || 'Championship In Progress'}
+        </div>
+        {!championshipWinner ? (
+          <div style={{ marginTop: 7, fontSize: 14, color: 'rgba(255,255,255,0.66)', fontWeight: 800 }}>
+            Winners will appear when the championship game is final.
+          </div>
+        ) : null}
       </div>
-      {consolationWinner ? (
+      {playoffMatches.some((match) => match.bracket_type === 'consolation') ? (
         <div
           style={{
             padding: '18px 16px',
@@ -521,8 +529,10 @@ const biggestClimber = isCreamOfTheCrop
             textAlign: 'center',
           }}
         >
-          <div style={{ fontSize: 14, fontWeight: 950, color: '#A78BFA' }}>🏅 CONSOLATION WINNERS</div>
-          <div style={{ marginTop: 8, fontSize: 25, fontWeight: 950 }}>{consolationWinner}</div>
+          <div style={{ fontSize: 14, fontWeight: 950, color: '#A78BFA' }}>🏅 CONSOLATION BRACKET WINNERS</div>
+          <div style={{ marginTop: 8, fontSize: 25, fontWeight: 950 }}>
+            {consolationWinner || 'Consolation In Progress'}
+          </div>
         </div>
       ) : null}
     </>
@@ -653,7 +663,7 @@ const biggestClimber = isCreamOfTheCrop
     title={tournament.title || 'DinkDraw Tournament'}
     resultsUrl={`https://dinkdraw.app/tournament/view/${params.id}`}
     shareCardUrl={`https://dinkdraw.app/tournament/view/${params.id}/share-card`}
-    resultSummary={championshipWinner
+    resultSummary={isBracketTournament && championshipWinner
       ? `Champions: ${championshipWinner}${consolationWinner ? `\nConsolation winners: ${consolationWinner}` : ''}`
       : undefined}
   />

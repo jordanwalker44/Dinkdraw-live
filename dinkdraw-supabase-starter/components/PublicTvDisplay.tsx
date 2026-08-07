@@ -7,6 +7,7 @@ import {
   buildCreamStageStatusMap,
   SHOW_CREAM_STAGE_STATUS,
 } from '../lib/cream-stage-status';
+import { formatPlayoffGameLabel, formatPlayoffRoundLabel } from '../lib/playoff-labels';
 
 type Tournament = {
   title: string;
@@ -215,9 +216,25 @@ export default function PublicTvDisplay({
         });
   const displayMatches = postseasonActive ? activePlayoffMatches : currentMatches;
   const completeDisplayMatches = displayMatches.filter((match) => match.is_complete).length;
-  const playoffRoundLabel = activePlayoffMatches[0]?.round_label ||
-    (activePlayoffRound === null ? '' : `Playoff Round ${activePlayoffRound}`);
-  const isFinal = tournament.status === 'completed' || (!isPoolTournament && allPlayableMatchesComplete);
+  const playoffRoundLabel = activePlayoffMatches[0]?.round_label
+    ? formatPlayoffRoundLabel(activePlayoffMatches[0].round_label)
+    : activePlayoffRound === null
+    ? ''
+    : `Playoff Round ${activePlayoffRound}`;
+  const championshipFinal = playoffMatches.find(
+    (match) => match.bracket_type === 'championship' && !match.next_match_id
+  );
+  const consolationFinal = playoffMatches.find(
+    (match) => match.bracket_type === 'consolation' && !match.next_match_id
+  );
+  const postseasonComplete =
+    !!championshipFinal?.is_complete &&
+    (!playoffMatches.some((match) => match.bracket_type === 'consolation') ||
+      !!consolationFinal?.is_complete);
+  const isFinal =
+    tournament.status === 'completed' ||
+    postseasonComplete ||
+    (!isPoolTournament && allPlayableMatchesComplete);
   const nextRound = currentRound + 1;
   const nextRoundMatches = !isCreamOfTheCrop && nextRound <= totalRounds
     ? matches.filter((match) => match.round_number === nextRound && !match.is_bye)
@@ -233,8 +250,6 @@ export default function PublicTvDisplay({
   const leader = topStandings[0];
   const runnerUp = topStandings[1];
   const thirdPlace = topStandings[2];
-  const championshipFinal = playoffMatches.find((match) => match.bracket_type === 'championship' && !match.next_match_id && match.is_complete);
-  const consolationFinal = playoffMatches.find((match) => match.bracket_type === 'consolation' && !match.next_match_id && match.is_complete);
   const playoffWinnerName = (match: PlayoffMatch | undefined) => match
     ? [match.winner_player_1_id, match.winner_player_2_id].filter(Boolean).map((id) => renderPlayerName(id)).join(' / ')
     : null;
@@ -465,15 +480,15 @@ export default function PublicTvDisplay({
                 </div>
 
                 {championName ? (
-                  <div style={{ minHeight: 0, display: 'grid', gridTemplateColumns: consolationWinnerName ? 'repeat(2, minmax(0, 1fr))' : '1fr', gap: 18, alignItems: 'center' }}>
-                    <div style={{ padding: 28, borderRadius: 26, border: '2px solid rgba(255,203,5,0.62)', background: 'rgba(255,203,5,0.12)', textAlign: 'center' }}>
-                      <div style={{ color: '#FFCB05', fontSize: 18, fontWeight: 950, letterSpacing: 2 }}>🏆 CHAMPIONS</div>
-                      <div style={{ marginTop: 14, fontSize: 'clamp(34px, 3vw, 58px)', fontWeight: 950 }}>{championName}</div>
+                  <div style={{ minHeight: 0, display: 'grid', gap: 18, alignContent: 'center' }}>
+                    <div style={{ padding: '34px 30px', borderRadius: 28, border: '3px solid rgba(255,203,5,0.78)', background: 'radial-gradient(circle at top, rgba(255,203,5,0.25), rgba(255,203,5,0.08))', boxShadow: '0 0 70px rgba(255,203,5,0.18)', textAlign: 'center' }}>
+                      <div style={{ color: '#FFCB05', fontSize: 22, fontWeight: 950, letterSpacing: 3 }}>🏆 CHAMPIONSHIP BRACKET WINNERS</div>
+                      <div style={{ marginTop: 16, fontSize: 'clamp(48px, 4.8vw, 86px)', lineHeight: 0.98, fontWeight: 950, letterSpacing: '-0.05em' }}>{championName}</div>
                     </div>
                     {consolationWinnerName ? (
-                      <div style={{ padding: 28, borderRadius: 26, border: '2px solid rgba(167,139,250,0.62)', background: 'rgba(167,139,250,0.10)', textAlign: 'center' }}>
-                        <div style={{ color: '#A78BFA', fontSize: 18, fontWeight: 950, letterSpacing: 2 }}>🏅 CONSOLATION WINNERS</div>
-                        <div style={{ marginTop: 14, fontSize: 'clamp(30px, 2.7vw, 52px)', fontWeight: 950 }}>{consolationWinnerName}</div>
+                      <div style={{ justifySelf: 'center', width: '78%', padding: '20px 24px', borderRadius: 24, border: '2px solid rgba(167,139,250,0.58)', background: 'rgba(167,139,250,0.10)', textAlign: 'center' }}>
+                        <div style={{ color: '#A78BFA', fontSize: 16, fontWeight: 950, letterSpacing: 2 }}>🏅 CONSOLATION BRACKET WINNERS</div>
+                        <div style={{ marginTop: 10, fontSize: 'clamp(28px, 2.5vw, 48px)', fontWeight: 950 }}>{consolationWinnerName}</div>
                       </div>
                     ) : null}
                   </div>
@@ -603,7 +618,10 @@ export default function PublicTvDisplay({
                         letterSpacing: '-0.04em',
                       }}
                     >
-                      {match.is_playoff ? `${match.bracket_type === 'consolation' ? 'Consolation' : 'Championship'} • ` : ''}{renderCourtLabel(match)}
+                      {match.is_playoff && match.bracket_type
+                        ? `${formatPlayoffGameLabel(match.bracket_type, match.round_label)} • `
+                        : ''}
+                      {renderCourtLabel(match)}
                     </div>
                     <div
                       style={{

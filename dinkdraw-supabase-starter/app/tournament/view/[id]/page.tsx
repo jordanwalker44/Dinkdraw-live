@@ -18,6 +18,7 @@ import {
 } from '../../../../lib/cream-stage-status';
 import { TournamentBracket } from '../../../../components/TournamentBracket';
 import { PoolStandingsTables } from '../../../../components/PoolStandingsTables';
+import { formatPlayoffGameLabel, formatPlayoffRoundLabel } from '../../../../lib/playoff-labels';
 
 export const dynamic = 'force-dynamic';
 
@@ -372,7 +373,8 @@ export default function PublicTournamentViewPage({
   const [selectedRound, setSelectedRound] = useState(1);
   const [selectedPlayoffRound, setSelectedPlayoffRound] = useState<number | null>(null);
   const [isLive, setIsLive] = useState(false);
-    const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
+  const [showWinnersCelebration, setShowWinnersCelebration] = useState(false);
+  const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
 
   const isSingles = tournament?.format === 'singles';
   const isBestOf3 = tournament?.match_format === 'best_of_3';
@@ -385,6 +387,40 @@ export default function PublicTournamentViewPage({
     () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
     [playerSlots]
   );
+
+  const postseasonWinners = useMemo(() => {
+    const championshipFinal = playoffMatches.find(
+      (match) => match.bracket_type === 'championship' && !match.next_match_id
+    );
+    const consolationFinal = playoffMatches.find(
+      (match) => match.bracket_type === 'consolation' && !match.next_match_id
+    );
+    const hasConsolationBracket = playoffMatches.some(
+      (match) => match.bracket_type === 'consolation'
+    );
+    const isComplete =
+      !!championshipFinal?.is_complete &&
+      (!hasConsolationBracket || !!consolationFinal?.is_complete);
+    const winnerName = (match: PlayoffMatch | undefined) =>
+      match
+        ? [match.winner_player_1_id, match.winner_player_2_id]
+            .filter(Boolean)
+            .map((id) => playersById[id || '']?.display_name || 'Player')
+            .join(' / ')
+        : '';
+
+    return {
+      isComplete,
+      championship: winnerName(championshipFinal),
+      consolation: winnerName(consolationFinal),
+    };
+  }, [playoffMatches, playersById]);
+
+  useEffect(() => {
+    if (postseasonWinners.isComplete && postseasonWinners.championship) {
+      setShowWinnersCelebration(true);
+    }
+  }, [postseasonWinners.isComplete, postseasonWinners.championship, postseasonWinners.consolation]);
 
   const poolStandings = useMemo(() => {
     if (!tournament?.pool_brackets_enabled) return [];
@@ -421,7 +457,9 @@ export default function PublicTournamentViewPage({
     .sort(([a], [b]) => a - b)
     .map(([roundNumber, matches]) => ({
       roundNumber,
-      label: matches[0]?.round_label || `Round ${roundNumber}`,
+      label: matches[0]?.round_label
+        ? formatPlayoffRoundLabel(matches[0].round_label)
+        : `Round ${roundNumber}`,
       matches: matches.sort((a, b) => {
         if (a.bracket_type !== b.bracket_type) return a.bracket_type === 'championship' ? -1 : 1;
         return a.match_number - b.match_number;
@@ -1194,6 +1232,47 @@ useEffect(() => {
       paddingTop: 68,
     }}
   >
+    {showWinnersCelebration ? (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Tournament winners"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1000,
+          display: 'grid',
+          placeItems: 'center',
+          padding: 20,
+          background: 'radial-gradient(circle at top, rgba(255,203,5,0.22), rgba(2,10,20,0.96) 55%)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <div style={{ width: 'min(760px, 100%)', display: 'grid', gap: 18, textAlign: 'center' }}>
+          <div style={{ color: '#FFCB05', fontSize: 18, fontWeight: 950, letterSpacing: 3, textTransform: 'uppercase' }}>
+            Tournament Complete
+          </div>
+          <div style={{ padding: '34px 24px', borderRadius: 28, border: '3px solid rgba(255,203,5,0.82)', background: 'radial-gradient(circle at top, rgba(255,203,5,0.26), rgba(12,35,55,0.96))', boxShadow: '0 0 80px rgba(255,203,5,0.22)' }}>
+            <div style={{ color: '#FFCB05', fontSize: 17, fontWeight: 950, letterSpacing: 2 }}>🏆 CHAMPIONSHIP BRACKET WINNERS</div>
+            <div style={{ marginTop: 16, color: '#fff', fontSize: 'clamp(38px, 8vw, 68px)', lineHeight: 1, fontWeight: 950, letterSpacing: '-0.05em' }}>
+              {postseasonWinners.championship}
+            </div>
+          </div>
+          {postseasonWinners.consolation ? (
+            <div style={{ width: '86%', justifySelf: 'center', padding: '22px 18px', borderRadius: 22, border: '2px solid rgba(167,139,250,0.62)', background: 'rgba(80,55,125,0.28)' }}>
+              <div style={{ color: '#A78BFA', fontSize: 14, fontWeight: 950, letterSpacing: 1.7 }}>🏅 CONSOLATION BRACKET WINNERS</div>
+              <div style={{ marginTop: 10, color: '#fff', fontSize: 'clamp(26px, 6vw, 44px)', lineHeight: 1.05, fontWeight: 950 }}>
+                {postseasonWinners.consolation}
+              </div>
+            </div>
+          ) : null}
+          <button type="button" className="button primary" onClick={() => setShowWinnersCelebration(false)} style={{ justifySelf: 'center', minWidth: 190 }}>
+            View Final Results
+          </button>
+        </div>
+      </div>
+    ) : null}
+
     <OrganizationBrandBanner brand={organizationBrand} compact />
 
     <div className="hero" style={{ marginBottom: 8 }}>
@@ -1764,6 +1843,14 @@ useEffect(() => {
                       letterSpacing: 1,
                     }}
                   >
+                    <div
+                      style={{
+                        color: match.bracket_type === 'consolation' ? '#A78BFA' : '#FFCB05',
+                        marginBottom: 4,
+                      }}
+                    >
+                      {formatPlayoffGameLabel(match.bracket_type, match.round_label)}
+                    </div>
                     {!match.is_bye ? playoffCourtLabel : ''}
                   </div>
 

@@ -4,11 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../lib/supabase-browser';
 import { TopNav } from '../../components/TopNav';
 import {
-  buildLeaderboardRows,
   getCutoffDate,
   filterLabel,
-  type EloStatRow,
-  type EloProfile,
 } from '../../lib/elo';
 
 type TimeFilter = 'lifetime' | '12m' | '6m' | '30d' | '7d';
@@ -21,11 +18,24 @@ type SortBy =
   | 'matches'
   | 'name';
 
+type NetworkLeaderboardRow = {
+  userId: string;
+  name: string;
+  wins: number;
+  losses: number;
+  ties: number;
+  matches: number;
+  winPct: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+  tournamentsPlayed: number;
+};
+
 export default function LeaderboardPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
 
-  const [stats, setStats] = useState<EloStatRow[]>([]);
-  const [profiles, setProfiles] = useState<EloProfile[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<NetworkLeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<TimeFilter>('lifetime');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('doubles');
@@ -34,107 +44,61 @@ export default function LeaderboardPage() {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
+  async function load() {
+    setLoading(true);
 
-      const {
-  data: { user },
-} = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-if (!user) {
-  setStats([]);
-  setProfiles([]);
-  setLoading(false);
-  return;
-}
-
-const { data: myStatsData, error: myStatsError } = await supabase
-  .from('player_match_stats')
-  .select('tournament_id, tournaments!inner(exclude_from_stats)')
-  .eq('tournaments.exclude_from_stats', false)
-  .eq('user_id', user.id);
-
-if (myStatsError) {
-  setStats([]);
-  setProfiles([]);
-  setLoading(false);
-  return;
-}
-
-const connectedTournamentIds = Array.from(
-  new Set((myStatsData || []).map((row) => row.tournament_id).filter(Boolean))
-);
-
-if (connectedTournamentIds.length === 0) {
-  setStats([]);
-  setProfiles([]);
-  setLoading(false);
-  return;
-}
-
-const { data: statsData, error: statsError } = await supabase
-  .from('player_match_stats')
-  .select('*, tournaments!inner(exclude_from_stats)')
-  .eq('tournaments.exclude_from_stats', false)
-  .in('tournament_id', connectedTournamentIds);
-
-      if (statsError) {
-        setStats([]);
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
-
-      const safeStats = (statsData || []) as EloStatRow[];
-      setStats(safeStats);
-
-      const userIds = Array.from(
-        new Set(safeStats.map((row) => row.user_id).filter(Boolean))
-      );
-
-      if (userIds.length === 0) {
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('public_profiles')
-        .select('id, display_name')
-        .in('id', userIds);
-
-      if (profileError) {
-        setProfiles([]);
-        setLoading(false);
-        return;
-      }
-
-      setProfiles((profileData || []) as EloProfile[]);
+    if (!user) {
+      setLeaderboardData([]);
       setLoading(false);
+      return;
     }
-
-    load();
-  }, [supabase]);
-
-  const filteredStats = useMemo(() => {
-    let result = stats;
 
     const cutoff = getCutoffDate(timeFilter);
-    if (cutoff) {
-      result = result.filter((row) => new Date(row.played_at) >= cutoff);
+
+    const { data, error } = await supabase.rpc(
+      'get_network_leaderboard_summary',
+      {
+        p_viewer_user_id: user.id,
+        p_format: formatFilter,
+        p_since: cutoff ? cutoff.toISOString() : null,
+        p_min_games: minMatches,
+      }
+    );
+
+    if (error) {
+      console.error('Leaderboard load failed:', error);
+      setLeaderboardData([]);
+      setLoading(false);
+      return;
     }
 
-    if (formatFilter !== 'all') {
-      result = result.filter((row) => row.format === formatFilter);
-    }
+    const rows: NetworkLeaderboardRow[] = (data || []).map((row: any) => ({
+      userId: row.user_id,
+      name: row.display_name || 'Player',
+      wins: Number(row.wins || 0),
+      losses: Number(row.losses || 0),
+      ties: Number(row.ties || 0),
+      matches: Number(row.matches || 0),
+      winPct: Number(row.win_pct || 0),
+      pointsFor: Number(row.points_for || 0),
+      pointsAgainst: Number(row.points_against || 0),
+      pointDiff: Number(row.point_diff || 0),
+      tournamentsPlayed: Number(row.tournaments_played || 0),
+    }));
 
-    return result;
-  }, [stats, timeFilter, formatFilter]);
+    setLeaderboardData(rows);
+    setLoading(false);
+  }
+
+  load();
+}, [supabase, timeFilter, formatFilter, minMatches]);
 
   const leaderboard = useMemo(() => {
-    const rows = buildLeaderboardRows(filteredStats, profiles, minMatches);
-
-    return [...rows].sort((a, b) => {
+  return [...leaderboardData].sort((a, b) => {
       switch (sortBy) {
         
         case 'wins':
@@ -164,7 +128,7 @@ const { data: statsData, error: statsError } = await supabase
           return b.pointDiff - a.pointDiff;
       }
     });
-  }, [filteredStats, profiles, minMatches, sortBy]);
+  }, [leaderboardData, sortBy]);
 
   const summary = useMemo(
     () => ({

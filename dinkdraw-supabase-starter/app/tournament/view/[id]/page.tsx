@@ -429,6 +429,21 @@ export default function PublicTournamentViewPage({
     }));
 }, [playoffMatches]);
 
+  const activePlayoffRoundNumber = useMemo(() => {
+    if (!playoffRounds.length) return null;
+
+    const firstUnfinishedRound = playoffRounds.find((round) =>
+      round.matches.some((match) => !match.is_bye && !match.is_complete)
+    );
+
+    return firstUnfinishedRound?.roundNumber ?? playoffRounds[playoffRounds.length - 1].roundNumber;
+  }, [playoffRounds]);
+
+  useEffect(() => {
+    if (activePlayoffRoundNumber === null) return;
+    setSelectedPlayoffRound(activePlayoffRoundNumber);
+  }, [activePlayoffRoundNumber]);
+
         const currentRound = useMemo(() => {
     if (!matches.length) return roundsAvailable[0] || 1;
 
@@ -652,6 +667,18 @@ export default function PublicTournamentViewPage({
           event: '*',
           schema: 'public',
           table: 'matches',
+          filter: `tournament_id=eq.${params.id}`,
+        },
+        () => {
+          void loadTournamentData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'playoff_matches',
           filter: `tournament_id=eq.${params.id}`,
         },
         () => {

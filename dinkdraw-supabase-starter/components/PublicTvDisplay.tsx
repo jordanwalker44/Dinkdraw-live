@@ -10,6 +10,7 @@ import {
 
 type Tournament = {
   title: string;
+  courts: number;
   court_labels: string[] | null;
   rounds: number;
   status: string;
@@ -36,6 +37,9 @@ type Match = {
   team_b_score: number | null;
   is_bye: boolean;
   is_complete: boolean;
+  is_playoff?: boolean;
+  bracket_type?: 'championship' | 'consolation';
+  round_label?: string | null;
 };
 
 type StandingRow = {
@@ -53,8 +57,19 @@ type StandingRow = {
 };
 
 type PlayoffMatch = {
+  id: string;
+  round_number: number;
+  match_number: number;
+  round_label: string | null;
+  team_a_player_1_id: string | null;
+  team_a_player_2_id: string | null;
+  team_b_player_1_id: string | null;
+  team_b_player_2_id: string | null;
+  team_a_score: number | null;
+  team_b_score: number | null;
   bracket_type: 'championship' | 'consolation';
   next_match_id: string | null;
+  is_bye: boolean;
   is_complete: boolean;
   winner_player_1_id: string | null;
   winner_player_2_id: string | null;
@@ -146,6 +161,7 @@ export default function PublicTvDisplay({
 
   function renderCourtLabel(match: Match) {
     const court = match.court_label?.trim() || `Court ${match.court_number ?? '-'}`;
+    if (match.is_playoff) return court;
     const poolNumber = playersById[match.team_a_player_1_id || '']?.pool_number || playersById[match.team_b_player_1_id || '']?.pool_number;
     return poolNumber ? `Pool ${poolNumber} • ${court}` : court;
   }
@@ -158,7 +174,6 @@ export default function PublicTvDisplay({
     [matches, currentRound]
   );
 
-  const completeThisRound = currentMatches.filter((match) => match.is_complete).length;
   const totalRounds = tournament.rounds || 9;
   const isCreamOfTheCrop = tournamentMode === 'cream_of_the_crop';
   const showPointDifferential = standingsRankingMethod === 'point_diff_first';
@@ -176,12 +191,38 @@ export default function PublicTvDisplay({
   const allPlayableMatchesComplete =
     playableMatches.length > 0 && playableMatches.every((match) => match.is_complete);
   const isPoolTournament = !!tournament.pool_brackets_enabled;
+  const postseasonActive = isPoolTournament && playoffMatches.length > 0;
+  const activePlayoffRound = postseasonActive
+    ? playoffMatches.find((match) => !match.is_bye && !match.is_complete)?.round_number ??
+      Math.max(...playoffMatches.map((match) => match.round_number))
+    : null;
+  const activePlayoffMatches: Match[] = activePlayoffRound === null
+    ? []
+    : playoffMatches
+        .filter((match) => match.round_number === activePlayoffRound && !match.is_bye)
+        .sort((a, b) => {
+          if (a.bracket_type !== b.bracket_type) return a.bracket_type === 'championship' ? -1 : 1;
+          return a.match_number - b.match_number;
+        })
+        .map((match, index) => {
+          const courtNumber = (index % Math.max(1, tournament.courts || 1)) + 1;
+          return {
+            ...match,
+            court_number: courtNumber,
+            court_label: tournament.court_labels?.[courtNumber - 1] || `Court ${courtNumber}`,
+            is_playoff: true,
+          };
+        });
+  const displayMatches = postseasonActive ? activePlayoffMatches : currentMatches;
+  const completeDisplayMatches = displayMatches.filter((match) => match.is_complete).length;
+  const playoffRoundLabel = activePlayoffMatches[0]?.round_label ||
+    (activePlayoffRound === null ? '' : `Playoff Round ${activePlayoffRound}`);
   const isFinal = tournament.status === 'completed' || (!isPoolTournament && allPlayableMatchesComplete);
   const nextRound = currentRound + 1;
   const nextRoundMatches = !isCreamOfTheCrop && nextRound <= totalRounds
     ? matches.filter((match) => match.round_number === nextRound && !match.is_bye)
     : [];
-  const showNextCourt = !isFinal && nextRoundMatches.length > 0;
+  const showNextCourt = !isFinal && !postseasonActive && nextRoundMatches.length > 0;
   const [poolPageIndex, setPoolPageIndex] = useState(0);
   const activePool = isPoolTournament && poolStandings.length ? poolStandings[poolPageIndex % poolStandings.length] : null;
   const activePoolHasGenderGroups = !!activePool?.standings.some((row) => row.gender === 'male' || row.gender === 'female');
@@ -199,18 +240,18 @@ export default function PublicTvDisplay({
     : null;
   const championName = playoffWinnerName(championshipFinal);
   const consolationWinnerName = playoffWinnerName(consolationFinal);
-  const courtPages = useMemo(() => chunkMatches(currentMatches, 6), [currentMatches]);
+  const courtPages = useMemo(() => chunkMatches(displayMatches, 6), [displayMatches]);
   const [courtPageIndex, setCourtPageIndex] = useState(0);
   const visibleMatches = courtPages[courtPageIndex] || courtPages[0] || [];
   const visibleMatchRowCount =
     visibleMatches.length <= 2 ? 1 : visibleMatches.length <= 4 ? 2 : 3;
   const courtPageStart = courtPageIndex * 6 + 1;
-  const courtPageEnd = Math.min(courtPageStart + visibleMatches.length - 1, currentMatches.length);
+  const courtPageEnd = Math.min(courtPageStart + visibleMatches.length - 1, displayMatches.length);
   const showCourtPager = !isFinal && courtPages.length > 1;
 
   useEffect(() => {
     setCourtPageIndex(0);
-  }, [currentRound, currentMatches.length]);
+  }, [currentRound, activePlayoffRound, displayMatches.length]);
 
   useEffect(() => {
     if (isFinal || courtPages.length <= 1) return;
@@ -293,7 +334,7 @@ export default function PublicTvDisplay({
                   marginBottom: 6,
                 }}
               >
-                {isFinal ? 'Tournament Complete' : allPlayableMatchesComplete && isPoolTournament ? 'Pool Play Complete' : 'Now Playing'}
+                {isFinal ? 'Tournament Complete' : postseasonActive ? 'Playoffs' : allPlayableMatchesComplete && isPoolTournament ? 'Pool Play Complete' : 'Now Playing'}
               </div>
               <div
                 style={{
@@ -304,7 +345,7 @@ export default function PublicTvDisplay({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {isFinal ? 'Final Results' : allPlayableMatchesComplete && isPoolTournament ? 'Postseason Next' : `Round ${currentRound}`}
+                {isFinal ? 'Final Results' : postseasonActive ? playoffRoundLabel : allPlayableMatchesComplete && isPoolTournament ? 'Postseason Next' : `Round ${currentRound}`}
               </div>
             </div>
 
@@ -333,7 +374,7 @@ export default function PublicTvDisplay({
                   textTransform: 'uppercase',
                 }}
               >
-                {isFinal ? 'Final' : allPlayableMatchesComplete && isPoolTournament ? 'Awaiting Brackets' : isLive ? 'Live' : 'Updating'}
+                {isFinal ? 'Final' : postseasonActive ? (isLive ? 'Playoffs Live' : 'Updating') : allPlayableMatchesComplete && isPoolTournament ? 'Awaiting Brackets' : isLive ? 'Live' : 'Updating'}
               </div>
               <div
                 style={{
@@ -347,7 +388,7 @@ export default function PublicTvDisplay({
                   ? `${playableMatches.filter((match) => match.is_complete).length}/${playableMatches.length} matches`
                   : showCourtPager
                   ? `Courts ${courtPageStart}-${courtPageEnd} of ${currentMatches.length}`
-                  : `${completeThisRound}/${currentMatches.length} complete`}
+                  : `${completeDisplayMatches}/${displayMatches.length} complete`}
               </div>
             </div>
           </header>
@@ -562,7 +603,7 @@ export default function PublicTvDisplay({
                         letterSpacing: '-0.04em',
                       }}
                     >
-                      {renderCourtLabel(match)}
+                      {match.is_playoff ? `${match.bracket_type === 'consolation' ? 'Consolation' : 'Championship'} • ` : ''}{renderCourtLabel(match)}
                     </div>
                     <div
                       style={{

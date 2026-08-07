@@ -1941,6 +1941,7 @@ function buildMixedDoublesSchedule(
 
   const output: ScheduleRow[] = [];
   const partnerCounts = new Map<string, number>();
+  const opponentCounts = new Map<string, number>();
   const mixedTeamOpponentCounts = new Map<string, number>();
   const foursomeCounts = new Map<string, number>();
   const byeCounts = new Map<string, number>(activePlayers.map((player) => [player.id, 0]));
@@ -1958,6 +1959,10 @@ function buildMixedDoublesSchedule(
 
   function getPartnerCount(a: string, b: string): number {
     return partnerCounts.get(pairKey(a, b)) || 0;
+  }
+
+  function getOpponentCount(a: string, b: string): number {
+    return opponentCounts.get(pairKey(a, b)) || 0;
   }
 
   function getMixedTeamKey(team: [string, string]): string {
@@ -1981,6 +1986,14 @@ function buildMixedDoublesSchedule(
 
     penalty += getPartnerCount(a1, a2) * 100000;
     penalty += getPartnerCount(b1, b2) * 100000;
+
+    // A unique mixed partnership does not guarantee balanced opponents. Track
+    // every player across the net so the same woman (or man) is not repeatedly
+    // assigned against one player while other available opponents are skipped.
+    penalty += getOpponentCount(a1, b1) * 60000;
+    penalty += getOpponentCount(a1, b2) * 60000;
+    penalty += getOpponentCount(a2, b1) * 60000;
+    penalty += getOpponentCount(a2, b2) * 60000;
 
     penalty +=
       (mixedTeamOpponentCounts.get(getMixedTeamOpponentKey(match.teamA, match.teamB)) || 0) *
@@ -2142,6 +2155,16 @@ function buildMixedDoublesSchedule(
 
     partnerCounts.set(pairKey(a1, a2), getPartnerCount(a1, a2) + 1);
     partnerCounts.set(pairKey(b1, b2), getPartnerCount(b1, b2) + 1);
+
+    for (const [opponentA, opponentB] of [
+      [a1, b1],
+      [a1, b2],
+      [a2, b1],
+      [a2, b2],
+    ] as Array<[string, string]>) {
+      const key = pairKey(opponentA, opponentB);
+      opponentCounts.set(key, (opponentCounts.get(key) || 0) + 1);
+    }
 
     const mixedTeamOpponentKey = getMixedTeamOpponentKey(match.teamA, match.teamB);
     mixedTeamOpponentCounts.set(

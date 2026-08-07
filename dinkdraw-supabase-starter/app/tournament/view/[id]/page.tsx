@@ -691,13 +691,17 @@ export default function PublicTournamentViewPage({
     };
   }, [params.id, supabase]);
 
-  // Polling fallback for spectators on web when realtime WebSocket drops
+  // Poll only as a conservative fallback when Realtime is unavailable. A TV
+  // display can stay open for hours, so frequent full reloads create needless
+  // database traffic when the WebSocket is already delivering updates.
 useEffect(() => {
   if (isLive) return;
 
   const interval = setInterval(() => {
-    void loadTournamentData();
-  }, 5000);
+    if (document.visibilityState === 'visible') {
+      void loadTournamentData();
+    }
+  }, 20000);
 
   return () => clearInterval(interval);
 }, [isLive]);

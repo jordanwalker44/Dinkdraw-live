@@ -3530,15 +3530,19 @@ setScoreDrafts((prev) => {
     };
   }, [params.id, supabase, userId]);
 
-  // Poll even while Realtime reports connected. Mobile WebViews can leave a
-  // WebSocket looking subscribed after an app sleeps or changes networks.
+  // Realtime is the primary update path. Poll only when it is disconnected;
+  // visibility refresh below covers mobile apps returning from sleep.
 useEffect(() => {
+  if (isLive) return;
+
   const interval = setInterval(() => {
-    void loadTournamentData(userId);
-  }, 5000);
+    if (document.visibilityState === 'visible') {
+      void loadTournamentData(userId);
+    }
+  }, 20000);
 
   return () => clearInterval(interval);
-}, [userId]);
+}, [isLive, userId]);
 
     useEffect(() => {
   async function handleVisibilityRefresh() {

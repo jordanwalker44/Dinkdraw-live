@@ -14,6 +14,7 @@ import {
 } from '../../../components/OrganizationBrandBanner';
 import { loadPublicOrganizationBrand } from '../../../lib/organization-brand';
 import { sendTournamentPushEvent } from '../../../lib/tournament-push';
+import { LAST_TOURNAMENT_KEY, saveRecentTournament } from '../../../lib/recent-tournament';
 import { TournamentAnnouncementsLink } from '../../../components/TournamentAnnouncementsLink';
 import { TournamentBracket } from '../../../components/TournamentBracket';
 import { PoolStandingsTables } from '../../../components/PoolStandingsTables';
@@ -47,6 +48,7 @@ type Tournament = {
   rounds: number;
   games_to: number;
   status: string;
+  updated_at: string | null;
   tournament_mode: string | null;
   started_at: string | null;
   format: string;
@@ -63,6 +65,7 @@ type Tournament = {
   champion_player_2_id: string | null;
   ask_for_dupr_id: boolean | null;
   organization_id: string | null;
+  moneyball_series_id: string | null;
   pool_brackets_enabled: boolean | null;
   standings_ranking_method: 'record_first' | 'point_diff_first' | null;
   pool_count: number | null;
@@ -190,8 +193,6 @@ type ScheduleRow = {
   is_bye: boolean;
   is_complete: boolean;
 };
-
-const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
 
 function pairKey(a: string, b: string) {
   return [a, b].sort().join('|');
@@ -2981,6 +2982,16 @@ function logScoreSubmitTiming(
     () => playerSlots.find((slot) => slot.claimed_by_user_id === userId) || null,
     [playerSlots, userId]
   );
+
+  useEffect(() => {
+    if (!tournament || !userId) return;
+    const canReturn =
+      tournament.organizer_user_id === userId ||
+      tournament.co_organizer_user_id === userId ||
+      playerSlots.some((slot) => slot.claimed_by_user_id === userId);
+
+    if (canReturn) saveRecentTournament(tournament);
+  }, [tournament, userId, playerSlots]);
 
   const playersById = useMemo(
     () => Object.fromEntries(playerSlots.map((slot) => [slot.id, slot])),
@@ -6576,7 +6587,7 @@ function renderShortTeam(a: string | null, b: string | null) {
   </div>
 ) : null}
 
-{tournament?.pool_brackets_enabled && tournament.id && canManageScores && !isStarted ? (
+{tournament?.moneyball_series_id && tournament.id && canManageScores && !isStarted ? (
   <div className="card" style={{ marginBottom: 14 }}>
     <div className="card-title">Player Payments</div>
     <div className="card-subtitle">Record each player’s contribution before starting. Every amount is divided equally between today’s prize and the race-to-three grand prize.</div>
@@ -8738,7 +8749,7 @@ isOrganizer &&
             </button>
           </div>
 
-          {tournament?.pool_brackets_enabled && tournament.id ? (
+          {tournament?.moneyball_series_id && tournament.id ? (
             <div style={{ margin: '14px 0 18px', padding: 14, borderRadius: 16, border: '1px solid rgba(255,203,5,0.2)', background: 'rgba(255,203,5,0.035)' }}>
               <div className="card-title" style={{ fontSize: 20 }}>Race to 3 + Prize Pot</div>
               <TournamentPrizePool tournamentId={tournament.id} canManage={canManageScores} dailyWinnerNames={championshipFinalWinnerNames} />

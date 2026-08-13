@@ -24,6 +24,16 @@ type Organization = {
   name: string;
 };
 
+type MoneyballSeries = {
+  id: string;
+  name: string;
+  organization_id: string;
+  format: 'singles' | 'doubles';
+  doubles_mode: 'rotating' | 'fixed' | 'mixed' | null;
+  target_wins: number;
+  default_buy_in_cents: number;
+};
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -135,6 +145,12 @@ export default function CreateTournamentPage() {
   const [favoriteLocations, setFavoriteLocations] = useState<FavoriteLocation[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
+  const [moneyballSeries, setMoneyballSeries] = useState<MoneyballSeries[]>([]);
+  const [moneyballEnabled, setMoneyballEnabled] = useState(false);
+  const [moneyballSeriesChoice, setMoneyballSeriesChoice] = useState<'existing' | 'new'>('existing');
+  const [selectedMoneyballSeriesId, setSelectedMoneyballSeriesId] = useState('');
+  const [newMoneyballSeriesName, setNewMoneyballSeriesName] = useState('');
+  const [moneyballBuyInDollars, setMoneyballBuyInDollars] = useState(10);
   const [canUseOrganizations, setCanUseOrganizations] = useState(false);
   const [canUseCreamOfTheCrop, setCanUseCreamOfTheCrop] = useState(false);
   const [canUsePoolBracketsAsUser, setCanUsePoolBracketsAsUser] = useState(false);
@@ -356,6 +372,58 @@ export default function CreateTournamentPage() {
     Boolean(selectedOrganizationId) && poolBracketEnabledOrganizationIds.includes(selectedOrganizationId)
   );
   const poolBracketsAvailable = tournamentMode === 'round_robin' && format === 'doubles' && ['rotating', 'mixed'].includes(doublesMode);
+  const compatibleMoneyballSeries = useMemo(
+    () => moneyballSeries.filter(
+      (series) => series.format === format && series.doubles_mode === doublesMode
+    ),
+    [moneyballSeries, format, doublesMode]
+  );
+
+  useEffect(() => {
+    if (!selectedOrganizationId) {
+      setMoneyballSeries([]);
+      setSelectedMoneyballSeriesId('');
+      return;
+    }
+
+    let isActive = true;
+    supabase
+      .from('moneyball_series')
+      .select('id, name, organization_id, format, doubles_mode, target_wins, default_buy_in_cents')
+      .eq('organization_id', selectedOrganizationId)
+      .eq('status', 'active')
+      .order('name')
+      .then(({ data, error }) => {
+        if (!isActive) return;
+        if (error) {
+          setMoneyballSeries([]);
+          return;
+        }
+        setMoneyballSeries((data || []) as MoneyballSeries[]);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [selectedOrganizationId, supabase]);
+
+  useEffect(() => {
+    if (!moneyballEnabled) return;
+    if (!compatibleMoneyballSeries.some((series) => series.id === selectedMoneyballSeriesId)) {
+      setSelectedMoneyballSeriesId(compatibleMoneyballSeries[0]?.id || '');
+      if (!compatibleMoneyballSeries.length) setMoneyballSeriesChoice('new');
+    }
+  }, [moneyballEnabled, compatibleMoneyballSeries, selectedMoneyballSeriesId]);
+
+  useEffect(() => {
+    if (!moneyballEnabled || moneyballSeriesChoice !== 'existing') return;
+    const selectedSeries = compatibleMoneyballSeries.find(
+      (series) => series.id === selectedMoneyballSeriesId
+    );
+    if (selectedSeries) {
+      setMoneyballBuyInDollars(selectedSeries.default_buy_in_cents / 100);
+    }
+  }, [moneyballEnabled, moneyballSeriesChoice, compatibleMoneyballSeries, selectedMoneyballSeriesId]);
 
   useEffect(() => {
     if (courts > maxCourtsAllowed) {
@@ -403,6 +471,7 @@ export default function CreateTournamentPage() {
 
   useEffect(() => {
     if (!poolBracketsAvailable && poolBracketsEnabled) setPoolBracketsEnabled(false);
+    if (!poolBracketsEnabled) setMoneyballEnabled(false);
   }, [poolBracketsAvailable, poolBracketsEnabled]);
 
   async function handleCreate() {
@@ -438,6 +507,29 @@ export default function CreateTournamentPage() {
     }
   }
 
+  if (moneyballEnabled) {
+    if (!poolBracketsEnabled) {
+      setMessage('Moneyball currently requires pool play with postseason brackets.');
+      return;
+    }
+    if (!selectedOrganizationId) {
+      setMessage('Select an organization for this Moneyball Series.');
+      return;
+    }
+    if (moneyballSeriesChoice === 'existing' && !selectedMoneyballSeriesId) {
+      setMessage('Select an existing Moneyball Series.');
+      return;
+    }
+    if (moneyballSeriesChoice === 'new' && newMoneyballSeriesName.trim().length < 2) {
+      setMessage('Enter a name for the new Moneyball Series.');
+      return;
+    }
+    if (moneyballBuyInDollars <= 0 || moneyballBuyInDollars % 2 !== 0) {
+      setMessage('The Moneyball buy-in must be a positive whole-dollar amount that splits evenly.');
+      return;
+    }
+  }
+
   if (!title.trim()) {
     setMessage('Please enter a tournament name.');
     return;
@@ -466,6 +558,30 @@ export default function CreateTournamentPage() {
     });
 
     const joinCode = makeJoinCode();
+    let resolvedMoneyballSeriesId: string | null = null;
+
+    if (moneyballEnabled && moneyballSeriesChoice === 'new') {
+      const { data: createdSeries, error: seriesError } = await supabase
+        .from('moneyball_series')
+        .insert({
+          organization_id: selectedOrganizationId,
+          organizer_user_id: user.id,
+          name: newMoneyballSeriesName.trim(),
+          format,
+          doubles_mode: format === 'doubles' ? doublesMode : null,
+          target_wins: 3,
+          default_buy_in_cents: moneyballBuyInDollars * 100,
+        })
+        .select('id')
+        .single();
+
+      if (seriesError || !createdSeries) {
+        throw new Error(seriesError?.message || 'Could not create the Moneyball Series.');
+      }
+      resolvedMoneyballSeriesId = createdSeries.id;
+    } else if (moneyballEnabled) {
+      resolvedMoneyballSeriesId = selectedMoneyballSeriesId;
+    }
 
     const { data: tournament, error } = await supabase
       .from('tournaments')
@@ -473,6 +589,7 @@ export default function CreateTournamentPage() {
         title: title.trim(),
         organizer_user_id: user.id,
         organization_id: selectedOrganizationId || null,
+        moneyball_series_id: resolvedMoneyballSeriesId,
         organizer_name: safeOrganizerName,
         join_code: joinCode,
         event_date: eventDate || null,
@@ -1040,6 +1157,65 @@ and final placement tie-breakers.
 
     {poolBracketsEnabled ? (
       <div className="grid" style={{ gap: 12, marginTop: 14 }}>
+        <div style={{ padding: 14, borderRadius: 14, border: '1px solid rgba(34,197,94,0.32)', background: 'rgba(34,197,94,0.07)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+            <div>
+              <div className="card-title" style={{ fontSize: 17 }}>Moneyball Event</div>
+              <div className="muted" style={{ fontSize: 12 }}>Connect weekly wins and grand-prize money to one named series.</div>
+            </div>
+            <button
+              type="button"
+              className={`button ${moneyballEnabled ? 'primary' : 'secondary'}`}
+              onClick={() => setMoneyballEnabled((enabled) => !enabled)}
+              style={{ width: 'auto', minWidth: 110 }}
+            >
+              {moneyballEnabled ? 'Enabled' : 'Not Moneyball'}
+            </button>
+          </div>
+
+          {moneyballEnabled ? (
+            <div style={{ display: 'grid', gap: 10, marginTop: 12 }}>
+              {!selectedOrganizationId ? (
+                <div style={{ color: '#FCA5A5', fontSize: 13, fontWeight: 850 }}>Select an organization above before creating a Moneyball event.</div>
+              ) : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8 }}>
+                    <button type="button" className={`button ${moneyballSeriesChoice === 'existing' ? 'primary' : 'secondary'}`} onClick={() => setMoneyballSeriesChoice('existing')} disabled={!compatibleMoneyballSeries.length}>Continue Series</button>
+                    <button type="button" className={`button ${moneyballSeriesChoice === 'new' ? 'primary' : 'secondary'}`} onClick={() => setMoneyballSeriesChoice('new')}>Create New Series</button>
+                  </div>
+
+                  {moneyballSeriesChoice === 'existing' ? (
+                    <div>
+                      <label className="label">Moneyball Series</label>
+                      <select className="input" value={selectedMoneyballSeriesId} onChange={(event) => {
+                        const seriesId = event.target.value;
+                        setSelectedMoneyballSeriesId(seriesId);
+                        const series = moneyballSeries.find((item) => item.id === seriesId);
+                        if (series) setMoneyballBuyInDollars(series.default_buy_in_cents / 100);
+                      }}>
+                        {compatibleMoneyballSeries.map((series) => <option key={series.id} value={series.id}>{series.name} • Race to {series.target_wins}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="label">New Series Name</label>
+                      <input className="input" value={newMoneyballSeriesName} onChange={(event) => setNewMoneyballSeriesName(event.target.value)} placeholder={doublesMode === 'mixed' ? 'Club 65 Mixed Moneyball' : 'Club 65 Moneyball'} />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="label">Buy-In Per Player</label>
+                    <select className="input" value={moneyballBuyInDollars} onChange={(event) => setMoneyballBuyInDollars(Number(event.target.value))} disabled={moneyballSeriesChoice === 'existing'}>
+                      {[10, 20, 30, 40, 50].map((amount) => <option key={amount} value={amount}>${amount} • ${amount / 2} daily + ${amount / 2} grand prize</option>)}
+                    </select>
+                    <div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Series format: {doublesMode === 'mixed' ? 'Mixed Doubles' : doublesMode === 'rotating' ? 'Rotating Doubles' : 'Doubles'} • First to 3 wins.</div>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : null}
+        </div>
+
         <div>
           <label className="label">Number of Pools</label>
           <select className="input" value={poolCount} onChange={(event) => setPoolCount(Number(event.target.value))}>

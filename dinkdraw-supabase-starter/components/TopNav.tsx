@@ -4,13 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../lib/supabase-browser';
-
-const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
-
-type LastTournament = {
-  id: string;
-  title: string;
-};
+import { type RecentTournament, readRecentTournament } from '../lib/recent-tournament';
 
 type NavItem = {
   label: string;
@@ -20,7 +14,7 @@ type NavItem = {
 export function TopNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const [lastTournament, setLastTournament] = useState<LastTournament | null>(null);
+  const [lastTournament, setLastTournament] = useState<RecentTournament | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [initials, setInitials] = useState('');
   const [isSignedIn, setIsSignedIn] = useState(false);
@@ -67,10 +61,7 @@ export function TopNav() {
   }
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
-      if (stored) setLastTournament(JSON.parse(stored));
-    } catch {}
+    setLastTournament(readRecentTournament());
 
     const supabase = getSupabaseBrowserClient();
 

@@ -4,26 +4,28 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { TopNav } from '../components/TopNav';
 import { getSupabaseBrowserClient } from '../lib/supabase-browser';
+import {
+  RECENT_COMPLETED_TOURNAMENT_DAYS,
+  type RecentTournament,
+  readRecentTournament,
+  saveRecentTournament,
+} from '../lib/recent-tournament';
 
-type LastTournament = {
-  id: string;
-  title: string;
+type TournamentShortcutRow = RecentTournament & {
+  organizer_user_id: string;
+  created_at: string;
+  updated_at: string | null;
 };
-
-const LAST_TOURNAMENT_KEY = 'dinkdraw_last_tournament';
 
 export default function HomePage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
-  const [lastTournament, setLastTournament] = useState<LastTournament | null>(null);
+  const [lastTournament, setLastTournament] = useState<RecentTournament | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(LAST_TOURNAMENT_KEY);
-      if (saved) setLastTournament(JSON.parse(saved));
-    } catch {}
+    setLastTournament(readRecentTournament());
 
     async function loadUser() {
       setIsLoadingUser(true);
@@ -34,12 +36,43 @@ export default function HomePage() {
       setUserEmail(user?.email ?? '');
 
       if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', user.id)
-          .maybeSingle();
+        const [{ data: profile }, { data: joinedSlots }] = await Promise.all([
+          supabase.from('profiles').select('display_name').eq('id', user.id).maybeSingle(),
+          supabase.from('tournament_players').select('tournament_id').eq('claimed_by_user_id', user.id),
+        ]);
         setDisplayName(profile?.display_name || user.email?.split('@')[0] || '');
+
+        const joinedIds = (joinedSlots || []).map((slot) => slot.tournament_id);
+        let tournamentQuery = supabase
+          .from('tournaments')
+          .select('id, title, status, organizer_user_id, created_at, updated_at');
+
+        tournamentQuery = joinedIds.length
+          ? tournamentQuery.or(`organizer_user_id.eq.${user.id},id.in.(${joinedIds.join(',')})`)
+          : tournamentQuery.eq('organizer_user_id', user.id);
+
+        const { data: tournamentRows, error: tournamentError } = await tournamentQuery.order(
+          'updated_at',
+          { ascending: false }
+        );
+        if (tournamentError) {
+          setIsLoadingUser(false);
+          return;
+        }
+        const rows = (tournamentRows || []) as TournamentShortcutRow[];
+        const active = rows.find((row) => row.status !== 'completed');
+        const recentCutoff = Date.now() - RECENT_COMPLETED_TOURNAMENT_DAYS * 24 * 60 * 60 * 1000;
+        const recentCompleted = rows.find(
+          (row) => row.status === 'completed' && new Date(row.updated_at || row.created_at).getTime() >= recentCutoff
+        );
+        const shortcut = active || recentCompleted || null;
+
+        if (shortcut) {
+          saveRecentTournament(shortcut);
+          setLastTournament(readRecentTournament());
+        } else {
+          setLastTournament(null);
+        }
       }
 
       setIsLoadingUser(false);
@@ -79,11 +112,11 @@ export default function HomePage() {
 <div className="card" style={{ marginBottom: 14 }}>
   <div className="card-title" style={{ color: '#FFCB05' }}>Start Here</div>
   <div className="card-subtitle">
-    Create a tournament, join one with a code, or jump back into your latest event.
+      Create a tournament, join one with a code, or jump back into your latest event.
   </div>
 
   <div className="grid">
-    {lastTournament ? (
+    {userEmail && lastTournament ? (
   <Link href={`/tournament/${lastTournament.id}`}>
     <button
   className="action-button black"
@@ -93,7 +126,9 @@ export default function HomePage() {
     textAlign: 'center',
   }}
 >
-      <div className="action-title" style={{ marginBottom: 6 }}>Resume Tournament</div>
+      <div className="action-title" style={{ marginBottom: 6 }}>
+        {lastTournament.status === 'completed' ? 'Most Recent Tournament' : 'Current Tournament'}
+      </div>
       <div
   className="action-subtitle"
   style={{

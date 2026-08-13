@@ -13,6 +13,9 @@ type PrizePlayer = {
 };
 
 type Dashboard = {
+  series_id: string;
+  series_name: string;
+  default_buy_in_cents: number;
   cycle_id: string;
   status: 'active' | 'pending_payout';
   target_wins: number;
@@ -45,6 +48,7 @@ export function TournamentPrizePool({ tournamentId, canManage, dailyWinnerNames 
     if (error) { setMessage(error.message); return; }
     const next = data as Dashboard;
     setDashboard(next);
+    setBulkPaymentDraft((next.default_buy_in_cents / 100).toFixed(2));
     if (!amountsResult.error) {
       setPaymentDrafts(Object.fromEntries(((amountsResult.data || []) as Array<{ user_id: string; amount_cents: number }>).map((row) => [row.user_id, (row.amount_cents / 100).toFixed(2)])));
     }
@@ -107,6 +111,7 @@ export function TournamentPrizePool({ tournamentId, canManage, dailyWinnerNames 
 
   return (
     <div style={{ display: 'grid', gap: 14, marginTop: 12 }}>
+      <div style={{ textAlign: 'center', color: '#FFCB05', fontSize: 18, fontWeight: 950 }}>{dashboard.series_name}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
         <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Daily Prize</div><div style={{ color: '#FFCB05', fontSize: 26, fontWeight: 950 }}>{money(dashboard.daily_pot_cents)}</div></div>
         <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Grand Prize Pot</div><div style={{ color: '#FFCB05', fontSize: 26, fontWeight: 950 }}>{money(dashboard.grand_pot_cents)}</div></div>

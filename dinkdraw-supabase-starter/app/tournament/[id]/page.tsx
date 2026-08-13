@@ -2950,6 +2950,9 @@ function logScoreSubmitTiming(
   const [isDeletingTournament, setIsDeletingTournament] = useState(false);
   const [isRematching, setIsRematching] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSlowLoading, setIsSlowLoading] = useState(false);
+  const [loadErrorMessage, setLoadErrorMessage] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [activeTab, setActiveTab] = useState<'players' | 'rounds' | 'standings'>('players');
   const [selectedRound, setSelectedRound] = useState(1);
   const [selectedPlayoffRound, setSelectedPlayoffRound] = useState<number | null>(null);
@@ -3386,6 +3389,19 @@ const hasAnyScores = matches.some(
   }, [tournament, playerSlots, newNames, minPlayersRequired]);
 
   async function loadTournamentData(currentUserId?: string) {
+    async function timedRequest<T>(label: string, request: PromiseLike<T>): Promise<T> {
+      const startedAt = nowForScoreSubmitTiming();
+
+      try {
+        return await request;
+      } finally {
+        console.info('[DinkDraw tournament load]', label, {
+          durationMs: scoreSubmitElapsedMs(startedAt),
+          tournamentId: params.id,
+        });
+      }
+    }
+
     const [
   tournamentResult,
   playersResult,
@@ -3393,25 +3409,25 @@ const hasAnyScores = matches.some(
   playoffMatchesResult,
   leagueSessionResult,
 ] = await Promise.all([
-  supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle(),
-  supabase
+  timedRequest('tournament', supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle()),
+  timedRequest('players', supabase
     .from('tournament_players')
     .select('*')
     .eq('tournament_id', params.id)
-    .order('slot_number', { ascending: true }),
-  supabase
+    .order('slot_number', { ascending: true })),
+  timedRequest('matches', supabase
     .from('matches')
     .select('*')
     .eq('tournament_id', params.id)
     .order('round_number', { ascending: true })
-    .order('court_number', { ascending: true }),
-  supabase
+    .order('court_number', { ascending: true })),
+  timedRequest('playoff matches', supabase
     .from('playoff_matches')
     .select('*')
     .eq('tournament_id', params.id)
     .order('round_number', { ascending: true })
-    .order('match_number', { ascending: true }),
-  supabase.from('league_sessions').select('league_id, session_number').eq('tournament_id', params.id).maybeSingle(),
+    .order('match_number', { ascending: true })),
+  timedRequest('league session', supabase.from('league_sessions').select('league_id, session_number').eq('tournament_id', params.id).maybeSingle()),
 ]);
 
 const tournamentData = tournamentResult.data;
@@ -3426,7 +3442,7 @@ const loadError =
 
 if (loadError) {
   console.error('Failed to refresh tournament data:', loadError);
-  return;
+  return false;
 }
 
 setTournament(tournamentData || null);
@@ -3444,7 +3460,17 @@ setMatches((prev) => {
 setPlayoffMatches(playoffMatchesResult.data || []);
 setLeagueSession(leagueSessionResult.data || null);
 
-setOrganizationBrand(await loadPublicOrganizationBrand(supabase, tournamentData?.organization_id));
+// Branding is optional. Never keep tournament data in a loading state while
+// waiting for this separate RPC.
+void timedRequest(
+  'organization branding',
+  loadPublicOrganizationBrand(supabase, tournamentData?.organization_id)
+)
+  .then(setOrganizationBrand)
+  .catch((error) => {
+    console.error('Failed to load organization branding:', error);
+    setOrganizationBrand(null);
+  });
 
 setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};
@@ -3472,19 +3498,30 @@ setScoreDrafts((prev) => {
 
   return next;
 });
+
+return true;
 }
 
   useEffect(() => {
     async function load() {
   setIsLoading(true);
+  setIsSlowLoading(false);
+  setLoadErrorMessage('');
 
-  // Run auth AND tournament data at the same time instead of one after another
-  const [{ data: authData }] = await Promise.all([
-    supabase.auth.getUser(),
-    loadTournamentData(),
-  ]);
+  try {
+    // The cached session is sufficient to render. Server-side user validation
+    // should not hold the tournament UI on its initial loading state.
+    const [{ data: authData }, loaded] = await Promise.all([
+      supabase.auth.getSession(),
+      loadTournamentData(),
+    ]);
 
-  const currentUserId = authData.user?.id ?? '';
+    if (!loaded) {
+      setLoadErrorMessage('We could not load this tournament. Check your connection and try again.');
+      return;
+    }
+
+  const currentUserId = authData.session?.user?.id ?? '';
   setUserId(currentUserId);
 
   // Load co-organizers after auth resolves, but don't block the page on it
@@ -3499,10 +3536,25 @@ setScoreDrafts((prev) => {
       });
   }
 
-  setIsLoading(false);
+  } catch (error) {
+    console.error('Failed to load tournament:', error);
+    setLoadErrorMessage('We could not load this tournament. Check your connection and try again.');
+  } finally {
+    setIsLoading(false);
+  }
 }
-    load();
-  }, [params.id, supabase]);
+    void load();
+  }, [params.id, supabase, loadAttempt]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsSlowLoading(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => setIsSlowLoading(true), 4000);
+    return () => window.clearTimeout(timeout);
+  }, [isLoading]);
 
   useEffect(() => {
     const channel = supabase
@@ -6370,6 +6422,23 @@ function renderShortTeam(a: string | null, b: string | null) {
   return (
     <main className="page-shell">
       <TopNav />
+      {loadErrorMessage ? (
+        <div className="notice" style={{ marginBottom: 14 }}>
+          <div>{loadErrorMessage}</div>
+          <button
+            type="button"
+            className="button primary"
+            style={{ marginTop: 10 }}
+            onClick={() => setLoadAttempt((attempt) => attempt + 1)}
+          >
+            Try Again
+          </button>
+        </div>
+      ) : isSlowLoading ? (
+        <div className="notice" style={{ marginBottom: 14 }}>
+          This tournament is taking longer than usual to load. We’re still trying…
+        </div>
+      ) : null}
       {leagueSession ? (
         <Link href={`/leagues/${leagueSession.league_id}`} className="button secondary" style={{ marginBottom: 14, width: '100%' }}>
           ← Back to League • Week {leagueSession.session_number}

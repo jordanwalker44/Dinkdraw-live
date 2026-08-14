@@ -33,6 +33,7 @@ type MoneyballSeries = {
   division: 'mixed' | 'mens' | 'womens' | 'open';
   target_wins: number;
   default_buy_in_cents: number;
+  is_test: boolean;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -377,9 +378,9 @@ export default function CreateTournamentPage() {
   const poolBracketsAvailable = tournamentMode === 'round_robin' && format === 'doubles' && ['rotating', 'mixed'].includes(doublesMode);
   const compatibleMoneyballSeries = useMemo(
     () => moneyballSeries.filter(
-      (series) => series.format === format && series.doubles_mode === doublesMode
+      (series) => series.format === format && series.doubles_mode === doublesMode && series.is_test === testMode
     ),
-    [moneyballSeries, format, doublesMode]
+    [moneyballSeries, format, doublesMode, testMode]
   );
 
   useEffect(() => {
@@ -392,7 +393,7 @@ export default function CreateTournamentPage() {
     let isActive = true;
     supabase
       .from('moneyball_series')
-      .select('id, name, organization_id, format, doubles_mode, division, target_wins, default_buy_in_cents')
+      .select('id, name, organization_id, format, doubles_mode, division, target_wins, default_buy_in_cents, is_test')
       .eq('organization_id', selectedOrganizationId)
       .eq('status', 'active')
       .order('name')
@@ -522,10 +523,6 @@ export default function CreateTournamentPage() {
   }
 
   if (moneyballEnabled) {
-    if (testMode) {
-      setMessage('Turn off Test Mode before creating a Moneyball event. Test results never count toward pots or wins.');
-      return;
-    }
     if (!poolBracketsEnabled) {
       setMessage('Moneyball currently requires pool play with postseason brackets.');
       return;
@@ -590,6 +587,7 @@ export default function CreateTournamentPage() {
           division: doublesMode === 'mixed' ? 'mixed' : moneyballDivision,
           target_wins: 3,
           default_buy_in_cents: moneyballBuyInDollars * 100,
+          is_test: testMode,
         })
         .select('id')
         .single();
@@ -1189,7 +1187,6 @@ and final placement tie-breakers.
               onClick={() => {
                 setTestMode((enabled) => {
                   const next = !enabled;
-                  if (next) setMoneyballEnabled(false);
                   return next;
                 });
               }}
@@ -1198,7 +1195,7 @@ and final placement tie-breakers.
               {testMode ? 'Testing' : 'Off'}
             </button>
           </div>
-          {testMode ? <div style={{ marginTop: 9, color: '#C4B5FD', fontSize: 12, fontWeight: 850 }}>Test tournaments do not track Moneyball payments, payouts, or series wins.</div> : null}
+          {testMode ? <div style={{ marginTop: 9, color: '#C4B5FD', fontSize: 12, fontWeight: 850 }}>Test tournaments stay private from public Moneyball standings. Link accounts if you want to test individual payments and wins.</div> : null}
         </div>
 
         <div style={{ padding: 14, borderRadius: 14, border: '1px solid rgba(34,197,94,0.32)', background: 'rgba(34,197,94,0.07)' }}>
@@ -1211,15 +1208,11 @@ and final placement tie-breakers.
               type="button"
               className={`button ${moneyballEnabled ? 'primary' : 'secondary'}`}
               onClick={() => {
-                if (testMode) {
-                  setMessage('Turn off Test Mode before enabling Moneyball.');
-                  return;
-                }
                 setMoneyballEnabled((enabled) => !enabled);
               }}
               style={{ width: 'auto', minWidth: 110 }}
             >
-              {moneyballEnabled ? 'Enabled' : 'Not Moneyball'}
+              {moneyballEnabled ? (testMode ? 'Test Moneyball' : 'Live Moneyball') : 'Not Moneyball'}
             </button>
           </div>
 
@@ -1245,7 +1238,7 @@ and final placement tie-breakers.
                       }}>
                         {compatibleMoneyballSeries.map((series) => (
                           <option key={series.id} value={series.id}>
-                            {series.name} • {series.division === 'mens' ? "Men's" : series.division === 'womens' ? "Women's" : series.division === 'mixed' ? 'Mixed' : 'Open'} • Race to {series.target_wins}
+                            {series.is_test ? '[TEST] ' : ''}{series.name} • {series.division === 'mens' ? "Men's" : series.division === 'womens' ? "Women's" : series.division === 'mixed' ? 'Mixed' : 'Open'} • Race to {series.target_wins}
                           </option>
                         ))}
                       </select>

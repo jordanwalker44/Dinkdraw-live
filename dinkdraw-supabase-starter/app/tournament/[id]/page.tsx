@@ -2950,6 +2950,8 @@ function logScoreSubmitTiming(
   const [isEndingEarly, setIsEndingEarly] = useState(false);
   const [isDeletingTournament, setIsDeletingTournament] = useState(false);
   const [isRematching, setIsRematching] = useState(false);
+  const [editedRounds, setEditedRounds] = useState<number | null>(null);
+  const [isSavingRounds, setIsSavingRounds] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSlowLoading, setIsSlowLoading] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState('');
@@ -3177,7 +3179,7 @@ const tournamentPhaseSubtitle =
     ? 'Playoff matches are active. Winners advance through the bracket.'
     : '';
 
-const hasAnyScores = matches.some(
+  const hasAnyScores = matches.some(
   (m) =>
     m.team_a_score !== null ||
     m.team_b_score !== null ||
@@ -3188,6 +3190,10 @@ const hasAnyScores = matches.some(
     m.game_3_a !== null ||
     m.game_3_b !== null
 );
+
+  useEffect(() => {
+    if (tournament && editedRounds === null) setEditedRounds(tournament.rounds);
+  }, [tournament, editedRounds]);
 
     const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming' | 'not_played'>();
@@ -4290,6 +4296,99 @@ if (existingFinalMatches.length > 0) {
   await loadTournamentData(userId);
   setMessage('Final Round created.');
 }
+
+  async function saveRoundCount() {
+    if (!tournament || editedRounds === null || !isOrganizer) return;
+
+    const nextRounds = Math.max(1, Math.min(30, Math.trunc(editedRounds)));
+    setEditedRounds(nextRounds);
+    if (nextRounds === tournament.rounds) {
+      setMessage('The tournament already has that number of rounds.');
+      return;
+    }
+    if (hasAnyScores) {
+      setMessage('Rounds are locked because a score has already been entered.');
+      return;
+    }
+    if (playoffMatches.length > 0) {
+      setMessage('Rounds are locked because postseason brackets have already been generated.');
+      return;
+    }
+
+    if (matches.length > 0 && !window.confirm(
+      `Change this tournament from ${tournament.rounds} to ${nextRounds} rounds? The entire round robin schedule, including rotations, court assignments, and serving order, will be regenerated.`
+    )) return;
+
+    setIsSavingRounds(true);
+    setMessage('');
+
+    try {
+      let replacementSchedule: ScheduleRow[] = [];
+
+      if (tournament.status === 'started') {
+        const namedPlayers = playerSlots.filter((player) => (player.display_name || '').trim());
+        const playersPerCourt = isSingles ? 2 : 4;
+        const availableCourts = Math.max(
+          1,
+          Math.min(tournament.courts, Math.floor(namedPlayers.length / playersPerCourt))
+        );
+
+        if (tournament.pool_brackets_enabled) {
+          const poolCount = tournament.pool_count || 0;
+          if (poolCount < 2 || namedPlayers.some((player) => !player.pool_number)) {
+            throw new Error('Pool assignments are incomplete, so the schedule cannot be regenerated.');
+          }
+          replacementSchedule = buildPoolSchedule(
+            namedPlayers,
+            poolCount,
+            nextRounds,
+            availableCourts,
+            tournament.doubles_mode
+          );
+        } else {
+          replacementSchedule = buildSchedule(
+            namedPlayers,
+            nextRounds,
+            availableCourts,
+            tournament.format,
+            tournament.doubles_mode
+          );
+        }
+
+        const validation = validateScheduleRows(replacementSchedule, {
+          format: tournament.format,
+          tournamentMode: tournament.tournament_mode,
+          expectedRoundCount: nextRounds,
+          availableCourts,
+        });
+        if (!validation.isValid) throw new Error(validation.message);
+
+        replacementSchedule = replacementSchedule.map((row) => ({
+          ...row,
+          court_label: getCourtLabel(tournament, row.court_number),
+        }));
+      }
+
+      const { error } = await supabase.rpc('replace_tournament_rounds_before_scores', {
+        p_tournament_id: tournament.id,
+        p_rounds: nextRounds,
+        p_schedule: replacementSchedule,
+      });
+      if (error) throw error;
+
+      await loadTournamentData(userId);
+      setSelectedRound(1);
+      setMessage(
+        tournament.status === 'started'
+          ? `Rounds changed to ${nextRounds}. The schedule has been regenerated.`
+          : `Rounds changed to ${nextRounds}.`
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? `Could not change rounds: ${error.message}` : 'Could not change rounds.');
+    } finally {
+      setIsSavingRounds(false);
+    }
+  }
 
   async function generateScheduleAndStart() {
   if (!tournament) return;
@@ -7119,6 +7218,68 @@ disabled={!canEditName}
   <div className="card-subtitle">
     Save names first, then start the tournament when everyone is ready.
   </div>
+
+  {isOrganizer && tournament?.tournament_mode === 'round_robin' ? (
+    <div className="list-item" style={{ marginBottom: 14 }}>
+      <div className="row-between" style={{ gap: 12, alignItems: 'center' }}>
+        <div>
+          <div style={{ fontWeight: 900 }}>Number of Rounds</div>
+          <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+            {hasAnyScores
+              ? 'Locked because a score has been entered.'
+              : playoffMatches.length > 0
+              ? 'Locked because postseason brackets exist.'
+              : matches.length > 0
+              ? 'Changing this will regenerate all rotations and court assignments.'
+              : 'You can change this until the first score is entered.'}
+          </div>
+        </div>
+        <strong style={{ color: '#FFCB05', fontSize: 20 }}>{tournament.rounds}</strong>
+      </div>
+
+      {!isCompleted && !hasAnyScores && playoffMatches.length === 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(70px, 1fr) 48px', gap: 8, marginTop: 12 }}>
+          <button
+            type="button"
+            className="button secondary"
+            aria-label="Remove one round"
+            onClick={() => setEditedRounds((value) => Math.max(1, (value ?? tournament.rounds) - 1))}
+            disabled={isSavingRounds || (editedRounds ?? tournament.rounds) <= 1}
+          >
+            −
+          </button>
+          <input
+            className="input"
+            type="number"
+            min={1}
+            max={30}
+            value={editedRounds ?? tournament.rounds}
+            onChange={(event) => setEditedRounds(Number(event.target.value))}
+            disabled={isSavingRounds}
+            style={{ textAlign: 'center', fontWeight: 900 }}
+          />
+          <button
+            type="button"
+            className="button secondary"
+            aria-label="Add one round"
+            onClick={() => setEditedRounds((value) => Math.min(30, (value ?? tournament.rounds) + 1))}
+            disabled={isSavingRounds || (editedRounds ?? tournament.rounds) >= 30}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="button primary"
+            onClick={saveRoundCount}
+            disabled={isSavingRounds || editedRounds === tournament.rounds || !Number.isFinite(editedRounds)}
+            style={{ gridColumn: '1 / -1' }}
+          >
+            {isSavingRounds ? 'Updating Schedule...' : matches.length > 0 ? 'Save & Regenerate Schedule' : 'Save Rounds'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  ) : null}
 
   <div className="grid">
     {!isLocked ? (

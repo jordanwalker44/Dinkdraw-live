@@ -67,6 +67,7 @@ type Tournament = {
   organization_id: string | null;
   moneyball_series_id: string | null;
   pool_brackets_enabled: boolean | null;
+  test_mode: boolean;
   standings_ranking_method: 'record_first' | 'point_diff_first' | null;
   pool_count: number | null;
   pool_qualifiers_per_gender: number | null;
@@ -4371,7 +4372,7 @@ const results = updates.length > 0 ? await Promise.all(updates) : [];
         return;
       }
 
-      if (tournament.pool_brackets_enabled) {
+      if (tournament.pool_brackets_enabled && !tournament.test_mode) {
         const unlinkedPlayers = namedPlayers.filter((slot) => !slot.claimed_by_user_id);
         if (unlinkedPlayers.length > 0) {
           setMessage(`Every player must claim their spot with a DinkDraw account before this tournament can start. ${unlinkedPlayers.length} player${unlinkedPlayers.length === 1 ? ' is' : 's are'} still unclaimed.`);
@@ -6661,6 +6662,12 @@ function renderShortTeam(a: string | null, b: string | null) {
     <div className="card-title">Player Payments</div>
     <div className="card-subtitle">Record each player’s contribution before starting. Every amount is divided equally between today’s prize and the race-to-three grand prize.</div>
     <TournamentPrizePool tournamentId={tournament.id} canManage={canManageScores} dailyWinnerNames={championshipFinalWinnerNames} />
+  </div>
+) : null}
+
+{tournament?.test_mode ? (
+  <div className="notice" style={{ marginBottom: 14, borderColor: 'rgba(167,139,250,0.55)', color: '#C4B5FD' }}>
+    Test Mode is enabled. Players do not need to claim their spots, and this event does not count toward Moneyball wins or prize money.
   </div>
 ) : null}
 

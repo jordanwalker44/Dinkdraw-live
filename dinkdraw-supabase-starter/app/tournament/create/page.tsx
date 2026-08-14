@@ -168,6 +168,7 @@ export default function CreateTournamentPage() {
   const [playoffAdvanceCount, setPlayoffAdvanceCount] = useState(8);
   const [playoffSeedingStyle, setPlayoffSeedingStyle] = useState<'traditional' | 'simple'>('traditional');
   const [poolBracketsEnabled, setPoolBracketsEnabled] = useState(false);
+  const [testMode, setTestMode] = useState(false);
   const [poolCount, setPoolCount] = useState(2);
   const [poolQualifiersPerGender, setPoolQualifiersPerGender] = useState(2);
   const [bracketMatchFormat, setBracketMatchFormat] = useState<'single' | 'best_of_3'>('single');
@@ -481,7 +482,10 @@ export default function CreateTournamentPage() {
 
   useEffect(() => {
     if (!poolBracketsAvailable && poolBracketsEnabled) setPoolBracketsEnabled(false);
-    if (!poolBracketsEnabled) setMoneyballEnabled(false);
+    if (!poolBracketsEnabled) {
+      setMoneyballEnabled(false);
+      setTestMode(false);
+    }
   }, [poolBracketsAvailable, poolBracketsEnabled]);
 
   async function handleCreate() {
@@ -518,6 +522,10 @@ export default function CreateTournamentPage() {
   }
 
   if (moneyballEnabled) {
+    if (testMode) {
+      setMessage('Turn off Test Mode before creating a Moneyball event. Test results never count toward pots or wins.');
+      return;
+    }
     if (!poolBracketsEnabled) {
       setMessage('Moneyball currently requires pool play with postseason brackets.');
       return;
@@ -635,6 +643,7 @@ export default function CreateTournamentPage() {
           : null,
         playoff_seeding_style: 'traditional',
         pool_brackets_enabled: poolBracketsEnabled,
+        test_mode: poolBracketsEnabled ? testMode : false,
         pool_count: poolBracketsEnabled ? poolCount : null,
         pool_qualifiers_per_gender: poolBracketsEnabled ? poolQualifiersPerGender : null,
         bracket_match_format: poolBracketsEnabled ? bracketMatchFormat : null,
@@ -1168,6 +1177,30 @@ and final placement tie-breakers.
 
     {poolBracketsEnabled ? (
       <div className="grid" style={{ gap: 12, marginTop: 14 }}>
+        <div style={{ padding: 14, borderRadius: 14, border: '1px solid rgba(167,139,250,0.38)', background: 'rgba(167,139,250,0.08)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+            <div>
+              <div className="card-title" style={{ fontSize: 17 }}>Test Mode</div>
+              <div className="muted" style={{ fontSize: 12 }}>Start with organizer-entered names without requiring players to claim accounts.</div>
+            </div>
+            <button
+              type="button"
+              className={`button ${testMode ? 'primary' : 'secondary'}`}
+              onClick={() => {
+                setTestMode((enabled) => {
+                  const next = !enabled;
+                  if (next) setMoneyballEnabled(false);
+                  return next;
+                });
+              }}
+              style={{ width: 'auto', minWidth: 100 }}
+            >
+              {testMode ? 'Testing' : 'Off'}
+            </button>
+          </div>
+          {testMode ? <div style={{ marginTop: 9, color: '#C4B5FD', fontSize: 12, fontWeight: 850 }}>Test tournaments do not track Moneyball payments, payouts, or series wins.</div> : null}
+        </div>
+
         <div style={{ padding: 14, borderRadius: 14, border: '1px solid rgba(34,197,94,0.32)', background: 'rgba(34,197,94,0.07)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
             <div>
@@ -1177,7 +1210,13 @@ and final placement tie-breakers.
             <button
               type="button"
               className={`button ${moneyballEnabled ? 'primary' : 'secondary'}`}
-              onClick={() => setMoneyballEnabled((enabled) => !enabled)}
+              onClick={() => {
+                if (testMode) {
+                  setMessage('Turn off Test Mode before enabling Moneyball.');
+                  return;
+                }
+                setMoneyballEnabled((enabled) => !enabled);
+              }}
               style={{ width: 'auto', minWidth: 110 }}
             >
               {moneyballEnabled ? 'Enabled' : 'Not Moneyball'}

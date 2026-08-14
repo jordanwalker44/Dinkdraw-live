@@ -30,6 +30,7 @@ type MoneyballSeries = {
   organization_id: string;
   format: 'singles' | 'doubles';
   doubles_mode: 'rotating' | 'fixed' | 'mixed' | null;
+  division: 'mixed' | 'mens' | 'womens' | 'open';
   target_wins: number;
   default_buy_in_cents: number;
 };
@@ -151,6 +152,7 @@ export default function CreateTournamentPage() {
   const [selectedMoneyballSeriesId, setSelectedMoneyballSeriesId] = useState('');
   const [newMoneyballSeriesName, setNewMoneyballSeriesName] = useState('');
   const [moneyballBuyInDollars, setMoneyballBuyInDollars] = useState(10);
+  const [moneyballDivision, setMoneyballDivision] = useState<'mixed' | 'mens' | 'womens' | 'open'>('open');
   const [canUseOrganizations, setCanUseOrganizations] = useState(false);
   const [canUseCreamOfTheCrop, setCanUseCreamOfTheCrop] = useState(false);
   const [canUsePoolBracketsAsUser, setCanUsePoolBracketsAsUser] = useState(false);
@@ -389,7 +391,7 @@ export default function CreateTournamentPage() {
     let isActive = true;
     supabase
       .from('moneyball_series')
-      .select('id, name, organization_id, format, doubles_mode, target_wins, default_buy_in_cents')
+      .select('id, name, organization_id, format, doubles_mode, division, target_wins, default_buy_in_cents')
       .eq('organization_id', selectedOrganizationId)
       .eq('status', 'active')
       .order('name')
@@ -424,6 +426,14 @@ export default function CreateTournamentPage() {
       setMoneyballBuyInDollars(selectedSeries.default_buy_in_cents / 100);
     }
   }, [moneyballEnabled, moneyballSeriesChoice, compatibleMoneyballSeries, selectedMoneyballSeriesId]);
+
+  useEffect(() => {
+    if (doublesMode === 'mixed') {
+      setMoneyballDivision('mixed');
+    } else if (moneyballDivision === 'mixed') {
+      setMoneyballDivision('open');
+    }
+  }, [doublesMode, moneyballDivision]);
 
   useEffect(() => {
     if (courts > maxCourtsAllowed) {
@@ -569,6 +579,7 @@ export default function CreateTournamentPage() {
           name: newMoneyballSeriesName.trim(),
           format,
           doubles_mode: format === 'doubles' ? doublesMode : null,
+          division: doublesMode === 'mixed' ? 'mixed' : moneyballDivision,
           target_wins: 3,
           default_buy_in_cents: moneyballBuyInDollars * 100,
         })
@@ -1193,13 +1204,31 @@ and final placement tie-breakers.
                         const series = moneyballSeries.find((item) => item.id === seriesId);
                         if (series) setMoneyballBuyInDollars(series.default_buy_in_cents / 100);
                       }}>
-                        {compatibleMoneyballSeries.map((series) => <option key={series.id} value={series.id}>{series.name} • Race to {series.target_wins}</option>)}
+                        {compatibleMoneyballSeries.map((series) => (
+                          <option key={series.id} value={series.id}>
+                            {series.name} • {series.division === 'mens' ? "Men's" : series.division === 'womens' ? "Women's" : series.division === 'mixed' ? 'Mixed' : 'Open'} • Race to {series.target_wins}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   ) : (
-                    <div>
-                      <label className="label">New Series Name</label>
-                      <input className="input" value={newMoneyballSeriesName} onChange={(event) => setNewMoneyballSeriesName(event.target.value)} placeholder={doublesMode === 'mixed' ? 'Club 65 Mixed Moneyball' : 'Club 65 Moneyball'} />
+                    <div style={{ display: 'grid', gap: 10 }}>
+                      <div>
+                        <label className="label">New Series Name</label>
+                        <input className="input" value={newMoneyballSeriesName} onChange={(event) => setNewMoneyballSeriesName(event.target.value)} placeholder={doublesMode === 'mixed' ? 'Club 65 Mixed Moneyball' : 'Club 65 Moneyball'} />
+                      </div>
+                      <div>
+                        <label className="label">Series Division</label>
+                        <select className="input" value={moneyballDivision} onChange={(event) => setMoneyballDivision(event.target.value as 'mixed' | 'mens' | 'womens' | 'open')} disabled={doublesMode === 'mixed'}>
+                          {doublesMode === 'mixed' ? <option value="mixed">Mixed</option> : null}
+                          {doublesMode !== 'mixed' ? <>
+                            <option value="mens">Men&apos;s</option>
+                            <option value="womens">Women&apos;s</option>
+                            <option value="open">Open</option>
+                          </> : null}
+                        </select>
+                        <div className="muted" style={{ marginTop: 5, fontSize: 12 }}>Wins and prize money stay isolated within this club and division.</div>
+                      </div>
                     </div>
                   )}
 

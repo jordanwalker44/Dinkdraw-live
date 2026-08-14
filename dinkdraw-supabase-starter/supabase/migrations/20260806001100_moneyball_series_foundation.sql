@@ -5,11 +5,16 @@ create table if not exists public.moneyball_series (
   name text not null check (length(btrim(name)) between 2 and 100),
   format text not null default 'doubles' check (format in ('singles', 'doubles')),
   doubles_mode text check (doubles_mode is null or doubles_mode in ('rotating', 'fixed', 'mixed')),
+  division text not null default 'open' check (division in ('mixed', 'mens', 'womens', 'open')),
   target_wins integer not null default 3 check (target_wins > 0),
   default_buy_in_cents integer not null default 1000 check (default_buy_in_cents > 0 and mod(default_buy_in_cents, 2) = 0),
   status text not null default 'active' check (status in ('active', 'archived')),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint moneyball_series_mixed_division_check check (
+    (doubles_mode = 'mixed' and division = 'mixed')
+    or (doubles_mode is distinct from 'mixed' and division <> 'mixed')
+  )
 );
 
 create unique index if not exists moneyball_series_org_name_idx
@@ -32,6 +37,7 @@ insert into public.moneyball_series (
   name,
   format,
   doubles_mode,
+  division,
   target_wins
 )
 select distinct on (coalesce(cycle.organization_id::text, 'user:' || cycle.organizer_user_id::text))
@@ -40,6 +46,7 @@ select distinct on (coalesce(cycle.organization_id::text, 'user:' || cycle.organ
   coalesce(organization.name || ' Moneyball', 'Moneyball Series'),
   coalesce(sample_tournament.format, 'doubles'),
   coalesce(sample_tournament.doubles_mode, 'rotating'),
+  case when sample_tournament.doubles_mode = 'mixed' then 'mixed' else 'open' end,
   cycle.target_wins
 from public.tournament_prize_cycles cycle
 left join public.organizations organization on organization.id = cycle.organization_id

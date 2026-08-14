@@ -180,6 +180,7 @@ export default function CreateTournamentPage() {
   const [courts, setCourts] = useState(2);
   const [courtLabels, setCourtLabels] = useState<string[]>([]);
   const [rounds, setRounds] = useState(7);
+  const [roundsManuallySet, setRoundsManuallySet] = useState(false);
   const [gamesTo, setGamesTo] = useState(11);
 
   const [message, setMessage] = useState('');
@@ -216,6 +217,7 @@ export default function CreateTournamentPage() {
         courts,
         courtLabels,
         rounds,
+        roundsManuallySet,
         gamesTo,
       })
     );
@@ -277,7 +279,12 @@ export default function CreateTournamentPage() {
       if (typeof draft.playerCount === 'number') setPlayerCount(draft.playerCount);
       if (typeof draft.courts === 'number') setCourts(draft.courts);
       if (Array.isArray(draft.courtLabels)) setCourtLabels(draft.courtLabels);
-      if (typeof draft.rounds === 'number') setRounds(draft.rounds);
+      if (typeof draft.rounds === 'number') {
+        setRounds(draft.rounds);
+        setRoundsManuallySet(
+          typeof draft.roundsManuallySet === 'boolean' ? draft.roundsManuallySet : true
+        );
+      }
       if (typeof draft.gamesTo === 'number') setGamesTo(draft.gamesTo);
 
       setMessage('Your tournament setup was restored. Sign in is complete, so you can create it now.');
@@ -462,10 +469,14 @@ export default function CreateTournamentPage() {
     }
 
     setCourts(Math.max(1, Math.floor(playerCount / 4)));
-  } else {
-    setRounds(Math.max(1, playerCount - 1));
+  } else if (!roundsManuallySet) {
+    const playersPerGroup =
+      poolBracketsEnabled && poolCount > 0 && playerCount % poolCount === 0
+        ? playerCount / poolCount
+        : playerCount;
+    setRounds(Math.max(1, playersPerGroup - 1));
   }
-}, [tournamentMode, playerCount]);
+}, [tournamentMode, playerCount, poolBracketsEnabled, poolCount, roundsManuallySet]);
 
   useEffect(() => {
     if (format === 'singles' && playerCount < 3) {
@@ -488,6 +499,12 @@ export default function CreateTournamentPage() {
       setTestMode(false);
     }
   }, [poolBracketsAvailable, poolBracketsEnabled]);
+
+  useEffect(() => {
+    if (!poolBracketsEnabled || playerCount % poolCount === 0) return;
+    const validPoolCount = [2, 3, 4, 5, 6, 8].find((count) => playerCount % count === 0);
+    if (validPoolCount) setPoolCount(validPoolCount);
+  }, [poolBracketsEnabled, playerCount, poolCount]);
 
   async function handleCreate() {
   setMessage('');
@@ -830,6 +847,79 @@ router.push(`/tournament/${tournament.id}`);
 </div>
 </div>             
 
+{tournamentMode === 'round_robin' ? (
+  <div
+    style={{
+      padding: 14,
+      borderRadius: 16,
+      border: '1px solid rgba(255,255,255,0.10)',
+      background: 'rgba(255,255,255,0.035)',
+    }}
+  >
+    <label className="label">What Are You Running?</label>
+    <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
+      Choose the event path first. DinkDraw will reveal the settings that apply to it.
+    </div>
+    <div style={{ display: 'grid', gap: 8 }}>
+      <button
+        type="button"
+        className={`button ${!poolBracketsEnabled ? 'primary' : 'secondary'}`}
+        onClick={() => {
+          setPoolBracketsEnabled(false);
+          setMoneyballEnabled(false);
+          setTestMode(false);
+          setRoundsManuallySet(false);
+        }}
+      >
+        Round Robin Only
+      </button>
+      <button
+        type="button"
+        className={`button ${poolBracketsEnabled && !moneyballEnabled ? 'primary' : 'secondary'}`}
+        onClick={() => {
+          if (!canUsePoolBrackets) {
+            setMessage('Pool play with postseason brackets is a premium feature. Contact DinkDraw to upgrade.');
+            return;
+          }
+          setFormat('doubles');
+          if (doublesMode === 'fixed') setDoublesMode('rotating');
+          setPoolBracketsEnabled(true);
+          setMoneyballEnabled(false);
+          setRoundsManuallySet(false);
+          setPlayoffFormat('none');
+        }}
+      >
+        Pool Play + Brackets {canUsePoolBrackets ? '' : '• Premium'}
+      </button>
+      <button
+        type="button"
+        className={`button ${poolBracketsEnabled && moneyballEnabled ? 'primary' : 'secondary'}`}
+        onClick={() => {
+          if (!canUsePoolBrackets) {
+            setMessage('Moneyball requires the premium Pool Play + Postseason feature. Contact DinkDraw to upgrade.');
+            return;
+          }
+          setFormat('doubles');
+          if (doublesMode === 'fixed') setDoublesMode('rotating');
+          setPoolBracketsEnabled(true);
+          setMoneyballEnabled(true);
+          setRoundsManuallySet(false);
+          setPlayoffFormat('none');
+        }}
+      >
+        Moneyball Series {canUsePoolBrackets ? '' : '• Premium'}
+      </button>
+    </div>
+    {poolBracketsEnabled ? (
+      <div style={{ marginTop: 10, color: '#FFCB05', fontSize: 12, fontWeight: 850 }}>
+        {moneyballEnabled
+          ? 'Moneyball includes pool play, championship and consolation brackets, payments, and series wins.'
+          : 'Players begin in pools, then advance into championship and consolation brackets.'}
+      </div>
+    ) : null}
+  </div>
+) : null}
+
 {tournamentMode === 'cream_of_the_crop' && (
   <div
     style={{
@@ -982,13 +1072,33 @@ and final placement tie-breakers.
 
           {tournamentMode === 'round_robin' && (
   <Stepper
-    label="Rounds"
+    label={poolBracketsEnabled ? 'Pool-Play Rounds' : 'Rounds'}
     value={rounds}
     min={1}
     max={30}
-    onChange={setRounds}
+    onChange={(value) => {
+      setRounds(value);
+      setRoundsManuallySet(true);
+    }}
   />
 )}
+
+          {tournamentMode === 'round_robin' && poolBracketsEnabled ? (
+            <div className="muted" style={{ marginTop: -6, fontSize: 12 }}>
+              {roundsManuallySet
+                ? `Custom round count. The complete-rotation recommendation is ${Math.max(1, playerCount / poolCount - 1)}.`
+                : `${playerCount / poolCount} players per pool creates a ${rounds}-round complete rotation.`}
+              {roundsManuallySet ? (
+                <button
+                  type="button"
+                  onClick={() => setRoundsManuallySet(false)}
+                  style={{ marginLeft: 6, padding: 0, border: 0, background: 'transparent', color: '#FFCB05', fontWeight: 900, cursor: 'pointer' }}
+                >
+                  Use recommended
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
     {tournamentMode === 'round_robin' ? (
   <Stepper
@@ -1165,7 +1275,11 @@ and final placement tie-breakers.
           setMessage('Pool play with postseason brackets is a premium feature. Contact DinkDraw to upgrade.');
           return;
         }
-        setPoolBracketsEnabled((enabled) => !enabled);
+        setPoolBracketsEnabled((enabled) => {
+          const next = !enabled;
+          if (next) setRoundsManuallySet(false);
+          return next;
+        });
         setPlayoffFormat('none');
       }}
       style={{ marginTop: 12, width: '100%' }}

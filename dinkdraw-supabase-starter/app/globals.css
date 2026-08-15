@@ -462,17 +462,11 @@ textarea.input:focus {
   overflow: hidden;
 }
 
-.admin-monitor-header,
-.admin-monitor-item-header {
+.admin-monitor-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
-}
-
-.admin-monitor-heading,
-.admin-monitor-item-main {
-  min-width: 0;
 }
 
 .admin-monitor-title {
@@ -484,94 +478,144 @@ textarea.input:focus {
   margin-bottom: 0;
 }
 
-.admin-monitor-item {
-  padding: 14px;
-  overflow: hidden;
+.admin-monitor-content {
+  display: grid;
+  gap: 28px;
+  margin-top: 24px;
 }
 
-.admin-monitor-item-title {
-  font-size: 20px;
-  line-height: 1.12;
-  font-weight: 950;
-  overflow-wrap: anywhere;
-}
-
-.admin-monitor-meta {
-  margin-top: 4px;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.admin-monitor-details {
-  overflow-wrap: anywhere;
-}
-
-.admin-monitor-actions {
+.admin-stat-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 14px;
-}
-
-.admin-monitor-actions .button {
-  min-height: 44px;
-  padding: 10px 8px;
-  text-align: center;
-}
-
-.admin-usage-section {
-  display: grid;
   gap: 12px;
-  padding-bottom: 8px;
 }
 
-.admin-usage-heading h2,
-.admin-monitor-section-title {
+.admin-stat-card {
+  display: grid;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid rgba(255, 203, 5, 0.2);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.admin-stat-card span {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-stat-card strong {
+  color: var(--accent);
+  font-size: clamp(32px, 5vw, 48px);
+  line-height: 1;
+  font-weight: 950;
+}
+
+.admin-geography-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-geography-section {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.admin-geography-section h2,
+.admin-tournament-section h2 {
   margin: 0;
   color: var(--accent);
   font-size: 22px;
-  font-weight: 950;
 }
 
-.admin-usage-grid {
+.admin-geography-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 8px;
+  margin-top: 9px;
+  max-height: 390px;
+  overflow-y: auto;
+}
+
+.admin-geography-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  color: var(--text);
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.admin-geography-row:hover,
+.admin-geography-row.selected {
+  border-color: var(--accent);
+  background: rgba(255, 203, 5, 0.07);
+}
+
+.admin-geography-counts {
+  display: grid;
+  justify-items: end;
+  white-space: nowrap;
+}
+
+.admin-geography-counts small {
+  color: var(--muted);
+}
+
+.admin-tournament-section,
+.admin-tournament-list {
+  display: grid;
   gap: 10px;
 }
 
-.admin-usage-item {
-  display: grid;
-  gap: 7px;
-  padding: 14px;
-  border-color: rgba(255, 203, 5, 0.2);
+.admin-tournament-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
-.admin-usage-location {
-  font-size: 17px;
-  font-weight: 900;
-  line-height: 1.3;
+.admin-tournament-search {
+  margin: 4px 0 2px;
+}
+
+.admin-tournament-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.admin-tournament-main,
+.admin-tournament-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-tournament-main span {
+  color: var(--muted);
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
-.admin-usage-total {
-  color: var(--accent);
-  font-size: 25px;
-  font-weight: 950;
-}
-
-.admin-usage-breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  font-size: 13px;
-}
-
-.admin-usage-latest {
+.admin-tournament-meta {
+  justify-items: end;
+  color: var(--muted);
   font-size: 12px;
-}
-
-.admin-monitor-section-title {
-  margin-top: 8px;
 }
 
 @media (max-width: 520px) {
@@ -600,26 +644,35 @@ textarea.input:focus {
     line-height: 1.35;
   }
 
-  .admin-monitor-item {
-    padding: 12px;
-    border-radius: 16px;
-  }
-
-  .admin-monitor-item-header {
+  .admin-stat-grid {
     gap: 8px;
   }
 
-  .admin-monitor-item-title {
-    font-size: 19px;
+  .admin-stat-card {
+    padding: 14px 10px;
   }
 
-  .admin-monitor-details {
-    font-size: 13px !important;
-    line-height: 1.35;
+  .admin-stat-card span {
+    font-size: 11px;
   }
 
-  .admin-monitor-actions {
+  .admin-geography-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-tournament-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-tournament-meta {
+    justify-items: start;
+    grid-template-columns: auto auto;
+    align-items: center;
+  }
+
+  .admin-tournament-row > .button {
+    width: 100%;
   }
 }
 

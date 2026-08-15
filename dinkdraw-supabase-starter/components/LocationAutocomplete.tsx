@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 type LocationAutocompleteProps = {
   value: string;
   onChange: (nextValue: string) => void;
+  required?: boolean;
 };
 
 type GooglePlace = {
@@ -99,6 +100,7 @@ function loadGoogleMaps(apiKey: string) {
 export function LocationAutocomplete({
   value,
   onChange,
+  required = false,
 }: LocationAutocompleteProps) {
   const placesLibraryRef = useRef<PlacesDataLibrary | null>(null);
   const sessionTokenRef = useRef<object | null>(null);
@@ -250,6 +252,7 @@ export function LocationAutocomplete({
     <div style={{ position: 'relative' }}>
       <input
         className="input"
+        required={required}
         value={value}
         onChange={(event) => {
           selectedValueRef.current = '';

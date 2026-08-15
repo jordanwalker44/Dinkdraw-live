@@ -567,6 +567,11 @@ export default function CreateTournamentPage() {
     return;
   }
 
+  if (!location.trim()) {
+    setMessage('Enter the club or court location.');
+    return;
+  }
+
   setIsCreating(true);
 
   try {
@@ -1544,7 +1549,7 @@ and final placement tie-breakers.
           </div>
 
           <div>
-            <label className="label">Location</label>
+            <label className="label">Location *</label>
 
             {favoriteLocations.length ? (
               <div style={{ marginBottom: 10 }}>
@@ -1574,6 +1579,7 @@ and final placement tie-breakers.
 
             {!selectedFavoriteLocationId ? (
               <LocationAutocomplete
+                required
                 value={location}
                 onChange={(nextLocation) => {
                   setLocation(nextLocation);

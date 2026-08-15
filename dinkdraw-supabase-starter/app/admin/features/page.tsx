@@ -24,6 +24,8 @@ export default function AdminFeaturesPage() {
   const [foundUserName, setFoundUserName] = useState('');
   const [organizationName, setOrganizationName] = useState('');
   const [userOrganizations, setUserOrganizations] = useState<OrganizationOption[]>([]);
+  const [userEntitlements, setUserEntitlements] = useState<string[]>([]);
+  const [organizationEntitlements, setOrganizationEntitlements] = useState<Record<string, string[]>>({});
   const [selectedOrganizationId, setSelectedOrganizationId] = useState('');
   const [renameOrganizationName, setRenameOrganizationName] = useState('');
   const [message, setMessage] = useState('');
@@ -34,6 +36,8 @@ export default function AdminFeaturesPage() {
   setUserId('');
   setFoundUserName('');
   setUserOrganizations([]);
+  setUserEntitlements([]);
+  setOrganizationEntitlements({});
   setSelectedOrganizationId('');
   setRenameOrganizationName('');
 
@@ -89,9 +93,46 @@ export default function AdminFeaturesPage() {
       })
       .filter((organization): organization is OrganizationOption => !!organization) || [];
 
+  const organizationIds = organizations.map((organization) => organization.id);
+  const [{ data: userAccess, error: userAccessError }, { data: organizationAccess, error: organizationAccessError }] =
+    await Promise.all([
+      supabase
+        .from('feature_entitlements')
+        .select('feature_key')
+        .eq('user_id', profile.id)
+        .eq('status', 'active'),
+      organizationIds.length
+        ? supabase
+            .from('feature_entitlements')
+            .select('organization_id, feature_key')
+            .in('organization_id', organizationIds)
+            .eq('status', 'active')
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+  if (userAccessError || organizationAccessError) {
+    setIsWorking(false);
+    setMessage(userAccessError?.message || organizationAccessError?.message || 'Could not load access.');
+    return;
+  }
+
+  const accessByOrganization = (organizationAccess || []).reduce<Record<string, string[]>>(
+    (result, entitlement) => {
+      if (!entitlement.organization_id) return result;
+      result[entitlement.organization_id] = [
+        ...(result[entitlement.organization_id] || []),
+        entitlement.feature_key,
+      ];
+      return result;
+    },
+    {}
+  );
+
   setUserId(profile.id);
   setFoundUserName(profile.display_name || profile.email || '');
   setUserOrganizations(organizations as OrganizationOption[]);
+  setUserEntitlements((userAccess || []).map((entitlement) => entitlement.feature_key));
+  setOrganizationEntitlements(accessByOrganization);
 
   if (organizations.length > 0) {
     setSelectedOrganizationId(organizations[0].id);
@@ -105,84 +146,47 @@ export default function AdminFeaturesPage() {
   );
 }
 
-  async function grantUserCream() {
+  async function setFeatureAccess({
+    featureKey,
+    enabled,
+    organizationId = null,
+  }: {
+    featureKey: string;
+    enabled: boolean;
+    organizationId?: string | null;
+  }) {
     setMessage('');
     setIsWorking(true);
 
-    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
-      p_user_id: userId.trim(),
-      p_organization_id: null,
-      p_feature_key: 'cream_of_the_crop',
-      p_notes: 'Granted from admin page',
+    const { error } = await supabase.rpc('admin_set_feature_entitlement_status', {
+      p_user_id: organizationId ? null : userId.trim(),
+      p_organization_id: organizationId,
+      p_feature_key: featureKey,
+      p_status: enabled ? 'active' : 'inactive',
+      p_notes: `${enabled ? 'Granted' : 'Revoked'} from admin page`,
     });
 
     setIsWorking(false);
-    setMessage(error ? error.message : 'Cream access granted to user.');
-  }
-
-  async function grantUserOrganizationMode() {
-    setMessage('');
-    setIsWorking(true);
-
-    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
-      p_user_id: userId.trim(),
-      p_organization_id: null,
-      p_feature_key: 'organization_mode',
-      p_notes: 'Granted from admin page',
-    });
-
-    setIsWorking(false);
-    setMessage(error ? error.message : 'Organization mode granted to user.');
-  }
-
-  async function grantUserPoolBrackets() {
-    setMessage('');
-    setIsWorking(true);
-
-    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
-      p_user_id: userId.trim(),
-      p_organization_id: null,
-      p_feature_key: 'round_robin_pool_brackets',
-      p_notes: 'Pool bracket premium access granted from admin page',
-    });
-
-    setIsWorking(false);
-    setMessage(error ? error.message : 'Pool and postseason bracket access granted to user.');
-  }
-
-  async function grantSelectedOrganizationLeagueMode() {
-    if (!selectedOrganizationId) {
-      setMessage('Choose an organization first.');
+    if (error) {
+      setMessage(error.message);
       return;
     }
 
-    setMessage('');
-    setIsWorking(true);
-    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
-      p_user_id: null,
-      p_organization_id: selectedOrganizationId,
-      p_feature_key: 'league_mode',
-      p_notes: 'League pilot access granted from admin page',
-    });
-    setIsWorking(false);
-    setMessage(error ? error.message : 'League access granted to the selected organization.');
-  }
-
-  async function grantSelectedOrganizationPoolBrackets() {
-    if (!selectedOrganizationId) {
-      setMessage('Choose an organization first.');
-      return;
+    if (organizationId) {
+      setOrganizationEntitlements((current) => {
+        const keys = new Set(current[organizationId] || []);
+        enabled ? keys.add(featureKey) : keys.delete(featureKey);
+        return { ...current, [organizationId]: [...keys] };
+      });
+    } else {
+      setUserEntitlements((current) => {
+        const keys = new Set(current);
+        enabled ? keys.add(featureKey) : keys.delete(featureKey);
+        return [...keys];
+      });
     }
-    setMessage('');
-    setIsWorking(true);
-    const { error } = await supabase.rpc('admin_ensure_feature_entitlement', {
-      p_user_id: null,
-      p_organization_id: selectedOrganizationId,
-      p_feature_key: 'round_robin_pool_brackets',
-      p_notes: 'Pool bracket premium access granted from admin page',
-    });
-    setIsWorking(false);
-    setMessage(error ? error.message : 'Pool and postseason bracket access granted to the selected organization.');
+
+    setMessage(`${featureKey.replaceAll('_', ' ')} access ${enabled ? 'enabled' : 'disabled'}.`);
   }
 
   async function createOrganizationForUser() {
@@ -360,20 +364,32 @@ export default function AdminFeaturesPage() {
 
                   <button
                     type="button"
-                    className="button primary"
-                    onClick={grantSelectedOrganizationLeagueMode}
+                    className={`button ${organizationEntitlements[selectedOrganizationId]?.includes('league_mode') ? 'secondary' : 'primary'}`}
+                    onClick={() => setFeatureAccess({
+                      featureKey: 'league_mode',
+                      enabled: !organizationEntitlements[selectedOrganizationId]?.includes('league_mode'),
+                      organizationId: selectedOrganizationId,
+                    })}
                     disabled={isWorking || !selectedOrganizationId}
                   >
-                    Grant Premium League Access
+                    {organizationEntitlements[selectedOrganizationId]?.includes('league_mode')
+                      ? 'Turn Off League Access'
+                      : 'Turn On League Access'}
                   </button>
 
                   <button
                     type="button"
-                    className="button primary"
-                    onClick={grantSelectedOrganizationPoolBrackets}
+                    className={`button ${organizationEntitlements[selectedOrganizationId]?.includes('round_robin_pool_brackets') ? 'secondary' : 'primary'}`}
+                    onClick={() => setFeatureAccess({
+                      featureKey: 'round_robin_pool_brackets',
+                      enabled: !organizationEntitlements[selectedOrganizationId]?.includes('round_robin_pool_brackets'),
+                      organizationId: selectedOrganizationId,
+                    })}
                     disabled={isWorking || !selectedOrganizationId}
                   >
-                    Grant Pool + Bracket Premium Access
+                    {organizationEntitlements[selectedOrganizationId]?.includes('round_robin_pool_brackets')
+                      ? 'Turn Off Pool + Bracket Access'
+                      : 'Turn On Pool + Bracket Access'}
                   </button>
                 </div>
               ) : (
@@ -404,28 +420,41 @@ export default function AdminFeaturesPage() {
           <button
             type="button"
             className="button secondary"
-            onClick={grantUserCream}
+            onClick={() => setFeatureAccess({
+              featureKey: 'cream_of_the_crop',
+              enabled: !userEntitlements.includes('cream_of_the_crop'),
+            })}
             disabled={isWorking || !userId.trim()}
           >
-            Grant Cream to User
+            {userEntitlements.includes('cream_of_the_crop') ? 'Turn Off Cream Access' : 'Turn On Cream Access'}
           </button>
 
           <button
             type="button"
             className="button secondary"
-            onClick={grantUserOrganizationMode}
+            onClick={() => setFeatureAccess({
+              featureKey: 'organization_mode',
+              enabled: !userEntitlements.includes('organization_mode'),
+            })}
             disabled={isWorking || !userId.trim()}
           >
-            Grant Organization Mode to User
+            {userEntitlements.includes('organization_mode')
+              ? 'Turn Off Organization Mode'
+              : 'Turn On Organization Mode'}
           </button>
 
           <button
             type="button"
             className="button secondary"
-            onClick={grantUserPoolBrackets}
+            onClick={() => setFeatureAccess({
+              featureKey: 'round_robin_pool_brackets',
+              enabled: !userEntitlements.includes('round_robin_pool_brackets'),
+            })}
             disabled={isWorking || !userId.trim()}
           >
-            Grant Pool + Bracket Premium Access
+            {userEntitlements.includes('round_robin_pool_brackets')
+              ? 'Turn Off Pool + Bracket Access'
+              : 'Turn On Pool + Bracket Access'}
           </button>
 
           {message ? <div className="notice">{message}</div> : null}

@@ -111,6 +111,7 @@ export default function AdminMonitorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState('');
+  const [totalUsers, setTotalUsers] = useState(0);
   const [tournaments, setTournaments] = useState<TournamentRow[]>([]);
   const [locationUsage, setLocationUsage] = useState<LocationUsageRow[]>([]);
   const [filter, setFilter] = useState<GeographyFilter>(null);
@@ -168,7 +169,7 @@ export default function AdminMonitorPage() {
       return;
     }
     setIsAdmin(true);
-    const [tournamentResult, usageResult] = await Promise.all([
+    const [tournamentResult, usageResult, userCountResult] = await Promise.all([
       (async () => {
         const rows: TournamentRow[] = [];
         const pageSize = 1000;
@@ -184,14 +185,22 @@ export default function AdminMonitorPage() {
         }
       })(),
       supabase.rpc('admin_get_geography_usage_report'),
+      supabase.rpc('admin_get_total_user_count'),
     ]);
-    if (tournamentResult.error || usageResult.error) {
-      setMessage(tournamentResult.error?.message || usageResult.error?.message || 'Could not load monitoring.');
+    if (tournamentResult.error || usageResult.error || userCountResult.error) {
+      setMessage(
+        tournamentResult.error?.message ||
+        usageResult.error?.message ||
+        userCountResult.error?.message ||
+        'Could not load monitoring.',
+      );
       setTournaments([]);
       setLocationUsage([]);
+      setTotalUsers(0);
     } else {
       setTournaments((tournamentResult.data || []) as TournamentRow[]);
       setLocationUsage((usageResult.data || []) as LocationUsageRow[]);
+      setTotalUsers(Number(userCountResult.data || 0));
     }
     setIsLoading(false);
   }
@@ -232,23 +241,24 @@ export default function AdminMonitorPage() {
 
         {!isLoading && isAdmin ? (
           <div className="admin-monitor-content">
-            <section className="admin-stat-grid" aria-label="Tournament totals">
-              <div className="admin-stat-card"><span>Created</span><strong>{totals.created}</strong></div>
-              <div className="admin-stat-card"><span>Started</span><strong>{totals.started}</strong></div>
-              <div className="admin-stat-card"><span>Finished</span><strong>{totals.finished}</strong></div>
+            <section className="admin-stat-grid" aria-label="DinkDraw totals">
+              <div className="admin-stat-card"><span>Total users</span><strong>{totalUsers}</strong></div>
+              <div className="admin-stat-card"><span>Tournaments created</span><strong>{totals.created}</strong></div>
+              <div className="admin-stat-card"><span>Tournaments started</span><strong>{totals.started}</strong></div>
+              <div className="admin-stat-card"><span>Tournaments finished</span><strong>{totals.finished}</strong></div>
             </section>
 
             <div className="admin-geography-grid">
               <section className="admin-geography-section">
-                <h2>Users by country</h2>
-                <div className="muted">Distinct signed-in players</div>
+                <h2>Players by tournament country</h2>
+                <div className="muted">Distinct signed-in players grouped by where they played</div>
                 <div className="admin-geography-list">
                   {geography.countries.map((row) => geographyButton('country', row))}
                 </div>
               </section>
               <section className="admin-geography-section">
-                <h2>Users by state</h2>
-                <div className="muted">Distinct signed-in players in the U.S.</div>
+                <h2>Players by tournament state</h2>
+                <div className="muted">Distinct signed-in players grouped by U.S. tournament location</div>
                 <div className="admin-geography-list">
                   {geography.states.map((row) => geographyButton('state', row))}
                 </div>

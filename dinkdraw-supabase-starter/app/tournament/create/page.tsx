@@ -184,6 +184,8 @@ export default function CreateTournamentPage() {
   const [gamesTo, setGamesTo] = useState(11);
 
   const [message, setMessage] = useState('');
+  const [messageIsError, setMessageIsError] = useState(false);
+  const [invalidField, setInvalidField] = useState<'title' | 'location' | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
     function saveCreateTournamentDraft() {
@@ -508,6 +510,24 @@ export default function CreateTournamentPage() {
 
   async function handleCreate() {
   setMessage('');
+  setMessageIsError(true);
+  setInvalidField(null);
+
+  function showValidationError(
+    nextMessage: string,
+    field?: 'title' | 'location',
+  ) {
+    setMessage(nextMessage);
+    setInvalidField(field || null);
+
+    if (!field) return;
+
+    window.setTimeout(() => {
+      const input = document.getElementById(`tournament-${field}`);
+      input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      input?.focus({ preventScroll: true });
+    }, 0);
+  }
 
   if (!isValidSetup) {
     setMessage(`You need at least ${minPlayers} players for ${format}.`);
@@ -563,12 +583,12 @@ export default function CreateTournamentPage() {
   }
 
   if (!title.trim()) {
-    setMessage('Please enter a tournament name.');
+    showValidationError('Enter an event name before creating your tournament.', 'title');
     return;
   }
 
   if (!location.trim()) {
-    setMessage('Enter the club or court location.');
+    showValidationError('Enter the club or court location before creating your tournament.', 'location');
     return;
   }
 
@@ -1513,10 +1533,25 @@ and final placement tie-breakers.
 
             <label className="label">Event name</label>
             <input
+              id="tournament-title"
               className="input"
+              aria-invalid={invalidField === 'title'}
+              aria-describedby={invalidField === 'title' ? 'tournament-title-error' : undefined}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                if (invalidField === 'title') {
+                  setInvalidField(null);
+                  setMessage('');
+                  setMessageIsError(false);
+                }
+              }}
             />
+            {invalidField === 'title' ? (
+              <div id="tournament-title-error" className="field-validation-error">
+                Event name is required.
+              </div>
+            ) : null}
           </div>
 
           <div>
@@ -1564,6 +1599,11 @@ and final placement tie-breakers.
                     if (selected) {
                       setLocation(selected.location);
                       setFavoriteLocationName(selected.name);
+                      if (invalidField === 'location') {
+                        setInvalidField(null);
+                        setMessage('');
+                        setMessageIsError(false);
+                      }
                     }
                   }}
                 >
@@ -1579,13 +1619,26 @@ and final placement tie-breakers.
 
             {!selectedFavoriteLocationId ? (
               <LocationAutocomplete
+                id="tournament-location"
                 required
+                invalid={invalidField === 'location'}
+                describedBy={invalidField === 'location' ? 'tournament-location-error' : undefined}
                 value={location}
                 onChange={(nextLocation) => {
                   setLocation(nextLocation);
                   setSelectedFavoriteLocationId('');
+                  if (invalidField === 'location') {
+                    setInvalidField(null);
+                    setMessage('');
+                    setMessageIsError(false);
+                  }
                 }}
               />
+            ) : null}
+            {invalidField === 'location' ? (
+              <div id="tournament-location-error" className="field-validation-error">
+                Club or court location is required.
+              </div>
             ) : null}
           </div>
 
@@ -1765,6 +1818,17 @@ and final placement tie-breakers.
 </div>
 
 <div style={{ marginTop: 16, marginBottom: 8 }}>
+  {message ? (
+    <div
+      className={`notice ${messageIsError ? 'create-tournament-feedback' : ''}`}
+      role={messageIsError ? 'alert' : 'status'}
+      aria-live={messageIsError ? 'assertive' : 'polite'}
+    >
+      {messageIsError ? <strong>Check your setup</strong> : null}
+      <div>{message}</div>
+    </div>
+  ) : null}
+
   <button
     type="button"
     className="button primary"
@@ -1782,8 +1846,6 @@ and final placement tie-breakers.
     {isCreating ? 'Creating...' : 'Create Tournament'}
   </button>
 </div>
-
-{message ? <div className="notice">{message}</div> : null}
         </div>
       </div>
     </main>

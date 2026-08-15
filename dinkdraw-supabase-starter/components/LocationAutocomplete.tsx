@@ -3,9 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 
 type LocationAutocompleteProps = {
+  id?: string;
   value: string;
   onChange: (nextValue: string) => void;
   required?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
 };
 
 type GooglePlace = {
@@ -98,9 +101,12 @@ function loadGoogleMaps(apiKey: string) {
 }
 
 export function LocationAutocomplete({
+  id,
   value,
   onChange,
   required = false,
+  invalid = false,
+  describedBy,
 }: LocationAutocompleteProps) {
   const placesLibraryRef = useRef<PlacesDataLibrary | null>(null);
   const sessionTokenRef = useRef<object | null>(null);
@@ -251,8 +257,11 @@ export function LocationAutocomplete({
   return (
     <div style={{ position: 'relative' }}>
       <input
+        id={id}
         className="input"
         required={required}
+        aria-invalid={invalid}
+        aria-describedby={describedBy}
         value={value}
         onChange={(event) => {
           selectedValueRef.current = '';

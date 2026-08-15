@@ -368,11 +368,36 @@ img {
   box-shadow: 0 0 0 2px rgba(255, 203, 5, 0.15);
 }
 
+.field-validation-error {
+  margin-top: 6px;
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.create-tournament-feedback {
+  margin-bottom: 12px;
+  border-color: rgba(248, 113, 113, 0.55);
+  background: rgba(127, 29, 29, 0.22);
+  color: #fee2e2;
+}
+
+.create-tournament-feedback strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
 .input:focus,
 select.input:focus,
 textarea.input:focus {
   border-color: rgba(255,203,5,0.5);
   box-shadow: 0 0 0 3px rgba(255,203,5,0.12);
+}
+
+.input[aria-invalid='true'],
+.input[aria-invalid='true']:focus {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.18);
 }
 
 .button,

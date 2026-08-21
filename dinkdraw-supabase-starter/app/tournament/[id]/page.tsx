@@ -2952,6 +2952,8 @@ function logScoreSubmitTiming(
   const [isRematching, setIsRematching] = useState(false);
   const [editedRounds, setEditedRounds] = useState<number | null>(null);
   const [isSavingRounds, setIsSavingRounds] = useState(false);
+  const [editedCreamPlayerCount, setEditedCreamPlayerCount] = useState<number | null>(null);
+  const [isSavingCreamSize, setIsSavingCreamSize] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSlowLoading, setIsSlowLoading] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState('');
@@ -3194,6 +3196,12 @@ const tournamentPhaseSubtitle =
   useEffect(() => {
     if (tournament && editedRounds === null) setEditedRounds(tournament.rounds);
   }, [tournament, editedRounds]);
+
+  useEffect(() => {
+    if (tournament && editedCreamPlayerCount === null) {
+      setEditedCreamPlayerCount(tournament.player_count);
+    }
+  }, [tournament, editedCreamPlayerCount]);
 
     const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming' | 'not_played'>();
@@ -4387,6 +4395,67 @@ if (existingFinalMatches.length > 0) {
       setMessage(error instanceof Error ? `Could not change rounds: ${error.message}` : 'Could not change rounds.');
     } finally {
       setIsSavingRounds(false);
+    }
+  }
+
+  async function saveCreamTournamentSize() {
+    if (!tournament || editedCreamPlayerCount === null || !isOrganizer) return;
+
+    const hasUnsavedPlayerEdits = playerSlots.some((slot) => {
+      const draftName = newNames[slot.id];
+      const draftDuprId = newDuprIds[slot.id];
+      return (draftName !== undefined && draftName.trim() !== (slot.display_name ?? '').trim()) ||
+        (draftDuprId !== undefined && draftDuprId.trim() !== (slot.dupr_id ?? '').trim());
+    });
+    if (hasUnsavedPlayerEdits) {
+      setMessage('Save player names before changing the tournament size so every assigned spot is preserved.');
+      return;
+    }
+
+    const nextPlayerCount = Math.max(4, Math.min(40, Math.trunc(editedCreamPlayerCount / 4) * 4));
+    setEditedCreamPlayerCount(nextPlayerCount);
+
+    if (nextPlayerCount === tournament.player_count) {
+      setMessage('The tournament already has that many players and courts.');
+      return;
+    }
+
+    const occupiedCount = playerSlots.filter((slot) =>
+      !!slot.claimed_by_user_id ||
+      !!slot.display_name?.trim() ||
+      !!slot.dupr_id?.trim() ||
+      !!slot.gender
+    ).length;
+
+    if (nextPlayerCount < occupiedCount) {
+      setMessage(`This tournament has ${occupiedCount} occupied spots. Clear players before reducing it to ${nextPlayerCount}.`);
+      return;
+    }
+
+    const nextCourts = nextPlayerCount / 4;
+    const shrinkingNote = nextPlayerCount < tournament.player_count
+      ? ' Empty spots will be removed; claimed players and assigned names will keep their spots.'
+      : ' New open spots will be added.';
+    if (!window.confirm(
+      `Change this tournament from ${tournament.player_count} players / ${tournament.courts} courts to ${nextPlayerCount} players / ${nextCourts} courts?${shrinkingNote}`
+    )) return;
+
+    setIsSavingCreamSize(true);
+    setMessage('');
+
+    try {
+      const { error } = await supabase.rpc('resize_draft_cream_tournament', {
+        p_tournament_id: tournament.id,
+        p_player_count: nextPlayerCount,
+      });
+      if (error) throw error;
+
+      await loadTournamentData(userId);
+      setMessage(`Tournament resized to ${nextPlayerCount} players / ${nextCourts} courts. Claimed spots were preserved.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? `Could not resize tournament: ${error.message}` : 'Could not resize tournament.');
+    } finally {
+      setIsSavingCreamSize(false);
     }
   }
 
@@ -7218,6 +7287,59 @@ disabled={!canEditName}
   <div className="card-subtitle">
     Save names first, then start the tournament when everyone is ready.
   </div>
+
+  {isOrganizer && tournament?.tournament_mode === 'cream_of_the_crop' ? (
+    <div className="list-item" style={{ marginBottom: 14 }}>
+      <div className="row-between" style={{ gap: 12, alignItems: 'center' }}>
+        <div>
+          <div style={{ fontWeight: 900 }}>Players & Courts</div>
+          <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
+            {isLocked
+              ? 'Locked because the tournament has started.'
+              : 'Four players use one court. Claimed players and assigned names stay attached when the size changes.'}
+          </div>
+        </div>
+        <strong style={{ color: '#FFCB05', fontSize: 18, whiteSpace: 'nowrap' }}>
+          {tournament.player_count} / {tournament.courts}
+        </strong>
+      </div>
+
+      {!isLocked ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(100px, 1fr) 48px', gap: 8, marginTop: 12 }}>
+          <button
+            type="button"
+            className="button secondary"
+            aria-label="Remove four players and one court"
+            onClick={() => setEditedCreamPlayerCount((value) => Math.max(4, (value ?? tournament.player_count) - 4))}
+            disabled={isSavingCreamSize || (editedCreamPlayerCount ?? tournament.player_count) <= 4}
+          >
+            −
+          </button>
+          <div className="input" style={{ textAlign: 'center', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {editedCreamPlayerCount ?? tournament.player_count} players • {(editedCreamPlayerCount ?? tournament.player_count) / 4} courts
+          </div>
+          <button
+            type="button"
+            className="button secondary"
+            aria-label="Add four players and one court"
+            onClick={() => setEditedCreamPlayerCount((value) => Math.min(40, (value ?? tournament.player_count) + 4))}
+            disabled={isSavingCreamSize || (editedCreamPlayerCount ?? tournament.player_count) >= 40}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            className="button primary"
+            onClick={saveCreamTournamentSize}
+            disabled={isSavingCreamSize || editedCreamPlayerCount === tournament.player_count}
+            style={{ gridColumn: '1 / -1' }}
+          >
+            {isSavingCreamSize ? 'Updating Tournament...' : 'Save Players & Courts'}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  ) : null}
 
   {isOrganizer && tournament?.tournament_mode === 'round_robin' ? (
     <div className="list-item" style={{ marginBottom: 14 }}>

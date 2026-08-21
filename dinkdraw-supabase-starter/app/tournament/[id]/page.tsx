@@ -2952,8 +2952,9 @@ function logScoreSubmitTiming(
   const [isRematching, setIsRematching] = useState(false);
   const [editedRounds, setEditedRounds] = useState<number | null>(null);
   const [isSavingRounds, setIsSavingRounds] = useState(false);
-  const [editedCreamPlayerCount, setEditedCreamPlayerCount] = useState<number | null>(null);
-  const [isSavingCreamSize, setIsSavingCreamSize] = useState(false);
+  const [editedPlayerCount, setEditedPlayerCount] = useState<number | null>(null);
+  const [editedCourtCount, setEditedCourtCount] = useState<number | null>(null);
+  const [isSavingTournamentSize, setIsSavingTournamentSize] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSlowLoading, setIsSlowLoading] = useState(false);
   const [loadErrorMessage, setLoadErrorMessage] = useState('');
@@ -3198,10 +3199,13 @@ const tournamentPhaseSubtitle =
   }, [tournament, editedRounds]);
 
   useEffect(() => {
-    if (tournament && editedCreamPlayerCount === null) {
-      setEditedCreamPlayerCount(tournament.player_count);
+    if (tournament && editedPlayerCount === null) {
+      setEditedPlayerCount(tournament.player_count);
     }
-  }, [tournament, editedCreamPlayerCount]);
+    if (tournament && editedCourtCount === null) {
+      setEditedCourtCount(tournament.courts);
+    }
+  }, [tournament, editedPlayerCount, editedCourtCount]);
 
     const roundStatusByRound = useMemo(() => {
     const statusMap = new Map<number, 'current' | 'complete' | 'upcoming' | 'not_played'>();
@@ -4398,8 +4402,8 @@ if (existingFinalMatches.length > 0) {
     }
   }
 
-  async function saveCreamTournamentSize() {
-    if (!tournament || editedCreamPlayerCount === null || !isOrganizer) return;
+  async function saveTournamentSize() {
+    if (!tournament || editedPlayerCount === null || editedCourtCount === null || !isOrganizer) return;
 
     const hasUnsavedPlayerEdits = playerSlots.some((slot) => {
       const draftName = newNames[slot.id];
@@ -4412,12 +4416,38 @@ if (existingFinalMatches.length > 0) {
       return;
     }
 
-    const nextPlayerCount = Math.max(4, Math.min(40, Math.trunc(editedCreamPlayerCount / 4) * 4));
-    setEditedCreamPlayerCount(nextPlayerCount);
+    const isCream = tournament.tournament_mode === 'cream_of_the_crop';
+    const minPlayers = tournament.format === 'singles' ? 3 : 4;
+    const playersPerCourt = tournament.format === 'singles' ? 2 : 4;
+    const rawPlayerCount = Math.trunc(editedPlayerCount);
+    const nextPlayerCount = isCream
+      ? Math.max(4, Math.min(40, Math.trunc(rawPlayerCount / 4) * 4))
+      : Math.max(minPlayers, Math.min(40, rawPlayerCount));
+    const maxCourts = Math.max(1, Math.floor(nextPlayerCount / playersPerCourt));
+    const nextCourts = isCream
+      ? nextPlayerCount / 4
+      : Math.max(1, Math.min(maxCourts, Math.trunc(editedCourtCount)));
+    setEditedPlayerCount(nextPlayerCount);
+    setEditedCourtCount(nextCourts);
 
-    if (nextPlayerCount === tournament.player_count) {
+    if (nextPlayerCount === tournament.player_count && nextCourts === tournament.courts) {
       setMessage('The tournament already has that many players and courts.');
       return;
+    }
+
+    if (tournament.pool_brackets_enabled && tournament.pool_count) {
+      if (nextPlayerCount % tournament.pool_count !== 0) {
+        setMessage(`Player count must divide evenly across this tournament's ${tournament.pool_count} pools.`);
+        return;
+      }
+      if (nextCourts < tournament.pool_count) {
+        setMessage(`Pool play requires at least ${tournament.pool_count} courts.`);
+        return;
+      }
+      if (tournament.doubles_mode === 'mixed' && (nextPlayerCount / tournament.pool_count) % 2 !== 0) {
+        setMessage('Each mixed pool must contain an even number of players.');
+        return;
+      }
     }
 
     const occupiedCount = playerSlots.filter((slot) =>
@@ -4432,7 +4462,6 @@ if (existingFinalMatches.length > 0) {
       return;
     }
 
-    const nextCourts = nextPlayerCount / 4;
     const shrinkingNote = nextPlayerCount < tournament.player_count
       ? ' Empty spots will be removed; claimed players and assigned names will keep their spots.'
       : ' New open spots will be added.';
@@ -4440,13 +4469,14 @@ if (existingFinalMatches.length > 0) {
       `Change this tournament from ${tournament.player_count} players / ${tournament.courts} courts to ${nextPlayerCount} players / ${nextCourts} courts?${shrinkingNote}`
     )) return;
 
-    setIsSavingCreamSize(true);
+    setIsSavingTournamentSize(true);
     setMessage('');
 
     try {
-      const { error } = await supabase.rpc('resize_draft_cream_tournament', {
+      const { error } = await supabase.rpc('resize_draft_tournament', {
         p_tournament_id: tournament.id,
         p_player_count: nextPlayerCount,
+        p_courts: nextCourts,
       });
       if (error) throw error;
 
@@ -4455,7 +4485,7 @@ if (existingFinalMatches.length > 0) {
     } catch (error) {
       setMessage(error instanceof Error ? `Could not resize tournament: ${error.message}` : 'Could not resize tournament.');
     } finally {
-      setIsSavingCreamSize(false);
+      setIsSavingTournamentSize(false);
     }
   }
 
@@ -7288,7 +7318,7 @@ disabled={!canEditName}
     Save names first, then start the tournament when everyone is ready.
   </div>
 
-  {isOrganizer && tournament?.tournament_mode === 'cream_of_the_crop' ? (
+  {isOrganizer && tournament ? (
     <div className="list-item" style={{ marginBottom: 14 }}>
       <div className="row-between" style={{ gap: 12, alignItems: 'center' }}>
         <div>
@@ -7296,7 +7326,7 @@ disabled={!canEditName}
           <div className="muted" style={{ marginTop: 4, fontSize: 13 }}>
             {isLocked
               ? 'Locked because the tournament has started.'
-              : 'Four players use one court. Claimed players and assigned names stay attached when the size changes.'}
+              : 'Claimed players and assigned names stay attached when the size changes.'}
           </div>
         </div>
         <strong style={{ color: '#FFCB05', fontSize: 18, whiteSpace: 'nowrap' }}>
@@ -7305,36 +7335,86 @@ disabled={!canEditName}
       </div>
 
       {!isLocked ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(100px, 1fr) 48px', gap: 8, marginTop: 12 }}>
-          <button
-            type="button"
-            className="button secondary"
-            aria-label="Remove four players and one court"
-            onClick={() => setEditedCreamPlayerCount((value) => Math.max(4, (value ?? tournament.player_count) - 4))}
-            disabled={isSavingCreamSize || (editedCreamPlayerCount ?? tournament.player_count) <= 4}
-          >
-            −
-          </button>
-          <div className="input" style={{ textAlign: 'center', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {editedCreamPlayerCount ?? tournament.player_count} players • {(editedCreamPlayerCount ?? tournament.player_count) / 4} courts
+        <div style={{ display: 'grid', gap: 12, marginTop: 12 }}>
+          <div>
+            <label className="label">Players</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(80px, 1fr) 48px', gap: 8 }}>
+              <button
+                type="button"
+                className="button secondary"
+                aria-label={tournament.tournament_mode === 'cream_of_the_crop' ? 'Remove four players' : 'Remove one player'}
+                onClick={() => {
+                  const step = tournament.tournament_mode === 'cream_of_the_crop' ? 4 : 1;
+                  const minimum = tournament.format === 'singles' ? 3 : 4;
+                  const next = Math.max(minimum, (editedPlayerCount ?? tournament.player_count) - step);
+                  setEditedPlayerCount(next);
+                  const maxCourts = Math.max(1, Math.floor(next / (tournament.format === 'singles' ? 2 : 4)));
+                  setEditedCourtCount(tournament.tournament_mode === 'cream_of_the_crop' ? next / 4 : Math.min(editedCourtCount ?? tournament.courts, maxCourts));
+                }}
+                disabled={isSavingTournamentSize || (editedPlayerCount ?? tournament.player_count) <= (tournament.format === 'singles' ? 3 : 4)}
+              >
+                −
+              </button>
+              <div className="input" style={{ textAlign: 'center', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {editedPlayerCount ?? tournament.player_count}
+              </div>
+              <button
+                type="button"
+                className="button secondary"
+                aria-label={tournament.tournament_mode === 'cream_of_the_crop' ? 'Add four players' : 'Add one player'}
+                onClick={() => {
+                  const step = tournament.tournament_mode === 'cream_of_the_crop' ? 4 : 1;
+                  const next = Math.min(40, (editedPlayerCount ?? tournament.player_count) + step);
+                  setEditedPlayerCount(next);
+                  if (tournament.tournament_mode === 'cream_of_the_crop') setEditedCourtCount(next / 4);
+                }}
+                disabled={isSavingTournamentSize || (editedPlayerCount ?? tournament.player_count) >= 40}
+              >
+                +
+              </button>
+            </div>
           </div>
-          <button
-            type="button"
-            className="button secondary"
-            aria-label="Add four players and one court"
-            onClick={() => setEditedCreamPlayerCount((value) => Math.min(40, (value ?? tournament.player_count) + 4))}
-            disabled={isSavingCreamSize || (editedCreamPlayerCount ?? tournament.player_count) >= 40}
-          >
-            +
-          </button>
+
+          <div>
+            <label className="label">Courts</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(80px, 1fr) 48px', gap: 8 }}>
+              <button
+                type="button"
+                className="button secondary"
+                aria-label="Remove one court"
+                onClick={() => setEditedCourtCount((value) => Math.max(1, (value ?? tournament.courts) - 1))}
+                disabled={isSavingTournamentSize || tournament.tournament_mode === 'cream_of_the_crop' || (editedCourtCount ?? tournament.courts) <= 1}
+              >
+                −
+              </button>
+              <div className="input" style={{ textAlign: 'center', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {editedCourtCount ?? tournament.courts}
+              </div>
+              <button
+                type="button"
+                className="button secondary"
+                aria-label="Add one court"
+                onClick={() => {
+                  const maxCourts = Math.max(1, Math.floor((editedPlayerCount ?? tournament.player_count) / (tournament.format === 'singles' ? 2 : 4)));
+                  setEditedCourtCount((value) => Math.min(maxCourts, (value ?? tournament.courts) + 1));
+                }}
+                disabled={isSavingTournamentSize || tournament.tournament_mode === 'cream_of_the_crop' || (editedCourtCount ?? tournament.courts) >= Math.max(1, Math.floor((editedPlayerCount ?? tournament.player_count) / (tournament.format === 'singles' ? 2 : 4)))}
+              >
+                +
+              </button>
+            </div>
+            {tournament.tournament_mode === 'cream_of_the_crop' ? (
+              <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>Cream of the Crop automatically uses one court per four players.</div>
+            ) : null}
+          </div>
+
           <button
             type="button"
             className="button primary"
-            onClick={saveCreamTournamentSize}
-            disabled={isSavingCreamSize || editedCreamPlayerCount === tournament.player_count}
-            style={{ gridColumn: '1 / -1' }}
+            onClick={saveTournamentSize}
+            disabled={isSavingTournamentSize || (editedPlayerCount === tournament.player_count && editedCourtCount === tournament.courts)}
           >
-            {isSavingCreamSize ? 'Updating Tournament...' : 'Save Players & Courts'}
+            {isSavingTournamentSize ? 'Updating Tournament...' : 'Save Players & Courts'}
           </button>
         </div>
       ) : null}

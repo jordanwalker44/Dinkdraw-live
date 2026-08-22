@@ -317,6 +317,45 @@ export function buildNextCreamOfTheCropStagePlayers(
     }))
   );
 
+  // Boundary clamping can leave a projected court with five players and an
+  // adjacent court with three (notably with 4+ courts). Rebalance those
+  // projections explicitly. A top-half finisher may only stay or move up; a
+  // bottom-half finisher may only stay or move down.
+  for (let targetCourt = 1; targetCourt <= courtCount; targetCourt += 1) {
+    while (projectedPlayers.filter((row) => row.projectedCourtNumber === targetCourt).length < 4) {
+      const candidates = projectedPlayers
+        .filter((row) => {
+          const projectedCount = projectedPlayers.filter(
+            (candidate) => candidate.projectedCourtNumber === row.projectedCourtNumber
+          ).length;
+          if (projectedCount <= 4) return false;
+          return row.rank <= 2
+            ? targetCourt <= row.currentCourtNumber
+            : targetCourt >= row.currentCourtNumber;
+        })
+        .sort((a, b) => {
+          const aProjectionCost = Math.abs(targetCourt - a.projectedCourtNumber);
+          const bProjectionCost = Math.abs(targetCourt - b.projectedCourtNumber);
+          if (aProjectionCost !== bProjectionCost) return aProjectionCost - bProjectionCost;
+
+          const aMovementCost = Math.abs(targetCourt - a.currentCourtNumber);
+          const bMovementCost = Math.abs(targetCourt - b.currentCourtNumber);
+          if (aMovementCost !== bMovementCost) return aMovementCost - bMovementCost;
+
+          if (a.rank !== b.rank) return a.rank - b.rank;
+          return a.priorSeed - b.priorSeed;
+        });
+
+      const selected = candidates[0];
+      if (!selected) return [];
+      selected.projectedCourtNumber = targetCourt;
+    }
+  }
+
+  if (Array.from({ length: courtCount }, (_, index) => index + 1).some(
+    (courtNumber) => projectedPlayers.filter((row) => row.projectedCourtNumber === courtNumber).length !== 4
+  )) return [];
+
   const sortedPlayers = projectedPlayers
   .sort((a, b) => {
     if (a.projectedCourtNumber !== b.projectedCourtNumber) {

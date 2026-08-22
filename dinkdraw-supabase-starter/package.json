@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "test:cream": "node --experimental-strip-types scripts/validate-cream-scheduler.ts",
     "start": "next start",
     "lint": "next lint"
   },

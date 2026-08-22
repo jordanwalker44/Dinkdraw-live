@@ -89,6 +89,38 @@ if (fallbackPlayers.length < 4) return [];
 if (fallbackPlayers.length % 4 !== 0) return [];
 
 const playerById = new Map(fallbackPlayers.map((player) => [player.id, player]));
+const expectedCourtCount = fallbackPlayers.length / 4;
+const stageMatches = matches.filter(
+  (match) =>
+    !match.is_bye &&
+    match.round_number >= startingRoundNumber &&
+    match.round_number <= startingRoundNumber + 2
+);
+
+// Never attempt to rank a corrupt or partial stage. Previously, duplicate
+// opening cards caused the scheduler to fall back to seed order, which hid the
+// corruption and produced incorrect courts in the following stage.
+if (stageMatches.length !== expectedCourtCount * 3) return [];
+
+for (let round = startingRoundNumber; round <= startingRoundNumber + 2; round += 1) {
+  const roundMatches = stageMatches.filter((match) => match.round_number === round);
+  if (roundMatches.length !== expectedCourtCount) return [];
+  if (new Set(roundMatches.map((match) => match.court_number)).size !== expectedCourtCount) return [];
+  if (roundMatches.some((match) =>
+    !match.is_complete || match.team_a_score === null || match.team_b_score === null
+  )) return [];
+
+  const roundPlayerIds = roundMatches.flatMap((match) => [
+    match.team_a_player_1_id,
+    match.team_a_player_2_id,
+    match.team_b_player_1_id,
+    match.team_b_player_2_id,
+  ].filter(Boolean) as string[]);
+
+  if (roundPlayerIds.length !== fallbackPlayers.length) return [];
+  if (new Set(roundPlayerIds).size !== fallbackPlayers.length) return [];
+  if (roundPlayerIds.some((playerId) => !playerById.has(playerId))) return [];
+}
 
 const openingRoundMatches = matches
   .filter(
@@ -111,10 +143,8 @@ const playersFromMatches = orderedPlayerIdsFromMatches
   .map((playerId) => playerById.get(playerId))
   .filter(Boolean) as PlayerSlot[];
 
-const activePlayers =
-  playersFromMatches.length === fallbackPlayers.length
-    ? playersFromMatches
-    : fallbackPlayers;
+if (playersFromMatches.length !== fallbackPlayers.length) return [];
+const activePlayers = playersFromMatches;
 
   const relevantMatches = matches.filter(
     (match) =>

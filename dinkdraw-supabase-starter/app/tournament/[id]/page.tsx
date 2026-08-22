@@ -2947,6 +2947,7 @@ function logScoreSubmitTiming(
 }
   const [submittingScoreId, setSubmittingScoreId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isGeneratingCreamStage, setIsGeneratingCreamStage] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
   const [isDeletingTournament, setIsDeletingTournament] = useState(false);
   const [isRematching, setIsRematching] = useState(false);
@@ -4194,7 +4195,12 @@ async function clearPlayerSlot(slotId: string) {
   async function handleGenerateSiftRound() {
   if (!tournament) return;
 
+  if (isGeneratingCreamStage) return;
+  setIsGeneratingCreamStage(true);
+
   setMessage('');
+
+  try {
 
     const existingSiftMatches = matches.filter(
   (m) => m.round_number >= 4 && m.round_number <= 6 && !m.is_bye
@@ -4232,14 +4238,16 @@ if (existingSiftMatches.length > 0) {
   // 3. Build Sift schedule (rounds 4–6)
   const siftSchedule = buildCreamOfTheCropStageSchedule(nextPlayers, 4);
 
-  // 4. Insert into database
-  const { error } = await supabase.from('matches').insert(
-    siftSchedule.map((row) => ({
-      tournament_id: tournament.id,
+  // 4. Validate and insert atomically so repeated taps or multiple organizer
+  // devices cannot create duplicate cards.
+  const { error } = await supabase.rpc('create_cream_stage_matches', {
+    p_tournament_id: tournament.id,
+    p_starting_round: 4,
+    p_schedule: siftSchedule.map((row) => ({
       ...row,
       court_label: getCourtLabel(tournament, row.court_number),
-    }))
-  );
+    })),
+  });
 
   if (error) {
     setMessage(`Failed to create Sift Round: ${error.message}`);
@@ -4248,12 +4256,20 @@ if (existingSiftMatches.length > 0) {
 
   await loadTournamentData(userId);
   setMessage('Re-Rank Round created.');
+  } finally {
+    setIsGeneratingCreamStage(false);
+  }
 }
 
   async function handleGenerateFinalRound() {
   if (!tournament) return;
 
+  if (isGeneratingCreamStage) return;
+  setIsGeneratingCreamStage(true);
+
   setMessage('');
+
+  try {
 
     const existingFinalMatches = matches.filter(
   (m) => m.round_number >= 7 && m.round_number <= 9 && !m.is_bye
@@ -4291,14 +4307,15 @@ if (existingFinalMatches.length > 0) {
   // 3. Build Final schedule (rounds 7–9)
   const finalSchedule = buildCreamOfTheCropStageSchedule(nextPlayers, 7);
 
-  // 4. Insert into database
-  const { error } = await supabase.from('matches').insert(
-    finalSchedule.map((row) => ({
-      tournament_id: tournament.id,
+  // 4. Validate and insert atomically.
+  const { error } = await supabase.rpc('create_cream_stage_matches', {
+    p_tournament_id: tournament.id,
+    p_starting_round: 7,
+    p_schedule: finalSchedule.map((row) => ({
       ...row,
       court_label: getCourtLabel(tournament, row.court_number),
-    }))
-  );
+    })),
+  });
 
   if (error) {
     setMessage(`Failed to create Final Round: ${error.message}`);
@@ -4307,6 +4324,9 @@ if (existingFinalMatches.length > 0) {
 
   await loadTournamentData(userId);
   setMessage('Final Round created.');
+  } finally {
+    setIsGeneratingCreamStage(false);
+  }
 }
 
   async function saveRoundCount() {
@@ -8171,8 +8191,9 @@ isOrganizer &&
       <button
         className="button primary"
         onClick={handleGenerateSiftRound}
+        disabled={isGeneratingCreamStage}
       >
-        Generate Re-Rank Round
+        {isGeneratingCreamStage ? 'Generating...' : 'Generate Re-Rank Round'}
       </button>
     )}
 
@@ -8181,8 +8202,9 @@ isOrganizer &&
         <button
           className="button primary"
           onClick={handleGenerateFinalRound}
+          disabled={isGeneratingCreamStage}
         >
-          Generate Final Round
+          {isGeneratingCreamStage ? 'Generating...' : 'Generate Final Round'}
         </button>
       )}
   </div>

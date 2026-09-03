@@ -44,6 +44,15 @@ function recommendedCourtCount(playerCount: number, format: 'singles' | 'doubles
   return Math.max(1, Math.floor(playerCount / (format === 'singles' ? 2 : 4)));
 }
 
+function recommendedPoolRoundCount(
+  playerCount: number,
+  poolCount: number,
+  doublesMode: 'rotating' | 'fixed' | 'mixed'
+) {
+  const playersPerPool = poolCount > 0 ? playerCount / poolCount : playerCount;
+  return Math.max(1, doublesMode === 'mixed' ? playersPerPool / 2 : playersPerPool - 1);
+}
+
 function Stepper({
   label,
   value,
@@ -472,13 +481,13 @@ export default function CreateTournamentPage() {
 
     setCourts(Math.max(1, Math.floor(playerCount / 4)));
   } else if (!roundsManuallySet) {
-    const playersPerGroup =
+    setRounds(
       poolBracketsEnabled && poolCount > 0 && playerCount % poolCount === 0
-        ? playerCount / poolCount
-        : playerCount;
-    setRounds(Math.max(1, playersPerGroup - 1));
+        ? recommendedPoolRoundCount(playerCount, poolCount, doublesMode)
+        : Math.max(1, playerCount - 1)
+    );
   }
-}, [tournamentMode, playerCount, poolBracketsEnabled, poolCount, roundsManuallySet]);
+}, [tournamentMode, playerCount, poolBracketsEnabled, poolCount, doublesMode, roundsManuallySet]);
 
   useEffect(() => {
     if (format === 'singles' && playerCount < 3) {
@@ -503,10 +512,11 @@ export default function CreateTournamentPage() {
   }, [poolBracketsAvailable, poolBracketsEnabled]);
 
   useEffect(() => {
-    if (!poolBracketsEnabled || playerCount % poolCount === 0) return;
+    if (!poolBracketsEnabled) return;
+    if (playerCount % poolCount === 0 && (moneyballEnabled || poolCount >= 2)) return;
     const validPoolCount = [2, 3, 4, 5, 6, 8].find((count) => playerCount % count === 0);
     if (validPoolCount) setPoolCount(validPoolCount);
-  }, [poolBracketsEnabled, playerCount, poolCount]);
+  }, [poolBracketsEnabled, moneyballEnabled, playerCount, poolCount]);
 
   async function handleCreate() {
   setMessage('');
@@ -553,8 +563,8 @@ export default function CreateTournamentPage() {
       setMessage('Each mixed pool must have the same number of men and women.');
       return;
     }
-    if (doublesMode === 'mixed' && poolQualifiersPerGender * 2 >= playersPerPool) {
-      setMessage('Each pool needs players remaining for both championship and consolation brackets.');
+    if (doublesMode === 'mixed' && poolQualifiersPerGender * 2 > playersPerPool) {
+      setMessage('The number of qualifiers cannot exceed the number of players in each pool.');
       return;
     }
   }
@@ -1111,7 +1121,7 @@ and final placement tie-breakers.
           {tournamentMode === 'round_robin' && poolBracketsEnabled ? (
             <div className="muted" style={{ marginTop: -6, fontSize: 12 }}>
               {roundsManuallySet
-                ? `Custom round count. The complete-rotation recommendation is ${Math.max(1, playerCount / poolCount - 1)}.`
+                ? `Custom round count. The complete-rotation recommendation is ${recommendedPoolRoundCount(playerCount, poolCount, doublesMode)}.`
                 : `${playerCount / poolCount} players per pool creates a ${rounds}-round complete rotation.`}
               {roundsManuallySet ? (
                 <button
@@ -1419,21 +1429,34 @@ and final placement tie-breakers.
         <div>
           <label className="label">Number of Pools</label>
           <select className="input" value={poolCount} onChange={(event) => setPoolCount(Number(event.target.value))}>
-            {[2, 3, 4, 5, 6, 8].filter((count) => playerCount % count === 0).map((count) => (
-              <option key={count} value={count}>{count} pools ({playerCount / count} players each)</option>
+            {[(moneyballEnabled ? 1 : null), 2, 3, 4, 5, 6, 8].filter((count): count is number => count !== null && playerCount % count === 0).map((count) => (
+              <option key={count} value={count}>{count === 1 ? `1 pool (all ${playerCount} players)` : `${count} pools (${playerCount / count} players each)`}</option>
             ))}
           </select>
+          {poolCount === 1 ? (
+            <div className="muted" style={{ fontSize: 12, marginTop: 5 }}>
+              Everyone plays in one combined pool before postseason seeding.
+            </div>
+          ) : null}
         </div>
 
         {doublesMode === 'mixed' ? (
           <div>
             <label className="label">Championship Qualifiers Per Pool</label>
             <select className="input" value={poolQualifiersPerGender} onChange={(event) => setPoolQualifiersPerGender(Number(event.target.value))}>
-              {Array.from({ length: Math.max(1, Math.floor(playerCount / poolCount / 2) - 1) }, (_, index) => index + 1).map((count) => (
-                <option key={count} value={count}>Top {count} men + top {count} women</option>
+              {Array.from({ length: Math.max(1, Math.floor(playerCount / poolCount / 2)) }, (_, index) => index + 1).map((count) => (
+                <option key={count} value={count}>
+                  {count * 2 === playerCount / poolCount
+                    ? 'Everyone advances to the championship bracket'
+                    : `Top ${count} men + top ${count} women`}
+                </option>
               ))}
             </select>
-            <div className="muted" style={{ fontSize: 12, marginTop: 5 }}>Remaining players enter the consolation bracket.</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 5 }}>
+              {poolQualifiersPerGender * 2 === playerCount / poolCount
+                ? 'Players are paired by gender rank. Top seeds receive byes when needed.'
+                : 'Remaining players enter the consolation bracket.'}
+            </div>
           </div>
         ) : null}
 

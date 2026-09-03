@@ -10,9 +10,13 @@ const {
 } = schedulerModule;
 import type { Match, PlayerSlot, ScheduleRow } from '../lib/tournament-types';
 
-const PLAYER_COUNTS = [8, 12, 16, 20, 24];
+const PLAYER_COUNTS = (process.env.CREAM_PLAYER_COUNTS || '8,12,16,20,24')
+  .split(',')
+  .map((value) => Number(value.trim()))
+  .filter((value) => Number.isInteger(value) && value >= 4 && value % 4 === 0);
 const SCORE_PATTERNS = ['alternating', 'team-a', 'team-b', 'court-seeded', 'close-games'] as const;
-const RANDOM_PATTERNS = Array.from({ length: 50 }, (_, index) => `random-${index + 1}` as const);
+const randomRunCount = Math.max(0, Number(process.env.CREAM_RANDOM_RUNS || 50));
+const RANDOM_PATTERNS = Array.from({ length: randomRunCount }, (_, index) => `random-${index + 1}` as const);
 type ScorePattern = typeof SCORE_PATTERNS[number] | `random-${number}`;
 const ALL_PATTERNS: ScorePattern[] = [...SCORE_PATTERNS, ...RANDOM_PATTERNS];
 

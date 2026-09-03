@@ -4367,7 +4367,7 @@ if (existingFinalMatches.length > 0) {
 
         if (tournament.pool_brackets_enabled) {
           const poolCount = tournament.pool_count || 0;
-          if (poolCount < 2 || namedPlayers.some((player) => !player.pool_number)) {
+          if (poolCount < 1 || namedPlayers.some((player) => !player.pool_number)) {
             throw new Error('Pool assignments are incomplete, so the schedule cannot be regenerated.');
           }
           replacementSchedule = buildPoolSchedule(
@@ -4636,7 +4636,7 @@ const results = updates.length > 0 ? await Promise.all(updates) : [];
       let scheduledPlayers = namedPlayers as PlayerSlot[];
 
       if (tournament.pool_brackets_enabled) {
-        if (poolCount < 2 || namedPlayers.length % poolCount !== 0) {
+        if (poolCount < 1 || namedPlayers.length % poolCount !== 0) {
           setMessage('Pool play requires players to divide evenly across every pool.');
           setIsStarting(false);
           return;
@@ -4823,10 +4823,10 @@ if (!scheduleValidation.isValid) {
     const brackets = [
       { type: 'championship' as const, teams: formTeams(championshipPlayers) },
       { type: 'consolation' as const, teams: formTeams(consolationPlayers) },
-    ];
+    ].filter((bracket) => bracket.teams.length > 0);
 
     if (brackets.some((bracket) => bracket.teams.length < 2)) {
-      setMessage('Each postseason bracket needs at least two complete teams.');
+      setMessage('Each active postseason bracket needs at least two complete teams.');
       return;
     }
 
@@ -4903,7 +4903,11 @@ if (!scheduleValidation.isValid) {
     const { error: tournamentError } = await supabase.from('tournaments').update({ playoff_status: 'started' }).eq('id', tournament.id);
     if (tournamentError) { setMessage(`Could not start postseason: ${tournamentError.message}`); return; }
     await loadTournamentData(userId);
-    setMessage('Championship and consolation brackets generated. Partnerships are now locked.');
+    setMessage(
+      brackets.some((bracket) => bracket.type === 'consolation')
+        ? 'Championship and consolation brackets generated. Partnerships are now locked.'
+        : 'Championship bracket generated for every player. Partnerships are now locked, and top seeds received byes.'
+    );
   }
 
   async function generatePlayoffBracket() {

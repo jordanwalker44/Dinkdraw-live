@@ -1618,10 +1618,104 @@ function scoreDoublesCourtSchedule(rows: ScheduleRow[], playerIds: string[]) {
   return score;
 }
 
+function scoreCompleteMixedCourtDistribution(rows: ScheduleRow[], playerIds: string[]) {
+  const allCourts = Array.from(
+    new Set(
+      rows
+        .filter((row) => !row.is_bye && row.court_number !== null)
+        .map((row) => row.court_number as number)
+    )
+  );
+  const courtCounts = new Map(
+    playerIds.map((playerId) => [playerId, new Map<number, number>()])
+  );
+
+  for (const row of rows) {
+    if (row.is_bye || row.court_number === null) continue;
+    for (const playerId of doublesRowPlayerIds(row)) {
+      const counts = courtCounts.get(playerId)!;
+      counts.set(row.court_number, (counts.get(row.court_number) ?? 0) + 1);
+    }
+  }
+
+  const spreads = playerIds.map((playerId) => {
+    const counts = courtCounts.get(playerId)!;
+    const values = allCourts.map((court) => counts.get(court) ?? 0);
+    return Math.max(...values) - Math.min(...values);
+  });
+
+  return (
+    Math.max(...spreads) * 1_000_000_000_000 +
+    spreads.reduce((sum, spread) => sum + Math.pow(spread, 2), 0) * 1_000_000_000 +
+    scoreDoublesCourtSchedule(rows, playerIds)
+  );
+}
+
 function balanceDoublesCourtsInSchedule(
   rows: ScheduleRow[],
   playerIds: string[]
 ) {
+  const playableRoundNumbers = Array.from(
+    new Set(
+      rows
+        .filter((row) => !row.is_bye && row.court_number !== null)
+        .map((row) => row.round_number)
+    )
+  ).sort((a, b) => a - b);
+  const isSixRoundThreeCourtRotation =
+    playableRoundNumbers.length === 6 &&
+    playableRoundNumbers.every(
+      (roundNumber) =>
+        rows.filter(
+          (row) => !row.is_bye && row.round_number === roundNumber && row.court_number !== null
+        ).length === 3
+    );
+
+  if (isSixRoundThreeCourtRotation) {
+    const courtPermutations = [
+      [1, 2, 3], [1, 3, 2], [2, 1, 3],
+      [2, 3, 1], [3, 1, 2], [3, 2, 1],
+    ];
+    const byeRows = rows.filter((row) => row.is_bye);
+    const rowsByRound = playableRoundNumbers.map((roundNumber) =>
+      rows.filter(
+        (row) => !row.is_bye && row.round_number === roundNumber && row.court_number !== null
+      )
+    );
+    let bestRows = rows;
+    let bestScore = scoreCompleteMixedCourtDistribution(rows, playerIds);
+
+    function search(roundIndex: number, assignedRows: ScheduleRow[]) {
+      if (roundIndex === rowsByRound.length) {
+        const candidateRows = [...assignedRows, ...byeRows];
+        const score = scoreCompleteMixedCourtDistribution(candidateRows, playerIds);
+        if (score < bestScore) {
+          bestScore = score;
+          bestRows = candidateRows;
+        }
+        return;
+      }
+
+      for (const permutation of courtPermutations) {
+        search(
+          roundIndex + 1,
+          assignedRows.concat(
+            rowsByRound[roundIndex].map((row, matchIndex) => ({
+              ...row,
+              court_number: permutation[matchIndex],
+              court_label: null,
+            }))
+          )
+        );
+      }
+    }
+
+    search(0, []);
+    return bestRows.sort(
+      (a, b) => a.round_number - b.round_number || (a.court_number ?? 999) - (b.court_number ?? 999)
+    );
+  }
+
   let balancedRows = [...rows];
   let bestScore = scoreDoublesCourtSchedule(balancedRows, playerIds);
   let improved = true;
@@ -2151,6 +2245,15 @@ function buildMixedDoublesSchedule(
     return bestMatches;
   }
 
+  const balancedSixTeamPairings = [
+    [[0, 1], [2, 5], [3, 4]],
+    [[0, 2], [1, 4], [3, 5]],
+    [[0, 2], [1, 3], [4, 5]],
+    [[0, 5], [1, 4], [2, 3]],
+    [[0, 1], [2, 4], [3, 5]],
+    [[0, 4], [1, 3], [2, 5]],
+  ];
+
   function recordMixedMatch(match: MixedMatch, courtNumber: number): void {
     const [a1, a2] = match.teamA;
     const [b1, b2] = match.teamB;
@@ -2233,7 +2336,18 @@ function buildMixedDoublesSchedule(
       maleSelection.participants,
       femaleSelection.participants
     );
-    const matches = pairMixedTeams(teams);
+    const useBalancedSixTeamRotation =
+      malePlayers.length === 6 &&
+      femalePlayers.length === 6 &&
+      rounds === 6 &&
+      courts >= 3 &&
+      teams.length === 6;
+    const matches = useBalancedSixTeamRotation
+      ? balancedSixTeamPairings[round - 1].map(([firstIndex, secondIndex]) => ({
+          teamA: [teams[firstIndex].maleId, teams[firstIndex].femaleId] as [string, string],
+          teamB: [teams[secondIndex].maleId, teams[secondIndex].femaleId] as [string, string],
+        }))
+      : pairMixedTeams(teams);
 
     if (!matches || !matches.length) break;
 

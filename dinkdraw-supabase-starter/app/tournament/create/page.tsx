@@ -180,6 +180,8 @@ export default function CreateTournamentPage() {
   const [poolBracketsEnabled, setPoolBracketsEnabled] = useState(false);
   const [testMode, setTestMode] = useState(false);
   const [poolCount, setPoolCount] = useState(2);
+  const [poolPostseasonFormat, setPoolPostseasonFormat] = useState<'split' | 'single' | 'single_consolation' | 'double' | 'triple'>('split');
+  const [postseasonFinalFormat, setPostseasonFinalFormat] = useState<'carry_losses' | 'winner_take_all'>('carry_losses');
   const [poolQualifiersPerGender, setPoolQualifiersPerGender] = useState(2);
   const [bracketMatchFormat, setBracketMatchFormat] = useState<'single' | 'best_of_3'>('single');
   const [bracketGamesTo, setBracketGamesTo] = useState(11);
@@ -220,6 +222,8 @@ export default function CreateTournamentPage() {
         playoffSeedingStyle,
         poolBracketsEnabled,
         poolCount,
+        poolPostseasonFormat,
+        postseasonFinalFormat,
         poolQualifiersPerGender,
         bracketMatchFormat,
         bracketGamesTo,
@@ -283,6 +287,10 @@ export default function CreateTournamentPage() {
       }
       if (typeof draft.poolBracketsEnabled === 'boolean') setPoolBracketsEnabled(draft.poolBracketsEnabled);
       if (typeof draft.poolCount === 'number') setPoolCount(draft.poolCount);
+      if (['split', 'single', 'single_consolation', 'double', 'triple'].includes(draft.poolPostseasonFormat)) {
+        setPoolPostseasonFormat(draft.poolPostseasonFormat);
+      }
+      if (draft.postseasonFinalFormat === 'carry_losses' || draft.postseasonFinalFormat === 'winner_take_all') setPostseasonFinalFormat(draft.postseasonFinalFormat);
       if (typeof draft.poolQualifiersPerGender === 'number') setPoolQualifiersPerGender(draft.poolQualifiersPerGender);
       if (draft.bracketMatchFormat) setBracketMatchFormat(draft.bracketMatchFormat);
       if (typeof draft.bracketGamesTo === 'number') setBracketGamesTo(draft.bracketGamesTo);
@@ -563,7 +571,7 @@ export default function CreateTournamentPage() {
       setMessage('Each mixed pool must have the same number of men and women.');
       return;
     }
-    if (doublesMode === 'mixed' && poolQualifiersPerGender * 2 > playersPerPool) {
+    if (doublesMode === 'mixed' && poolPostseasonFormat === 'split' && poolQualifiersPerGender * 2 > playersPerPool) {
       setMessage('The number of qualifiers cannot exceed the number of players in each pool.');
       return;
     }
@@ -695,6 +703,8 @@ export default function CreateTournamentPage() {
         pool_brackets_enabled: poolBracketsEnabled,
         test_mode: poolBracketsEnabled ? testMode : false,
         pool_count: poolBracketsEnabled ? poolCount : null,
+        pool_postseason_format: poolBracketsEnabled ? poolPostseasonFormat : null,
+        postseason_final_format: poolBracketsEnabled ? postseasonFinalFormat : null,
         pool_qualifiers_per_gender: poolBracketsEnabled ? poolQualifiersPerGender : null,
         bracket_match_format: poolBracketsEnabled ? bracketMatchFormat : null,
         bracket_games_to: poolBracketsEnabled ? bracketGamesTo : null,
@@ -1440,7 +1450,40 @@ and final placement tie-breakers.
           ) : null}
         </div>
 
-        {doublesMode === 'mixed' ? (
+        <div>
+          <label className="label">Postseason Structure</label>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {([
+              ['single', 'Single Elimination', 'Everyone enters one championship bracket.'],
+              ['single_consolation', 'Single + First-Round Consolation', 'First-round losers receive a separate consolation path.'],
+              ['double', 'Double Elimination', 'A team is eliminated after its second postseason loss.'],
+              ['triple', 'Triple Elimination', 'A team is eliminated after its third postseason loss.'],
+              ['split', 'Split Championship + Consolation', 'Pool standings split the field before brackets begin.'],
+            ] as const).map(([value, label, description]) => (
+              <button key={value} type="button" className={`button ${poolPostseasonFormat === value ? 'primary' : 'secondary'}`} onClick={() => setPoolPostseasonFormat(value)} style={{ textAlign: 'left' }}>
+                <span style={{ display: 'block', fontWeight: 900 }}>{label}</span>
+                <span style={{ display: 'block', marginTop: 3, fontSize: 11, opacity: 0.72 }}>{description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {poolPostseasonFormat === 'double' || poolPostseasonFormat === 'triple' ? (
+          <div>
+            <label className="label">Championship Advantage</label>
+            <select className="input" value={postseasonFinalFormat} onChange={(event) => setPostseasonFinalFormat(event.target.value as 'carry_losses' | 'winner_take_all')}>
+              <option value="carry_losses">Carry losses forward (recommended)</option>
+              <option value="winner_take_all">One winner-take-all final</option>
+            </select>
+            <div className="muted" style={{ fontSize: 12, marginTop: 5 }}>
+              {postseasonFinalFormat === 'carry_losses'
+                ? `A finalist remains alive until reaching ${poolPostseasonFormat === 'double' ? 2 : 3} total postseason losses.`
+                : 'Earlier losses do not affect the one deciding championship match.'}
+            </div>
+          </div>
+        ) : null}
+
+        {doublesMode === 'mixed' && poolPostseasonFormat === 'split' ? (
           <div>
             <label className="label">Championship Qualifiers Per Pool</label>
             <select className="input" value={poolQualifiersPerGender} onChange={(event) => setPoolQualifiersPerGender(Number(event.target.value))}>

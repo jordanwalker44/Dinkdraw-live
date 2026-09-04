@@ -43,6 +43,7 @@ type Tournament = {
   tournament_mode: string | null;
   organization_id: string | null;
   pool_brackets_enabled: boolean | null;
+  pool_postseason_format: string | null;
   standings_ranking_method: 'record_first' | 'point_diff_first' | null;
 };
 
@@ -99,6 +100,9 @@ type PlayoffMatch = {
   bracket_type: 'championship' | 'consolation';
   is_bye: boolean;
   is_complete: boolean;
+  elimination_section: 'main' | 'second_chance' | 'last_chance' | 'finals' | null;
+  team_a_losses: number;
+  team_b_losses: number;
 };
 
 type StandingRow = {
@@ -1783,8 +1787,15 @@ useEffect(() => {
           <div className="card" style={{ marginBottom: 14 }}>
             <div className="card-title">Bracket Path</div>
             <div className="card-subtitle">Follow every team from its opening matchup to the championship.</div>
-            <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" title="Championship Bracket" accentColor="#FFCB05" />
-            <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" title="Consolation Bracket" accentColor="#A78BFA" />
+            {playoffMatches.some((match) => match.elimination_section) ? <>
+              <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" eliminationSection="main" title="Main Draw · 0 Losses" accentColor="#FFCB05" />
+              <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" eliminationSection="second_chance" title="Second Chance · 1 Loss" accentColor="#A78BFA" />
+              <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" eliminationSection="last_chance" title="Last Chance · 2 Losses" accentColor="#FB7185" />
+              <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" eliminationSection="finals" title="Championship Finals" accentColor="#86EFAC" />
+            </> : <>
+              <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" title="Championship Bracket" accentColor="#FFCB05" />
+              <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" title="Consolation Bracket" accentColor="#A78BFA" />
+            </>}
           </div>
         ) : null}
 

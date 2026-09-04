@@ -23,6 +23,9 @@ export type BracketMatch = {
   next_match_id: string | null;
   is_bye: boolean;
   is_complete: boolean;
+  elimination_section?: 'main' | 'second_chance' | 'last_chance' | 'finals' | null;
+  team_a_losses?: number;
+  team_b_losses?: number;
 };
 
 function teamName(
@@ -78,15 +81,19 @@ export function TournamentBracket({
   bracketType,
   title,
   accentColor,
+  eliminationSection,
 }: {
   matches: BracketMatch[];
   players: Record<string, BracketPlayer>;
   bracketType: 'championship' | 'consolation';
   title: string;
   accentColor: string;
+  eliminationSection?: 'main' | 'second_chance' | 'last_chance' | 'finals';
 }) {
   const bracketMatches = matches.filter(
-    (match) => (match.bracket_type || 'championship') === bracketType
+    (match) => eliminationSection
+      ? match.elimination_section === eliminationSection
+      : !match.elimination_section && (match.bracket_type || 'championship') === bracketType
   );
   if (!bracketMatches.length) return null;
 
@@ -146,17 +153,32 @@ export function TournamentBracket({
                         >
                           <BracketSide seed={match.team_a_seed} name={teamA} score={match.team_a_score} winner={match.winner_team === 'A' || match.is_bye} />
                           <BracketSide seed={match.team_b_seed} name={teamB} score={match.team_b_score} winner={match.winner_team === 'B'} />
+                          {eliminationSection && eliminationSection !== 'main' ? (
+                            <div style={{ padding: '4px 8px', textAlign: 'center', color: 'rgba(255,255,255,0.55)', fontSize: 9, fontWeight: 850 }}>
+                              Entered with {Math.max(match.team_a_losses || 0, match.team_b_losses || 0)} loss{Math.max(match.team_a_losses || 0, match.team_b_losses || 0) === 1 ? '' : 'es'}
+                            </div>
+                          ) : null}
                           {isFinal && match.is_complete ? (
                             <div style={{ padding: '5px 8px', textAlign: 'center', background: `${accentColor}18`, color: accentColor, fontSize: 10, fontWeight: 950, letterSpacing: 1 }}>
-                              {bracketType === 'championship' ? 'CHAMPIONS' : 'CONSOLATION WINNERS'}
+                              {eliminationSection === 'main'
+                                ? 'MAIN DRAW WINNER'
+                                : eliminationSection === 'second_chance'
+                                ? 'SECOND CHANCE WINNER'
+                                : eliminationSection === 'last_chance'
+                                ? 'LAST CHANCE WINNER'
+                                : eliminationSection === 'finals'
+                                ? 'CHAMPIONS'
+                                : bracketType === 'championship'
+                                ? 'CHAMPIONS'
+                                : 'CONSOLATION WINNERS'}
                             </div>
                           ) : null}
                         </div>
                         {!isFinal ? (
                           <div aria-hidden="true" style={{ position: 'absolute', top: '50%', right: -24, width: 24, borderTop: `2px solid ${accentColor}77` }} />
-                        ) : (
+                        ) : eliminationSection === 'finals' || !eliminationSection ? (
                           <div aria-hidden="true" style={{ position: 'absolute', top: '50%', right: -17, transform: 'translateY(-50%)', fontSize: 22 }}>🏆</div>
-                        )}
+                        ) : null}
                       </div>
                     );
                   })}

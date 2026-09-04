@@ -29,6 +29,7 @@ import {
   buildCreamOfTheCropStageSchedule,
   buildNextCreamOfTheCropStagePlayers
 } from '../../../lib/scheduler';
+import { buildFirstRoundConsolationGraph, buildFixedEliminationGraph, type BracketSource } from '../../../lib/multi-elimination';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,8 @@ type Tournament = {
   test_mode: boolean;
   standings_ranking_method: 'record_first' | 'point_diff_first' | null;
   pool_count: number | null;
+  pool_postseason_format: 'split' | 'single' | 'single_consolation' | 'double' | 'triple' | null;
+  postseason_final_format: 'carry_losses' | 'winner_take_all' | null;
   pool_qualifiers_per_gender: number | null;
   bracket_match_format: 'single' | 'best_of_3' | null;
   bracket_games_to: number | null;
@@ -167,6 +170,14 @@ type PlayoffMatch = {
   game_2_b: number | null;
   game_3_a: number | null;
   game_3_b: number | null;
+  elimination_section: 'main' | 'second_chance' | 'last_chance' | 'finals' | null;
+  template_key: string | null;
+  loser_next_match_id: string | null;
+  loser_next_match_team: 'A' | 'B' | null;
+  team_a_losses: number;
+  team_b_losses: number;
+  elimination_limit: number;
+  is_conditional_final: boolean;
 };
 
 type SavedCoOrganizer = {
@@ -4918,19 +4929,25 @@ if (!scheduleValidation.isValid) {
     const poolCount = tournament.pool_count || 0;
     const qualifiersPerGender = tournament.pool_qualifiers_per_gender || 1;
 
-    for (let poolNumber = 1; poolNumber <= poolCount; poolNumber += 1) {
-      const pool = playerSlots.filter((player) => player.pool_number === poolNumber && (player.display_name || '').trim());
-      if (tournament.doubles_mode === 'mixed') {
-        for (const gender of ['male', 'female']) {
-          const ranked = rankPlayers(pool.filter((player) => player.gender === gender));
-          championshipPlayers.push(...ranked.slice(0, qualifiersPerGender));
-          consolationPlayers.push(...ranked.slice(qualifiersPerGender));
+    if (tournament.pool_postseason_format && tournament.pool_postseason_format !== 'split') {
+      championshipPlayers.push(
+        ...rankPlayers(playerSlots.filter((player) => (player.display_name || '').trim()))
+      );
+    } else {
+      for (let poolNumber = 1; poolNumber <= poolCount; poolNumber += 1) {
+        const pool = playerSlots.filter((player) => player.pool_number === poolNumber && (player.display_name || '').trim());
+        if (tournament.doubles_mode === 'mixed') {
+          for (const gender of ['male', 'female']) {
+            const ranked = rankPlayers(pool.filter((player) => player.gender === gender));
+            championshipPlayers.push(...ranked.slice(0, qualifiersPerGender));
+            consolationPlayers.push(...ranked.slice(qualifiersPerGender));
+          }
+        } else {
+          const ranked = rankPlayers(pool);
+          const advanceCount = Math.floor(ranked.length / 2);
+          championshipPlayers.push(...ranked.slice(0, advanceCount));
+          consolationPlayers.push(...ranked.slice(advanceCount));
         }
-      } else {
-        const ranked = rankPlayers(pool);
-        const advanceCount = Math.floor(ranked.length / 2);
-        championshipPlayers.push(...ranked.slice(0, advanceCount));
-        consolationPlayers.push(...ranked.slice(advanceCount));
       }
     }
 
@@ -4953,6 +4970,100 @@ if (!scheduleValidation.isValid) {
       }
       return teams;
     };
+
+    const eliminationFormat = tournament.pool_postseason_format || 'split';
+    if (eliminationFormat === 'single_consolation' || eliminationFormat === 'double' || eliminationFormat === 'triple') {
+      const teams = formTeams(championshipPlayers);
+      if (teams.length < 2) {
+        setMessage('Multi-elimination postseason requires at least two complete teams.');
+        return;
+      }
+
+      const lossLimit = eliminationFormat === 'triple' ? 3 : eliminationFormat === 'double' ? 2 : 1;
+      const graph = eliminationFormat === 'single_consolation'
+        ? buildFirstRoundConsolationGraph(teams.length)
+        : buildFixedEliminationGraph(teams.length, lossLimit as 2 | 3);
+      const depthByKey = new Map<string, number>();
+      const sourceDepth = (source: BracketSource) => source.kind === 'seed' ? 0 : (depthByKey.get(source.matchKey) || 0);
+      for (const template of graph.matches) {
+        depthByKey.set(template.key, Math.max(sourceDepth(template.inputA), sourceDepth(template.inputB)) + 1);
+      }
+      const matchNumberByRound = new Map<number, number>();
+      const sectionLabel = { main: 'Main Draw', second_chance: 'Second Chance', last_chance: 'Last Chance' } as const;
+      const sectionLosses = { main: 0, second_chance: 1, last_chance: 2 } as const;
+      const teamForSource = (source: BracketSource) => source.kind === 'seed' ? teams[source.seed - 1] : null;
+
+      const rows = graph.matches.map((template) => {
+        const roundNumber = depthByKey.get(template.key) || 1;
+        const matchNumber = (matchNumberByRound.get(roundNumber) || 0) + 1;
+        matchNumberByRound.set(roundNumber, matchNumber);
+        const teamA = teamForSource(template.inputA);
+        const teamB = teamForSource(template.inputB);
+        return {
+          tournament_id: tournament.id,
+          bracket_type: template.section === 'main' ? 'championship' : 'consolation',
+          elimination_section: template.section,
+          template_key: template.key,
+          round_number: roundNumber,
+          match_number: matchNumber,
+          round_label: `${sectionLabel[template.section]} · Round ${template.sectionRound}`,
+          team_a_seed: teamA?.seed || null,
+          team_b_seed: teamB?.seed || null,
+          team_a_player_1_id: teamA?.player1Id || null,
+          team_a_player_2_id: teamA?.player2Id || null,
+          team_b_player_1_id: teamB?.player1Id || null,
+          team_b_player_2_id: teamB?.player2Id || null,
+          team_a_losses: sectionLosses[template.section],
+          team_b_losses: sectionLosses[template.section],
+          elimination_limit: lossLimit,
+          winner_team: null,
+          winner_player_1_id: null,
+          winner_player_2_id: null,
+          next_match_id: null,
+          next_match_team: null,
+          loser_next_match_id: null,
+          loser_next_match_team: null,
+          is_bye: false,
+          is_complete: false,
+          is_conditional_final: false,
+          match_format: tournament.bracket_match_format || 'single',
+          games_to: tournament.bracket_games_to || 11,
+          deciding_game_to: tournament.bracket_deciding_game_to,
+        };
+      });
+
+      const { error: deleteError } = await supabase.from('playoff_matches').delete().eq('tournament_id', tournament.id);
+      if (deleteError) { setMessage(`Could not reset postseason brackets: ${deleteError.message}`); return; }
+      const { data: inserted, error: insertError } = await supabase.from('playoff_matches').insert(rows).select('*');
+      if (insertError || !inserted) { setMessage(`Could not generate elimination brackets: ${insertError?.message || 'No matches returned.'}`); return; }
+
+      const insertedByKey = new Map((inserted as PlayoffMatch[]).map((match) => [match.template_key, match]));
+      const linkUpdates: PromiseLike<{ error: any }>[] = [];
+      for (const template of graph.matches) {
+        const destination = insertedByKey.get(template.key);
+        if (!destination) continue;
+        for (const [slot, source] of [['A', template.inputA], ['B', template.inputB]] as const) {
+          if (source.kind !== 'match') continue;
+          const sourceMatch = insertedByKey.get(source.matchKey);
+          if (!sourceMatch) continue;
+          linkUpdates.push(supabase.from('playoff_matches').update(
+            source.outcome === 'winner'
+              ? { next_match_id: destination.id, next_match_team: slot }
+              : { loser_next_match_id: destination.id, loser_next_match_team: slot }
+          ).eq('id', sourceMatch.id));
+        }
+      }
+      const linked = await Promise.all(linkUpdates);
+      const linkFailure = linked.find((result) => result.error)?.error;
+      if (linkFailure) { setMessage(`Brackets generated, but route linking failed: ${linkFailure.message}`); return; }
+      const { error: statusError } = await supabase.from('tournaments').update({ playoff_status: 'started' }).eq('id', tournament.id);
+      if (statusError) { setMessage(`Could not start postseason: ${statusError.message}`); return; }
+      await loadTournamentData(userId);
+      setMessage(eliminationFormat === 'single_consolation'
+        ? 'Championship and first-round consolation paths generated.'
+        : `${eliminationFormat === 'double' ? 'Double' : 'Triple'}-elimination brackets generated with fixed paths.`);
+      return;
+    }
 
     const brackets = [
       { type: 'championship' as const, teams: formTeams(championshipPlayers) },
@@ -5831,6 +5942,101 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
       }
     }
   }
+  async function advanceMultiEliminationPostseason(
+    completedMatch: PlayoffMatch,
+    winner: { player1Id: string; player2Id: string | null; seed: number | null; losses: number },
+    loser: { player1Id: string; player2Id: string | null; seed: number | null; losses: number },
+  ) {
+    if (!tournament) return;
+    const slotUpdate = (slot: 'A' | 'B', team: typeof winner) => slot === 'A' ? {
+      team_a_seed: team.seed, team_a_player_1_id: team.player1Id, team_a_player_2_id: team.player2Id, team_a_losses: team.losses,
+    } : {
+      team_b_seed: team.seed, team_b_player_1_id: team.player1Id, team_b_player_2_id: team.player2Id, team_b_losses: team.losses,
+    };
+    const routeUpdates: PromiseLike<{ error: any }>[] = [];
+    if (completedMatch.next_match_id && completedMatch.next_match_team) {
+      routeUpdates.push(supabase.from('playoff_matches').update(slotUpdate(completedMatch.next_match_team as 'A' | 'B', winner)).eq('id', completedMatch.next_match_id));
+    }
+    if (completedMatch.loser_next_match_id && completedMatch.loser_next_match_team) {
+      routeUpdates.push(supabase.from('playoff_matches').update(slotUpdate(completedMatch.loser_next_match_team, loser)).eq('id', completedMatch.loser_next_match_id));
+    }
+    const routed = await Promise.all(routeUpdates);
+    const routeError = routed.find((result) => result.error)?.error;
+    if (routeError) throw new Error(`Result saved, but bracket routing failed: ${routeError.message}`);
+
+    const { data, error } = await supabase.from('playoff_matches').select('*').eq('tournament_id', tournament.id).order('round_number').order('match_number');
+    if (error) throw error;
+    const allMatches = (data || []) as PlayoffMatch[];
+    const limit = tournament.pool_postseason_format === 'triple' ? 3 : 2;
+    const requiredSections = limit === 3 ? ['main', 'second_chance', 'last_chance'] : ['main', 'second_chance'];
+    const sectionFinals = requiredSections.map((section) => allMatches
+      .filter((candidate) => candidate.elimination_section === section && !candidate.next_match_id)
+      .sort((a, b) => b.round_number - a.round_number)[0]);
+    if (sectionFinals.some((candidate) => !candidate?.is_complete || !candidate.winner_player_1_id)) return;
+
+    type Finalist = { player1Id: string; player2Id: string | null; seed: number | null; losses: number };
+    const teamKey = (team: Pick<Finalist, 'player1Id' | 'player2Id'>) => `${team.player1Id}|${team.player2Id || ''}`;
+    const finalists = new Map<string, Finalist>();
+    sectionFinals.forEach((sectionFinal, index) => {
+      if (!sectionFinal?.winner_player_1_id) return;
+      const team = { player1Id: sectionFinal.winner_player_1_id, player2Id: sectionFinal.winner_player_2_id, seed: sectionFinal.winner_team === 'A' ? sectionFinal.team_a_seed : sectionFinal.team_b_seed, losses: index };
+      finalists.set(teamKey(team), team);
+    });
+    const finals = allMatches.filter((candidate) => candidate.elimination_section === 'finals').sort((a, b) => a.round_number - b.round_number);
+    for (const final of finals.filter((candidate) => candidate.is_complete)) {
+      const losingA = final.winner_team === 'B';
+      const losingTeam = losingA
+        ? { player1Id: final.team_a_player_1_id!, player2Id: final.team_a_player_2_id }
+        : { player1Id: final.team_b_player_1_id!, player2Id: final.team_b_player_2_id };
+      const tracked = finalists.get(teamKey(losingTeam));
+      if (tracked) tracked.losses += 1;
+    }
+
+    const completeTournamentWith = async (champion: Finalist) => {
+      const { error: completionError } = await supabase.from('tournaments').update({
+        status: 'completed', playoff_status: 'completed',
+        champion_player_1_id: champion.player1Id, champion_player_2_id: champion.player2Id,
+      }).eq('id', tournament.id);
+      if (completionError) throw new Error(`Final score saved, but tournament completion failed: ${completionError.message}`);
+      void sendTournamentPushEvent(supabase, {
+        eventType: 'tournament_completed',
+        tournamentId: tournament.id,
+      });
+    };
+
+    if (tournament.postseason_final_format === 'winner_take_all' && finals.some((candidate) => candidate.is_complete)) {
+      const last = finals.filter((candidate) => candidate.is_complete).at(-1)!;
+      await completeTournamentWith({
+        player1Id: last.winner_player_1_id!, player2Id: last.winner_player_2_id,
+        seed: last.winner_team === 'A' ? last.team_a_seed : last.team_b_seed,
+        losses: 0,
+      });
+      return;
+    }
+
+    const active = [...finalists.values()].filter((team) => team.losses < limit).sort((a, b) => b.losses - a.losses || (a.seed || 999) - (b.seed || 999));
+    if (active.length === 1) {
+      await completeTournamentWith(active[0]);
+      return;
+    }
+    if (finals.some((candidate) => !candidate.is_complete)) return;
+
+    const teamA = active[0];
+    const teamB = active[1];
+    const nextRound = Math.max(0, ...allMatches.map((candidate) => candidate.round_number)) + 1;
+    const { error: finalError } = await supabase.from('playoff_matches').insert({
+      tournament_id: tournament.id, bracket_type: 'championship', elimination_section: 'finals', template_key: `finals-${finals.length + 1}`,
+      round_number: nextRound, match_number: 1, round_label: finals.length ? `Championship Match ${finals.length + 1}` : 'Championship Final',
+      team_a_seed: teamA.seed, team_b_seed: teamB.seed,
+      team_a_player_1_id: teamA.player1Id, team_a_player_2_id: teamA.player2Id,
+      team_b_player_1_id: teamB.player1Id, team_b_player_2_id: teamB.player2Id,
+      team_a_losses: teamA.losses, team_b_losses: teamB.losses, elimination_limit: limit, is_conditional_final: true,
+      match_format: tournament.bracket_match_format || 'single', games_to: tournament.bracket_games_to || 11, deciding_game_to: tournament.bracket_deciding_game_to,
+      is_bye: false, is_complete: false,
+    });
+    if (finalError) throw finalError;
+  }
+
   async function submitPlayoffScore(matchId: string) {
   if (!tournament) return;
 
@@ -5919,11 +6125,23 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
   const winnerSeed = teamAWins ? match.team_a_seed : match.team_b_seed;
   const winnerTeam = teamAWins ? 'A' : 'B';
+  const winnerLosses = teamAWins ? match.team_a_losses : match.team_b_losses;
+  const loserPlayer1Id = teamAWins ? match.team_b_player_1_id : match.team_a_player_1_id;
+  const loserPlayer2Id = teamAWins ? match.team_b_player_2_id : match.team_a_player_2_id;
+  const loserSeed = teamAWins ? match.team_b_seed : match.team_a_seed;
+  const loserLosses = (teamAWins ? match.team_b_losses : match.team_a_losses) + 1;
 
   setMessage('Submitting playoff score...');
 
   if (isCorrectingCompletedMatch) {
-    const { error: correctionError } = await supabase.rpc('correct_playoff_match_score', {
+    const isMultiEliminationCorrection =
+      tournament.pool_postseason_format === 'double' || tournament.pool_postseason_format === 'triple';
+    const isFixedPathCorrection = isMultiEliminationCorrection ||
+      (tournament.pool_postseason_format === 'single_consolation' && !!match.loser_next_match_id);
+    const { error: correctionError } = await supabase.rpc(
+      isFixedPathCorrection
+        ? 'correct_multi_elimination_match_score'
+        : 'correct_playoff_match_score', {
       p_match_id: match.id,
       p_team_a_score: aScore,
       p_team_b_score: bScore,
@@ -5939,6 +6157,20 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
       setPlayoffCorrectionMessage((prev) => ({ ...prev, [match.id]: correctionError.message }));
       setMessage(`Score correction failed: ${correctionError.message}`);
       return;
+    }
+
+    if (isMultiEliminationCorrection && match.winner_team !== winnerTeam) {
+      try {
+        await advanceMultiEliminationPostseason(
+          match,
+          { player1Id: winnerPlayer1Id, player2Id: winnerPlayer2Id, seed: winnerSeed, losses: winnerLosses },
+          { player1Id: loserPlayer1Id!, player2Id: loserPlayer2Id, seed: loserSeed, losses: loserLosses },
+        );
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : 'Score corrected, but bracket rebuilding failed.');
+        await loadTournamentData(userId);
+        return;
+      }
     }
 
     setPlayoffCorrectionMessage((prev) => ({ ...prev, [match.id]: '' }));
@@ -5961,6 +6193,35 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
 
   if (matchError) {
     setMessage(`Playoff score failed: ${matchError.message}`);
+    return;
+  }
+
+  if (tournament.pool_postseason_format === 'single_consolation' && match.loser_next_match_id && match.loser_next_match_team) {
+    const loserUpdate = match.loser_next_match_team === 'A' ? {
+      team_a_seed: loserSeed, team_a_player_1_id: loserPlayer1Id, team_a_player_2_id: loserPlayer2Id, team_a_losses: loserLosses,
+    } : {
+      team_b_seed: loserSeed, team_b_player_1_id: loserPlayer1Id, team_b_player_2_id: loserPlayer2Id, team_b_losses: loserLosses,
+    };
+    const { error: loserRouteError } = await supabase.from('playoff_matches').update(loserUpdate).eq('id', match.loser_next_match_id);
+    if (loserRouteError) {
+      setMessage(`Score saved, but consolation routing failed: ${loserRouteError.message}`);
+      await loadTournamentData(userId);
+      return;
+    }
+  }
+
+  if (tournament.pool_postseason_format === 'double' || tournament.pool_postseason_format === 'triple') {
+    try {
+      await advanceMultiEliminationPostseason(
+        match,
+        { player1Id: winnerPlayer1Id, player2Id: winnerPlayer2Id, seed: winnerSeed, losses: winnerLosses },
+        { player1Id: loserPlayer1Id!, player2Id: loserPlayer2Id, seed: loserSeed, losses: loserLosses },
+      );
+      await loadTournamentData(userId);
+      setMessage(match.elimination_section === 'finals' ? 'Championship result saved.' : 'Playoff score submitted. Winner and loser paths updated.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Bracket advancement failed.');
+    }
     return;
   }
 
@@ -8591,6 +8852,14 @@ isOrganizer &&
   <div className="card" style={{ marginTop: 14 }}>
     <div className="card-title">Bracket Path</div>
     <div className="card-subtitle">Follow every team from its opening matchup to the championship.</div>
+    {playoffMatches.some((match) => match.elimination_section) ? (
+      <>
+        <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" eliminationSection="main" title="Main Draw · 0 Losses" accentColor="#FFCB05" />
+        <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" eliminationSection="second_chance" title="Second Chance · 1 Loss" accentColor="#A78BFA" />
+        <TournamentBracket matches={playoffMatches} players={playersById} bracketType="consolation" eliminationSection="last_chance" title="Last Chance · 2 Losses" accentColor="#FB7185" />
+        <TournamentBracket matches={playoffMatches} players={playersById} bracketType="championship" eliminationSection="finals" title="Championship Finals" accentColor="#86EFAC" />
+      </>
+    ) : <>
     <TournamentBracket
       matches={playoffMatches}
       players={playersById}
@@ -8605,6 +8874,7 @@ isOrganizer &&
       title="Consolation Bracket"
       accentColor="#A78BFA"
     />
+    </>}
   </div>
 ) : null}
 

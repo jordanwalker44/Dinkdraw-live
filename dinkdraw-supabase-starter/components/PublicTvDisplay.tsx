@@ -16,6 +16,7 @@ type Tournament = {
   rounds: number;
   status: string;
   pool_brackets_enabled: boolean | null;
+  pool_postseason_format?: string | null;
 };
 
 type PlayerSlot = {
@@ -41,6 +42,7 @@ type Match = {
   is_playoff?: boolean;
   bracket_type?: 'championship' | 'consolation';
   round_label?: string | null;
+  elimination_section?: 'main' | 'second_chance' | 'last_chance' | 'finals' | null;
 };
 
 type StandingRow = {
@@ -74,6 +76,7 @@ type PlayoffMatch = {
   is_complete: boolean;
   winner_player_1_id: string | null;
   winner_player_2_id: string | null;
+  elimination_section: 'main' | 'second_chance' | 'last_chance' | 'finals' | null;
 };
 
 type PublicTvDisplayProps = {
@@ -221,16 +224,24 @@ export default function PublicTvDisplay({
     : activePlayoffRound === null
     ? ''
     : `Playoff Round ${activePlayoffRound}`;
-  const championshipFinal = playoffMatches.find(
-    (match) => match.bracket_type === 'championship' && !match.next_match_id
-  );
+  const isMultiElimination =
+    tournament.pool_postseason_format === 'double' || tournament.pool_postseason_format === 'triple';
+  const championshipFinal = isMultiElimination
+    ? playoffMatches
+        .filter((match) => match.elimination_section === 'finals' && match.is_complete)
+        .sort((a, b) => b.round_number - a.round_number)[0]
+    : playoffMatches.find(
+        (match) => match.bracket_type === 'championship' && !match.next_match_id
+      );
   const consolationFinal = playoffMatches.find(
     (match) => match.bracket_type === 'consolation' && !match.next_match_id
   );
   const postseasonComplete =
-    !!championshipFinal?.is_complete &&
-    (!playoffMatches.some((match) => match.bracket_type === 'consolation') ||
-      !!consolationFinal?.is_complete);
+    isMultiElimination
+      ? tournament.status === 'completed'
+      : !!championshipFinal?.is_complete &&
+        (!playoffMatches.some((match) => match.bracket_type === 'consolation') ||
+          !!consolationFinal?.is_complete);
   const isFinal =
     tournament.status === 'completed' ||
     postseasonComplete ||
@@ -254,7 +265,7 @@ export default function PublicTvDisplay({
     ? [match.winner_player_1_id, match.winner_player_2_id].filter(Boolean).map((id) => renderPlayerName(id)).join(' / ')
     : null;
   const championName = playoffWinnerName(championshipFinal);
-  const consolationWinnerName = playoffWinnerName(consolationFinal);
+  const consolationWinnerName = isMultiElimination ? null : playoffWinnerName(consolationFinal);
   const courtPages = useMemo(() => chunkMatches(displayMatches, 6), [displayMatches]);
   const [courtPageIndex, setCourtPageIndex] = useState(0);
   const visibleMatches = courtPages[courtPageIndex] || courtPages[0] || [];
@@ -619,7 +630,15 @@ export default function PublicTvDisplay({
                       }}
                     >
                       {match.is_playoff && match.bracket_type
-                        ? `${formatPlayoffGameLabel(match.bracket_type, match.round_label)} • `
+                        ? `${match.elimination_section === 'main'
+                          ? 'Main Draw'
+                          : match.elimination_section === 'second_chance'
+                          ? 'Second Chance'
+                          : match.elimination_section === 'last_chance'
+                          ? 'Last Chance'
+                          : match.elimination_section === 'finals'
+                          ? 'Championship Finals'
+                          : formatPlayoffGameLabel(match.bracket_type, match.round_label)} • `
                         : ''}
                       {renderCourtLabel(match)}
                     </div>

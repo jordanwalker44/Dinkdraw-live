@@ -3021,6 +3021,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   Record<string, Partial<ScoreDraft>>
   >({});
   const [editingPlayoffMatchId, setEditingPlayoffMatchId] = useState<string | null>(null);
+  const [playoffCorrectionMessage, setPlayoffCorrectionMessage] = useState<Record<string, string>>({});
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [editedTournamentTitle, setEditedTournamentTitle] = useState('');
   const [isSavingTournamentTitle, setIsSavingTournamentTitle] = useState(false);
@@ -5877,10 +5878,12 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
     });
 
     if (correctionError) {
+      setPlayoffCorrectionMessage((prev) => ({ ...prev, [match.id]: correctionError.message }));
       setMessage(`Score correction failed: ${correctionError.message}`);
       return;
     }
 
+    setPlayoffCorrectionMessage((prev) => ({ ...prev, [match.id]: '' }));
     setEditingPlayoffMatchId(null);
     await loadTournamentData(userId);
     setMessage('Postseason score updated successfully.');
@@ -8782,6 +8785,7 @@ isOrganizer &&
             </div>
 
                 {(!match.is_complete || editingPlayoffMatchId === match.id) && !match.is_bye ? (
+  <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
   <button
     className="button primary"
     onClick={() =>
@@ -8797,7 +8801,6 @@ isOrganizer &&
     }
     style={{
       width: '100%',
-      marginTop: 10,
       fontWeight: 900,
       padding: '12px 14px',
     }}
@@ -8808,6 +8811,12 @@ isOrganizer &&
         ? editingPlayoffMatchId === match.id ? 'Save Corrected Score' : 'Submit Playoff Score'
         : 'Scores Locked'}
   </button>
+  {playoffCorrectionMessage[match.id] ? (
+    <div style={{ color: '#ff9b9b', fontWeight: 800, textAlign: 'center', padding: '4px 8px' }}>
+      {playoffCorrectionMessage[match.id]}
+    </div>
+  ) : null}
+  </div>
 ) : match.is_complete && !match.is_bye ? (
   <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
     <div
@@ -8832,12 +8841,18 @@ isOrganizer &&
         className="button secondary"
         onClick={() => {
           setEditingPlayoffMatchId(match.id);
+          setPlayoffCorrectionMessage((prev) => ({ ...prev, [match.id]: '' }));
           setMessage('Edit the postseason score, then save the correction.');
         }}
         style={{ width: '100%', fontWeight: 900 }}
       >
         Edit Postseason Score
       </button>
+    ) : null}
+    {playoffCorrectionMessage[match.id] ? (
+      <div style={{ color: '#ff9b9b', fontWeight: 800, textAlign: 'center', padding: '4px 8px' }}>
+        {playoffCorrectionMessage[match.id]}
+      </div>
     ) : null}
   </div>
 ) : null}

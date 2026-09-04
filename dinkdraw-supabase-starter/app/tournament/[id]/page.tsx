@@ -3020,6 +3020,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const [playoffScoreDrafts, setPlayoffScoreDrafts] = useState<
   Record<string, Partial<ScoreDraft>>
   >({});
+  const [editingPlayoffMatchId, setEditingPlayoffMatchId] = useState<string | null>(null);
   const [isSavingNames, setIsSavingNames] = useState(false);
   const [editedTournamentTitle, setEditedTournamentTitle] = useState('');
   const [isSavingTournamentTitle, setIsSavingTournamentTitle] = useState(false);
@@ -5482,8 +5483,14 @@ if (!scheduleValidation.isValid) {
 
   async function endTournamentEarly() {
     if (!tournament || !isOrganizer || !isStarted || isCompleted) return;
+    const postseasonIsFinished =
+      !!tournament.pool_brackets_enabled &&
+      playoffMatches.length > 0 &&
+      playoffMatches.every((match) => match.is_complete);
     const confirmed = window.confirm(
-      'End this tournament now? Any unfinished rounds will be locked and the current standings will become final.'
+      postseasonIsFinished
+        ? 'Finish this tournament and record the postseason champions?'
+        : 'End this tournament now? Any unfinished rounds will be locked and the current standings will become final.'
     );
     if (!confirmed) return;
     setIsEndingEarly(true);
@@ -5492,7 +5499,11 @@ if (!scheduleValidation.isValid) {
     if (completed) {
       setActiveTab('standings');
       setSelectedRound(currentRound);
-      setMessage('Tournament ended early. Final results are now locked.');
+      setMessage(
+        postseasonIsFinished
+          ? 'Tournament completed. Postseason champions recorded.'
+          : 'Tournament ended early. Final results are now locked.'
+      );
     }
     setIsEndingEarly(false);
   }
@@ -5772,7 +5783,8 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
   const match = playoffMatches.find((m) => m.id === matchId);
   if (!match) return;
 
-  if (match.is_complete) {
+  const isCorrectingCompletedMatch = match.is_complete && editingPlayoffMatchId === match.id;
+  if (match.is_complete && !isCorrectingCompletedMatch) {
     setMessage('This playoff match is already complete.');
     return;
   }
@@ -5850,6 +5862,30 @@ if (!lockedMatch || !canReportMatchScore(lockedMatch)) {
   const winnerTeam = teamAWins ? 'A' : 'B';
 
   setMessage('Submitting playoff score...');
+
+  if (isCorrectingCompletedMatch) {
+    const { error: correctionError } = await supabase.rpc('correct_playoff_match_score', {
+      p_match_id: match.id,
+      p_team_a_score: aScore,
+      p_team_b_score: bScore,
+      p_game_1_a: scoreUpdate.game_1_a ?? null,
+      p_game_1_b: scoreUpdate.game_1_b ?? null,
+      p_game_2_a: scoreUpdate.game_2_a ?? null,
+      p_game_2_b: scoreUpdate.game_2_b ?? null,
+      p_game_3_a: scoreUpdate.game_3_a ?? null,
+      p_game_3_b: scoreUpdate.game_3_b ?? null,
+    });
+
+    if (correctionError) {
+      setMessage(`Score correction failed: ${correctionError.message}`);
+      return;
+    }
+
+    setEditingPlayoffMatchId(null);
+    await loadTournamentData(userId);
+    setMessage('Postseason score updated successfully.');
+    return;
+  }
 
   const { error: matchError } = await supabase
     .from('playoff_matches')
@@ -8298,7 +8334,13 @@ isOrganizer &&
         fontWeight: 800,
       }}
     >
-      {isEndingEarly ? 'Ending Tournament...' : 'End Tournament Early'}
+      {isEndingEarly
+        ? 'Finishing Tournament...'
+        : tournament.pool_brackets_enabled &&
+          playoffMatches.length > 0 &&
+          playoffMatches.every((match) => match.is_complete)
+        ? 'Finish Tournament'
+        : 'End Tournament Early'}
     </button>
   </div>
 ) : null}
@@ -8623,7 +8665,7 @@ isOrganizer &&
             aria-label={`Team A game ${gameIndex + 1}`}
             value={playoffScoreDrafts[match.id]?.[field] ?? (match[field] === null ? '' : String(match[field]))}
             onChange={(e) => setPlayoffScoreDrafts((prev) => ({ ...prev, [match.id]: { ...prev[match.id], [field]: e.target.value.replace(/[^\d]/g, '') } }))}
-            disabled={match.is_complete}
+            disabled={match.is_complete && editingPlayoffMatchId !== match.id}
             placeholder={`G${gameIndex + 1}`}
             style={{ textAlign: 'center', padding: '8px 2px', fontWeight: 900 }}
           />
@@ -8635,7 +8677,7 @@ isOrganizer &&
         type="number"
         value={playoffScoreDrafts[match.id]?.team_a_score ?? (match.team_a_score === null ? '' : String(match.team_a_score))}
         onChange={(e) => setPlayoffScoreDrafts((prev) => ({ ...prev, [match.id]: { ...prev[match.id], team_a_score: e.target.value.replace(/[^\d]/g, '') } }))}
-        disabled={match.is_complete}
+        disabled={match.is_complete && editingPlayoffMatchId !== match.id}
         placeholder="0"
         style={{ textAlign: 'center', padding: '8px 4px', fontWeight: 900 }}
       />
@@ -8703,7 +8745,7 @@ isOrganizer &&
           aria-label={`Team B game ${gameIndex + 1}`}
           value={playoffScoreDrafts[match.id]?.[field] ?? (match[field] === null ? '' : String(match[field]))}
           onChange={(e) => setPlayoffScoreDrafts((prev) => ({ ...prev, [match.id]: { ...prev[match.id], [field]: e.target.value.replace(/[^\d]/g, '') } }))}
-          disabled={match.is_complete || !match.team_b_player_1_id}
+          disabled={(match.is_complete && editingPlayoffMatchId !== match.id) || !match.team_b_player_1_id}
           placeholder={`G${gameIndex + 1}`}
           style={{ textAlign: 'center', padding: '8px 2px', fontWeight: 900 }}
         />
@@ -8727,7 +8769,7 @@ isOrganizer &&
         },
       }))
     }
-    disabled={match.is_complete || !match.team_b_player_1_id}
+    disabled={(match.is_complete && editingPlayoffMatchId !== match.id) || !match.team_b_player_1_id}
     placeholder="0"
     style={{
       textAlign: 'center',
@@ -8739,7 +8781,7 @@ isOrganizer &&
 </div>
             </div>
 
-                {!match.is_complete && !match.is_bye ? (
+                {(!match.is_complete || editingPlayoffMatchId === match.id) && !match.is_bye ? (
   <button
     className="button primary"
     onClick={() =>
@@ -8763,27 +8805,40 @@ isOrganizer &&
     {submittingScoreId === `playoff-${match.id}`
         ? 'Submitting...'
         : isOrganizer
-        ? 'Submit Playoff Score'
+        ? editingPlayoffMatchId === match.id ? 'Save Corrected Score' : 'Submit Playoff Score'
         : 'Scores Locked'}
   </button>
 ) : match.is_complete && !match.is_bye ? (
-  <div
-    style={{
-      marginTop: 10,
-      padding: '10px 12px',
-      borderRadius: 12,
-      background: 'rgba(255,203,5,0.08)',
-      border: '1px solid rgba(255,203,5,0.20)',
-      fontWeight: 900,
-      color: '#FFCB05',
-      textAlign: 'center',
-    }}
-  >
-    {match.next_match_id
-      ? 'Winner Advanced'
-      : match.bracket_type === 'championship'
-      ? '🏆 Champions Crowned'
-      : '🏅 Consolation Winners Crowned'}
+  <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+    <div
+      style={{
+        padding: '10px 12px',
+        borderRadius: 12,
+        background: 'rgba(255,203,5,0.08)',
+        border: '1px solid rgba(255,203,5,0.20)',
+        fontWeight: 900,
+        color: '#FFCB05',
+        textAlign: 'center',
+      }}
+    >
+      {match.next_match_id
+        ? 'Winner Advanced'
+        : match.bracket_type === 'championship'
+        ? '🏆 Champions Crowned'
+        : '🏅 Consolation Winners Crowned'}
+    </div>
+    {isOrganizer ? (
+      <button
+        className="button secondary"
+        onClick={() => {
+          setEditingPlayoffMatchId(match.id);
+          setMessage('Edit the postseason score, then save the correction.');
+        }}
+        style={{ width: '100%', fontWeight: 900 }}
+      >
+        Edit Postseason Score
+      </button>
+    ) : null}
   </div>
 ) : null}
              {match.is_bye ? (

@@ -112,10 +112,10 @@ export function TournamentPrizePool({ tournamentId, canManage, dailyWinnerNames 
   return (
     <div style={{ display: 'grid', gap: 14, marginTop: 12 }}>
       <div style={{ textAlign: 'center', color: '#FFCB05', fontSize: 18, fontWeight: 950 }}>{dashboard.series_name}</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-        <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Daily Prize</div><div style={{ color: '#FFCB05', fontSize: 26, fontWeight: 950 }}>{money(dashboard.daily_pot_cents)}</div></div>
-        <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Grand Prize Pot</div><div style={{ color: '#FFCB05', fontSize: 26, fontWeight: 950 }}>{money(dashboard.grand_pot_cents)}</div></div>
-        <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Race Status</div><div style={{ color: dashboard.status === 'pending_payout' ? '#A78BFA' : '#fff', fontSize: 20, fontWeight: 950 }}>{dashboard.status === 'pending_payout' ? 'Winner Pending Payout' : `First to ${dashboard.target_wins} Wins`}</div></div>
+      <div className="moneyball-summary-grid">
+        <div className="list-item moneyball-summary-card"><div className="muted">Daily Prize</div><div className="moneyball-amount">{money(dashboard.daily_pot_cents)}</div></div>
+        <div className="list-item moneyball-summary-card"><div className="muted">Grand Prize Pot</div><div className="moneyball-amount">{money(dashboard.grand_pot_cents)}</div></div>
+        <div className="list-item moneyball-summary-card moneyball-race-card"><div className="muted">Race Status</div><div className="moneyball-race-value" style={{ color: dashboard.status === 'pending_payout' ? '#A78BFA' : '#fff' }}>{dashboard.status === 'pending_payout' ? 'Winner Pending Payout' : `First to ${dashboard.target_wins} Wins`}</div></div>
       </div>
       <div className="muted" style={{ textAlign: 'center' }}>{dashboard.paid_player_count} paid players • Every payment is split 50% daily / 50% grand prize</div>
 
@@ -123,12 +123,12 @@ export function TournamentPrizePool({ tournamentId, canManage, dailyWinnerNames 
         <div className="list-item" style={{ borderColor: 'rgba(255,203,5,0.38)' }}>
           <div style={{ fontSize: 18, fontWeight: 950 }}>Set Everyone’s Buy-In</div>
           <div className="muted" style={{ marginTop: 4 }}>Apply one amount to every account-linked player. You can still adjust individuals below.</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
+          <div className="moneyball-payment-row">
             <div>
               <label className="label">Buy-In Per Player</label>
               <input className="input" type="number" min="0.02" step="0.02" value={bulkPaymentDraft} onChange={(event) => setBulkPaymentDraft(event.target.value)} />
             </div>
-            <button type="button" className="button primary" style={{ alignSelf: 'end' }} onClick={setEveryonePaid} disabled={isSavingAll}>
+            <button type="button" className="button primary moneyball-payment-button" onClick={setEveryonePaid} disabled={isSavingAll}>
               {isSavingAll ? 'Saving Everyone…' : `Everybody Paid ${money(Math.max(0, Math.round((Number(bulkPaymentDraft) || 0) * 100)))}`}
             </button>
           </div>
@@ -145,21 +145,21 @@ export function TournamentPrizePool({ tournamentId, canManage, dailyWinnerNames 
 
       {dashboard.players.map((player, index) => (
         <div key={player.user_id} className="list-item" style={{ borderColor: player.eligible_for_payout ? 'rgba(167,139,250,0.7)' : index === 0 ? 'rgba(255,203,5,0.38)' : undefined }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 12, alignItems: 'center' }}>
+          <div className="moneyball-player-heading">
             <div><div style={{ fontSize: 18, fontWeight: 900 }}>{player.name}</div><div className="muted">Grand-prize contributions this cycle: {money(player.cycle_grand_contribution_cents)}</div></div>
-            <div style={{ color: player.eligible_for_payout ? '#A78BFA' : '#FFCB05', fontSize: 22, fontWeight: 950 }}>{player.wins}/{dashboard.target_wins} wins</div>
+            <div className="moneyball-player-wins" style={{ color: player.eligible_for_payout ? '#A78BFA' : '#FFCB05' }}>{player.wins}/{dashboard.target_wins} wins</div>
           </div>
           <div style={{ display: 'flex', gap: 5, marginTop: 10 }}>
             {Array.from({ length: dashboard.target_wins }, (_, winIndex) => <div key={winIndex} style={{ height: 8, flex: 1, borderRadius: 99, background: winIndex < player.wins ? '#FFCB05' : 'rgba(255,255,255,0.12)' }} />)}
           </div>
 
           {canManage && dashboard.status === 'active' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, marginTop: 12 }}>
+            <div className="moneyball-payment-row">
               <div>
                 <label className="label">Amount Paid</label>
                 <input className="input" type="number" min="0" step="0.02" value={paymentDrafts[player.user_id] ?? ''} onChange={(event) => setPaymentDrafts((current) => ({ ...current, [player.user_id]: event.target.value }))} placeholder="10.00" />
               </div>
-              <button type="button" className="button primary" style={{ alignSelf: 'end' }} onClick={() => setPayment(player)} disabled={workingId === player.user_id}>{workingId === player.user_id ? 'Saving…' : 'Save Payment'}</button>
+              <button type="button" className="button primary moneyball-payment-button" onClick={() => setPayment(player)} disabled={workingId === player.user_id}>{workingId === player.user_id ? 'Saving…' : 'Save Payment'}</button>
             </div>
           ) : null}
 

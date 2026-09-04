@@ -1634,6 +1634,99 @@ box-shadow:
   animation: claimPulse 1.8s ease-in-out infinite;
 }
 
+.moneyball-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.moneyball-summary-card {
+  min-width: 0;
+  text-align: center;
+}
+
+.moneyball-amount {
+  color: #ffcb05;
+  font-size: 26px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.moneyball-race-value {
+  font-size: 20px;
+  font-weight: 950;
+}
+
+.moneyball-payment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: end;
+}
+
+.moneyball-payment-button {
+  align-self: end;
+  white-space: nowrap;
+}
+
+.moneyball-player-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.moneyball-player-wins {
+  font-size: 22px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+@media (max-width: 620px) {
+  .moneyball-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .moneyball-race-card {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .moneyball-amount {
+    margin-top: 2px;
+    font-size: 23px;
+  }
+
+  .moneyball-race-value {
+    font-size: 18px;
+    text-align: right;
+  }
+
+  .moneyball-payment-row {
+    grid-template-columns: 1fr;
+  }
+
+  .moneyball-payment-button {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .moneyball-player-heading {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .moneyball-player-wins {
+    font-size: 19px;
+  }
+}
+
 @keyframes claimPulse {
   0% {
     box-shadow: 0 0 0 0 rgba(255, 203, 5, 0.6);

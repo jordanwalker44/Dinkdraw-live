@@ -3040,6 +3040,7 @@ export default function TournamentDetailPage({ params }: { params: { id: string 
   const scoreSubmitLockRef = useRef(false);
   const pendingScoreSubmitIdsRef = useRef<Set<string>>(new Set());
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const brandingOrganizationIdRef = useRef<string | null>(null);
 
 function scheduleTournamentRefresh(currentUserId?: string) {
   if (refreshTimeoutRef.current) {
@@ -3627,15 +3628,19 @@ setLeagueSession(leagueSessionResult.data || null);
 
 // Branding is optional. Never keep tournament data in a loading state while
 // waiting for this separate RPC.
-void timedRequest(
-  'organization branding',
-  loadPublicOrganizationBrand(supabase, tournamentData?.organization_id)
-)
-  .then(setOrganizationBrand)
-  .catch((error) => {
-    console.error('Failed to load organization branding:', error);
-    setOrganizationBrand(null);
-  });
+const organizationId = tournamentData?.organization_id || null;
+if (brandingOrganizationIdRef.current !== organizationId) {
+  brandingOrganizationIdRef.current = organizationId;
+  void timedRequest(
+    'organization branding',
+    loadPublicOrganizationBrand(supabase, organizationId)
+  )
+    .then(setOrganizationBrand)
+    .catch((error) => {
+      console.error('Failed to load organization branding:', error);
+      setOrganizationBrand(null);
+    });
+}
 
 setScoreDrafts((prev) => {
   const next: Record<string, ScoreDraft> = {};
@@ -3790,7 +3795,7 @@ useEffect(() => {
     if (document.visibilityState === 'visible') {
       void loadTournamentData(userId);
     }
-  }, 20000);
+  }, 45000);
 
   return () => clearInterval(interval);
 }, [isLive, userId]);

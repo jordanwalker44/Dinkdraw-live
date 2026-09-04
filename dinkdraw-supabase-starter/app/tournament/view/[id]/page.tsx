@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import PublicTvDisplay from '../../../../components/PublicTvDisplay';
@@ -377,6 +377,15 @@ export default function PublicTournamentViewPage({
   const [selectedRound, setSelectedRound] = useState(1);
   const [selectedPlayoffRound, setSelectedPlayoffRound] = useState<number | null>(null);
   const [isLive, setIsLive] = useState(false);
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const brandingOrganizationIdRef = useRef<string | null>(null);
+
+  function scheduleTournamentRefresh() {
+    if (refreshTimeoutRef.current) window.clearTimeout(refreshTimeoutRef.current);
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      void loadTournamentData();
+    }, 500);
+  }
   const [showWinnersCelebration, setShowWinnersCelebration] = useState(false);
   const [showAppDownloadBanner, setShowAppDownloadBanner] = useState(false);
 
@@ -677,12 +686,16 @@ export default function PublicTournamentViewPage({
 
     // Branding is optional and must never hold the tournament screen on its loader.
     // Load it independently so the core tournament data can render immediately.
-    void loadPublicOrganizationBrand(supabase, tournamentData?.organization_id)
-      .then(setOrganizationBrand)
-      .catch((error) => {
-        console.error('Failed to load organization branding:', error);
-        setOrganizationBrand(null);
-      });
+    const organizationId = tournamentData?.organization_id || null;
+    if (brandingOrganizationIdRef.current !== organizationId) {
+      brandingOrganizationIdRef.current = organizationId;
+      void loadPublicOrganizationBrand(supabase, organizationId)
+        .then(setOrganizationBrand)
+        .catch((error) => {
+          console.error('Failed to load organization branding:', error);
+          setOrganizationBrand(null);
+        });
+    }
   }
 
   useEffect(() => {
@@ -712,7 +725,7 @@ export default function PublicTournamentViewPage({
           filter: `tournament_id=eq.${params.id}`,
         },
         () => {
-          void loadTournamentData();
+          scheduleTournamentRefresh();
         }
       )
       .on(
@@ -724,7 +737,7 @@ export default function PublicTournamentViewPage({
           filter: `tournament_id=eq.${params.id}`,
         },
         () => {
-          void loadTournamentData();
+          scheduleTournamentRefresh();
         }
       )
       .on(
@@ -736,7 +749,7 @@ export default function PublicTournamentViewPage({
           filter: `tournament_id=eq.${params.id}`,
         },
         () => {
-          void loadTournamentData();
+          scheduleTournamentRefresh();
         }
       )
       .on(
@@ -748,7 +761,7 @@ export default function PublicTournamentViewPage({
           filter: `id=eq.${params.id}`,
         },
         () => {
-          void loadTournamentData();
+          scheduleTournamentRefresh();
         }
       )
       .subscribe((status) => {
@@ -756,6 +769,7 @@ export default function PublicTournamentViewPage({
       });
 
     return () => {
+      if (refreshTimeoutRef.current) window.clearTimeout(refreshTimeoutRef.current);
       void supabase.removeChannel(channel);
     };
   }, [params.id, supabase]);
@@ -770,7 +784,7 @@ useEffect(() => {
     if (document.visibilityState === 'visible') {
       void loadTournamentData();
     }
-  }, 20000);
+  }, 45000);
 
   return () => clearInterval(interval);
 }, [isLive]);

@@ -33,7 +33,7 @@ export function MyTournamentWinnings() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8 }}>
         <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Daily Prizes</div><div style={{ color: '#FFCB05', fontSize: 22, fontWeight: 950 }}>{money(winnings.daily_winnings_cents)}</div></div>
         <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Grand Prizes</div><div style={{ color: '#A78BFA', fontSize: 22, fontWeight: 950 }}>{money(winnings.grand_prize_winnings_cents)}</div></div>
-        <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Total Won</div><div style={{ color: '#86EFAC', fontSize: 22, fontWeight: 950 }}>{money(winnings.total_winnings_cents)}</div></div>
+        <div className="list-item" style={{ textAlign: 'center' }}><div className="muted">Total<br />Won</div><div style={{ color: '#86EFAC', fontSize: 22, fontWeight: 950 }}>{money(winnings.total_winnings_cents)}</div></div>
       </div>
       {winnings.daily_awards.length || winnings.grand_prize_awards.length ? (
         <div style={{ display: 'grid', gap: 7, marginTop: 12 }}>

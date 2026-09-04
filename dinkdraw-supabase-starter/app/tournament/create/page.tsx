@@ -513,10 +513,10 @@ export default function CreateTournamentPage() {
 
   useEffect(() => {
     if (!poolBracketsEnabled) return;
-    if (playerCount % poolCount === 0 && (moneyballEnabled || poolCount >= 2)) return;
-    const validPoolCount = [2, 3, 4, 5, 6, 8].find((count) => playerCount % count === 0);
+    if (poolCount >= 1 && playerCount % poolCount === 0) return;
+    const validPoolCount = [1, 2, 3, 4, 5, 6, 8].find((count) => playerCount % count === 0);
     if (validPoolCount) setPoolCount(validPoolCount);
-  }, [poolBracketsEnabled, moneyballEnabled, playerCount, poolCount]);
+  }, [poolBracketsEnabled, playerCount, poolCount]);
 
   async function handleCreate() {
   setMessage('');
@@ -949,7 +949,7 @@ router.push(`/tournament/${tournament.id}`);
       <div style={{ marginTop: 10, color: '#FFCB05', fontSize: 12, fontWeight: 850 }}>
         {moneyballEnabled
           ? 'Moneyball includes pool play, championship and consolation brackets, payments, and series wins.'
-          : 'Players begin in pools, then advance into championship and consolation brackets.'}
+            : 'Players begin in one or more pools, then advance into postseason brackets.'}
       </div>
     ) : null}
   </div>
@@ -1429,7 +1429,7 @@ and final placement tie-breakers.
         <div>
           <label className="label">Number of Pools</label>
           <select className="input" value={poolCount} onChange={(event) => setPoolCount(Number(event.target.value))}>
-            {[(moneyballEnabled ? 1 : null), 2, 3, 4, 5, 6, 8].filter((count): count is number => count !== null && playerCount % count === 0).map((count) => (
+            {[1, 2, 3, 4, 5, 6, 8].filter((count) => playerCount % count === 0).map((count) => (
               <option key={count} value={count}>{count === 1 ? `1 pool (all ${playerCount} players)` : `${count} pools (${playerCount / count} players each)`}</option>
             ))}
           </select>

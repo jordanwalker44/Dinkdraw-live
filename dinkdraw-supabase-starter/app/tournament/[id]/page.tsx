@@ -3063,6 +3063,7 @@ function logScoreSubmitTiming(
 }
   const [submittingScoreId, setSubmittingScoreId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isEndingPoolPlay, setIsEndingPoolPlay] = useState(false);
   const [isGeneratingCreamStage, setIsGeneratingCreamStage] = useState(false);
   const [isEndingEarly, setIsEndingEarly] = useState(false);
   const [isDeletingTournament, setIsDeletingTournament] = useState(false);
@@ -3311,6 +3312,16 @@ const tournamentPhaseSubtitle =
     m.game_3_b !== null
 );
 
+  const completedPoolRounds = useMemo(() => {
+    let completedThrough = 0;
+    for (const round of roundsAvailable) {
+      const roundMatches = matches.filter((match) => match.round_number === round && !match.is_bye);
+      if (!roundMatches.length || !roundMatches.every((match) => match.is_complete)) break;
+      completedThrough = round;
+    }
+    return completedThrough;
+  }, [matches, roundsAvailable]);
+
   useEffect(() => {
     if (tournament && editedRounds === null) setEditedRounds(tournament.rounds);
   }, [tournament, editedRounds]);
@@ -3436,6 +3447,13 @@ const tournamentPhaseSubtitle =
     tournament.co_organizer_user_id === userId;
 
   const canManageScores = isOrganizer || isCoOrganizer;
+  const canOfferEarlyPostseason =
+    !!tournament?.pool_brackets_enabled &&
+    isOrganizer &&
+    isStarted &&
+    playoffMatches.length === 0 &&
+    completedPoolRounds > 0 &&
+    matches.some((match) => match.round_number > completedPoolRounds);
   const championshipFinalWinnerNames = (() => {
     const final = playoffMatches.find((match) => match.bracket_type === 'championship' && !match.next_match_id && match.is_complete);
     if (!final) return [];
@@ -5024,6 +5042,46 @@ if (!scheduleValidation.isValid) {
         ? 'Championship and consolation brackets generated. Partnerships are now locked.'
         : 'Championship bracket generated for every player. Partnerships are now locked, and top seeds received byes.'
     );
+  }
+
+  async function endPoolPlayAndGeneratePostseason() {
+    if (!tournament || !canOfferEarlyPostseason) return;
+
+    const nextRoundMatches = matches.filter(
+      (match) => match.round_number === completedPoolRounds + 1 && !match.is_bye
+    );
+    const nextRoundHasActivity = nextRoundMatches.some(
+      (match) =>
+        match.is_complete ||
+        match.team_a_score !== null || match.team_b_score !== null ||
+        match.game_1_a !== null || match.game_1_b !== null ||
+        match.game_2_a !== null || match.game_2_b !== null ||
+        match.game_3_a !== null || match.game_3_b !== null
+    );
+
+    if (nextRoundHasActivity) {
+      setMessage(`Round ${completedPoolRounds + 1} is partially played. Finish it or clear its scores before starting postseason.`);
+      return;
+    }
+
+    if (!window.confirm(
+      `End pool play after Round ${completedPoolRounds}? Untouched future rounds will be removed and these standings will determine postseason seeding.`
+    )) return;
+
+    setIsEndingPoolPlay(true);
+    setMessage('Ending pool play and preparing postseason...');
+    const { error } = await supabase.rpc('end_pool_play_early', {
+      p_tournament_id: tournament.id,
+    });
+
+    if (error) {
+      setIsEndingPoolPlay(false);
+      setMessage(`Could not end pool play: ${error.message}`);
+      return;
+    }
+
+    await generatePoolPostseasonBrackets();
+    setIsEndingPoolPlay(false);
   }
 
   async function generatePlayoffBracket() {
@@ -8255,6 +8313,23 @@ Sign in with this same email address to submit and edit scores.`;
 
       {activeTab === 'rounds' && (
   <>
+
+    {canOfferEarlyPostseason ? (
+      <div className="card" style={{ marginBottom: 14, borderColor: 'rgba(255,203,5,0.32)' }}>
+        <div className="card-title">Ready for Postseason Early?</div>
+        <div className="card-subtitle">
+          Rounds 1–{completedPoolRounds} are complete. You can end pool play now, discard untouched future rounds, and seed the brackets from the current standings.
+        </div>
+        <button
+          className="button primary"
+          onClick={endPoolPlayAndGeneratePostseason}
+          disabled={isEndingPoolPlay}
+          style={{ width: '100%', marginTop: 10, padding: 12, fontSize: 16, fontWeight: 900 }}
+        >
+          {isEndingPoolPlay ? 'Preparing Postseason...' : `End Pool Play After Round ${completedPoolRounds}`}
+        </button>
+      </div>
+    ) : null}
 
     {(
 isOrganizer &&

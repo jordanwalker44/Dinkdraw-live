@@ -1,0 +1,45 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+// Compile only the pure demo engine and its local TypeScript dependencies.
+require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+const { buildClubDemo, demoNames } = require('../lib/club-demo.ts');
+for (const count of [8, 16, 32]) {
+  for (const format of ['pool', 'round_robin']) {
+    const base = { id: 'test', name: 'Demo club', title: 'Test event', logo: null, primary: '#00274C', accent: '#FFCB05', names: demoNames(count), format, seed: 7, step: 0 };
+    assert.equal(new Set(base.names).size, count);
+    const max = buildClubDemo(base).maxStep;
+    for (let step = 0; step <= max; step++) {
+      const result = buildClubDemo({ ...base, step });
+      assert.equal(result.matches.length, count / 4 * 3);
+      for (const round of [1, 2, 3]) {
+        const ids = result.matches.filter(m => m.round_number === round).flatMap(m => [m.team_a_player_1_id, m.team_a_player_2_id, m.team_b_player_1_id, m.team_b_player_2_id]);
+        assert.equal(ids.length, count);
+        assert.equal(new Set(ids).size, count, 'Each player plays exactly once per pool round');
+      }
+      assert.equal(result.standings.reduce((n, p) => n + p.wins, 0), result.standings.reduce((n, p) => n + p.losses, 0));
+      assert.equal(result.standings.reduce((n, p) => n + p.pointDiff, 0), 0);
+      assert(result.standings.every(p => p.played === Math.min(step, 3)));
+      if (step < 3 || format === 'round_robin') assert.equal(result.playoffs.length, 0);
+      for (const match of result.playoffs) {
+        if (!match.is_complete) { assert.equal(match.team_a_score, null); assert.equal(match.winner_player_1_id, null); continue; }
+        const winner = match.team_a_score > match.team_b_score ? [match.team_a_player_1_id, match.team_a_player_2_id] : [match.team_b_player_1_id, match.team_b_player_2_id];
+        assert.deepEqual([match.winner_player_1_id, match.winner_player_2_id], winner);
+        if (match.next_match_id) {
+          const next = result.playoffs.find(m => m.id === match.next_match_id);
+          assert(next);
+          assert([next.team_a_player_1_id, next.team_b_player_1_id].includes(winner[0]), 'Winner advances to next round');
+        }
+      }
+      if (step === max && format === 'pool') {
+        assert(result.playoffs.every(m => m.is_complete));
+        assert.equal(result.playoffs.filter(m => !m.next_match_id).length, 2);
+      }
+      assert.deepEqual(result, buildClubDemo({ ...base, step }), 'Saved demos reproduce identical scores');
+    }
+    const reset = buildClubDemo(base);
+    assert(reset.matches.every(m => !m.is_complete && m.team_a_score === null));
+    assert.equal(reset.playoffs.length, 0);
+  }
+}
+console.log('Club demo checks passed: rosters, scheduling, standings, bracket advancement, reproducibility, and reset.');

@@ -12,8 +12,9 @@ export function AppChrome({ children }: { children: ReactNode }) {
 
   const isPublicTournamentView = pathname?.startsWith('/tournament/view/');
   const isHowToFlyer = pathname === '/how-to';
-  const hideBottomNav = isPublicTournamentView || isHowToFlyer;
-  const hideHeader = isTvMode || isHowToFlyer;
+  const isDemoStudio = pathname === '/admin/demo';
+  const hideBottomNav = isPublicTournamentView || isHowToFlyer || isDemoStudio;
+  const hideHeader = isTvMode || isHowToFlyer || isDemoStudio;
   const bodyBottomPadding = hideBottomNav ? (isTvMode ? 0 : 16) : 88;
 
   useEffect(() => {

@@ -258,6 +258,7 @@ export default function AdminFeaturesPage() {
   return (
     <main className="page-shell">
       <TopNav />
+      <Link className="button primary" href="/admin/demo" style={{ marginBottom: 16 }}>Open Club Demo Studio</Link>
 
       <div className="card">
         <div className="card-title" style={{ color: '#FFCB05' }}>

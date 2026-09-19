@@ -8,7 +8,8 @@
     "test:cream": "node --experimental-strip-types scripts/validate-cream-scheduler.ts",
     "test:elimination": "node --experimental-strip-types scripts/validate-multi-elimination.ts",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:demo": "node scripts/validate-club-demo.cjs"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.2",

@@ -43,3 +43,47 @@ for (const count of [8, 16, 32]) {
   }
 }
 console.log('Club demo checks passed: rosters, scheduling, standings, bracket advancement, reproducibility, and reset.');
+
+for (const count of [8, 16, 32]) for (const format of ['round_robin', 'cream', 'pool', 'moneyball', 'league']) {
+  const styles = ['cream', 'league'].includes(format) ? ['rotating'] : format === 'round_robin' ? ['rotating', 'fixed', 'mixed', 'singles'] : ['rotating', 'mixed'];
+  for (const playStyle of styles) for (const postseason of ['split', 'single', 'single_consolation', 'double', 'triple']) {
+    const base = { id: 'expanded', names: demoNames(count), format, playStyle, postseason, seed: 3, step: 0 };
+    const max = buildClubDemo(base).maxStep;
+    const end = buildClubDemo({ ...base, step: max });
+    assert(end.matches.every(m => m.is_complete));
+    assert(end.playoffs.every(m => m.is_complete));
+    for (let step = 0; step <= max; step++) {
+      const d = buildClubDemo({ ...base, step });
+      assert(d.matches.every(m => m.is_complete === (m.round_number <= step)));
+      for (const round of new Set([...d.matches, ...d.playoffs].map(m => m.round_number))) {
+        const ids = [...d.matches, ...d.playoffs].filter(m => m.round_number === round).flatMap(m => [m.team_a_player_1_id, m.team_a_player_2_id, m.team_b_player_1_id, m.team_b_player_2_id].filter(Boolean));
+        assert.equal(new Set(ids).size, ids.length, `${format}/${postseason}: no player appears twice in round ${round}`);
+      }
+      for (const m of d.playoffs.filter(m => !m.is_complete)) assert.equal(m.team_a_score, null);
+    }
+    if (playStyle === 'mixed') for (const m of end.matches) {
+      for (const ids of [[m.team_a_player_1_id, m.team_a_player_2_id], [m.team_b_player_1_id, m.team_b_player_2_id]]) assert.equal(new Set(ids.map(id => end.players.find(p => p.id === id).gender)).size, 2);
+    }
+    if (format === 'league') { assert.equal(max, 12); assert(end.standings.every(p => p.played === 12)); }
+    if (format === 'cream') {
+      assert.equal(max, 9);
+      assert(end.standings.every(p => p.played === 9 && p.finalCourt));
+      assert.equal(buildClubDemo({ ...base, step: 0 }).matches.length, count / 4 * 3);
+      assert.equal(buildClubDemo({ ...base, step: 3 }).matches.length, count / 4 * 6);
+    }
+    if (end.isPool && ['double', 'triple'].includes(postseason)) {
+      const losses = new Map();
+      for (const m of end.playoffs) {
+        const loser = m.winner_team === 'A' ? m.team_b_player_1_id : m.team_a_player_1_id;
+        losses.set(loser, (losses.get(loser) || 0) + 1);
+      }
+      const limit = postseason === 'double' ? 2 : 3;
+      const finalists = end.playoffs.filter(m => m.elimination_section === 'finals');
+      assert(finalists.length > 0);
+      const winner = finalists.at(-1).winner_player_1_id;
+      const teamIds = new Set(end.playoffs.flatMap(m => [m.team_a_player_1_id, m.team_b_player_1_id]));
+      for (const team of teamIds) assert(team === winner ? (losses.get(team) || 0) < limit : losses.get(team) === limit, `${postseason}: elimination loss limit`);
+    }
+  }
+}
+console.log('Expanded formats passed: play styles, all postseason structures, elimination loss limits, and nine-round Cream progression.');

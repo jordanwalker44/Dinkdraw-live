@@ -1,10 +1,11 @@
 import { buildCreamOfTheCropStageSchedule, buildNextCreamOfTheCropStagePlayers } from './scheduler';
 import { buildFixedEliminationGraph, buildFirstRoundConsolationGraph, type BracketSource } from './multi-elimination';
 import type { BracketMatch } from '../components/TournamentBracket';
-import type { Match } from './tournament-types';
+import { buildPartnershipRotation } from './league-scheduler';
+import type { Match, PlayerSlot } from './tournament-types';
 
 export const DEMO_FORMATS = {
-  round_robin: 'Round Robin', pool: 'Pool Play + Brackets', cream: 'Cream of the Crop', moneyball: 'Moneyball Series',
+  round_robin: 'Round Robin', pool: 'Pool Play + Brackets', cream: 'Cream of the Crop', moneyball: 'Moneyball Series', league: 'Premium League (4 weeks)',
 };
 export const DEMO_POSTSEASONS = {
   split: 'Split Championship + Consolation', single: 'Single Elimination',
@@ -32,7 +33,8 @@ type DemoPlayoff = BracketMatch & {
 export function buildClubDemo(demo: ClubDemo) {
   const isPool = demo.format === 'pool' || demo.format === 'moneyball';
   const isCream = demo.format === 'cream';
-  const style = isCream ? 'rotating' : demo.playStyle || 'rotating';
+  const isLeague = demo.format === 'league';
+  const style = isCream || isLeague ? 'rotating' : demo.playStyle || 'rotating';
   const isSingles = style === 'singles' && !isPool;
   const postseason = demo.postseason || 'split';
   const players = demo.names.map((name, i) => ({ id: `demo-player-${i}`, tournament_id: demo.id, slot_number: i + 1, display_name: name, claimed_by_user_id: null, gender: style === 'mixed' ? (i % 2 ? 'female' : 'male') : null, pool_number: Math.floor(i / 4) + 1 }));
@@ -43,8 +45,18 @@ export function buildClubDemo(demo: ClubDemo) {
     const [sa, sb] = scores(i);
     fullMatches.push({ id: `demo-pool-${i}`, round_number: round, court_number: court, court_label: null, team_a_player_1_id: a[0], team_a_player_2_id: a[1] || null, team_b_player_1_id: b[0], team_b_player_2_id: b[1] || null, team_a_score: sa, team_b_score: sb, is_complete: true, is_bye: false });
   }
-  if (isCream || style === 'rotating') {
-    let stagePlayers = players;
+  if (isLeague) {
+    const pairings = buildPartnershipRotation(players.length, 4);
+    for (let week = 1; week <= 4; week++) {
+      const teams = pairings.filter(p => p.sessionNumber === week).map(p => [players[p.player1Index].id, players[p.player2Index].id]);
+      const order = teams.map((_, i) => i);
+      for (let r = 1; r <= 3; r++) {
+        for (let i = 0; i < order.length / 2; i++) addMatch(teams[order[i]], teams[order[order.length - 1 - i]], (week - 1) * 3 + r, i + 1);
+        order.splice(1, 0, order.pop()!);
+      }
+    }
+  } else if (isCream || style === 'rotating') {
+    let stagePlayers: PlayerSlot[] = players;
     for (let stage = 0; stage < (isCream ? 3 : 1); stage++) {
       const start = stage * 3 + 1;
       for (const m of buildCreamOfTheCropStageSchedule(stagePlayers, start)) addMatch([m.team_a_player_1_id!, m.team_a_player_2_id!], [m.team_b_player_1_id!, m.team_b_player_2_id!], m.round_number, m.court_number!);
@@ -133,5 +145,5 @@ export function buildClubDemo(demo: ClubDemo) {
     const done = demo.step >= m.round_number;
     return { ...m, is_complete: done, team_a_player_1_id: demo.step >= availableA ? m.team_a_player_1_id : null, team_a_player_2_id: demo.step >= availableA ? m.team_a_player_2_id : null, team_b_player_1_id: demo.step >= availableB ? m.team_b_player_1_id : null, team_b_player_2_id: demo.step >= availableB ? m.team_b_player_2_id : null, team_a_seed: demo.step >= availableA ? m.team_a_seed : null, team_b_seed: demo.step >= availableB ? m.team_b_seed : null, team_a_score: done ? m.team_a_score : null, team_b_score: done ? m.team_b_score : null, winner_team: done ? m.winner_team : null, winner_player_1_id: done ? m.winner_player_1_id : null, winner_player_2_id: done ? m.winner_player_2_id : null };
   });
-  return { players, matches, standings, pools, playoffs, isPool, isCream, isSingles, courts: players.length / (isSingles ? 2 : 4), maxStep: Math.max(isCream ? 9 : 3, ...fullPlayoffs.map(m => m.round_number)) };
+  return { players, matches, standings, pools, playoffs, isPool, isCream, isLeague, isSingles, courts: players.length / (isSingles ? 2 : 4), maxStep: Math.max(isLeague ? 12 : isCream ? 9 : 3, ...fullPlayoffs.map(m => m.round_number)) };
 }

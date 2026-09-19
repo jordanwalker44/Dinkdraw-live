@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
-import { buildClubDemo, demoNames, newClubDemo, type ClubDemo } from '../../../lib/club-demo';
+import { buildClubDemo, demoNames, newClubDemo, DEMO_FORMATS, DEMO_POSTSEASONS, type ClubDemo } from '../../../lib/club-demo';
 import { OrganizationBrandBanner } from '../../../components/OrganizationBrandBanner';
 import { TournamentBracket } from '../../../components/TournamentBracket';
 import { PoolStandingsTables } from '../../../components/PoolStandingsTables';
@@ -16,6 +16,8 @@ export default function ClubDemoStudio() {
   const [saved, setSaved] = useState<ClubDemo[]>([]);
   const [demo, setDemo] = useState<ClubDemo | null>(null);
   const [message, setMessage] = useState('');
+  const [logoMessage, setLogoMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [view, setView] = useState<'public' | 'player' | 'standings' | 'tv'>('public');
   const [player, setPlayer] = useState('demo-player-0');
   const [clean, setClean] = useState(false);
@@ -64,20 +66,47 @@ export default function ClubDemoStudio() {
     if (!file || !demo) return;
     const targetId = demo.id;
     const request = ++logoRequest.current;
-    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type) || file.size > 3 * 1024 * 1024) { setMessage('Choose a PNG, JPG, WEBP, or GIF under 3 MB.'); return; }
+    setLogoMessage('');
+    if (!/\.(png|jpe?g|webp|gif|svg)$/i.test(file.name) && !['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'].includes(file.type)) {
+      setLogoMessage('Choose a PNG, JPG, WEBP, GIF, or SVG image. HEIC files must be exported as PNG or JPG first.'); return;
+    }
+    if (file.size > 10 * 1024 * 1024) { setLogoMessage('Choose a logo under 10 MB.'); return; }
+    setUploading(true);
+    setLogoMessage('Loading logo…');
     try {
-      const bitmap = await createImageBitmap(file);
+      const source = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(new Error('Could not read this file.'));
+        reader.onabort = () => reject(new Error('File reading was cancelled.'));
+        reader.readAsDataURL(file);
+      });
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        const timeout = window.setTimeout(() => reject(new Error('Image loading timed out.')), 15000);
+        image.onload = () => { clearTimeout(timeout); resolve(image); };
+        image.onerror = () => { clearTimeout(timeout); reject(new Error('Unsupported or damaged image.')); };
+        image.src = source;
+      });
+      const width = img.naturalWidth || img.width || 512;
+      const height = img.naturalHeight || img.height || 512;
       const canvas = document.createElement('canvas');
-      const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale)); canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
+      const scale = Math.min(1, 512 / Math.max(width, height));
+      canvas.width = Math.max(1, Math.round(width * scale)); canvas.height = Math.max(1, Math.round(height * scale));
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Image processing is unavailable in this browser.');
+      context.drawImage(img, 0, 0, canvas.width, canvas.height);
       const logo = canvas.toDataURL('image/png');
       if (logoRequest.current === request) {
         setDemo(current => current?.id === targetId ? { ...current, logo } : current);
+        setLogoMessage(`${file.name} loaded. Click Save demo to keep it.`);
         setMessage('Logo ready. Save demo to keep it.');
       }
-    } catch { setMessage('This image could not be opened. Try a different logo file.'); }
+    } catch {
+      if (logoRequest.current === request) setLogoMessage('This image could not be opened. Try exporting it as PNG or JPG, then choose it again.');
+    } finally { setUploading(false); }
   }
+
   async function download() {
     if (!preview.current || !demo) return;
     setExporting(true); setMessage('');
@@ -97,9 +126,9 @@ export default function ClubDemoStudio() {
   const team = (a: string | null, b: string | null) => [a, b].filter(Boolean).map(id => byId[id!]?.display_name || 'TBD').join(' & ') || 'TBD';
   const selectedPlayer = byId[player] ? player : data.players[0].id;
   const complete = demo.step >= data.maxStep;
-  const tournament = { title: demo.title, courts: demo.names.length / 4, court_labels: null, rounds: 3, status: complete ? 'completed' : demo.step ? 'started' : 'draft', pool_brackets_enabled: demo.format === 'pool', pool_postseason_format: 'single_elimination' };
+  const tournament = { title: demo.title, courts: data.courts, court_labels: null, rounds: data.isLeague ? 12 : data.isCream ? 9 : 3, status: complete ? 'completed' : demo.step ? 'started' : 'draft', pool_brackets_enabled: data.isPool, pool_postseason_format: demo.postseason || 'split' };
   const currentRound = Math.min(demo.step + 1, data.maxStep);
-  const shownMatches = demo.step >= 3 && demo.format === 'pool' ? data.playoffs.map((m, i) => ({ ...m, court_number: i % tournament.courts + 1 })) : data.matches;
+  const shownMatches = demo.step >= 3 && data.isPool ? data.playoffs.map((m, i) => ({ ...m, court_number: i % tournament.courts + 1 })) : data.matches;
   return <main className="page-shell" style={{ maxWidth: view === 'tv' ? 1600 : 1200 }}>
     {!clean && <section className="card">
       <Link href="/admin/features">← Admin tools</Link>
@@ -107,32 +136,38 @@ export default function ClubDemoStudio() {
       <div className="demo-controls">
         <label>Saved demos<select className="input" value={saved.some(s => s.id === demo.id) ? demo.id : ''} onChange={e => { const selected = saved.find(s => s.id === e.target.value); if (selected) { ++logoRequest.current; setDemo(selected); setMessage('Saved demo opened.'); } }}><option value="" disabled>New, unsaved demo</option>{saved.map(s => <option key={s.id} value={s.id}>{s.name} — {s.title}</option>)}</select></label>
         <button className="button secondary" onClick={() => { ++logoRequest.current; setDemo(newClubDemo()); setMessage('New demo ready.'); }}>New demo</button>
-        <button className="button primary" onClick={() => { if (!demo.name.trim() || !demo.title.trim() || demo.names.some(n => !n.trim())) { setMessage('Enter a club name, event title, and a name for every player.'); return; } if (store([...saved.filter(s => s.id !== demo.id), demo])) setMessage('Demo saved in this browser.'); }}>Save demo</button>
+        <button className="button primary" disabled={uploading} onClick={() => { if (!demo.name.trim() || !demo.title.trim() || demo.names.some(n => !n.trim())) { setMessage('Enter a club name, event title, and a name for every player.'); return; } if (store([...saved.filter(s => s.id !== demo.id), demo])) setMessage('Demo saved in this browser.'); }}>Save demo</button>
         <button className="button secondary" onClick={() => { ++logoRequest.current; setDemo({ ...demo, id: crypto.randomUUID(), name: `${demo.name} copy` }); setMessage('Copy created. Edit the branding and save it.'); }}>Duplicate</button>
         <button className="button secondary" disabled={!saved.some(s => s.id === demo.id)} onClick={() => { if (window.confirm(`Delete the saved demo for ${demo.name}?`) && store(saved.filter(s => s.id !== demo.id))) { setDemo(newClubDemo()); setMessage('Saved demo deleted.'); } }}>Delete saved demo</button>
       </div>
       <div className="demo-fields">
         <label>Club name<input className="input" maxLength={100} value={demo.name} onChange={e => change({ name: e.target.value })} /></label>
         <label>Event title<input className="input" maxLength={140} value={demo.title} onChange={e => change({ title: e.target.value })} /></label>
-        <label>Club logo<input className="input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e => { void upload(e.target.files?.[0]); e.target.value = ''; }} /><small>PNG, JPG, WEBP, or GIF · up to 3 MB</small></label>
+        <div><label>Club logo<input className="input" type="file" disabled={uploading} accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml,.png,.jpg,.jpeg,.webp,.gif,.svg" onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; void upload(file); }} /></label><small>PNG, JPG, WEBP, GIF, or SVG · up to 10 MB</small>{logoMessage && <p role="status">{logoMessage}</p>}{demo.logo && <img src={demo.logo} alt="Selected club logo" style={{ width: 80, height: 80, objectFit: 'contain', background: '#fff', borderRadius: 8, marginTop: 8 }} />}</div>
         <div className="demo-controls"><label>Primary<input aria-label="Primary color" type="color" value={demo.primary} onChange={e => change({ primary: e.target.value })} /></label><label>Accent<input aria-label="Accent color" type="color" value={demo.accent} onChange={e => change({ accent: e.target.value })} /></label>{demo.logo && <button className="button secondary" onClick={() => { ++logoRequest.current; change({ logo: null }); }}>Remove logo</button>}</div>
-        <label>Format<select className="input" value={demo.format} onChange={e => change({ format: e.target.value as ClubDemo['format'], step: 0 })}><option value="pool">Rotating pool play + postseason brackets</option><option value="round_robin">Rotating round robin (groups of 4)</option></select></label>
-        <label>Players / courts<select className="input" value={demo.names.length} onChange={e => { const count = Number(e.target.value); const defaults = demoNames(count, demo.seed); change({ names: defaults.map((name, i) => demo.names[i] || name), step: 0 }); }} >{[8, 16, 32].map(n => <option key={n} value={n}>{n} players · {n / 4} courts</option>)}</select></label>
+        <label>Tournament type<select className="input" value={demo.format} onChange={e => change({ format: e.target.value as ClubDemo['format'], playStyle: 'rotating', step: 0 })}>{Object.entries(DEMO_FORMATS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        {!data.isCream && !data.isLeague && <label>Play style<select className="input" value={demo.playStyle || 'rotating'} onChange={e => change({ playStyle: e.target.value as ClubDemo['playStyle'], step: 0 })}><option value="rotating">Rotating doubles</option><option value="mixed">Mixed doubles</option>{!data.isPool && <><option value="fixed">Fixed partners</option><option value="singles">Singles</option></>}</select></label>}
+        {data.isPool && <label>Postseason structure<select className="input" value={demo.postseason || 'split'} onChange={e => change({ postseason: e.target.value as ClubDemo['postseason'], step: 0 })}>{Object.entries(DEMO_POSTSEASONS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
+        {data.isLeague && <p>Four sample weeks with rotating partners and cumulative standings. Each week has three rounds.</p>}
+        {data.isCream && <p>Three stages of rotating doubles. Players move courts after each stage using the real Cream of the Crop scheduler.</p>}
+        {demo.format === 'moneyball' && <p>Sample Moneyball event with fictional prizes and a race-to-three series preview. No payments are collected.</p>}
+        <label>Players / courts<select className="input" value={demo.names.length} onChange={e => { const count = Number(e.target.value); const defaults = demoNames(count, demo.seed); change({ names: defaults.map((name, i) => demo.names[i] || name), step: 0 }); }} >{[8, 16, 32].map(n => <option key={n} value={n}>{n} players · {n / (data.isSingles ? 2 : 4)} courts</option>)}</select></label>
       </div>
-      <details><summary>Edit prepopulated players</summary><p>Names are fictional. Each group of four rotates partners during three pool rounds.</p><button className="button secondary" onClick={() => change({ names: demoNames(demo.names.length, demo.seed + 1), seed: demo.seed + 1, step: 0 })}>Shuffle names</button><div className="demo-fields">{demo.names.map((name, i) => <label key={i}>Player {i + 1}<input className="input" maxLength={60} value={name} onChange={e => change({ names: demo.names.map((n, j) => i === j ? e.target.value : n) })} /></label>)}</div></details>
+      <details><summary>Edit prepopulated players</summary><p>Names are fictional. Schedules and sample results follow the selected tournament type and play style.</p><button className="button secondary" onClick={() => change({ names: demoNames(demo.names.length, demo.seed + 1), seed: demo.seed + 1, step: 0 })}>Shuffle names</button><div className="demo-fields">{demo.names.map((name, i) => <label key={i}>Player {i + 1}<input className="input" maxLength={60} value={name} onChange={e => change({ names: demo.names.map((n, j) => i === j ? e.target.value : n) })} /></label>)}</div></details>
       <hr /><div className="demo-controls"><button className="button secondary" disabled={demo.step === 0} onClick={() => change({ step: 0 })}>Reset event</button><button className="button secondary" disabled={demo.step === 0} onClick={() => change({ step: demo.step - 1 })}>Previous round</button><button className="button primary" disabled={complete} onClick={() => change({ step: demo.step + 1 })}>Simulate next round</button><button className="button secondary" disabled={complete} onClick={() => change({ step: data.maxStep })}>Complete tournament</button><span>{demo.step} / {data.maxStep} rounds completed</span></div>
-      <div className="demo-controls" style={{ marginTop: 16 }}><label>Preview<select className="input" value={view} onChange={e => setView(e.target.value as typeof view)}><option value="public">Public brackets & matches</option><option value="player">Player match preview</option><option value="standings">Pool standings</option><option value="tv">TV display</option></select></label>{view === 'player' && <label>Player<select className="input" value={selectedPlayer} onChange={e => setPlayer(e.target.value)}>{data.players.map(p => <option value={p.id} key={p.id}>{p.display_name}</option>)}</select></label>}<label><input type="checkbox" checked={mobile} onChange={e => setMobile(e.target.checked)} /> Phone width</label><button className="button secondary" onClick={() => setClean(true)}>Screenshot mode</button><button className="button primary" disabled={exporting} onClick={() => void download()}>{exporting ? 'Exporting…' : 'Download PNG'}</button></div>
-      <p><small>Demo only · No live events, player statistics, prizes, or notifications are created. Brackets appear after pool round 3. Preview uses DinkDraw’s shared branding, brackets, standings, and TV components; the player panel is a demo match preview.</small></p>
+      <div className="demo-controls" style={{ marginTop: 16 }}><label>Preview<select className="input" value={view} onChange={e => setView(e.target.value as typeof view)}><option value="public">Public brackets & matches</option><option value="player">Player match preview</option><option value="standings">Standings</option><option value="tv">TV display</option></select></label>{view === 'player' && <label>Player<select className="input" value={selectedPlayer} onChange={e => setPlayer(e.target.value)}>{data.players.map(p => <option value={p.id} key={p.id}>{p.display_name}</option>)}</select></label>}<label><input type="checkbox" checked={mobile} onChange={e => setMobile(e.target.checked)} /> Phone width</label><button className="button secondary" onClick={() => setClean(true)}>Screenshot mode</button><button className="button primary" disabled={exporting || uploading} onClick={() => void download()}>{exporting ? 'Exporting…' : 'Download PNG'}</button></div>
+      <p><small>Demo only · No live events, player statistics, prizes, or notifications are created. Brackets appear after pool round 3 for bracket events. Preview uses DinkDraw’s shared branding, brackets, standings, and TV components; the player panel is a demo match preview.</small></p>
       {message && <div role="status" className="notice">{message}</div>}
     </section>}
     {clean && <button className="button secondary demo-exit" onClick={() => setClean(false)}>Exit screenshot mode · Esc</button>}
     <div ref={preview} style={{ width: mobile ? 390 : '100%', maxWidth: '100%', margin: '0 auto', padding: view === 'tv' ? 0 : 16, background: '#001426', borderRadius: 16 }}>
-      {view === 'tv' ? <PublicTvDisplay tournament={tournament} playerSlots={data.players} matches={data.matches} standings={data.standings} currentRound={currentRound} isSingles={false} isLive={!complete} organizationBrand={brand} poolStandings={data.pools} playoffMatches={data.playoffs} /> : <>
+      {view === 'tv' ? <PublicTvDisplay tournament={tournament} playerSlots={data.players} matches={data.matches} standings={data.standings} currentRound={currentRound} isSingles={data.isSingles} tournamentMode={data.isCream ? 'cream_of_the_crop' : 'round_robin'} isLive={!complete} organizationBrand={brand} poolStandings={data.isPool ? data.pools : []} playoffMatches={data.playoffs} /> : <>
         <div style={{ fontSize: 22, fontWeight: 950, marginBottom: 16 }}>DinkDraw</div><OrganizationBrandBanner brand={brand} />
-        <section className="card"><div className="card-title">{demo.title}</div><p>{complete ? 'Tournament complete' : demo.step === 0 ? 'Ready to play' : `Live · Round ${currentRound}`} · {demo.names.length} players · {tournament.courts} courts</p></section>
-        {view === 'standings' ? <PoolStandingsTables pools={data.pools} /> : <>
-          {view === 'public' && data.playoffs.length > 0 && <section className="card"><div className="card-title">Bracket Path</div><div className="card-subtitle">Follow every team from its opening matchup to the championship.</div><TournamentBracket matches={data.playoffs} players={byId} bracketType="championship" title="Championship Bracket" accentColor={demo.accent} /><TournamentBracket matches={data.playoffs} players={byId} bracketType="consolation" title="Consolation Bracket" accentColor="#A78BFA" /></section>}
-          <section className="card"><div className="card-title">{view === 'player' ? `${byId[selectedPlayer]?.display_name || 'Player'} · My matches` : 'Matches'}</div><div style={{ display: 'grid', gap: 12, marginTop: 12 }}>{shownMatches.filter(m => view !== 'player' || [m.team_a_player_1_id, m.team_a_player_2_id, m.team_b_player_1_id, m.team_b_player_2_id].includes(selectedPlayer)).map(m => <div className="list-item" key={m.id} style={{ padding: 14 }}><div style={{ color: demo.accent, marginBottom: 8, fontWeight: 800 }}>Round {m.round_number} · Court {m.court_number} · {m.is_complete ? 'Final' : 'Upcoming'}</div><div className="row-between"><span>{team(m.team_a_player_1_id, m.team_a_player_2_id)}</span><strong>{m.team_a_score ?? '—'}</strong></div><div className="row-between"><span>{team(m.team_b_player_1_id, m.team_b_player_2_id)}</span><strong>{m.team_b_score ?? '—'}</strong></div></div>)}</div></section>
+        <section className="card"><div className="card-title">{demo.title}</div><p>{DEMO_FORMATS[demo.format]} · {complete ? 'Tournament complete' : demo.step === 0 ? 'Ready to play' : `Live · Round ${currentRound}`} · {demo.names.length} players · {tournament.courts} courts</p></section>
+        {demo.format === 'moneyball' && <section className="card"><div className="card-title">Moneyball Series · Race to 3</div><p>Sample buy-in: $20 per player · Event prize: ${demo.names.length * 10} · Series contribution: ${demo.names.length * 10}</p><p>{complete ? 'Event finished · Series win awarded to the championship team' : 'Opening event · First team to three event wins takes the series'}</p><small>Illustrative prizes only</small></section>}
+        {view === 'standings' ? (data.isPool ? <PoolStandingsTables pools={data.pools} /> : <section className="card"><div className="card-title">Standings</div>{data.standings.map((p, i) => <div className="list-item row-between" key={p.playerId} style={{ padding: 12 }}><span>#{i + 1} {p.name}{data.isCream && p.finalCourt ? ` · Court ${p.finalCourt}` : ''}</span><strong>{p.wins}–{p.losses} · {p.pointDiff > 0 ? '+' : ''}{p.pointDiff}</strong></div>)}</section>) : <>
+          {view === 'public' && data.playoffs.length > 0 && <section className="card"><div className="card-title">Bracket Path</div><div className="card-subtitle">Follow every team from its opening matchup to the championship.</div>{data.playoffs.some(m => m.elimination_section) ? (['main', 'second_chance', 'last_chance', 'finals'] as const).map(section => <TournamentBracket key={section} matches={data.playoffs} players={byId} bracketType={section === 'main' || section === 'finals' ? 'championship' : 'consolation'} eliminationSection={section} title={{ main: 'Main Draw', second_chance: 'Second Chance', last_chance: 'Last Chance', finals: 'Championship Finals' }[section]} accentColor={section === 'main' || section === 'finals' ? demo.accent : '#A78BFA'} />) : <><TournamentBracket matches={data.playoffs} players={byId} bracketType="championship" title="Championship Bracket" accentColor={demo.accent} /><TournamentBracket matches={data.playoffs} players={byId} bracketType="consolation" title="Consolation Bracket" accentColor="#A78BFA" /></>}</section>}
+          <section className="card"><div className="card-title">{view === 'player' ? `${byId[selectedPlayer]?.display_name || 'Player'} · My matches` : 'Matches'}</div><div style={{ display: 'grid', gap: 12, marginTop: 12 }}>{shownMatches.filter(m => view !== 'player' || [m.team_a_player_1_id, m.team_a_player_2_id, m.team_b_player_1_id, m.team_b_player_2_id].includes(selectedPlayer)).map(m => <div className="list-item" key={m.id} style={{ padding: 14 }}><div style={{ color: demo.accent, marginBottom: 8, fontWeight: 800 }}>{data.isLeague ? `Week ${Math.ceil(m.round_number / 3)} · Round ${(m.round_number - 1) % 3 + 1}` : `Round ${m.round_number}`} · Court {m.court_number} · {m.is_complete ? 'Final' : 'Upcoming'}</div><div className="row-between"><span>{team(m.team_a_player_1_id, m.team_a_player_2_id)}</span><strong>{m.team_a_score ?? '—'}</strong></div><div className="row-between"><span>{team(m.team_b_player_1_id, m.team_b_player_2_id)}</span><strong>{m.team_b_score ?? '—'}</strong></div></div>)}</div></section>
         </>}
       </>}
     </div>
@@ -147,7 +182,9 @@ function isDemo(value: unknown): value is ClubDemo {
     && (d.logo === null || typeof d.logo === 'string' && d.logo.startsWith('data:image/png;base64,'))
     && /^#[0-9a-f]{6}$/i.test(d.primary) && /^#[0-9a-f]{6}$/i.test(d.accent)
     && Array.isArray(d.names) && [8, 16, 32].includes(d.names.length) && d.names.every(n => typeof n === 'string')
-    && ['pool', 'round_robin'].includes(d.format) && Number.isInteger(d.step) && d.step >= 0
-    && d.step <= (d.format === 'pool' ? 3 + Math.log2(d.names.length / 4) : 3)
+    && Object.keys(DEMO_FORMATS).includes(d.format)
+    && (d.postseason === undefined || Object.keys(DEMO_POSTSEASONS).includes(d.postseason))
+    && (d.playStyle === undefined || ['rotating', 'fixed', 'mixed', 'singles'].includes(d.playStyle)) && Number.isInteger(d.step) && d.step >= 0
+    && d.step <= 100
     && Number.isSafeInteger(d.seed) && d.seed >= 0;
 }

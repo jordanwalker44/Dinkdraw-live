@@ -4,7 +4,7 @@ Open `/admin/demo`, or use **Open Club Demo Studio** on `/admin/features`.
 An authenticated account must pass the existing `is_dinkdraw_admin` RPC.
 No database migration is needed.
 
-1. Enter a club name and event title, upload a PNG/JPG/WEBP/GIF logo under 3 MB,
+1. Enter a club name and event title, upload a PNG/JPG/WEBP/GIF/SVG logo under 10 MB,
    and choose branding colors.
 2. Choose 8, 16, or 32 fictional players and the event format. Names are populated
    automatically and editable. Shuffle names creates a new roster and resets scores.
@@ -25,17 +25,27 @@ There are no public demo links in this version.
 
 ## Supported simulation
 
-Groups of four play three rounds of rotating doubles, using the existing
-Cream-of-the-Crop stage scheduler. For pool/postseason demos, the top two players
-in each pool form a championship team and the other two form a consolation team.
-Each draw uses the existing single-elimination graph builder. Scores are
-repeatable and standings derive from completed pool matches. This is a sample
-sales scenario, not a replacement for every production event format.
+Supported options:
 
-The studio reuses OrganizationBrandBanner, TournamentBracket, PoolStandingsTables,
-and PublicTvDisplay. The event header and player match preview are demo-specific;
-they are not the complete production player page. Cream-of-the-Crop progression,
-Moneyball, and multiple-elimination demos are not yet available.
+- Round Robin: rotating doubles, fixed partners, mixed doubles, and singles.
+- Pool Play + Brackets and Moneyball: rotating or mixed doubles, with split,
+  single, first-round consolation, double, and triple elimination.
+- Cream of the Crop: nine rounds across three stages using the production court
+  movement scheduler.
+- Premium League: four sample weeks, three rounds each, with the production
+  partnership rotation and cumulative standings.
+
+Moneyball displays illustrative prizes for one sample event; no payments or
+real series wins are recorded. Multi-elimination finals run to the loss limit.
+Demos use repeatable sample scores and standings calculated from those scores.
+
+The studio reuses the production branding, bracket, pool standings, and TV
+components. Player match cards, league preview, and sample prize summary are
+demo-specific, not replicas of the complete production player or league pages.
+
+Logo selection uses FileReader and an HTML image decoder, then resizes to a PNG.
+A thumbnail and status appear beside the file picker. Save demo keeps that logo
+in browser storage. HEIC is not supported; export as PNG or JPG first.
 
 ## Verification
 

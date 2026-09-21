@@ -15,6 +15,7 @@ export type ClubDemo = {
   id: string; name: string; title: string; logo: string | null;
   primary: string; accent: string; names: string[];
   format: keyof typeof DEMO_FORMATS; step: number; seed: number;
+  gamesInRound?: number;
   postseason?: keyof typeof DEMO_POSTSEASONS;
   playStyle?: 'rotating' | 'fixed' | 'mixed' | 'singles';
 };
@@ -76,7 +77,10 @@ export function buildClubDemo(demo: ClubDemo) {
       order.splice(1, 0, order.pop()!);
     }
   }
-  const matches = fullMatches.filter(m => !isCream || m.round_number <= Math.min(9, (Math.floor(demo.step / 3) + 1) * 3)).map(m => ({ ...m, is_complete: demo.step >= m.round_number, team_a_score: demo.step >= m.round_number ? m.team_a_score : null, team_b_score: demo.step >= m.round_number ? m.team_b_score : null }));
+  const partial = demo.gamesInRound || 0;
+  const completedPoolGames = new Set(fullMatches.filter(m => m.round_number === demo.step + 1).slice(0, partial).map(m => m.id));
+  const poolGameComplete = (m: Match) => demo.step >= m.round_number || completedPoolGames.has(m.id);
+  const matches = fullMatches.filter(m => !isCream || m.round_number <= Math.min(9, (Math.floor(demo.step / 3) + 1) * 3)).map(m => ({ ...m, is_complete: poolGameComplete(m), team_a_score: poolGameComplete(m) ? m.team_a_score : null, team_b_score: poolGameComplete(m) ? m.team_b_score : null }));
   function rank(source: Match[]) {
     return players.map(p => {
       const played = source.filter(m => m.is_complete && [m.team_a_player_1_id, m.team_a_player_2_id, m.team_b_player_1_id, m.team_b_player_2_id].includes(p.id));
@@ -141,9 +145,10 @@ export function buildClubDemo(demo: ClubDemo) {
       }
     }
   }
+  const completedPlayoffGames = new Set(fullPlayoffs.filter(m => m.round_number === demo.step + 1).slice(0, partial).map(m => m.id));
   const playoffs: DemoPlayoff[] = demo.step < 3 ? [] : fullPlayoffs.filter(m => m.elimination_section !== 'finals' || Math.max(m.availableA, m.availableB) <= demo.step).map(({ availableA, availableB, ...m }) => {
-    const done = demo.step >= m.round_number;
+    const done = demo.step >= m.round_number || completedPlayoffGames.has(m.id);
     return { ...m, is_complete: done, team_a_player_1_id: demo.step >= availableA ? m.team_a_player_1_id : null, team_a_player_2_id: demo.step >= availableA ? m.team_a_player_2_id : null, team_b_player_1_id: demo.step >= availableB ? m.team_b_player_1_id : null, team_b_player_2_id: demo.step >= availableB ? m.team_b_player_2_id : null, team_a_seed: demo.step >= availableA ? m.team_a_seed : null, team_b_seed: demo.step >= availableB ? m.team_b_seed : null, team_a_score: done ? m.team_a_score : null, team_b_score: done ? m.team_b_score : null, winner_team: done ? m.winner_team : null, winner_player_1_id: done ? m.winner_player_1_id : null, winner_player_2_id: done ? m.winner_player_2_id : null };
   });
-  return { players, matches, standings, pools, playoffs, isPool, isCream, isLeague, isSingles, courts: players.length / (isSingles ? 2 : 4), maxStep: Math.max(isLeague ? 12 : isCream ? 9 : 3, ...fullPlayoffs.map(m => m.round_number)) };
+  return { roundGames: [...matches, ...playoffs].filter(m => m.round_number === demo.step + 1), players, matches, standings, pools, playoffs, isPool, isCream, isLeague, isSingles, courts: players.length / (isSingles ? 2 : 4), maxStep: Math.max(isLeague ? 12 : isCream ? 9 : 3, ...fullPlayoffs.map(m => m.round_number)) };
 }

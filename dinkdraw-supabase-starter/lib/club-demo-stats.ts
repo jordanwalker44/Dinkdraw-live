@@ -4,7 +4,7 @@ import { buildClubDemo, type ClubDemo } from './club-demo';
 export function buildClubDemoStats(demo: ClubDemo, playerId: string, includeHistory = true) {
   const historical = ['Club Social', 'Weekend Round Robin', 'Friday Night Doubles'].map((title, i) => ({
     ...demo, id: `${demo.id}-history-${i}`, title, format: 'round_robin' as const,
-    playStyle: 'rotating' as const, seed: demo.seed + i + 4, step: 3,
+    playStyle: 'rotating' as const, seed: demo.seed + i + 4, step: 3, gamesInRound: 0,
   }));
   const events = [...(includeHistory ? historical : []), demo].map((event, index) => {
     const data = buildClubDemo(event);

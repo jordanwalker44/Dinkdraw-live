@@ -107,3 +107,20 @@ for (const format of ['pool', 'cream', 'league', 'round_robin', 'moneyball']) {
   assert.deepEqual(buildClubDemoStats(base, 'demo-player-0'), before, 'Reset restores statistics without accumulating duplicates');
 }
 console.log('Demo stats passed: history, current-event totals, partnership totals, IDs, and reset.');
+
+for (const format of ['round_robin', 'cream', 'league', 'pool', 'moneyball']) {
+  const base = { id: 'partial', title: 'Partial games', names: demoNames(16), format, seed: 2, step: 0, postseason: 'triple' };
+  const max = buildClubDemo(base).maxStep;
+  for (let step = 0; step < max; step++) {
+    const start = buildClubDemo({ ...base, step });
+    for (let gamesInRound = 0; gamesInRound < start.roundGames.length; gamesInRound++) {
+      const demo = { ...base, step, gamesInRound };
+      const data = buildClubDemo(demo);
+      assert.equal(data.roundGames.filter(m => m.is_complete).length, gamesInRound);
+      assert(data.roundGames.filter(m => !m.is_complete).every(m => m.team_a_score === null && m.team_b_score === null));
+      const playerGames = data.players.reduce((n, p) => n + buildClubDemoStats(demo, p.id, false).matches.length, 0);
+      assert.equal(playerGames, [...data.matches, ...data.playoffs].filter(m => m.is_complete).length * 4);
+    }
+  }
+}
+console.log('Partial-game checks passed for every round and demo type, including player stats.');

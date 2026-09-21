@@ -56,3 +56,20 @@ standings arithmetic, bracket advancement, reproducibility, and reset.
 Manual check with an admin session: upload a logo, change a player name, save,
 reload and reopen; advance into brackets; inspect phone/TV previews; download PNG;
 and verify the image contains the intended logo and no studio controls.
+
+## Joining and My Stats demo
+
+Use **Simulate player joining** or **Join Now** in the public preview. Select a
+fictional player slot, optionally change the name, and join. The confirmation
+opens My matches; My Stats opens that same player's fictional profile. Reset join
+demo clears the simulated registration without resetting tournament scores or
+renaming the roster. The studio still requires an admin session; this does not
+change real tournament authentication or register an account.
+
+My Stats offers career + sample history and this-event views. Three fictional
+past events are generated deterministically. Wins, losses, points, form, streaks,
+partners, and match history derive from completed sample matches (including
+postseason games). Advancing/resetting a tournament recalculates totals; no
+records accumulate. Sample history is labeled in the profile. Bracket events
+only award a placement for the champion; other bracket placements are omitted.
+League events do not award tournament placements. No Supabase migration needed.

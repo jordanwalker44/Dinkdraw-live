@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
 // Compile only the pure demo engine and its local TypeScript dependencies.
-require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2017 } }).outputText, filename);
 const { buildClubDemo, demoNames } = require('../lib/club-demo.ts');
 for (const count of [8, 16, 32]) {
   for (const format of ['pool', 'round_robin']) {
@@ -87,3 +87,23 @@ for (const count of [8, 16, 32]) for (const format of ['round_robin', 'cream', '
   }
 }
 console.log('Expanded formats passed: play styles, all postseason structures, elimination loss limits, and nine-round Cream progression.');
+
+const { buildClubDemoStats } = require('../lib/club-demo-stats.ts');
+for (const format of ['pool', 'cream', 'league', 'round_robin', 'moneyball']) {
+  const base = { id: 'stats', title: 'Current demo', names: demoNames(16), format, seed: 4, step: 0, postseason: 'triple' };
+  const before = buildClubDemoStats(base, 'demo-player-0');
+  assert.equal(before.events.length, 4);
+  assert.equal(before.matches.length, 9);
+  assert.equal(buildClubDemoStats(base, 'demo-player-0', false).matches.length, 0);
+  const finalDemo = { ...base, step: buildClubDemo(base).maxStep };
+  const career = buildClubDemoStats(finalDemo, 'demo-player-0');
+  const current = buildClubDemoStats(finalDemo, 'demo-player-0', false);
+  assert.equal(career.matches.length, before.matches.length + current.matches.length);
+  assert.equal(career.wins + career.losses, career.matches.length);
+  assert.equal(career.pointDiff, career.pointsFor - career.pointsAgainst);
+  assert.equal(career.pointsFor, before.pointsFor + current.pointsFor);
+  assert.equal(new Set(career.matches.map(m => m.id)).size, career.matches.length);
+  assert.equal(career.partners.reduce((n, p) => n + p.played, 0), career.matches.length);
+  assert.deepEqual(buildClubDemoStats(base, 'demo-player-0'), before, 'Reset restores statistics without accumulating duplicates');
+}
+console.log('Demo stats passed: history, current-event totals, partnership totals, IDs, and reset.');

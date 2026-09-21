@@ -80,6 +80,7 @@ type PlayoffMatch = {
 };
 
 type PublicTvDisplayProps = {
+  previewWidth?: number;
   tournament: Tournament;
   playerSlots: PlayerSlot[];
   matches: Match[];
@@ -150,7 +151,11 @@ export default function PublicTvDisplay({
   standingsRankingMethod,
   poolStandings = [],
   playoffMatches = [],
+  previewWidth,
 }: PublicTvDisplayProps) {
+  const tvSize = (value: string) => previewWidth
+    ? value.replace(/([\d.]+)vw/g, (_, amount) => `${Number(amount) * previewWidth / 100}px`)
+    : value;
   const playersById = Object.fromEntries(playerSlots.map((slot) => [slot.id, slot]));
 
   function renderPlayerName(id: string | null) {
@@ -305,8 +310,8 @@ export default function PublicTvDisplay({
   return (
     <main
       style={{
-        height: '100vh',
-        width: '100vw',
+        height: previewWidth ? '100%' : '100vh',
+        width: previewWidth ? '100%' : '100vw',
         overflow: 'hidden',
         background:
           'radial-gradient(circle at top left, rgba(255,203,5,0.16), transparent 34%), linear-gradient(135deg, #06111f 0%, #071827 45%, #030712 100%)',
@@ -322,7 +327,7 @@ export default function PublicTvDisplay({
     height: '100%',
     width: '100%',
     display: 'grid',
-    gridTemplateColumns: '66% 34%',
+    gridTemplateColumns: previewWidth ? 'minmax(0, 66fr) minmax(0, 34fr)' : '66% 34%',
     gap: 18,
     minHeight: 0,
     minWidth: 0,
@@ -364,7 +369,7 @@ export default function PublicTvDisplay({
               </div>
               <div
                 style={{
-                  fontSize: isFinal ? 'clamp(42px, 4.9vw, 82px)' : 'clamp(46px, 5.2vw, 86px)',
+                  fontSize: isFinal ? tvSize('clamp(42px, 4.9vw, 82px)') : tvSize('clamp(46px, 5.2vw, 86px)'),
                   lineHeight: 0.92,
                   fontWeight: 950,
                   letterSpacing: '-0.06em',
@@ -464,7 +469,7 @@ export default function PublicTvDisplay({
                   </div>
                   <div
                     style={{
-                      fontSize: 'clamp(54px, 5.2vw, 92px)',
+                      fontSize: tvSize('clamp(54px, 5.2vw, 92px)'),
                       lineHeight: 0.98,
                       fontWeight: 950,
                       letterSpacing: '-0.06em',
@@ -494,12 +499,12 @@ export default function PublicTvDisplay({
                   <div style={{ minHeight: 0, display: 'grid', gap: 18, alignContent: 'center' }}>
                     <div style={{ padding: '34px 30px', borderRadius: 28, border: '3px solid rgba(255,203,5,0.78)', background: 'radial-gradient(circle at top, rgba(255,203,5,0.25), rgba(255,203,5,0.08))', boxShadow: '0 0 70px rgba(255,203,5,0.18)', textAlign: 'center' }}>
                       <div style={{ color: '#FFCB05', fontSize: 22, fontWeight: 950, letterSpacing: 3 }}>🏆 CHAMPIONSHIP BRACKET WINNERS</div>
-                      <div style={{ marginTop: 16, fontSize: 'clamp(48px, 4.8vw, 86px)', lineHeight: 0.98, fontWeight: 950, letterSpacing: '-0.05em' }}>{championName}</div>
+                      <div style={{ marginTop: 16, fontSize: tvSize('clamp(48px, 4.8vw, 86px)'), lineHeight: 0.98, fontWeight: 950, letterSpacing: '-0.05em' }}>{championName}</div>
                     </div>
                     {consolationWinnerName ? (
                       <div style={{ justifySelf: 'center', width: '78%', padding: '20px 24px', borderRadius: 24, border: '2px solid rgba(167,139,250,0.58)', background: 'rgba(167,139,250,0.10)', textAlign: 'center' }}>
                         <div style={{ color: '#A78BFA', fontSize: 16, fontWeight: 950, letterSpacing: 2 }}>🏅 CONSOLATION BRACKET WINNERS</div>
-                        <div style={{ marginTop: 10, fontSize: 'clamp(28px, 2.5vw, 48px)', fontWeight: 950 }}>{consolationWinnerName}</div>
+                        <div style={{ marginTop: 10, fontSize: tvSize('clamp(28px, 2.5vw, 48px)'), fontWeight: 950 }}>{consolationWinnerName}</div>
                       </div>
                     ) : null}
                   </div>
@@ -547,7 +552,7 @@ export default function PublicTvDisplay({
                         <div>
                           <div
                             style={{
-                              fontSize: 'clamp(26px, 2.2vw, 42px)',
+                              fontSize: tvSize('clamp(26px, 2.2vw, 42px)'),
                               lineHeight: 1.02,
                               fontWeight: 950,
                               letterSpacing: '-0.05em',
@@ -622,7 +627,7 @@ export default function PublicTvDisplay({
                   >
                     <div
                       style={{
-                        fontSize: 'clamp(24px, 1.8vw, 38px)',
+                        fontSize: tvSize('clamp(24px, 1.8vw, 38px)'),
                         lineHeight: 1,
                         fontWeight: 950,
                         color: '#FFCB05',
@@ -662,7 +667,7 @@ export default function PublicTvDisplay({
     gridTemplateColumns: 'minmax(0, 1fr) auto',
     gap: 14,
     alignItems: 'center',
-    fontSize: 'clamp(18px, 1.45vw, 28px)',
+    fontSize: tvSize('clamp(18px, 1.45vw, 28px)'),
     lineHeight: 1.24,
     fontWeight: 950,
     letterSpacing: '-0.04em',
@@ -708,7 +713,7 @@ export default function PublicTvDisplay({
     style={{
       minWidth: 52,
       textAlign: 'right',
-      fontSize: 'clamp(34px, 2.5vw, 52px)',
+      fontSize: tvSize('clamp(34px, 2.5vw, 52px)'),
       lineHeight: 1,
       fontWeight: 950,
       color: '#FFCB05',
@@ -721,7 +726,7 @@ export default function PublicTvDisplay({
                   <div
                     style={{
                       textAlign: 'center',
-                      fontSize: 'clamp(13px, 1vw, 18px)',
+                      fontSize: tvSize('clamp(13px, 1vw, 18px)'),
                       fontWeight: 950,
                       letterSpacing: '0.22em',
                       textTransform: 'uppercase',
@@ -738,7 +743,7 @@ export default function PublicTvDisplay({
     gridTemplateColumns: 'minmax(0, 1fr) auto',
     gap: 14,
     alignItems: 'center',
-    fontSize: 'clamp(18px, 1.45vw, 28px)',
+    fontSize: tvSize('clamp(18px, 1.45vw, 28px)'),
     lineHeight: 1.24,
     fontWeight: 950,
     letterSpacing: '-0.04em',
@@ -784,7 +789,7 @@ export default function PublicTvDisplay({
     style={{
       minWidth: 52,
       textAlign: 'right',
-      fontSize: 'clamp(34px, 2.5vw, 52px)',
+      fontSize: tvSize('clamp(34px, 2.5vw, 52px)'),
       lineHeight: 1,
       fontWeight: 950,
       color: '#FFCB05',
@@ -840,7 +845,7 @@ export default function PublicTvDisplay({
                 </div>
                 <div
                   style={{
-                    fontSize: 'clamp(28px, 2.2vw, 44px)',
+                    fontSize: tvSize('clamp(28px, 2.2vw, 44px)'),
                     lineHeight: 1,
                     fontWeight: 950,
                     letterSpacing: '-0.05em',
@@ -894,7 +899,7 @@ export default function PublicTvDisplay({
                   </div>
                   <div
                     style={{
-                      fontSize: 'clamp(18px, 1.2vw, 24px)',
+                      fontSize: tvSize('clamp(18px, 1.2vw, 24px)'),
                       lineHeight: 1.05,
                       fontWeight: 950,
                       overflow: 'hidden',

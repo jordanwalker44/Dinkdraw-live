@@ -8,6 +8,7 @@ import { OrganizationBrandBanner } from '../../../components/OrganizationBrandBa
 import { TournamentBracket } from '../../../components/TournamentBracket';
 import { PoolStandingsTables } from '../../../components/PoolStandingsTables';
 import { ClubDemoStats } from '../../../components/ClubDemoStats';
+import { DemoTvFrame } from '../../../components/DemoTvFrame';
 import PublicTvDisplay from '../../../components/PublicTvDisplay';
 
 export default function ClubDemoStudio() {
@@ -167,7 +168,7 @@ export default function ClubDemoStudio() {
     </section>}
     {clean && <button className="button secondary demo-exit" onClick={() => setClean(false)}>Exit screenshot mode · Esc</button>}
     <div ref={preview} style={{ width: mobile ? 390 : '100%', maxWidth: '100%', margin: '0 auto', padding: view === 'tv' ? 0 : 16, background: '#001426', borderRadius: 16 }}>
-      {view === 'tv' ? <PublicTvDisplay tournament={tournament} playerSlots={data.players} matches={data.matches} standings={data.standings} currentRound={currentRound} isSingles={data.isSingles} tournamentMode={data.isCream ? 'cream_of_the_crop' : 'round_robin'} isLive={!complete} organizationBrand={brand} poolStandings={data.isPool ? data.pools : []} playoffMatches={data.playoffs} /> : <>
+      {view === 'tv' ? <DemoTvFrame><PublicTvDisplay previewWidth={1600} tournament={tournament} playerSlots={data.players} matches={data.matches} standings={data.standings} currentRound={currentRound} isSingles={data.isSingles} tournamentMode={data.isCream ? 'cream_of_the_crop' : 'round_robin'} isLive={!complete} organizationBrand={brand} poolStandings={data.isPool ? data.pools : []} playoffMatches={data.playoffs} /></DemoTvFrame> : <>
         <div style={{ fontSize: 22, fontWeight: 950, marginBottom: 16 }}>DinkDraw</div><OrganizationBrandBanner brand={brand} />
         <section className="card"><div className="card-title">{demo.title}</div><p>{DEMO_FORMATS[demo.format]} · {complete ? 'Tournament complete' : demo.step === 0 ? 'Ready to play' : `Live · Round ${currentRound}`} · {demo.names.length} players · {tournament.courts} courts</p></section>
         {view === 'public' && <section className="card"><button className="button primary" onClick={() => { setJoinName(''); setView('join'); }}>Join Now</button><p className="muted">Try joining this sample event.</p></section>}

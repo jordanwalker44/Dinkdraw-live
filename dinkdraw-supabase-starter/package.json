@@ -9,7 +9,8 @@
     "test:elimination": "node --experimental-strip-types scripts/validate-multi-elimination.ts",
     "start": "next start",
     "lint": "next lint",
-    "test:demo": "node scripts/validate-club-demo.cjs"
+    "test:demo": "node scripts/validate-club-demo.cjs",
+    "test:rotating": "node scripts/validate-rotating-doubles.cjs"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.2",

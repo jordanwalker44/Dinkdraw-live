@@ -31,6 +31,8 @@ import {
 } from '../../../lib/scheduler';
 import { buildFirstRoundConsolationGraph, buildFixedEliminationGraph, type BracketSource } from '../../../lib/multi-elimination';
 
+import { buildTwelvePlayerRotation, scoreRotatingCourtBalance } from '../../../lib/rotating-doubles';
+
 export const dynamic = 'force-dynamic';
 
 type Tournament = {
@@ -1561,72 +1563,7 @@ function doublesRowPlayerIds(row: ScheduleRow) {
 }
 
 function scoreDoublesCourtSchedule(rows: ScheduleRow[], playerIds: string[]) {
-  const allCourts = Array.from(
-    new Set(
-      rows
-        .filter((row) => !row.is_bye && row.court_number !== null)
-        .map((row) => row.court_number as number)
-    )
-  ).sort((a, b) => a - b);
-
-  const lastCourt = new Map<string, number | null>(
-    playerIds.map((playerId) => [playerId, null])
-  );
-  const currentStreak = new Map<string, number>(
-    playerIds.map((playerId) => [playerId, 0])
-  );
-  const longestStreak = new Map<string, number>(
-    playerIds.map((playerId) => [playerId, 0])
-  );
-  const courtCounts = new Map<string, Map<number, number>>(
-    playerIds.map((playerId) => [playerId, new Map()])
-  );
-
-  const playableRows = [...rows]
-    .filter((row) => !row.is_bye && row.court_number !== null)
-    .sort(
-      (a, b) =>
-        a.round_number - b.round_number ||
-        (a.court_number ?? 999) - (b.court_number ?? 999)
-    );
-
-  for (const row of playableRows) {
-    const court = row.court_number as number;
-
-    for (const playerId of doublesRowPlayerIds(row)) {
-      const nextStreak =
-        lastCourt.get(playerId) === court
-          ? (currentStreak.get(playerId) ?? 0) + 1
-          : 1;
-
-      lastCourt.set(playerId, court);
-      currentStreak.set(playerId, nextStreak);
-      longestStreak.set(
-        playerId,
-        Math.max(longestStreak.get(playerId) ?? 0, nextStreak)
-      );
-
-      const playerCourtCounts = courtCounts.get(playerId) || new Map<number, number>();
-      playerCourtCounts.set(court, (playerCourtCounts.get(court) ?? 0) + 1);
-      courtCounts.set(playerId, playerCourtCounts);
-    }
-  }
-
-  let score = 0;
-
-  for (const playerId of playerIds) {
-    const longest = longestStreak.get(playerId) ?? 0;
-    const counts = courtCounts.get(playerId) || new Map<number, number>();
-    const values = allCourts.map((court) => counts.get(court) ?? 0);
-    const courtSpread = values.length
-      ? Math.max(...values) - Math.min(...values)
-      : 0;
-
-    score += Math.pow(longest, 4) * 100000;
-    score += courtSpread * 1000;
-  }
-
-  return score;
+  return scoreRotatingCourtBalance(rows, playerIds);
 }
 
 function scoreCompleteMixedCourtDistribution(rows: ScheduleRow[], playerIds: string[]) {
@@ -1707,7 +1644,10 @@ function balanceDoublesCourtsInSchedule(
         return;
       }
 
-      for (const permutation of courtPermutations) {
+      // Court labels are interchangeable for this score. Fixing the first
+      // round removes six equivalent searches without losing an assignment.
+      const permutations = roundIndex === 0 ? courtPermutations.slice(0, 1) : courtPermutations;
+      for (const permutation of permutations) {
         search(
           roundIndex + 1,
           assignedRows.concat(
@@ -1806,6 +1746,13 @@ function buildDoublesSchedule(
   if (activePlayers.length < 4) return [];
 
   const ids = activePlayers.map((player) => player.id);
+  if (ids.length === 12 && courts >= 3 && Number.isInteger(rounds) && rounds >= 1 && rounds <= 11) {
+    const rotation = buildTwelvePlayerRotation(shuffle(ids), rounds);
+    return balanceDoublesCourtsInSchedule(
+      balanceDoublesServingSidesInSchedule(rotation, ids), ids
+    );
+  }
+
   const totalValid = (_id: string) => ids.length - 1;
   const groupCooldown = Math.max(2, Math.ceil(ids.length / (courts * 2)));
 

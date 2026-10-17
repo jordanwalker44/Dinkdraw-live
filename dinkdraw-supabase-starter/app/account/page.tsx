@@ -72,36 +72,27 @@ export default function AccountPage() {
 
     loadUser();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const user = session?.user;
-
-      setUserEmail(user?.email ?? '');
-      setEmail(user?.email ?? '');
-
-      if (!user) {
+    // Auth notifications are awaited by Supabase. Run profile requests after
+    // the notification returns so they cannot hold up session refreshes.
+    let profileRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? '');
+      setEmail(session?.user?.email ?? '');
+      clearTimeout(profileRefreshTimer);
+      if (!session?.user) {
         setProfileName('');
         setName('');
         return;
       }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name, time_zone')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const resolvedName = profile?.display_name || user.email?.split('@')[0] || '';
-      setProfileName(resolvedName);
-      setName(resolvedName);
-      const detectedTimeZone = detectDeviceTimeZone();
-      const resolvedTimeZone = profile?.time_zone || detectedTimeZone || 'America/Denver';
-      setProfileTimeZone(resolvedTimeZone);
-      if (!profile?.time_zone && detectedTimeZone) {
-        void supabase.from('profiles').update({ time_zone: detectedTimeZone }).eq('id', user.id);
-      }
+      profileRefreshTimer = setTimeout(() => {
+        void loadUser().catch((error) => console.error('Failed to load profile:', error));
+      }, 0);
     });
 
-    return () => { subscription.unsubscribe(); };
+    return () => {
+      clearTimeout(profileRefreshTimer);
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   async function handleAuth() {

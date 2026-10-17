@@ -23,3 +23,19 @@ export function getSupabaseBrowserClient() {
 
   return browserClient;
 }
+
+let publicBrowserClient: SupabaseClient | null = null;
+
+// Only use for data whose SELECT policies already allow anonymous access.
+// Supplying accessToken keeps these reads independent of Auth initialization
+// and token refresh. Account data and all mutations use the signed-in client.
+export function getSupabasePublicBrowserClient() {
+  if (publicBrowserClient) return publicBrowserClient;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('Missing Supabase environment variables.');
+  publicBrowserClient = createClient(url, key, {
+    accessToken: async () => key,
+  });
+  return publicBrowserClient;
+}

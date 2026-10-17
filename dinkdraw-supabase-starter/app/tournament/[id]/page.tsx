@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { QRCodeSVG } from 'qrcode.react';
-import { getSupabaseBrowserClient } from '../../../lib/supabase-browser';
+import { getSupabaseBrowserClient, getSupabasePublicBrowserClient } from '../../../lib/supabase-browser';
 import { TopNav } from '../../../components/TopNav';
 import { ShareResultsButton } from '../../../components/ShareResultsButton';
 import {
@@ -2994,6 +2994,7 @@ function getTournamentModeBadges(tournament: Tournament | null) {
 
 export default function TournamentDetailPage({ params }: { params: { id: string } }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const publicSupabase = useMemo(() => getSupabasePublicBrowserClient(), []);
   const router = useRouter();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
@@ -3573,27 +3574,25 @@ const tournamentPhaseSubtitle =
   playersResult,
   matchesResult,
   playoffMatchesResult,
-  leagueSessionResult,
 ] = await Promise.all([
-  timedRequest('tournament', supabase.from('tournaments').select('*').eq('id', params.id).maybeSingle()),
-  timedRequest('players', supabase
+  timedRequest('tournament', publicSupabase.from('tournaments').select('*').eq('id', params.id).maybeSingle()),
+  timedRequest('players', publicSupabase
     .from('tournament_players')
     .select('*')
     .eq('tournament_id', params.id)
     .order('slot_number', { ascending: true })),
-  timedRequest('matches', supabase
+  timedRequest('matches', publicSupabase
     .from('matches')
     .select('*')
     .eq('tournament_id', params.id)
     .order('round_number', { ascending: true })
     .order('court_number', { ascending: true })),
-  timedRequest('playoff matches', supabase
+  timedRequest('playoff matches', publicSupabase
     .from('playoff_matches')
     .select('*')
     .eq('tournament_id', params.id)
     .order('round_number', { ascending: true })
     .order('match_number', { ascending: true })),
-  timedRequest('league session', supabase.from('league_sessions').select('league_id, session_number').eq('tournament_id', params.id).maybeSingle()),
 ]);
 
 const tournamentData = tournamentResult.data;
@@ -3624,7 +3623,6 @@ setMatches((prev) => {
   });
 });
 setPlayoffMatches(playoffMatchesResult.data || []);
-setLeagueSession(leagueSessionResult.data || null);
 
 // Branding is optional. Never keep tournament data in a loading state while
 // waiting for this separate RPC.
@@ -3672,6 +3670,19 @@ setScoreDrafts((prev) => {
 return true;
 }
 
+  // League navigation is optional and must not gate tournament rendering.
+  useEffect(() => {
+    let active = true;
+    setLeagueSession(null);
+    void Promise.resolve(
+      supabase.from('league_sessions').select('league_id, session_number')
+        .eq('tournament_id', params.id).maybeSingle()
+    ).then(({ data }) => {
+      if (active) setLeagueSession(data || null);
+    }).catch((error) => console.error('Failed to load league session:', error));
+    return () => { active = false; };
+  }, [params.id, supabase, loadAttempt]);
+
   useEffect(() => {
     async function load() {
   setIsLoading(true);
@@ -3679,32 +3690,10 @@ return true;
   setLoadErrorMessage('');
 
   try {
-    // The cached session is sufficient to render. Server-side user validation
-    // should not hold the tournament UI on its initial loading state.
-    const [{ data: authData }, loaded] = await Promise.all([
-      supabase.auth.getSession(),
-      loadTournamentData(),
-    ]);
-
+    const loaded = await loadTournamentData();
     if (!loaded) {
       setLoadErrorMessage('We could not load this tournament. Check your connection and try again.');
-      return;
     }
-
-  const currentUserId = authData.session?.user?.id ?? '';
-  setUserId(currentUserId);
-
-  // Load co-organizers after auth resolves, but don't block the page on it
-  if (currentUserId) {
-    supabase
-      .from('saved_co_organizers')
-      .select('id, name, email')
-      .eq('user_id', currentUserId)
-      .order('name', { ascending: true })
-      .then(({ data: savedAdmins }) => {
-        setSavedCoOrganizers(savedAdmins || []);
-      });
-  }
 
   } catch (error) {
     console.error('Failed to load tournament:', error);
@@ -3715,6 +3704,28 @@ return true;
 }
     void load();
   }, [params.id, supabase, loadAttempt]);
+
+  // Resolve identity independently; refreshing a session must not hide public
+  // player slots and scores. Private queries keep using the signed-in client.
+  useEffect(() => {
+    let active = true;
+    void supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
+      const currentUserId = data.session?.user?.id ?? '';
+      setUserId(currentUserId);
+      if (!currentUserId) {
+        setSavedCoOrganizers([]);
+        return;
+      }
+      const { data: savedAdmins } = await supabase
+        .from('saved_co_organizers')
+        .select('id, name, email')
+        .eq('user_id', currentUserId)
+        .order('name', { ascending: true });
+      if (active) setSavedCoOrganizers(savedAdmins || []);
+    }).catch((error) => console.error('Failed to load tournament account:', error));
+    return () => { active = false; };
+  }, [supabase, loadAttempt]);
 
   useEffect(() => {
     if (!isLoading) {

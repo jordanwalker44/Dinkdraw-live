@@ -11,19 +11,11 @@ export function AuthRefresh() {
       await supabase.auth.getSession();
     }
 
-    async function keepAlive() {
-      try {
-        await supabase.from('tournaments').select('id').limit(1);
-      } catch {}
-    }
-
-    refresh();
-    keepAlive();
+    void refresh();
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         refresh();
-        keepAlive();
       }
     };
 
